@@ -1,6 +1,10 @@
 <?php
 /**
- * El reporte diario al panel.
+ * El reporte al panel: el diario, y el que sale en el momento.
+ *
+ * Este archivo arma y manda el reporte. Quién dispara el envío son dos: el
+ * reloj, una vez al día, y SWA_Vigilante, en el instante en que cambia quién
+ * tiene control del sitio.
  *
  * El sitio llama al panel, no al revés. Así este sitio no abre ninguna puerta
  * nueva: no queda un endpoint esperando peticiones de internet, que es el tipo
@@ -39,23 +43,33 @@ class SWA_Reporte {
 	}
 
 	/**
-	 * Lo que se manda. Nada más que esto.
+	 * Los roles que se vigilan.
 	 *
-	 * @return array<string,mixed>
+	 * Un sitio con 3.000 clientes de tienda no tiene por qué mandar 3.000 filas:
+	 * lo que se vigila son los que tienen control. "Yo lo que quiero son
+	 * administradores, pero son los que tienen control" (04:16).
+	 *
+	 * @return array<int,string>
 	 */
-	public static function armar(): array {
-		$usuarios = [];
-
-		// Solo los roles que importan. Un sitio con 3.000 clientes de tienda no
-		// tiene por qué mandar 3.000 filas todos los días: lo que se vigila son
-		// los que tienen control. "Yo lo que quiero son administradores, pero
-		// son los que tienen control" (04:16).
-		$roles_vigilados = (array) apply_filters(
+	public static function roles_vigilados(): array {
+		return (array) apply_filters(
 			'swa_roles_vigilados',
 			[ 'administrator', 'editor', 'shop_manager' ]
 		);
+	}
 
-		foreach ( get_users( [ 'role__in' => $roles_vigilados ] ) as $u ) {
+	/**
+	 * Quién tiene control de este sitio ahora mismo.
+	 *
+	 * Vive aparte de armar() porque el vigilante la usa para sacar la huella y
+	 * decidir si un cambio amerita aviso, sin tener que armar el reporte entero.
+	 *
+	 * @return array<int,array<string,mixed>>
+	 */
+	public static function usuarios_vigilados(): array {
+		$usuarios = [];
+
+		foreach ( get_users( [ 'role__in' => self::roles_vigilados() ] ) as $u ) {
 			$usuarios[] = [
 				'id'        => (int) $u->ID,
 				'login'     => $u->user_login,
@@ -66,6 +80,18 @@ class SWA_Reporte {
 				'dos_pasos' => (bool) get_user_meta( $u->ID, '_swa_configurado', true ),
 			];
 		}
+
+		return $usuarios;
+	}
+
+	/**
+	 * Lo que se manda. Nada más que esto.
+	 *
+	 * @return array<string,mixed>
+	 */
+	public static function armar(): array {
+		$usuarios        = self::usuarios_vigilados();
+		$roles_vigilados = self::roles_vigilados();
 
 		$correo = SWA_Correo::estado();
 
@@ -181,6 +207,11 @@ class SWA_Reporte {
 
 		update_option( 'swa_ultimo_reporte', current_time( 'mysql' ), false );
 		delete_option( 'swa_ultimo_error' );
+
+		// El panel ya conoce esta lista. Sirve igual si el envío salió del
+		// reporte diario o del aviso instantáneo: después de cualquiera de los
+		// dos, lo que hay aquí y lo que hay allá coinciden.
+		SWA_Vigilante::recordar_huella();
 
 		return true;
 	}

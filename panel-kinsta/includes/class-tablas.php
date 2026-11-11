@@ -21,7 +21,7 @@ defined( 'ABSPATH' ) || exit;
 
 class SWPK_Tablas {
 
-	public const VERSION = 6;
+	public const VERSION = 7;
 
 	public static function tabla( string $nombre ): string {
 		global $wpdb;
@@ -97,7 +97,7 @@ class SWPK_Tablas {
 				tipo VARCHAR(48) NOT NULL,
 				severidad VARCHAR(16) NOT NULL DEFAULT 'info',
 				slug VARCHAR(191) NOT NULL DEFAULT '',
-				titulo VARCHAR(191) NOT NULL DEFAULT '',
+				titulo TEXT NULL,
 				detalle LONGTEXT NULL,
 				notificado TINYINT(1) NOT NULL DEFAULT 0,
 				PRIMARY KEY (id),

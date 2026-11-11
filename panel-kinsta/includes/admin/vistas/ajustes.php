@@ -175,6 +175,20 @@ $a = SWPK_Ajustes::todos();
 	<table class="widefat striped" style="max-width:720px">
 		<tbody>
 			<tr><td>Fuente de datos</td><td><strong><?php echo esc_html( swpk_fuente()->nombre() ); ?></strong></td></tr>
+			<?php $perdidos = SWPK_Eventos::fallos(); ?>
+			<?php if ( $perdidos ) : ?>
+				<tr>
+					<td>Avisos perdidos</td>
+					<td>
+						<strong style="color:#b32d2e"><?php echo count( $perdidos ); ?> evento(s) no se pudieron guardar.</strong>
+						<br><span style="font-size:12px">
+							Un panel que avisa no puede perder avisos callado. El último fue
+							<?php echo esc_html( SWPK_Frescura::fecha( (string) $perdidos[0]['cuando'] ) ); ?>:
+							<code><?php echo esc_html( (string) $perdidos[0]['error'] ); ?></code>
+						</span>
+					</td>
+				</tr>
+			<?php endif; ?>
 			<tr>
 				<td>Último dato bueno de <?php echo esc_html( swpk_fuente()->proveedor() ); ?></td>
 				<td>

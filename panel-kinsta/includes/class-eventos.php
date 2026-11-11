@@ -40,6 +40,19 @@ class SWPK_Eventos {
 		];
 	}
 
+	/**
+	 * Anota un evento. Y si no puede, lo dice.
+	 *
+	 * El insert puede fallar —un texto más largo que su columna, la base llena,
+	 * la tabla sin migrar— y durante un tiempo esto lo dejó pasar callado: el
+	 * evento simplemente no existía, y nadie tenía forma de saber que faltaba.
+	 * Un panel cuyo trabajo es avisar no puede perder avisos en silencio, así
+	 * que un fallo aquí queda anotado y sale en Ajustes.
+	 *
+	 * Se descubrió así: se alargó el texto de "administrador nuevo" por encima
+	 * de los 191 caracteres de su columna, el evento dejó de guardarse, y el
+	 * panel siguió como si nada.
+	 */
 	public static function registrar(
 		string $tipo,
 		string $sitio_id,
@@ -47,10 +60,10 @@ class SWPK_Eventos {
 		string $severidad = 'info',
 		string $slug = '',
 		array $detalle = []
-	): void {
+	): bool {
 		global $wpdb;
 
-		$wpdb->insert(
+		$ok = $wpdb->insert(
 			SWPK_Tablas::tabla( 'eventos' ),
 			[
 				'ocurrio_en' => current_time( 'mysql' ),
@@ -62,6 +75,43 @@ class SWPK_Eventos {
 				'detalle'    => $detalle ? wp_json_encode( $detalle ) : null,
 			]
 		);
+
+		if ( false === $ok ) {
+			self::anotar_fallo( $tipo, $titulo, (string) $wpdb->last_error );
+			return false;
+		}
+
+		return true;
+	}
+
+	private const OPCION_FALLOS = 'swpk_eventos_perdidos';
+
+	/** Deja constancia de un evento que no se pudo guardar. */
+	private static function anotar_fallo( string $tipo, string $titulo, string $error ): void {
+		$fallos = self::fallos();
+
+		array_unshift(
+			$fallos,
+			[
+				'cuando' => current_time( 'mysql' ),
+				'tipo'   => $tipo,
+				'titulo' => mb_substr( $titulo, 0, 300 ),
+				'error'  => mb_substr( $error, 0, 300 ),
+			]
+		);
+
+		update_option( self::OPCION_FALLOS, array_slice( $fallos, 0, 20 ), false );
+		error_log( sprintf( '[Panel Kinsta] No se pudo guardar el evento "%s": %s', $tipo, $error ) );
+	}
+
+	/** @return array<int,array<string,string>> */
+	public static function fallos(): array {
+		$v = get_option( self::OPCION_FALLOS, [] );
+		return is_array( $v ) ? $v : [];
+	}
+
+	public static function olvidar_fallos(): void {
+		delete_option( self::OPCION_FALLOS );
 	}
 
 	/**

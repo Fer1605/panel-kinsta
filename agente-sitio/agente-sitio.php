@@ -33,8 +33,9 @@
  * NO sale: contraseñas (ni cifradas), contenido, pedidos, clientes, ni nada
  * más de la base de datos.
  *
- * Y el sitio NO abre ninguna puerta nueva: es él quien llama al panel una vez
- * al día. No queda un endpoint esperando peticiones de internet.
+ * Y el sitio NO abre ninguna puerta nueva: es él quien llama al panel, una vez
+ * al día y además en el momento en que cambia quién tiene control. No queda un
+ * endpoint esperando peticiones de internet.
  * ────────────────────────────────────────────────────────────────────────────
  */
 
@@ -48,6 +49,7 @@ require_once SWA_RUTA . 'includes/class-ajustes.php';
 require_once SWA_RUTA . 'includes/class-firma.php';
 require_once SWA_RUTA . 'includes/class-correo.php';
 require_once SWA_RUTA . 'includes/class-reporte.php';
+require_once SWA_RUTA . 'includes/class-vigilante.php';
 require_once SWA_RUTA . 'includes/class-dos-factores.php';
 require_once SWA_RUTA . 'includes/class-admin.php';
 
@@ -58,6 +60,7 @@ add_action(
 	'plugins_loaded',
 	static function (): void {
 		SWA_Reporte::init();
+		SWA_Vigilante::init();
 		SWA_Dos_Factores::init();
 		if ( is_admin() ) {
 			SWA_Admin::init();
