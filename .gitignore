@@ -22,3 +22,6 @@ Thumbs.db
 node_modules/
 vendor/
 *.log
+
+# Guía de pruebas: tiene contraseñas de los sitios locales
+PRUEBAS.md
