@@ -53,6 +53,15 @@ class SWPK_Vista {
 		<?php
 	}
 
+	/** Abre la fila que lleva los filtros a la izquierda y el buscador a la derecha. */
+	public static function abrir_barra(): void {
+		echo '<div class="swpk-barra">';
+	}
+
+	public static function cerrar_barra(): void {
+		echo '</div>';
+	}
+
 	/** Filtro por nivel de riesgo. */
 	public static function filtro_de_riesgo( string $actual, array $conteos = [] ): void {
 		$niveles = [ '' => 'Todos' ] + SWPK_Riesgo::nombres();
@@ -129,6 +138,58 @@ class SWPK_Vista {
 			</span>
 		</div>
 		<?php
+	}
+
+	/**
+	 * El botón de regresar.
+	 *
+	 * Sin esto, al entrar a la ficha de un sitio no hay forma obvia de volver a
+	 * la lista de donde se venía: queda el menú de la izquierda, que lleva al
+	 * principio y pierde el grupo y el filtro que la persona había elegido.
+	 */
+	public static function volver( string $url, string $texto ): void {
+		printf(
+			'<p class="swpk-volver"><a href="%s">&larr; %s</a></p>',
+			esc_url( $url ),
+			esc_html( $texto )
+		);
+	}
+
+	/** La dirección de la lista de donde se vino, con su grupo y su filtro. */
+	public static function url_de_regreso(): array {
+		$origen = isset( $_GET['de'] ) ? sanitize_key( (string) $_GET['de'] ) : 'panel-kinsta-vulnerabilidades';
+		$origen = in_array( $origen, [ 'panel-kinsta-vulnerabilidades', 'panel-kinsta-sitios' ], true )
+			? $origen
+			: 'panel-kinsta-vulnerabilidades';
+
+		$args = [ 'page' => $origen ];
+		foreach ( [ 'tag', 'nivel', 'p', 'q' ] as $k ) {
+			if ( ! empty( $_GET[ $k ] ) ) {
+				$args[ $k ] = sanitize_text_field( wp_unslash( (string) $_GET[ $k ] ) );
+			}
+		}
+
+		return [
+			'url'   => add_query_arg( $args, admin_url( 'admin.php' ) ),
+			'texto' => 'panel-kinsta-sitios' === $origen ? 'Volver a Sitios' : 'Volver a Vulnerabilidades',
+		];
+	}
+
+	/** El enlace a la ficha de un sitio, conservando de dónde se viene. */
+	public static function url_del_sitio( string $sitio_id, string $origen ): string {
+		$args = [
+			'page'  => 'panel-kinsta-sitio',
+			'sitio' => $sitio_id,
+			'de'    => $origen,
+		];
+
+		foreach ( [ 'tag', 'nivel', 'p', 'q' ] as $k ) {
+			if ( ! empty( $_GET[ $k ] ) ) {
+				$args[ $k ] = sanitize_text_field( wp_unslash( (string) $_GET[ $k ] ) );
+			}
+		}
+
+		return add_query_arg( $args, admin_url( 'admin.php' ) );
 	}
 
 	public static function pagina_pedida(): int {

@@ -1,7 +1,9 @@
 <?php
 /**
- * Vulnerabilidades y pendientes. Mismo recorrido que Sitios: primero el grupo,
- * después el filtro, y de a una página por vez.
+ * Vulnerabilidades: la lista de sitios con algo pendiente, en resumen.
+ *
+ * Aquí no se ven las vulnerabilidades una por una — con 107 sitios eso era una
+ * página infinita. Se ve cuánto tiene cada sitio, y se entra al que interese.
  */
 defined( 'ABSPATH' ) || exit;
 
@@ -9,21 +11,19 @@ $todos    = SWPK_Perfiles::sitios_visibles();
 $tag      = SWPK_Vista::tag_pedido();
 $nivel    = SWPK_Vista::nivel_pedido();
 $busqueda = SWPK_Vista::busqueda_pedida();
-$abierto  = isset( $_GET['sitio'] ) ? sanitize_text_field( wp_unslash( (string) $_GET['sitio'] ) ) : '';
 
-$por_tag = SWPK_Vista::conteo_por_tag( $todos );
+$por_tag   = SWPK_Vista::conteo_por_tag( $todos );
+$del_grupo = SWPK_Vista::filtrar( $todos, $tag, '', '' );
 
-// Aquí solo interesan los sitios que tienen algo pendiente.
-$con_algo = array_values(
-	array_filter(
-		SWPK_Vista::filtrar( $todos, $tag, $nivel, $busqueda ),
-		static fn( $s ) => ! in_array(
-			SWPK_Riesgo::nivel_del_sitio( $s->sitio_id ),
-			[ SWPK_Riesgo::AL_DIA, SWPK_Riesgo::SIN_DATOS ],
-			true
-		)
-	)
+$tiene_algo = static fn( $s ) => ! in_array(
+	SWPK_Riesgo::nivel_del_sitio( $s->sitio_id ),
+	[ SWPK_Riesgo::AL_DIA, SWPK_Riesgo::SIN_DATOS ],
+	true
 );
+
+$con_algo  = array_values( array_filter( SWPK_Vista::filtrar( $todos, $tag, $nivel, $busqueda ), $tiene_algo ) );
+$al_dia    = count( array_filter( $del_grupo, static fn( $s ) => SWPK_Riesgo::AL_DIA === SWPK_Riesgo::nivel_del_sitio( $s->sitio_id ) ) );
+$sin_datos = count( array_filter( $del_grupo, static fn( $s ) => SWPK_Riesgo::SIN_DATOS === SWPK_Riesgo::nivel_del_sitio( $s->sitio_id ) ) );
 
 $orden = [ SWPK_Riesgo::CRITICO => 0, SWPK_Riesgo::ALTO => 1, SWPK_Riesgo::MEDIO => 2, SWPK_Riesgo::BAJO => 3 ];
 usort(
@@ -32,10 +32,13 @@ usort(
 		<=> ( $orden[ SWPK_Riesgo::nivel_del_sitio( $b->sitio_id ) ] ?? 9 )
 );
 
-$por_nivel = SWPK_Vista::conteo_por_nivel( SWPK_Vista::filtrar( $todos, $tag, '', '' ) );
-unset( $por_nivel[ SWPK_Riesgo::AL_DIA ], $por_nivel[ SWPK_Riesgo::SIN_DATOS ] );
+$por_nivel = SWPK_Vista::conteo_por_nivel( $del_grupo );
+// En esta pantalla solo hay sitios con pendientes, así que esos dos filtros
+// no devolverían nada. Se ponen en cero para que el filtro los esconda.
+$por_nivel[ SWPK_Riesgo::AL_DIA ]    = 0;
+$por_nivel[ SWPK_Riesgo::SIN_DATOS ] = 0;
 
-[ $en_pantalla, $pagina, $paginas ] = SWPK_Vista::paginar( $con_algo, SWPK_Vista::pagina_pedida(), 5 );
+[ $en_pantalla, $pagina, $paginas ] = SWPK_Vista::paginar( $con_algo, SWPK_Vista::pagina_pedida(), 15 );
 ?>
 <div class="wrap">
 	<h1>Vulnerabilidades y pendientes</h1>
@@ -50,8 +53,27 @@ unset( $por_nivel[ SWPK_Riesgo::AL_DIA ], $por_nivel[ SWPK_Riesgo::SIN_DATOS ] )
 		<?php return; ?>
 	<?php endif; ?>
 
-	<?php SWPK_Vista::filtro_de_riesgo( $nivel, $por_nivel ); ?>
-	<?php SWPK_Vista::buscador( 'panel-kinsta-vulnerabilidades', $busqueda, [ 'tag' => $tag, 'nivel' => $nivel ] ); ?>
+	<?php SWPK_Vista::abrir_barra(); ?>
+		<?php SWPK_Vista::filtro_de_riesgo( $nivel, $por_nivel ); ?>
+		<?php SWPK_Vista::buscador( 'panel-kinsta-vulnerabilidades', $busqueda, [ 'tag' => $tag, 'nivel' => $nivel ] ); ?>
+	<?php SWPK_Vista::cerrar_barra(); ?>
+
+	<?php
+	// Decir explícitamente cuántos del grupo quedan fuera de esta lista. Si no,
+	// "tengo 12 sitios en desarrollo y solo veo 3" parece un error del panel.
+	$fuera = [];
+	if ( $al_dia ) {
+		$fuera[] = sprintf( '%d al día', $al_dia );
+	}
+	if ( $sin_datos ) {
+		$fuera[] = sprintf( '%d sin datos del hosting', $sin_datos );
+	}
+	?>
+	<p class="swpk-cuenta" style="margin:0 0 10px">
+		<strong><?php echo count( $con_algo ); ?></strong> de <?php echo count( $del_grupo ); ?> sitios de este
+		grupo tienen algo pendiente<?php echo $fuera ? ' (' . esc_html( implode( ', ', $fuera ) ) . ')' : ''; ?>.
+	</p>
+
 	<?php SWPK_Vista::paginador( $pagina, $paginas, count( $con_algo ), 'sitios con pendientes' ); ?>
 
 	<?php if ( ! $en_pantalla ) : ?>
@@ -63,149 +85,47 @@ unset( $por_nivel[ SWPK_Riesgo::AL_DIA ], $por_nivel[ SWPK_Riesgo::SIN_DATOS ] )
 	<?php foreach ( $en_pantalla as $s ) : ?>
 		<?php
 		$hallazgos = SWPK_Riesgo::hallazgos( $s->sitio_id );
-		$nivel_s   = SWPK_Riesgo::nivel_del_sitio( $s->sitio_id );
-		$es_este   = $abierto === $s->sitio_id;
-		$graves    = array_values(
-			array_filter(
-				$hallazgos,
-				static fn( $h ) => in_array( $h['nivel'], [ SWPK_Riesgo::CRITICO, SWPK_Riesgo::ALTO ], true )
-			)
-		);
-		$total_graves = count( $graves );
-		$sobran       = max( 0, $total_graves - SWPK_Textos::MAXIMO_EN_MENSAJE );
-		$graves       = array_slice( $graves, 0, SWPK_Textos::MAXIMO_EN_MENSAJE );
+		$vulns     = 0;
+		$sin_cta   = 0;
+		foreach ( $hallazgos as $h ) {
+			if ( 'actualizacion_pendiente' === $h['motivo'] ) {
+				continue;
+			}
+			++$vulns;
+			$v = $h['vulnerabilidades'][0] ?? null;
+			if ( $v && SWPK_Textos::quien_puede( (string) ( $v->cvss_vector ?? '' ), (string) $v->descripcion )['sin_cuenta'] ) {
+				++$sin_cta;
+			}
+		}
+		$url = SWPK_Vista::url_del_sitio( (string) $s->sitio_id, 'panel-kinsta-vulnerabilidades' );
 		?>
-		<h2 style="margin-top:30px">
-			<?php echo wp_kses_post( SWPK_Admin::nivel_badge( $nivel_s ) ); ?>
-			<?php echo esc_html( $s->nombre_visible ); ?>
-			<span style="font-weight:400;color:#50575e;font-size:13px">
-				· <?php echo count( $hallazgos ); ?> hallazgo(s)
-			</span>
-		</h2>
-
-		<table class="widefat striped swpk-tabla">
-			<thead>
-				<tr>
-					<th>Módulo</th>
-					<th style="width:155px">Versión</th>
-					<th style="width:95px">Nivel</th>
-					<th>Por qué importa</th>
-				</tr>
-			</thead>
-			<tbody>
-			<?php foreach ( array_slice( $hallazgos, 0, $es_este ? 100 : 6 ) as $h ) : ?>
-				<tr>
-					<td>
-						<strong><?php echo esc_html( $h['titulo'] ); ?></strong><br>
-						<span class="swpk-mono" style="color:#50575e"><?php echo esc_html( $h['slug'] ); ?></span>
-					</td>
-					<td>
-						<span class="swpk-mono"><?php echo esc_html( $h['version'] ); ?></span>
-						<?php if ( '' !== $h['version_disponible'] ) : ?>
-							→ <span class="swpk-mono" style="color:#008a20"><?php echo esc_html( $h['version_disponible'] ); ?></span>
-						<?php endif; ?>
-					</td>
-					<td><?php echo wp_kses_post( SWPK_Admin::nivel_badge( $h['nivel'] ) ); ?></td>
-					<td>
-						<?php if ( ! empty( $h['vulnerabilidades'] ) ) : ?>
-							<?php $v = $h['vulnerabilidades'][0]; ?>
-							<?php echo esc_html( SWPK_Textos::explicar( (string) $v->titulo, (string) $v->descripcion ) ); ?>
-							<?php if ( '' !== (string) $v->cve ) : ?>
-								<br><span class="swpk-mono" style="color:#50575e"><?php echo esc_html( (string) $v->cve ); ?></span>
-							<?php endif; ?>
-						<?php elseif ( 'vulnerable_sin_detalle' === $h['motivo'] ) : ?>
-							<span style="color:#d63638">El hosting marca esta versión como vulnerable</span>, pero
-							el feed todavía no trae el detalle.
-						<?php else : ?>
-							<span style="color:#50575e">Solo actualización pendiente, sin vulnerabilidad conocida.</span>
-						<?php endif; ?>
-					</td>
-				</tr>
-			<?php endforeach; ?>
-			<?php if ( ! $es_este && count( $hallazgos ) > 6 ) : ?>
-				<tr>
-					<td colspan="4" style="color:#50575e">
-						y <?php echo count( $hallazgos ) - 6; ?> más…
-					</td>
-				</tr>
-			<?php endif; ?>
-			</tbody>
-		</table>
-
-		<p style="margin-top:10px">
-			<?php $url = add_query_arg( [ 'page' => 'panel-kinsta-vulnerabilidades', 'tag' => $tag, 'nivel' => $nivel, 'p' => $pagina, 'sitio' => $s->sitio_id ], admin_url( 'admin.php' ) ); ?>
-			<?php if ( $es_este ) : ?>
-				<a class="button" href="<?php echo esc_url( remove_query_arg( 'sitio' ) ); ?>">Cerrar</a>
-			<?php else : ?>
-				<a class="button button-primary" href="<?php echo esc_url( $url ); ?>">Ver el mensaje para la asesora</a>
-			<?php endif; ?>
-		</p>
-
-		<?php if ( $es_este ) : ?>
-			<?php $plano = SWPK_Textos::para_asesora( $s, $hallazgos ); ?>
-			<div class="swpk-mensaje" id="msg-<?php echo esc_attr( $s->sitio_id ); ?>">
-				<p class="swpk-mensaje-intro">
-					<?php if ( $graves ) : ?>
-						El sitio <strong><?php echo esc_html( $s->nombre_visible ); ?></strong> tiene
-						<strong><?php echo (int) $total_graves; ?></strong> módulo(s) con una vulnerabilidad de
-						seguridad conocida públicamente.
-						<?php if ( $sobran ) : ?>
-							Estos son los <?php echo count( $graves ); ?> más graves; los otros
-							<?php echo (int) $sobran; ?> están en el reporte completo:
-						<?php else : ?>
-							Recomendamos actualizarlos:
-						<?php endif; ?>
-					<?php else : ?>
-						El sitio <strong><?php echo esc_html( $s->nombre_visible ); ?></strong> tiene
-						<?php echo count( $hallazgos ); ?> módulo(s) con actualización pendiente. Ninguno
-						tiene una vulnerabilidad conocida hoy, pero mantenerlos al día es lo que evita
-						llegar a ese punto.
-					<?php endif; ?>
+		<div class="swpk-ficha">
+			<div>
+				<p class="swpk-ficha-nom">
+					<?php echo wp_kses_post( SWPK_Admin::nivel_badge( SWPK_Riesgo::nivel_del_sitio( $s->sitio_id ) ) ); ?>
+					<?php echo esc_html( $s->nombre_visible ); ?>
 				</p>
-
-				<?php foreach ( $graves as $i => $h ) : ?>
-					<?php $v = $h['vulnerabilidades'][0] ?? null; ?>
-					<div class="swpk-mod">
-						<div class="swpk-mod-nombre"><?php echo (int) $i + 1; ?>. <?php echo esc_html( $h['titulo'] ); ?></div>
-						<div class="swpk-mod-ver">
-							Versión instalada <?php echo esc_html( $h['version'] ); ?>
-							→ actualizar a <b><?php echo esc_html( $h['version_disponible'] ?: 'la última disponible' ); ?></b>
-							<?php if ( $v && '' !== (string) $v->cvss_rating ) : ?>
-								· riesgo <?php echo esc_html( strtolower( (string) $v->cvss_rating ) ); ?>
-								(<?php echo esc_html( (string) $v->cvss_score ); ?> sobre 10)
-							<?php endif; ?>
-						</div>
-						<?php if ( $v ) : ?>
-							<p class="swpk-mod-que"><?php echo esc_html( SWPK_Textos::explicar( (string) $v->titulo, (string) $v->descripcion ) ); ?></p>
-							<?php $corrige = SWPK_Textos::version_que_corrige( $v, (string) $h['version_disponible'] ); ?>
-							<?php if ( '' !== $corrige ) : ?>
-								<p class="swpk-mod-ojo">
-									Atención: la versión <?php echo esc_html( $h['version_disponible'] ); ?> todavía
-									está afectada. Hay que llegar a la <?php echo esc_html( $corrige ); ?> o posterior.
-								</p>
-							<?php endif; ?>
-						<?php endif; ?>
-					</div>
-				<?php endforeach; ?>
-
-				<?php if ( $graves ) : ?>
-					<p class="swpk-cierre">
-						Mientras el sitio siga con estas versiones, queda expuesto a un ataque
-						automatizado: estas fallas se publican y los robots las buscan por internet sin
-						elegir a quién.
+				<span class="swpk-ficha-dom"><?php echo esc_html( $s->dominio ); ?></span>
+				<?php if ( $sin_cta ) : ?>
+					<p style="margin:6px 0 0;color:#b32d2e;font-size:13px">
+						<?php echo (int) $sin_cta; ?> se <?php echo 1 === $sin_cta ? 'puede' : 'pueden'; ?>
+						aprovechar sin tener cuenta en el sitio
 					</p>
 				<?php endif; ?>
-
-				<textarea id="plano-<?php echo esc_attr( $s->sitio_id ); ?>" style="position:absolute;left:-9999px" readonly><?php echo esc_textarea( $plano ); ?></textarea>
-				<p class="swpk-copiar">
-					<button type="button" class="button button-primary"
-						onclick="var t=document.getElementById('plano-<?php echo esc_js( $s->sitio_id ); ?>');t.select();document.execCommand('copy');this.textContent='✓ Copiado';">
-						Copiar el texto
-					</button>
-					<span style="color:#50575e;margin-left:8px">listo para pegar en una cotización o un correo</span>
-				</p>
 			</div>
-		<?php endif; ?>
+
+			<div class="swpk-ficha-cifras">
+				<div class="swpk-cifra">
+					<b style="color:<?php echo $vulns ? '#b32d2e' : '#008a20'; ?>"><?php echo (int) $vulns; ?></b>
+					<span>con vulnerabilidad</span>
+				</div>
+				<div class="swpk-cifra">
+					<b><?php echo count( $hallazgos ) - $vulns; ?></b>
+					<span>por actualizar</span>
+				</div>
+				<a class="button button-primary" href="<?php echo esc_url( $url ); ?>">Ver detalle</a>
+			</div>
+		</div>
 	<?php endforeach; ?>
 
 	<?php if ( $en_pantalla ) : ?>

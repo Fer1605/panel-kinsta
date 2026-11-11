@@ -314,6 +314,9 @@ class SWPK_Wordfence {
 					'cve_enlace'           => (string) ( $registro['cve_link'] ?? '' ),
 					'cvss_score'           => isset( $registro['cvss']['score'] ) ? (float) $registro['cvss']['score'] : null,
 					'cvss_rating'          => (string) ( $registro['cvss']['rating'] ?? '' ),
+					// El vector dice, en clave, si hace falta cuenta para explotarlo y
+					// si alguien tiene que hacer clic. Es lo más concreto que da el feed.
+					'cvss_vector'          => (string) ( $registro['cvss']['vector'] ?? '' ),
 					'informativa'          => ! empty( $registro['informational'] ) ? 1 : 0,
 					'descripcion'          => (string) ( $registro['description'] ?? '' ),
 					'remediacion'          => (string) ( $sw['remediation'] ?? '' ),
@@ -343,6 +346,7 @@ class SWPK_Wordfence {
 			'cve_enlace'           => $v['cve_enlace'] ?? '',
 			'cvss_score'           => $v['cvss_score'],
 			'cvss_rating'          => $v['cvss_rating'],
+			'cvss_vector'          => (string) ( $v['cvss_vector'] ?? '' ),
 			'informativa'          => (int) $v['informativa'],
 			'descripcion'          => $v['descripcion'],
 			'remediacion'          => $v['remediacion'],

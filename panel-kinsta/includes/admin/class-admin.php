@@ -26,6 +26,9 @@ class SWPK_Admin {
 		add_action( 'admin_post_swpk_crear_acceso', [ __CLASS__, 'accion_crear_acceso' ] );
 		add_action( 'admin_post_swpk_quitar_acceso', [ __CLASS__, 'accion_quitar_acceso' ] );
 		add_action( 'admin_head', [ __CLASS__, 'estilos' ] );
+		add_filter( 'parent_file', [ __CLASS__, 'menu_abierto' ] );
+		add_filter( 'submenu_file', [ __CLASS__, 'submenu_marcado' ] );
+		add_filter( 'admin_title', [ __CLASS__, 'titulo_de_la_ficha' ], 10, 2 );
 	}
 
 	private static function puede_ver(): bool {
@@ -66,6 +69,9 @@ class SWPK_Admin {
 		add_submenu_page( self::SLUG, 'Sitios', 'Sitios', $ver, self::SLUG . '-sitios', [ __CLASS__, 'pantalla_sitios' ] );
 		add_submenu_page( self::SLUG, 'Vulnerabilidades', 'Vulnerabilidades', $ver, self::SLUG . '-vulnerabilidades', [ __CLASS__, 'pantalla_vulnerabilidades' ] );
 		add_submenu_page( self::SLUG, 'Caídas', 'Caídas', $tecnico, self::SLUG . '-caidas', [ __CLASS__, 'pantalla_caidas' ] );
+
+		// La ficha de un sitio no va en el menú: se llega desde las listas.
+		add_submenu_page( null, 'Sitio', 'Sitio', $ver, self::SLUG . '-sitio', [ __CLASS__, 'pantalla_sitio' ] );
 		add_submenu_page( self::SLUG, 'Bitácora', 'Bitácora', $ver, self::SLUG . '-bitacora', [ __CLASS__, 'pantalla_bitacora' ] );
 		add_submenu_page( self::SLUG, 'Equipo', 'Equipo', $admin, self::SLUG . '-equipo', [ __CLASS__, 'pantalla_equipo' ] );
 		add_submenu_page( self::SLUG, 'Accesos', 'Accesos', $admin, self::SLUG . '-accesos', [ __CLASS__, 'pantalla_accesos' ] );
@@ -84,6 +90,43 @@ class SWPK_Admin {
 				? ', con los ' . (int) $cuantos . ' sitios.'
 				: sprintf( ', con %d sitio(s) asignado(s).', (int) $cuantos )
 		);
+	}
+
+	/**
+	 * La ficha de un sitio no está en el menú, así que WordPress cerraría el
+	 * menú del panel al entrar en ella y la persona se quedaría sin saber dónde
+	 * está. Esto lo deja abierto y marca de dónde viene.
+	 */
+	public static function menu_abierto( $padre ) {
+		return self::SLUG . '-sitio' === self::pagina_actual() ? self::SLUG : $padre;
+	}
+
+	public static function submenu_marcado( $submenu ) {
+		if ( self::SLUG . '-sitio' !== self::pagina_actual() ) {
+			return $submenu;
+		}
+
+		$de = isset( $_GET['de'] ) ? sanitize_key( (string) $_GET['de'] ) : '';
+
+		return in_array( $de, [ self::SLUG . '-sitios', self::SLUG . '-vulnerabilidades' ], true )
+			? $de
+			: self::SLUG . '-sitios';
+	}
+
+	/** Y que la pestaña del navegador diga de qué sitio se trata. */
+	public static function titulo_de_la_ficha( $titulo, $admin_titulo ) {
+		if ( self::SLUG . '-sitio' !== self::pagina_actual() ) {
+			return $titulo;
+		}
+
+		$id    = isset( $_GET['sitio'] ) ? sanitize_text_field( wp_unslash( (string) $_GET['sitio'] ) ) : '';
+		$sitio = $id ? SWPK_Inventario::obtener( $id ) : null;
+
+		return ( $sitio->nombre_visible ?? 'Sitio' ) . ' ' . $admin_titulo;
+	}
+
+	private static function pagina_actual(): string {
+		return isset( $_GET['page'] ) ? sanitize_key( (string) $_GET['page'] ) : '';
 	}
 
 	public static function estilos(): void {
@@ -124,6 +167,29 @@ class SWPK_Admin {
 			.swpk-filtro-activo:hover{color:#fff}
 			.swpk-filtro-n{background:rgba(0,0,0,.08);border-radius:9px;padding:0 6px;font-size:11px}
 			.swpk-filtro-activo .swpk-filtro-n{background:rgba(255,255,255,.25)}
+
+			/* Barra de filtros + buscador, en una sola fila */
+			.swpk-barra{display:flex;justify-content:space-between;align-items:center;
+				gap:16px;flex-wrap:wrap;margin:14px 0}
+			.swpk-barra .swpk-filtros{margin:0}
+			.swpk-barra .swpk-buscador{margin:0}
+
+			/* Volver */
+			.swpk-volver{margin:4px 0 14px}
+			.swpk-volver a{display:inline-block;padding:6px 14px;border:1px solid #c3c4c7;
+				border-radius:4px;background:#fff;text-decoration:none;font-weight:600;color:#2271b1}
+			.swpk-volver a:hover{border-color:#2271b1;background:#f0f6fc}
+
+			/* Fichas de sitio en la lista */
+			.swpk-ficha{display:flex;justify-content:space-between;align-items:center;gap:16px;
+				background:#fff;border:1px solid #c3c4c7;border-radius:8px;padding:16px 20px;margin-bottom:10px}
+			.swpk-ficha:hover{border-color:#2271b1}
+			.swpk-ficha-nom{font-size:15px;font-weight:600;margin:0}
+			.swpk-ficha-dom{color:#646970;font-size:12px;font-family:ui-monospace,Menlo,monospace}
+			.swpk-ficha-cifras{display:flex;gap:26px;align-items:center;flex-wrap:wrap}
+			.swpk-cifra{text-align:center;min-width:72px}
+			.swpk-cifra b{display:block;font-size:22px;line-height:1.1}
+			.swpk-cifra span{color:#646970;font-size:11px}
 
 			/* Buscador y paginación */
 			.swpk-buscador{display:inline-flex;gap:6px;align-items:center;margin:0 0 14px}
@@ -220,6 +286,13 @@ class SWPK_Admin {
 			wp_die( 'Sin permiso.' );
 		}
 		require SWPK_RUTA . 'includes/admin/vistas/caidas.php';
+	}
+
+	public static function pantalla_sitio(): void {
+		if ( ! self::puede_ver() ) {
+			wp_die( 'Sin permiso.' );
+		}
+		require SWPK_RUTA . 'includes/admin/vistas/sitio.php';
 	}
 
 	public static function pantalla_equipo(): void {

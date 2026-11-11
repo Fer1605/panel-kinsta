@@ -21,7 +21,7 @@ defined( 'ABSPATH' ) || exit;
 
 class SWPK_Tablas {
 
-	public const VERSION = 5;
+	public const VERSION = 6;
 
 	public static function tabla( string $nombre ): string {
 		global $wpdb;
@@ -118,6 +118,7 @@ class SWPK_Tablas {
 				cve_enlace TEXT NULL,
 				cvss_score DECIMAL(3,1) NULL,
 				cvss_rating VARCHAR(16) NOT NULL DEFAULT '',
+				cvss_vector VARCHAR(120) NOT NULL DEFAULT '',
 				informativa TINYINT(1) NOT NULL DEFAULT 0,
 				descripcion LONGTEXT NULL,
 				remediacion TEXT NULL,

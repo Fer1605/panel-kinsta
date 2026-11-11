@@ -53,8 +53,10 @@ $filtrados = SWPK_Vista::filtrar( $todos, $tag, $nivel, $busqueda );
 		</p>
 	<?php endif; ?>
 
-	<?php SWPK_Vista::filtro_de_riesgo( $nivel, $por_nivel ); ?>
-	<?php SWPK_Vista::buscador( 'panel-kinsta-sitios', $busqueda, [ 'tag' => $tag, 'nivel' => $nivel ] ); ?>
+	<?php SWPK_Vista::abrir_barra(); ?>
+		<?php SWPK_Vista::filtro_de_riesgo( $nivel, $por_nivel ); ?>
+		<?php SWPK_Vista::buscador( 'panel-kinsta-sitios', $busqueda, [ 'tag' => $tag, 'nivel' => $nivel ] ); ?>
+	<?php SWPK_Vista::cerrar_barra(); ?>
 	<?php SWPK_Vista::paginador( $pagina, $paginas, count( $filtrados ) ); ?>
 
 	<?php if ( ! $pagina_de_sitios ) : ?>
@@ -98,7 +100,9 @@ $filtrados = SWPK_Vista::filtrar( $todos, $tag, $nivel, $busqueda );
 				?>
 				<tr>
 					<td>
-						<strong><?php echo esc_html( $s->nombre_visible ); ?></strong><br>
+						<a href="<?php echo esc_url( SWPK_Vista::url_del_sitio( (string) $s->sitio_id, 'panel-kinsta-sitios' ) ); ?>">
+							<strong><?php echo esc_html( $s->nombre_visible ); ?></strong>
+						</a><br>
 						<span class="swpk-mono" style="color:#50575e"><?php echo esc_html( $s->dominio ); ?></span>
 					</td>
 					<td><?php echo wp_kses_post( SWPK_Admin::nivel_badge( $nivel_s ) ); ?></td>
