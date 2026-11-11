@@ -67,6 +67,24 @@ llave ahí viaja dentro de cada respaldo.
 Kinsta responde un sí/no por plugin. Wordfence es lo que convierte ese sí/no en
 una frase que se le puede explicar a un cliente.
 
+### El feed se descarga una vez al día, y el límite está en el código
+
+El feed de vulnerabilidades se publica una vez al día: pedirlo más seguido no
+trae nada nuevo y cuenta contra el límite del proveedor, que avisa por correo y
+puede llegar a **suspender la llave**.
+
+Por eso el freno no depende de que alguien se acuerde:
+
+- No se vuelve a descargar si hace menos de 20 horas que se bajó bien. No es un
+  error, simplemente no hace falta.
+- Ante un **429**, se anota hasta cuándo no insistir y la espera se va
+  duplicando (6 h → 12 h → … hasta 48 h). Insistir contra un 429 es justo lo que
+  lleva a la suspensión.
+- Las dos comprobaciones ocurren **antes** de tocar la red.
+
+La pantalla de Ajustes muestra cuándo fue la última descarga y a partir de
+cuándo se permite la siguiente.
+
 ## Modo de prueba
 
 El panel funciona completo **sin llave de Kinsta**. En modo de prueba genera una

@@ -46,6 +46,58 @@ class SWPK_Wordfence {
 
 	private const URL_PRODUCCION = 'https://www.wordfence.com/api/intelligence/v3/vulnerabilities/production';
 
+	/**
+	 * ─── El freno ───────────────────────────────────────────────────────────
+	 *
+	 * El 11 de noviembre de 2026, probando, se descargó el feed cuatro veces en
+	 * cuarenta minutos. Wordfence mandó un aviso por correo advirtiendo que
+	 * seguir así puede terminar en la **suspensión de la llave**.
+	 *
+	 * El feed se publica una vez al día: pedirlo más seguido no trae nada nuevo.
+	 * Así que el límite va aquí, en el código, y no en que alguien se acuerde:
+	 *
+	 *  - No se vuelve a pedir si hace menos de MINIMO_ENTRE_DESCARGAS que se
+	 *    bajó bien. No es un error: simplemente no hace falta.
+	 *  - Si Wordfence contesta 429, se anota hasta cuándo no insistir, y la
+	 *    espera se va duplicando. Insistir contra un 429 es justo lo que lleva
+	 *    a que suspendan la llave.
+	 */
+	private const MINIMO_ENTRE_DESCARGAS = 20 * HOUR_IN_SECONDS;
+	private const ESPERA_INICIAL         = 6 * HOUR_IN_SECONDS;
+	private const ESPERA_MAXIMA          = 48 * HOUR_IN_SECONDS;
+
+	private const OPCION_ESPERA = 'swpk_wordfence_no_antes_de';
+
+	/** Hasta cuándo no hay que volver a pedirle nada a Wordfence. */
+	public static function esperar_hasta(): int {
+		return (int) get_option( self::OPCION_ESPERA, 0 );
+	}
+
+	private static function anotar_429(): void {
+		$previa = (int) get_option( 'swpk_wordfence_espera_previa', 0 );
+		$espera = $previa ? min( $previa * 2, self::ESPERA_MAXIMA ) : self::ESPERA_INICIAL;
+
+		update_option( 'swpk_wordfence_espera_previa', $espera, false );
+		update_option( self::OPCION_ESPERA, time() + $espera, false );
+	}
+
+	private static function limpiar_espera(): void {
+		delete_option( self::OPCION_ESPERA );
+		delete_option( 'swpk_wordfence_espera_previa' );
+	}
+
+	/** Cuándo sería la próxima descarga, para enseñarlo en pantalla. */
+	public static function proxima_descarga(): int {
+		$espera = self::esperar_hasta();
+		if ( $espera > time() ) {
+			return $espera;
+		}
+
+		$ultima = strtotime( self::ultima_actualizacion() ?: '' );
+
+		return $ultima ? $ultima + self::MINIMO_ENTRE_DESCARGAS : time();
+	}
+
 	public static function atribucion(): string {
 		return sprintf(
 			'Datos de vulnerabilidades: <a href="%s" target="_blank" rel="noopener">Wordfence Intelligence</a> (Defiant, Inc.), bajo su <a href="%s" target="_blank" rel="noopener">licencia de uso</a>. Identificadores CVE: MITRE.',
@@ -76,6 +128,30 @@ class SWPK_Wordfence {
 				);
 		}
 
+		// Primer freno: un 429 reciente. Insistir es lo que lleva a la suspensión.
+		$espera = self::esperar_hasta();
+		if ( $espera > time() ) {
+			return new WP_Error(
+				'swpk_wf_en_espera',
+				sprintf(
+					'Wordfence pidió esperar. No se vuelve a intentar hasta el %s.',
+					wp_date( 'j \d\e F, H:i', $espera )
+				)
+			);
+		}
+
+		// Segundo freno: ya se bajó hoy. El feed se publica una vez al día.
+		$ultima = strtotime( self::ultima_actualizacion() ?: '' );
+		if ( $ultima && ( time() - $ultima ) < self::MINIMO_ENTRE_DESCARGAS ) {
+			return new WP_Error(
+				'swpk_wf_reciente',
+				sprintf(
+					'El feed ya se descargó el %s. Se publica una vez al día, así que no hace falta volver a pedirlo todavía.',
+					wp_date( 'j \d\e F \a \l\a\s H:i', $ultima )
+				)
+			);
+		}
+
 		$slugs = self::slugs_instalados();
 		if ( ! $slugs ) {
 			return new WP_Error( 'swpk_sin_inventario', 'Todavía no hay inventario: primero hay que sincronizar los sitios.' );
@@ -103,7 +179,15 @@ class SWPK_Wordfence {
 		$codigo = (int) wp_remote_retrieve_response_code( $respuesta );
 		if ( 429 === $codigo ) {
 			@unlink( $destino );
-			return new WP_Error( 'swpk_wf_limite', 'Wordfence devolvió 429: demasiadas descargas. Con una al día no debería pasar.' );
+			self::anotar_429();
+
+			return new WP_Error(
+				'swpk_wf_limite',
+				sprintf(
+					'Wordfence devolvió 429 (demasiadas peticiones). No se volverá a intentar hasta el %s. Insistir puede hacer que suspendan la llave.',
+					wp_date( 'j \d\e F, H:i', self::esperar_hasta() )
+				)
+			);
 		}
 		if ( $codigo < 200 || $codigo >= 300 ) {
 			@unlink( $destino );
@@ -121,6 +205,7 @@ class SWPK_Wordfence {
 		);
 
 		@unlink( $destino );
+		self::limpiar_espera();
 		update_option( 'swpk_wordfence_actualizado', current_time( 'mysql' ), false );
 
 		return $guardadas;

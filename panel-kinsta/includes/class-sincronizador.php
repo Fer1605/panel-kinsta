@@ -53,6 +53,7 @@ class SWPK_Sincronizador {
 			'vulnerabilidades' => 0,
 			'eventos'          => 0,
 			'errores'          => [],
+			'notas'            => [],
 		];
 
 		$sitios = SWPK_Inventario::sincronizar();
@@ -71,7 +72,16 @@ class SWPK_Sincronizador {
 
 		$wf = SWPK_Wordfence::actualizar();
 		if ( is_wp_error( $wf ) ) {
-			$resumen['errores'][] = $wf->get_error_message();
+			// Que el feed no haga falta todavía no es un fallo: es el freno
+			// haciendo su trabajo. Mezclarlo con los errores de verdad haría que
+			// nadie mire los errores de verdad.
+			$saltos = [ 'swpk_wf_reciente', 'swpk_wf_en_espera' ];
+
+			if ( in_array( $wf->get_error_code(), $saltos, true ) ) {
+				$resumen['notas'][] = $wf->get_error_message();
+			} else {
+				$resumen['errores'][] = $wf->get_error_message();
+			}
 		} else {
 			$resumen['vulnerabilidades'] = (int) $wf;
 		}

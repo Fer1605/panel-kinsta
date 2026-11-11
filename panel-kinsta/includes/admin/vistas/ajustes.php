@@ -139,7 +139,24 @@ $a = SWPK_Ajustes::todos();
 		<tbody>
 			<tr><td>Fuente de datos</td><td><strong><?php echo esc_html( swpk_fuente()->nombre() ); ?></strong></td></tr>
 			<tr><td>Última sincronización</td><td><?php echo esc_html( SWPK_Inventario::ultima_sincronizacion() ?: 'nunca' ); ?></td></tr>
-			<tr><td>Feed de vulnerabilidades</td><td><?php echo esc_html( SWPK_Wordfence::ultima_actualizacion() ?: 'nunca' ); ?></td></tr>
+			<tr>
+				<td>Feed de vulnerabilidades</td>
+				<td>
+					<?php echo esc_html( SWPK_Wordfence::ultima_actualizacion() ?: 'nunca se ha descargado' ); ?>
+					<?php $proxima = SWPK_Wordfence::proxima_descarga(); ?>
+					<?php if ( $proxima > time() ) : ?>
+						<br><span style="color:#50575e;font-size:12px">
+							Próxima descarga a partir del <?php echo esc_html( wp_date( 'j \d\e F, H:i', $proxima ) ); ?>.
+							<?php if ( SWPK_Wordfence::esperar_hasta() > time() ) : ?>
+								<strong>Wordfence pidió esperar</strong>, así que el panel no va a insistir:
+								insistir contra su límite puede terminar en que suspendan la llave.
+							<?php else : ?>
+								El feed se publica una vez al día; pedirlo más seguido no trae nada nuevo.
+							<?php endif; ?>
+						</span>
+					<?php endif; ?>
+				</td>
+			</tr>
 			<tr><td>Próxima corrida automática</td><td>
 				<?php
 				$ts = wp_next_scheduled( SWPK_Sincronizador::HOOK );
