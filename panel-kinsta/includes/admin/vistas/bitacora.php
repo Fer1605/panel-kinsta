@@ -6,12 +6,22 @@
  */
 defined( 'ABSPATH' ) || exit;
 
-$registros = SWPK_Bitacora::listar( 200 );
+$registros = SWPK_Bitacora::listar( 400 );
+
+// Una asesora ve la constancia de SUS sitios. La bitácora es evidencia, y
+// la evidencia que le sirve es la de los clientes que ella atiende.
+if ( ! SWPK_Perfiles::puede( SWPK_Perfiles::VER_TODO ) ) {
+	$mios      = array_map( static fn( $s ) => (string) $s->sitio_id, SWPK_Perfiles::sitios_visibles() );
+	$registros = array_filter( $registros, static fn( $r ) => in_array( (string) $r->sitio_id, $mios, true ) );
+}
+
+$registros = array_slice( $registros, 0, 200 );
 $tipos     = SWPK_Bitacora::tipos();
 ?>
 <div class="wrap">
 	<h1>Bitácora de notificaciones</h1>
 	<?php SWPK_Admin::mostrar_mensaje(); ?>
+	<?php SWPK_Admin::tira_de_perfil(); ?>
 
 	<p style="max-width:820px;color:#3c434a">
 		Todo lo que el panel notifica queda aquí con su fecha, su destinatario y su contenido. Esto

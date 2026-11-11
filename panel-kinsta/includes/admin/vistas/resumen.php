@@ -2,10 +2,19 @@
 /** Resumen: el panel "en paquete" que pidió el jefe (00:00). */
 defined( 'ABSPATH' ) || exit;
 
-$conteo   = SWPK_Inventario::conteo_por_tag();
-$sitios   = SWPK_Inventario::todos();
+$sitios   = SWPK_Perfiles::sitios_visibles();
+
+$conteo   = array_fill_keys( array_keys( SWPK_Etiquetas::nombres() ), 0 );
+foreach ( $sitios as $s ) {
+	$conteo[ $s->tag ] = ( $conteo[ $s->tag ] ?? 0 ) + 1;
+}
 $nombres  = SWPK_Etiquetas::nombres();
-$eventos  = SWPK_Eventos::recientes( 25 );
+$visibles = array_map( static fn( $s ) => (string) $s->sitio_id, $sitios );
+$eventos  = array_filter(
+	SWPK_Eventos::recientes( 60 ),
+	static fn( $e ) => SWPK_Perfiles::puede( SWPK_Perfiles::VER_TODO ) || in_array( (string) $e->sitio_id, $visibles, true )
+);
+$eventos  = array_slice( $eventos, 0, 25 );
 $etq_evt  = SWPK_Eventos::etiquetas();
 
 $criticos    = 0;
@@ -38,8 +47,9 @@ foreach ( $sitios as $s ) {
 <div class="wrap">
 	<h1>Panel Kinsta</h1>
 	<?php SWPK_Admin::mostrar_mensaje(); ?>
+	<?php SWPK_Admin::tira_de_perfil(); ?>
 	<?php SWPK_Admin::aviso_demo(); ?>
-	<?php SWPK_Admin::barra_acciones(); ?>
+	<?php if ( SWPK_Perfiles::puede( SWPK_Perfiles::ADMINISTRAR ) ) { SWPK_Admin::barra_acciones(); } ?>
 
 	<?php if ( ! $sitios ) : ?>
 		<div class="notice notice-info"><p>

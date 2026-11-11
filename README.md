@@ -153,6 +153,51 @@ la sesión cuando el código es correcto. Las reglas que lo sostienen:
    agente prueba el envío antes y **se niega a activar la verificación si el
    envío falla**.
 
+## Perfiles de acceso
+
+Tres roles propios de WordPress, no los de siempre. Si una asesora necesitara
+ser *administradora* para ver su panel, tendría acceso a instalar plugins y
+editar código en el sitio desde el cual se consulta la información de todos los
+clientes.
+
+| Perfil | Qué ve | Qué no |
+|---|---|---|
+| **Dirección** | Todo, más los ajustes y el registro de accesos | — |
+| **Ventas** | Solo los sitios que tiene asignados: qué actualizar, por qué importa, y la constancia de lo que se le avisó a ese cliente | Caídas, accesos, ajustes, llaves |
+| **Soporte** | Todos los sitios, del lado técnico: caídas, vulnerabilidades, estado de los agentes | Accesos, ajustes, llaves |
+
+Que ventas vea solo lo suyo no es desconfianza: un panel con 107 sitios donde
+solo 12 son los tuyos no se usa. El recorte es lo que lo hace útil.
+
+Cada pantalla vuelve a comprobar el permiso al abrirse, así que esconder la
+opción del menú no es lo único que la protege: entrar por la URL directa
+devuelve un 403.
+
+### El registro de accesos
+
+Entradas, salidas e intentos fallidos. El tercero no se pidió, pero es el que
+más sirve: una ráfaga de intentos contra el panel es la señal de que alguien
+está probando contraseñas contra el sitio desde el que se consulta a todos los
+clientes.
+
+**No se guarda ninguna contraseña, ni siquiera las de los intentos fallidos.**
+Un registro de contraseñas intentadas es una lista de contraseñas reales de
+gente que se equivocó de campo.
+
+### La verificación en dos pasos del panel
+
+El panel es un WordPress, así que usa **el mismo agente** que se instala en los
+sitios vigilados, con el reporte apagado. Una sola implementación de código
+sensible en vez de dos — mantener dos versiones de lo mismo es cómo se arreglan
+los fallos en una sola y se olvidan en la otra.
+
+Hay una interacción entre las dos funciones que vale conocer, porque costó
+encontrarla: la verificación en dos pasos corta el login para mostrar su
+pantalla, así que el gancho normal de WordPress donde se anotaba la entrada
+**nunca llegaba a correr**. La entrada se anota ahora cuando el segundo paso se
+supera, que es cuando la persona entró de verdad. Anotarla antes habría
+registrado como entrada a alguien que solo acertó la contraseña.
+
 ## El monitor de caídas
 
 El panel revisa cada sitio cada cinco minutos desde su propio servidor, en
@@ -215,6 +260,8 @@ panel-kinsta/
     ├── class-wordfence.php       feed de vulnerabilidades (lectura en trozos)
     ├── class-riesgo.php          cruce de versiones instaladas contra el feed
     ├── class-eventos.php         comparación entre fotos: qué cambió
+    ├── class-perfiles.php        roles, permisos y alcance por perfil
+    ├── class-accesos.php         entradas, salidas e intentos fallidos
     ├── class-monitor.php         sondeo de disponibilidad cada 5 minutos
     ├── class-receptor.php        recibe los reportes firmados de los agentes
     ├── class-usuarios.php        línea base de usuarios y alerta de admin nuevo
@@ -263,9 +310,9 @@ software que realmente está instalado.
 
 En desarrollo. Funciona el inventario, el cruce de vulnerabilidades, la
 comparación diaria, los textos de aviso, la bitácora, el agente con su reporte
-firmado y su verificación en dos pasos, y el monitor de caídas. Falta el envío
-automático de los correos periódicos, los perfiles de acceso al panel y la
-exportación.
+firmado y su verificación en dos pasos, el monitor de caídas, los perfiles de
+acceso y el registro de entradas. Falta el envío automático de los correos
+periódicos y la exportación a Excel y PDF.
 
 ## Atribución
 

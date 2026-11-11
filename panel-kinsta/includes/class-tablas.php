@@ -21,7 +21,7 @@ defined( 'ABSPATH' ) || exit;
 
 class SWPK_Tablas {
 
-	public const VERSION = 3;
+	public const VERSION = 4;
 
 	public static function tabla( string $nombre ): string {
 		global $wpdb;
@@ -54,6 +54,8 @@ class SWPK_Tablas {
 				tag VARCHAR(32) NOT NULL DEFAULT 'sin_etiqueta',
 				version_wp VARCHAR(32) NOT NULL DEFAULT '',
 				version_php VARCHAR(32) NOT NULL DEFAULT '',
+				asesora_id BIGINT UNSIGNED NOT NULL DEFAULT 0,
+				contacto_cliente VARCHAR(191) NOT NULL DEFAULT '',
 				cobertura_agente TINYINT(1) NOT NULL DEFAULT 0,
 				tiene_2fa TINYINT(1) NOT NULL DEFAULT 0,
 				plugin_2fa VARCHAR(191) NOT NULL DEFAULT '',

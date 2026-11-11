@@ -48,8 +48,10 @@ $historial = array_filter(
 	<?php endif; ?>
 
 	<p>
-		<a href="<?php echo esc_url( wp_nonce_url( admin_url( 'admin-post.php?action=swpk_sondear' ), 'swpk_sondear' ) ); ?>"
-			class="button button-primary">Sondear ahora</a>
+		<?php if ( SWPK_Perfiles::puede( SWPK_Perfiles::ADMINISTRAR ) ) : ?>
+			<a href="<?php echo esc_url( wp_nonce_url( admin_url( 'admin-post.php?action=swpk_sondear' ), 'swpk_sondear' ) ); ?>"
+				class="button button-primary">Sondear ahora</a>
+		<?php endif; ?>
 		<span style="margin-left:10px;color:#50575e">
 			<?php
 			echo ! empty( $ultimo['cuando'] )

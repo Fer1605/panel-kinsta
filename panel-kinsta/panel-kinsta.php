@@ -31,6 +31,8 @@ define( 'SWPK_URL', plugin_dir_url( __FILE__ ) );
 define( 'SWPK_ARCHIVO', __FILE__ );
 
 require_once SWPK_RUTA . 'includes/class-tablas.php';
+require_once SWPK_RUTA . 'includes/class-perfiles.php';
+require_once SWPK_RUTA . 'includes/class-accesos.php';
 require_once SWPK_RUTA . 'includes/class-ajustes.php';
 require_once SWPK_RUTA . 'includes/class-etiquetas.php';
 require_once SWPK_RUTA . 'includes/class-versiones.php';
@@ -83,6 +85,7 @@ function swpk_fuente(): SWPK_Fuente {
 }
 
 register_activation_hook( __FILE__, [ 'SWPK_Tablas', 'crear' ] );
+register_activation_hook( __FILE__, [ 'SWPK_Perfiles', 'crear_roles' ] );
 register_activation_hook( __FILE__, [ 'SWPK_Sincronizador', 'programar' ] );
 register_activation_hook( __FILE__, [ 'SWPK_Monitor', 'programar' ] );
 register_deactivation_hook( __FILE__, [ 'SWPK_Sincronizador', 'desprogramar' ] );
@@ -95,6 +98,7 @@ add_action(
 		SWPK_Sincronizador::init();
 		SWPK_Receptor::init();
 		SWPK_Monitor::init();
+		SWPK_Accesos::init();
 		if ( is_admin() ) {
 			SWPK_Admin::init();
 		}

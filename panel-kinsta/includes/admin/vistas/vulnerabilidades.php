@@ -6,7 +6,7 @@
  */
 defined( 'ABSPATH' ) || exit;
 
-$sitios = SWPK_Inventario::todos();
+$sitios = SWPK_Perfiles::sitios_visibles();
 $abierto = isset( $_GET['sitio'] ) ? sanitize_text_field( wp_unslash( (string) $_GET['sitio'] ) ) : '';
 
 $con_hallazgos = [];
@@ -28,6 +28,7 @@ usort(
 <div class="wrap">
 	<h1>Vulnerabilidades y pendientes</h1>
 	<?php SWPK_Admin::mostrar_mensaje(); ?>
+	<?php SWPK_Admin::tira_de_perfil(); ?>
 	<?php SWPK_Admin::aviso_demo(); ?>
 
 	<?php if ( ! $con_hallazgos ) : ?>
