@@ -16,6 +16,15 @@ interface SWPK_Fuente {
 	/** Nombre legible de la fuente, para mostrarlo en el panel. */
 	public function nombre(): string;
 
+	/**
+	 * El nombre del proveedor de hosting, a secas.
+	 *
+	 * Para escribirlo en las pantallas. Decir "el hosting" deja a quien lee
+	 * preguntándose quién es el hosting; decir "Kinsta" no. El código sigue sin
+	 * saber de Kinsta: lo pregunta.
+	 */
+	public function proveedor(): string;
+
 	/** ¿Esta fuente trae datos reales o de prueba? */
 	public function es_demo(): bool;
 

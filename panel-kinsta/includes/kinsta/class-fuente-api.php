@@ -22,6 +22,10 @@ class SWPK_Fuente_Api implements SWPK_Fuente {
 		return 'API de Kinsta';
 	}
 
+	public function proveedor(): string {
+		return 'Kinsta';
+	}
+
 	public function es_demo(): bool {
 		return false;
 	}

@@ -59,7 +59,7 @@ foreach ( $sitios as $s ) {
 		<div class="notice notice-warning">
 			<p>
 				<strong>De <?php echo count( $sin_datos ); ?> sitio(s) no tenemos datos de qué hay instalado.</strong>
-				El proveedor de hosting nunca escaneó su contenido, así que devuelve una lista vacía.
+				<?php echo esc_html( SWPK_Admin::proveedor() ); ?> nunca ha escaneado su contenido, así que devuelve una lista vacía.
 			</p>
 			<p>
 				<em>Una lista vacía no significa "está limpio": significa que no sabemos.</em> Por eso
@@ -67,8 +67,9 @@ foreach ( $sitios as $s ) {
 				<?php echo esc_html( implode( ', ', array_slice( $sin_datos, 0, 12 ) ) ); ?><?php echo count( $sin_datos ) > 12 ? '…' : ''; ?>.
 			</p>
 			<p>
-				Normalmente se resuelve solo en cuanto el hosting los escanee. Si pasan días así, hay
-				que pedirle soporte al proveedor.
+				<?php echo esc_html( SWPK_Admin::proveedor() ); ?> arma esa lista por su cuenta, sitio por
+				sitio y cada uno a su ritmo, así que normalmente aparece sola en unos días. Si pasa una
+				semana así, vale la pena abrirles un ticket.
 			</p>
 		</div>
 	<?php endif; ?>
@@ -110,7 +111,7 @@ foreach ( $sitios as $s ) {
 			<?php if ( $sin_datos ) : ?>
 				<div class="swpk-tarjeta">
 					<div class="swpk-n" style="color:#8c8f94"><?php echo count( $sin_datos ); ?></div>
-					<div class="swpk-r">Sitios sin datos del hosting</div>
+					<div class="swpk-r">Sitios que <?php echo esc_html( SWPK_Admin::proveedor() ); ?> no ha escaneado</div>
 				</div>
 			<?php endif; ?>
 		</div>

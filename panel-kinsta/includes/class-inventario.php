@@ -86,6 +86,35 @@ class SWPK_Inventario {
 		return $conteo;
 	}
 
+	/**
+	 * A partir de cuántos días el inventario de un sitio deja de ser confiable.
+	 *
+	 * El proveedor no escanea todos los sitios a la vez: cada uno lleva su
+	 * propio ritmo. Un dato de hace tres días está bien; uno de hace tres
+	 * semanas puede estar escondiendo una actualización pendiente que salió
+	 * después, y eso es casi tan engañoso como no tener dato.
+	 */
+	public const DIAS_PARA_DUDAR = 14;
+
+	/** Días desde que el proveedor miró este sitio. null = nunca lo miró. */
+	public static function dias_sin_escanear( object $sitio ): ?int {
+		if ( empty( $sitio->inventario_en ) ) {
+			return null;
+		}
+
+		$cuando = strtotime( (string) $sitio->inventario_en );
+		if ( ! $cuando ) {
+			return null;
+		}
+
+		return (int) floor( ( time() - $cuando ) / DAY_IN_SECONDS );
+	}
+
+	public static function dato_viejo( object $sitio ): bool {
+		$dias = self::dias_sin_escanear( $sitio );
+		return null !== $dias && $dias >= self::DIAS_PARA_DUDAR;
+	}
+
 	public static function ultima_sincronizacion(): string {
 		return (string) get_option( 'swpk_ultima_sincronizacion', '' );
 	}

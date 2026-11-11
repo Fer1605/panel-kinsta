@@ -125,6 +125,11 @@ class SWPK_Admin {
 		return ( $sitio->nombre_visible ?? 'Sitio' ) . ' ' . $admin_titulo;
 	}
 
+	/** El nombre del proveedor, para escribirlo en las pantallas. */
+	public static function proveedor(): string {
+		return swpk_fuente()->proveedor();
+	}
+
 	private static function pagina_actual(): string {
 		return isset( $_GET['page'] ) ? sanitize_key( (string) $_GET['page'] ) : '';
 	}

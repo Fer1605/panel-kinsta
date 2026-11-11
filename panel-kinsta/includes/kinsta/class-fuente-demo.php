@@ -26,6 +26,10 @@ class SWPK_Fuente_Demo implements SWPK_Fuente {
 		return 'Datos de prueba';
 	}
 
+	public function proveedor(): string {
+		return 'el proveedor';
+	}
+
 	public function es_demo(): bool {
 		return true;
 	}

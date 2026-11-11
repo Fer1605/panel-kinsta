@@ -66,7 +66,7 @@ $por_nivel[ SWPK_Riesgo::SIN_DATOS ] = 0;
 		$fuera[] = sprintf( '%d al día', $al_dia );
 	}
 	if ( $sin_datos ) {
-		$fuera[] = sprintf( '%d sin datos del hosting', $sin_datos );
+		$fuera[] = sprintf( '%d que %s nunca ha escaneado', $sin_datos, SWPK_Admin::proveedor() );
 	}
 	?>
 	<p class="swpk-cuenta" style="margin:0 0 10px">

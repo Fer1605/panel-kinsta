@@ -49,7 +49,8 @@ $filtrados = SWPK_Vista::filtrar( $todos, $tag, $nivel, $busqueda );
 		<p style="color:#50575e;max-width:800px;margin:0">
 			Estos sitios los administra el cliente. Quedan fuera de la doble autenticación y de la
 			lectura de usuarios: no podemos instalarles nada mientras no se les venda. Lo que sí se
-			vigila es todo lo que viene del hosting, que es justo lo que hay que avisarles.
+			vigila es todo lo que viene de <?php echo esc_html( SWPK_Admin::proveedor() ); ?>, que es
+			justo lo que hay que avisarles.
 		</p>
 	<?php endif; ?>
 
@@ -108,12 +109,17 @@ $filtrados = SWPK_Vista::filtrar( $todos, $tag, $nivel, $busqueda );
 					<td><?php echo wp_kses_post( SWPK_Admin::nivel_badge( $nivel_s ) ); ?></td>
 					<td>
 						<?php if ( SWPK_Riesgo::SIN_DATOS === $nivel_s ) : ?>
-							<span style="color:#8c8f94">el hosting no ha escaneado este sitio</span>
+							<span style="color:#8c8f94"><?php echo esc_html( SWPK_Admin::proveedor() ); ?> nunca lo ha escaneado</span>
 						<?php else : ?>
 							<?php if ( $vulns ) : ?>
 								<strong style="color:#b32d2e"><?php echo (int) $vulns; ?> con vulnerabilidad</strong><br>
 							<?php endif; ?>
 							<?php echo count( $hallazgos ) - $vulns; ?> por actualizar
+							<?php if ( SWPK_Inventario::dato_viejo( $s ) ) : ?>
+								<br><span style="color:#dba617;font-size:12px" title="<?php echo esc_attr( SWPK_Admin::proveedor() . ' no lo revisa desde hace ' . (int) SWPK_Inventario::dias_sin_escanear( $s ) . ' días' ); ?>">
+									dato de hace <?php echo (int) SWPK_Inventario::dias_sin_escanear( $s ); ?> días
+								</span>
+							<?php endif; ?>
 						<?php endif; ?>
 					</td>
 					<td><?php echo esc_html( $s->version_wp ?: '—' ); ?></td>
