@@ -46,6 +46,8 @@ require_once SWPK_RUTA . 'includes/class-riesgo.php';
 require_once SWPK_RUTA . 'includes/class-textos.php';
 require_once SWPK_RUTA . 'includes/class-eventos.php';
 require_once SWPK_RUTA . 'includes/class-bitacora.php';
+require_once SWPK_RUTA . 'includes/class-plantillas.php';
+require_once SWPK_RUTA . 'includes/class-correos.php';
 require_once SWPK_RUTA . 'includes/class-usuarios.php';
 require_once SWPK_RUTA . 'includes/class-receptor.php';
 require_once SWPK_RUTA . 'includes/class-monitor.php';
@@ -89,8 +91,10 @@ register_activation_hook( __FILE__, [ 'SWPK_Tablas', 'crear' ] );
 register_activation_hook( __FILE__, [ 'SWPK_Perfiles', 'crear_roles' ] );
 register_activation_hook( __FILE__, [ 'SWPK_Sincronizador', 'programar' ] );
 register_activation_hook( __FILE__, [ 'SWPK_Monitor', 'programar' ] );
+register_activation_hook( __FILE__, [ 'SWPK_Correos', 'programar' ] );
 register_deactivation_hook( __FILE__, [ 'SWPK_Sincronizador', 'desprogramar' ] );
 register_deactivation_hook( __FILE__, [ 'SWPK_Monitor', 'desprogramar' ] );
+register_deactivation_hook( __FILE__, [ 'SWPK_Correos', 'desprogramar' ] );
 
 add_action(
 	'plugins_loaded',
@@ -99,6 +103,7 @@ add_action(
 		SWPK_Sincronizador::init();
 		SWPK_Receptor::init();
 		SWPK_Monitor::init();
+		SWPK_Correos::init();
 		SWPK_Accesos::init();
 		SWPK_Perfiles::init();
 		if ( is_admin() ) {

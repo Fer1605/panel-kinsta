@@ -24,6 +24,11 @@ class SWPK_Admin {
 		add_action( 'admin_post_swpk_asignar', [ __CLASS__, 'accion_asignar' ] );
 		add_action( 'admin_post_swpk_cifrar', [ __CLASS__, 'accion_cifrar' ] );
 		add_action( 'admin_post_swpk_crear_acceso', [ __CLASS__, 'accion_crear_acceso' ] );
+		add_action( 'admin_post_swpk_modo_envio', [ __CLASS__, 'accion_modo_envio' ] );
+		add_action( 'admin_post_swpk_envios', [ __CLASS__, 'accion_envios' ] );
+		add_action( 'admin_post_swpk_correo_semanal', [ __CLASS__, 'accion_correo_semanal' ] );
+		add_action( 'admin_post_swpk_correo_diario', [ __CLASS__, 'accion_correo_diario' ] );
+		add_action( 'admin_post_swpk_correo_mensual', [ __CLASS__, 'accion_correo_mensual' ] );
 		add_action( 'admin_post_swpk_quitar_acceso', [ __CLASS__, 'accion_quitar_acceso' ] );
 		add_action( 'admin_head', [ __CLASS__, 'estilos' ] );
 		add_filter( 'parent_file', [ __CLASS__, 'menu_abierto' ] );
@@ -72,6 +77,7 @@ class SWPK_Admin {
 
 		// La ficha de un sitio no va en el menú: se llega desde las listas.
 		add_submenu_page( null, 'Sitio', 'Sitio', $ver, self::SLUG . '-sitio', [ __CLASS__, 'pantalla_sitio' ] );
+		add_submenu_page( self::SLUG, 'Correos', 'Correos', $admin, self::SLUG . '-correos', [ __CLASS__, 'pantalla_correos' ] );
 		add_submenu_page( self::SLUG, 'Bitácora', 'Bitácora', $ver, self::SLUG . '-bitacora', [ __CLASS__, 'pantalla_bitacora' ] );
 		add_submenu_page( self::SLUG, 'Equipo', 'Equipo', $admin, self::SLUG . '-equipo', [ __CLASS__, 'pantalla_equipo' ] );
 		add_submenu_page( self::SLUG, 'Accesos', 'Accesos', $admin, self::SLUG . '-accesos', [ __CLASS__, 'pantalla_accesos' ] );
@@ -315,6 +321,13 @@ class SWPK_Admin {
 		require SWPK_RUTA . 'includes/admin/vistas/accesos.php';
 	}
 
+	public static function pantalla_correos(): void {
+		if ( ! self::puede_administrar() ) {
+			wp_die( 'Sin permiso.' );
+		}
+		require SWPK_RUTA . 'includes/admin/vistas/correos.php';
+	}
+
 	public static function pantalla_bitacora(): void {
 		if ( ! self::puede_ver() ) {
 			wp_die( 'Sin permiso.' );
@@ -457,6 +470,89 @@ class SWPK_Admin {
 
 		wp_safe_redirect( admin_url( 'admin.php?page=' . self::SLUG . '-equipo&swpk_msg=ok:' . rawurlencode( 'Acceso retirado.' ) ) );
 		exit;
+	}
+
+	private static function volver_a_correos( string $mensaje, bool $error = false ): void {
+		wp_safe_redirect(
+			admin_url( 'admin.php?page=' . self::SLUG . '-correos&swpk_msg=' . ( $error ? 'error:' : 'ok:' ) . rawurlencode( $mensaje ) )
+		);
+		exit;
+	}
+
+	public static function accion_modo_envio(): void {
+		if ( ! self::puede_administrar() ) {
+			wp_die( 'Sin permiso.' );
+		}
+		check_admin_referer( 'swpk_modo_envio' );
+
+		$nuevo = SWPK_Correos::en_prueba() ? SWPK_Correos::MODO_REAL : SWPK_Correos::MODO_PRUEBA;
+		update_option( 'swpk_modo_envio', $nuevo, false );
+
+		self::volver_a_correos(
+			SWPK_Correos::MODO_REAL === $nuevo
+				? 'Envío real activado. Los correos ahora salen de verdad.'
+				: 'De vuelta en modo de prueba. No sale ningún correo.'
+		);
+	}
+
+	public static function accion_envios(): void {
+		if ( ! self::puede_administrar() ) {
+			wp_die( 'Sin permiso.' );
+		}
+		check_admin_referer( 'swpk_envios' );
+
+		$nuevo = ! SWPK_Correos::activos();
+		update_option( 'swpk_envios_activos', $nuevo, false );
+
+		self::volver_a_correos( $nuevo ? 'Envíos encendidos.' : 'Envíos apagados: no sale nada.' );
+	}
+
+	public static function accion_correo_semanal(): void {
+		if ( ! self::puede_administrar() ) {
+			wp_die( 'Sin permiso.' );
+		}
+		check_admin_referer( 'swpk_correo_semanal' );
+
+		$r = SWPK_Correos::semanal_asesoras();
+
+		self::volver_a_correos(
+			$r['asesoras']
+				? sprintf( '%d correo(s) generados, cubriendo %d sitios. Están en la bitácora.', $r['asesoras'], $r['sitios'] )
+				: 'No se generó ninguno: no hay asesoras con sitios asignados que tengan algo pendiente.'
+		);
+	}
+
+	public static function accion_correo_diario(): void {
+		if ( ! self::puede_administrar() ) {
+			wp_die( 'Sin permiso.' );
+		}
+		check_admin_referer( 'swpk_correo_diario' );
+
+		$r = SWPK_Correos::diario_soporte();
+
+		self::volver_a_correos(
+			$r['eventos']
+				? sprintf( 'Resumen generado con %d cambios. Está en la bitácora.', $r['eventos'] )
+				: 'No hubo cambios en las últimas 24 horas, así que no hay nada que contar.'
+		);
+	}
+
+	public static function accion_correo_mensual(): void {
+		if ( ! self::puede_administrar() ) {
+			wp_die( 'Sin permiso.' );
+		}
+		check_admin_referer( 'swpk_correo_mensual' );
+
+		$r = SWPK_Correos::mensual_clientes();
+
+		self::volver_a_correos(
+			sprintf(
+				'%d correo(s) generados. %d sitios sin novedad en el mes y %d sin destinatario.',
+				$r['enviados'],
+				$r['sin_novedad'],
+				$r['sin_destinatario']
+			)
+		);
 	}
 
 	public static function accion_cifrar(): void {
