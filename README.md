@@ -263,6 +263,22 @@ Y en el panel del servidor (Plesk → Tareas programadas), cada 5 minutos:
 /usr/bin/php /ruta/al/sitio/wp-cron.php >/dev/null 2>&1
 ```
 
+## Exportar
+
+Cualquier lista se baja a Excel con los filtros que estén puestos — exportar
+siempre todo obligaría a filtrar otra vez en Excel, que es lo que se quería
+evitar. Dos detalles que parecen menores:
+
+- El CSV lleva **BOM**, porque Excel abre UTF-8 sin BOM convirtiendo
+  "Librería" en "LibrerÃ­a".
+- Las columnas van separadas por **punto y coma**, que es lo que espera Excel
+  en español. Con coma, todo cae en una sola columna.
+
+Y cada sitio tiene un **reporte imprimible** con lo que se le notificó al
+cliente en un periodo, lo que cambió en el sitio y su estado actual. El PDF lo
+genera el navegador desde el diálogo de impresión: sin librerías de PDF, sin
+problemas de memoria y sin pelearse con fuentes y acentos.
+
 ## Cómo está armado
 
 ```
@@ -329,8 +345,10 @@ software que realmente está instalado.
 En desarrollo. Funciona el inventario, el cruce de vulnerabilidades, la
 comparación diaria, los textos de aviso, la bitácora, el agente con su reporte
 firmado y su verificación en dos pasos, el monitor de caídas, los perfiles de
-acceso y el registro de entradas. Falta el envío automático de los correos
-periódicos y la exportación a Excel y PDF.
+acceso, el registro de entradas, los correos automáticos y la exportación.
+
+Falta el despliegue del agente en los sitios, que no es programar sino entrar a
+cada uno.
 
 ## Atribución
 

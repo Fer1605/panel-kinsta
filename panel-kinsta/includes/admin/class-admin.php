@@ -77,11 +77,27 @@ class SWPK_Admin {
 
 		// La ficha de un sitio no va en el menú: se llega desde las listas.
 		add_submenu_page( null, 'Sitio', 'Sitio', $ver, self::SLUG . '-sitio', [ __CLASS__, 'pantalla_sitio' ] );
+		add_submenu_page( null, 'Reporte', 'Reporte', $ver, self::SLUG . '-reporte', [ __CLASS__, 'pantalla_reporte' ] );
 		add_submenu_page( self::SLUG, 'Correos', 'Correos', $admin, self::SLUG . '-correos', [ __CLASS__, 'pantalla_correos' ] );
 		add_submenu_page( self::SLUG, 'Bitácora', 'Bitácora', $ver, self::SLUG . '-bitacora', [ __CLASS__, 'pantalla_bitacora' ] );
 		add_submenu_page( self::SLUG, 'Equipo', 'Equipo', $admin, self::SLUG . '-equipo', [ __CLASS__, 'pantalla_equipo' ] );
 		add_submenu_page( self::SLUG, 'Accesos', 'Accesos', $admin, self::SLUG . '-accesos', [ __CLASS__, 'pantalla_accesos' ] );
 		add_submenu_page( self::SLUG, 'Ajustes', 'Ajustes', $admin, self::SLUG . '-ajustes', [ __CLASS__, 'pantalla_ajustes' ] );
+	}
+
+	/** El botón de bajar a Excel, con los filtros que estén puestos. */
+	public static function boton_exportar( string $tipo ): void {
+		$filtros = [];
+		foreach ( [ 'tag', 'nivel', 'q' ] as $k ) {
+			if ( ! empty( $_GET[ $k ] ) ) {
+				$filtros[ $k ] = sanitize_text_field( wp_unslash( (string) $_GET[ $k ] ) );
+			}
+		}
+
+		printf(
+			'<a class="button" href="%s" style="margin-left:6px">Bajar a Excel</a>',
+			esc_url( SWPK_Exportar::url( $tipo, $filtros ) )
+		);
 	}
 
 	/** La tira que dice con qué perfil se está viendo el panel. */
@@ -104,7 +120,7 @@ class SWPK_Admin {
 	 * está. Esto lo deja abierto y marca de dónde viene.
 	 */
 	public static function menu_abierto( $padre ) {
-		return self::SLUG . '-sitio' === self::pagina_actual() ? self::SLUG : $padre;
+		return in_array( self::pagina_actual(), [ self::SLUG . '-sitio', self::SLUG . '-reporte' ], true ) ? self::SLUG : $padre;
 	}
 
 	public static function submenu_marcado( $submenu ) {
@@ -121,14 +137,21 @@ class SWPK_Admin {
 
 	/** Y que la pestaña del navegador diga de qué sitio se trata. */
 	public static function titulo_de_la_ficha( $titulo, $admin_titulo ) {
-		if ( self::SLUG . '-sitio' !== self::pagina_actual() ) {
+		$pagina = self::pagina_actual();
+
+		if ( ! in_array( $pagina, [ self::SLUG . '-sitio', self::SLUG . '-reporte' ], true ) ) {
 			return $titulo;
 		}
 
 		$id    = isset( $_GET['sitio'] ) ? sanitize_text_field( wp_unslash( (string) $_GET['sitio'] ) ) : '';
 		$sitio = $id ? SWPK_Inventario::obtener( $id ) : null;
+		$nombre = $sitio->nombre_visible ?? 'Sitio';
 
-		return ( $sitio->nombre_visible ?? 'Sitio' ) . ' ' . $admin_titulo;
+		// El título de la pestaña es el nombre que propone el navegador al
+		// guardar el PDF, así que en el reporte conviene que diga de qué es.
+		return self::SLUG . '-reporte' === $pagina
+			? sprintf( 'Reporte %s %s', $nombre, $admin_titulo )
+			: $nombre . ' ' . $admin_titulo;
 	}
 
 	/** El nombre del proveedor, para escribirlo en las pantallas. */
@@ -305,6 +328,13 @@ class SWPK_Admin {
 			wp_die( 'Sin permiso.' );
 		}
 		require SWPK_RUTA . 'includes/admin/vistas/sitio.php';
+	}
+
+	public static function pantalla_reporte(): void {
+		if ( ! self::puede_ver() ) {
+			wp_die( 'Sin permiso.' );
+		}
+		require SWPK_RUTA . 'includes/admin/vistas/reporte.php';
 	}
 
 	public static function pantalla_equipo(): void {

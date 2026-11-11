@@ -53,6 +53,7 @@ $historial = array_filter(
 			<a href="<?php echo esc_url( wp_nonce_url( admin_url( 'admin-post.php?action=swpk_sondear' ), 'swpk_sondear' ) ); ?>"
 				class="button button-primary">Sondear ahora</a>
 		<?php endif; ?>
+		<?php SWPK_Admin::boton_exportar( 'caidas' ); ?>
 		<span style="margin-left:10px;color:#50575e">
 			<?php
 			echo ! empty( $ultimo['cuando'] )

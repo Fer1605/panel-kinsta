@@ -99,7 +99,10 @@ $por_nivel[ SWPK_Riesgo::SIN_DATOS ] = 0;
 
 	<?php SWPK_Vista::abrir_barra(); ?>
 		<?php SWPK_Vista::filtro_de_riesgo( $nivel, $por_nivel ); ?>
-		<?php SWPK_Vista::buscador( 'panel-kinsta-vulnerabilidades', $busqueda, [ 'tag' => $tag, 'nivel' => $nivel ] ); ?>
+		<span>
+			<?php SWPK_Vista::buscador( 'panel-kinsta-vulnerabilidades', $busqueda, [ 'tag' => $tag, 'nivel' => $nivel ] ); ?>
+			<?php SWPK_Admin::boton_exportar( 'vulnerabilidades' ); ?>
+		</span>
 	<?php SWPK_Vista::cerrar_barra(); ?>
 
 	<?php SWPK_Vista::paginador( $pagina, $paginas, count( $con_algo ), 'sitios con pendientes' ); ?>

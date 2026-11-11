@@ -56,7 +56,10 @@ $filtrados = SWPK_Vista::filtrar( $todos, $tag, $nivel, $busqueda );
 
 	<?php SWPK_Vista::abrir_barra(); ?>
 		<?php SWPK_Vista::filtro_de_riesgo( $nivel, $por_nivel ); ?>
-		<?php SWPK_Vista::buscador( 'panel-kinsta-sitios', $busqueda, [ 'tag' => $tag, 'nivel' => $nivel ] ); ?>
+		<span>
+			<?php SWPK_Vista::buscador( 'panel-kinsta-sitios', $busqueda, [ 'tag' => $tag, 'nivel' => $nivel ] ); ?>
+			<?php SWPK_Admin::boton_exportar( 'sitios' ); ?>
+		</span>
 	<?php SWPK_Vista::cerrar_barra(); ?>
 	<?php SWPK_Vista::paginador( $pagina, $paginas, count( $filtrados ) ); ?>
 

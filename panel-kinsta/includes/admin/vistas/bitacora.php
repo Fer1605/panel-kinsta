@@ -93,6 +93,8 @@ $tipos     = SWPK_Bitacora::tipos();
 		<?php endforeach; ?>
 	</div>
 
+	<p><?php SWPK_Admin::boton_exportar( 'bitacora' ); ?></p>
+
 	<?php SWPK_Vista::paginador( $pagina, $paginas, count( $registros ), 'avisos' ); ?>
 
 	<?php if ( ! $registros ) : ?>
