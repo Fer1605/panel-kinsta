@@ -415,7 +415,7 @@ class SWPK_Monitor {
 				esc_html( $nombre ),
 				esc_url( (string) $r['url'] ),
 				esc_html( (string) $r['url'] ),
-				esc_html( current_time( 'j \d\e F, H:i' ) ),
+				esc_html( SWPK_Frescura::fmt( 'j \d\e F, H:i', current_time( 'mysql' ) ) ),
 				esc_html( (string) $r['motivo'] )
 			),
 			$sitio_id

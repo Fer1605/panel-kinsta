@@ -23,8 +23,10 @@ $filtrados = SWPK_Vista::filtrar( $todos, $tag, $nivel, $busqueda );
 <div class="wrap">
 	<h1>Sitios</h1>
 	<?php SWPK_Admin::mostrar_mensaje(); ?>
+	<?php SWPK_Frescura::aviso(); ?>
 	<?php SWPK_Admin::tira_de_perfil(); ?>
 	<?php SWPK_Admin::aviso_demo(); ?>
+	<?php SWPK_Frescura::sello(); ?>
 
 	<?php if ( ! $todos ) : ?>
 		<div class="notice notice-info"><p>

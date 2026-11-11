@@ -86,13 +86,13 @@ $accion = static fn( $a ) => wp_nonce_url( admin_url( 'admin-post.php?action=' .
 					A cada asesora, solo sus sitios con algo pendiente, con el texto listo para reenviarle
 					al cliente. Copia a la dirección de ventas si está configurada.
 				</td>
-				<td><?php echo $proximos['Semanal a las asesoras'] ? esc_html( wp_date( 'j M, H:i', $proximos['Semanal a las asesoras'] ) ) : '<span style="color:#d63638">sin programar</span>'; ?></td>
+				<td><?php echo $proximos['Semanal a las asesoras'] ? esc_html( SWPK_Frescura::fmt( 'j M, H:i', $proximos['Semanal a las asesoras'] ) ) : '<span style="color:#d63638">sin programar</span>'; ?></td>
 				<td><a class="button" href="<?php echo esc_url( $accion( 'swpk_correo_semanal' ) ); ?>">Generarlo ahora</a></td>
 			</tr>
 			<tr>
 				<td><strong>Diario a soporte</strong><br><span style="color:#50575e;font-size:12px">todos los días 7:30</span></td>
 				<td>Lo que cambió en las últimas 24 horas en toda la cartera.</td>
-				<td><?php echo $proximos['Diario a soporte'] ? esc_html( wp_date( 'j M, H:i', $proximos['Diario a soporte'] ) ) : '<span style="color:#d63638">sin programar</span>'; ?></td>
+				<td><?php echo $proximos['Diario a soporte'] ? esc_html( SWPK_Frescura::fmt( 'j M, H:i', $proximos['Diario a soporte'] ) ) : '<span style="color:#d63638">sin programar</span>'; ?></td>
 				<td><a class="button" href="<?php echo esc_url( $accion( 'swpk_correo_diario' ) ); ?>">Generarlo ahora</a></td>
 			</tr>
 			<tr>
@@ -101,7 +101,7 @@ $accion = static fn( $a ) => wp_nonce_url( admin_url( 'admin-post.php?action=' .
 					A los administradores de cada sitio que administramos nosotros, excluyendo las
 					direcciones propias. Cuántas veces se actualizó su sitio y qué se mantuvo al día.
 				</td>
-				<td><?php echo $proximos['Mensual a los clientes'] ? esc_html( wp_date( 'j M, H:i', $proximos['Mensual a los clientes'] ) ) : '<span style="color:#d63638">sin programar</span>'; ?></td>
+				<td><?php echo $proximos['Mensual a los clientes'] ? esc_html( SWPK_Frescura::fmt( 'j M, H:i', $proximos['Mensual a los clientes'] ) ) : '<span style="color:#d63638">sin programar</span>'; ?></td>
 				<td><a class="button" href="<?php echo esc_url( $accion( 'swpk_correo_mensual' ) ); ?>">Generarlo ahora</a></td>
 			</tr>
 		</tbody>

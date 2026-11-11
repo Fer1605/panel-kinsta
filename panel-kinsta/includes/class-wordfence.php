@@ -135,7 +135,7 @@ class SWPK_Wordfence {
 				'swpk_wf_en_espera',
 				sprintf(
 					'Wordfence pidió esperar. No se vuelve a intentar hasta el %s.',
-					wp_date( 'j \d\e F, H:i', $espera )
+					SWPK_Frescura::fmt( 'j \d\e F, H:i', $espera )
 				)
 			);
 		}
@@ -147,7 +147,7 @@ class SWPK_Wordfence {
 				'swpk_wf_reciente',
 				sprintf(
 					'El feed ya se descargó el %s. Se publica una vez al día, así que no hace falta volver a pedirlo todavía.',
-					wp_date( 'j \d\e F \a \l\a\s H:i', $ultima )
+					SWPK_Frescura::fmt( 'j \d\e F \a \l\a\s H:i', $ultima )
 				)
 			);
 		}
@@ -185,7 +185,7 @@ class SWPK_Wordfence {
 				'swpk_wf_limite',
 				sprintf(
 					'Wordfence devolvió 429 (demasiadas peticiones). No se volverá a intentar hasta el %s. Insistir puede hacer que suspendan la llave.',
-					wp_date( 'j \d\e F, H:i', self::esperar_hasta() )
+					SWPK_Frescura::fmt( 'j \d\e F, H:i', self::esperar_hasta() )
 				)
 			);
 		}

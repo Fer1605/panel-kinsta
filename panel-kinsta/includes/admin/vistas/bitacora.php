@@ -20,7 +20,7 @@ if ( $ver ) {
 		printf( '<h1>%s</h1>', esc_html( (string) $uno->asunto ) );
 		printf(
 			'<p style="color:#50575e">%s · a %s · <strong>%s</strong></p>',
-			esc_html( mysql2date( 'j \d\e F \d\e Y, H:i', $uno->enviado_en ) ),
+			esc_html( SWPK_Frescura::fmt( 'j \d\e F \d\e Y, H:i', $uno->enviado_en ) ),
 			esc_html( (string) $uno->destinatarios ?: 'nadie' ),
 			esc_html( (string) $uno->resultado )
 		);
@@ -119,7 +119,7 @@ $tipos     = SWPK_Bitacora::tipos();
 			<?php foreach ( $en_pantalla as $r ) : ?>
 				<?php $sitio = SWPK_Inventario::obtener( $r->sitio_id ); ?>
 				<tr>
-					<td><?php echo esc_html( mysql2date( 'j M Y, H:i', $r->enviado_en ) ); ?></td>
+					<td><?php echo esc_html( SWPK_Frescura::fmt( 'j M Y, H:i', $r->enviado_en ) ); ?></td>
 					<td><?php echo esc_html( $tipos[ $r->tipo ] ?? $r->tipo ); ?></td>
 					<td><?php echo esc_html( $sitio->nombre_visible ?? '—' ); ?></td>
 					<td class="swpk-mono"><?php echo esc_html( (string) $r->destinatarios ); ?></td>

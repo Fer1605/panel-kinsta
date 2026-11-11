@@ -38,14 +38,36 @@ class SWPK_Plantillas {
 			. '<div style="padding:26px;color:#1d2327;font-size:14px;line-height:1.6">%s</div>'
 			. '<div style="padding:16px 26px;border-top:1px solid #f0f0f1;background:#fafafa">'
 			. '<p style="margin:0;color:%s;font-size:12px">Este mensaje lo generó automáticamente el panel de mantenimiento. '
-			. 'Queda registrado con su fecha y su destinatario.</p>%s'
+			. 'Queda registrado con su fecha y su destinatario.<br>%s</p>%s'
 			. '</div></div></div>',
 			self::AZUL,
 			esc_html( $titulo ),
 			$contenido,
 			self::GRIS,
+			esc_html( self::de_cuando() ),
 			$pie
 		);
+	}
+
+	/**
+	 * De cuándo son los datos del correo.
+	 *
+	 * Un correo se lee a los tres días, o se reenvía a los dos meses. Si el
+	 * cliente contesta "esto ya lo arreglamos", hay que poder decir de qué día
+	 * era la foto sin tener que entrar al panel a adivinarlo.
+	 *
+	 * No se nombra al hosting ni a Wordfence: este pie también lo lee el
+	 * cliente, y ahí el proveedor no le dice nada.
+	 */
+	private static function de_cuando(): string {
+		$cuando = SWPK_Frescura::corrida();
+
+		return '' === $cuando
+			? 'Los datos de este mensaje no tienen fecha de origen registrada.'
+			: sprintf(
+				'Los datos de este mensaje se obtuvieron el %s.',
+				SWPK_Frescura::fmt( 'j \d\e F \d\e Y, g:i a', $cuando )
+			);
 	}
 
 	/** Lunes a las 7, a cada asesora: sus sitios y el texto listo para reenviar. */
@@ -136,7 +158,26 @@ class SWPK_Plantillas {
 			);
 		}
 
-		$c  = sprintf( '<p>Esto cambió en las últimas 24 horas (%d en total):</p>', count( $eventos ) );
+		// "Cero cambios" es el mensaje más peligroso que este correo puede dar.
+		// Leído rápido significa "todo tranquilo", y puede significar "no
+		// miramos". Si la corrida no trajo datos, eso va arriba y en rojo, antes
+		// que cualquier número, porque el número es lo que engaña.
+		$c = '';
+		if ( ! SWPK_Frescura::corrida_al_dia() || SWPK_Frescura::corrida_fallo() ) {
+			$c .= sprintf(
+				'<p style="background:#fcf0f1;border-left:4px solid %s;padding:12px 14px;margin:0 0 18px">'
+				. '<strong>Ojo: este resumen no es de hoy.</strong><br>'
+				. 'El último dato bueno entró el %s. Lo de abajo es esa foto, no la de ahora, '
+				. 'así que "cero cambios" aquí no quiere decir que no haya pasado nada: quiere '
+				. 'decir que el panel no pudo mirar. Hay que revisar la tarea programada.</p>',
+				self::ROJO,
+				'' === SWPK_Frescura::corrida()
+					? 'nunca'
+					: esc_html( SWPK_Frescura::fmt( 'j \d\e F, g:i a', SWPK_Frescura::corrida() ) . ', ' . SWPK_Frescura::hace( SWPK_Frescura::corrida() ) )
+			);
+		}
+
+		$c .= sprintf( '<p>Esto cambió en las últimas 24 horas (%d en total):</p>', count( $eventos ) );
 		$c .= '<table style="width:100%;border-collapse:collapse">' . $filas . '</table>';
 
 		if ( count( $eventos ) > 60 ) {
@@ -176,7 +217,7 @@ class SWPK_Plantillas {
 			$lista .= '<li style="margin-bottom:4px">' . esc_html( SWPK_Textos::limpiar_titulo( $nombre ) ) . '</li>';
 		}
 
-		$mes = wp_date( 'F \d\e Y', strtotime( $desde ) );
+		$mes = SWPK_Frescura::fmt( 'F \d\e Y', strtotime( $desde ) );
 
 		$c  = '<p>Hola,</p>';
 		$c .= sprintf(

@@ -42,6 +42,7 @@ $plano = SWPK_Textos::para_asesora( $sitio, $hallazgos );
 	</p>
 
 	<?php SWPK_Admin::mostrar_mensaje(); ?>
+	<?php SWPK_Frescura::aviso(); ?>
 
 	<p>
 		<a class="button button-primary"
@@ -98,17 +99,13 @@ $plano = SWPK_Textos::para_asesora( $sitio, $hallazgos );
 			<p>
 				<strong>Este dato tiene <?php echo (int) $dias; ?> días.</strong>
 				No ha vuelto a ser revisado por <?php echo esc_html( SWPK_Admin::proveedor() ); ?> desde el
-				<?php echo esc_html( mysql2date( 'j \d\e F', (string) $sitio->inventario_en ) ); ?>, así que
+				<?php echo esc_html( SWPK_Frescura::fmt( 'j \d\e F', (string) $sitio->inventario_en ) ); ?>, así que
 				lo de abajo puede estar desactualizado.
 			</p>
 		</div>
-	<?php else : ?>
-		<p style="color:#50575e;margin:-6px 0 16px">
-			Lo que hay instalado en este sitio fue revisado por <?php echo esc_html( SWPK_Admin::proveedor() ); ?> el
-			<?php echo esc_html( mysql2date( 'j \d\e F \a \l\a\s H:i', (string) $sitio->inventario_en ) ); ?>
-			<?php echo 0 === $dias ? '(hoy)' : sprintf( '(hace %d día%s)', (int) $dias, 1 === $dias ? '' : 's' ); ?>.
-		</p>
 	<?php endif; ?>
+
+	<?php SWPK_Frescura::sello( $sitio ); ?>
 
 	<?php if ( $hallazgos ) : ?>
 		<h2>El mensaje para la asesora</h2>

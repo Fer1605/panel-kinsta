@@ -130,7 +130,7 @@ $recien  = get_transient( 'swpk_acceso_nuevo' );
 							<span style="color:#50575e">todos</span>
 						<?php endif; ?>
 					</td>
-					<td><?php echo $ultima ? esc_html( mysql2date( 'j M Y, H:i', (string) $ultima ) ) : '<span style="color:#50575e">nunca</span>'; ?></td>
+					<td><?php echo $ultima ? esc_html( SWPK_Frescura::fmt( 'j M Y, H:i', (string) $ultima ) ) : '<span style="color:#50575e">nunca</span>'; ?></td>
 					<td>
 						<a class="button button-small"
 							href="<?php echo esc_url( wp_nonce_url( admin_url( 'admin-post.php?action=swpk_quitar_acceso&usuario=' . $u->ID ), 'swpk_quitar_acceso_' . $u->ID ) ); ?>"

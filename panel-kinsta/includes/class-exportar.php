@@ -70,6 +70,17 @@ class SWPK_Exportar {
 		// El BOM, para que Excel entienda los acentos.
 		fwrite( $salida, "\xEF\xBB\xBF" );
 
+		// De cuándo son estos datos, antes de los datos.
+		//
+		// Un Excel se baja, se guarda en una carpeta y se vuelve a abrir meses
+		// después, cuando ya nadie se acuerda de qué día se sacó. Sin la fecha
+		// encima no sirve como respaldo: son números sueltos que no se pueden
+		// defender. Van tres filas antes de las columnas; Excel las abre sin
+		// problema y quien lo reciba las lee primero.
+		fputcsv( $salida, [ 'Panel Kinsta — ' . ucfirst( $nombre ) ], ';' );
+		fputcsv( $salida, [ SWPK_Frescura::linea_de_texto() ], ';' );
+		fputcsv( $salida, [], ';' );
+
 		fputcsv( $salida, $cabeceras, ';' );
 		foreach ( $filas as $fila ) {
 			fputcsv( $salida, $fila, ';' );
@@ -109,7 +120,7 @@ class SWPK_Exportar {
 				$s->tiene_2fa ? 'Sí' : 'No',
 				$asesora->display_name ?? '',
 				$s->contacto_cliente,
-				$s->inventario_en ? mysql2date( 'd/m/Y H:i', (string) $s->inventario_en ) : 'nunca',
+				$s->inventario_en ? SWPK_Frescura::fmt( 'd/m/Y H:i', (string) $s->inventario_en ) : 'nunca',
 			];
 		}
 
@@ -202,7 +213,7 @@ class SWPK_Exportar {
 			}
 
 			$filas[] = [
-				mysql2date( 'd/m/Y H:i', $r->enviado_en ),
+				SWPK_Frescura::fmt( 'd/m/Y H:i', $r->enviado_en ),
 				$tipos[ $r->tipo ] ?? $r->tipo,
 				$s->nombre_visible ?? '',
 				(string) $r->destinatarios,
@@ -237,7 +248,7 @@ class SWPK_Exportar {
 				(string) $e->codigo,
 				$e->ms ? number_format( $e->ms / 1000, 2 ) . ' s' : '',
 				(string) $e->motivo,
-				$e->desde ? mysql2date( 'd/m/Y H:i', (string) $e->desde ) : '',
+				$e->desde ? SWPK_Frescura::fmt( 'd/m/Y H:i', (string) $e->desde ) : '',
 				(string) $e->caidas_mes,
 				$e->segundos_caido ? SWPK_Monitor::duracion( (int) $e->segundos_caido ) : '',
 			];

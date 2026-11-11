@@ -175,15 +175,42 @@ $a = SWPK_Ajustes::todos();
 	<table class="widefat striped" style="max-width:720px">
 		<tbody>
 			<tr><td>Fuente de datos</td><td><strong><?php echo esc_html( swpk_fuente()->nombre() ); ?></strong></td></tr>
-			<tr><td>Última sincronización</td><td><?php echo esc_html( SWPK_Inventario::ultima_sincronizacion() ?: 'nunca' ); ?></td></tr>
+			<tr>
+				<td>Último dato bueno de <?php echo esc_html( swpk_fuente()->proveedor() ); ?></td>
+				<td>
+					<?php echo esc_html( SWPK_Frescura::fecha_y_edad( SWPK_Frescura::corrida() ) ); ?>
+					<?php if ( ! SWPK_Frescura::corrida_al_dia() ) : ?>
+						<br><strong style="color:#b32d2e">La corrida diaria no está pasando.</strong>
+					<?php endif; ?>
+					<?php if ( SWPK_Frescura::corrida_fallo() ) : ?>
+						<br><span style="color:#b32d2e;font-size:12px">
+							Hubo un intento posterior, el <?php echo esc_html( SWPK_Frescura::fecha( SWPK_Frescura::intento() ) ); ?>,
+							que arrancó y no trajo nada.
+						</span>
+					<?php endif; ?>
+				</td>
+			</tr>
+			<tr>
+				<td>Último intento de corrida</td>
+				<td><?php echo esc_html( SWPK_Frescura::fecha_y_edad( SWPK_Frescura::intento() ) ); ?></td>
+			</tr>
 			<tr>
 				<td>Feed de vulnerabilidades</td>
 				<td>
-					<?php echo esc_html( SWPK_Wordfence::ultima_actualizacion() ?: 'nunca se ha descargado' ); ?>
+					<?php
+					$wf = SWPK_Wordfence::ultima_actualizacion();
+					echo '' !== $wf
+						? esc_html( SWPK_Frescura::fecha_y_edad( $wf ) )
+						: 'nunca se ha descargado';
+					?>
+					<?php if ( '' !== $wf && ! SWPK_Frescura::feed_al_dia() ) : ?>
+						<br><strong style="color:#b32d2e">La lista está vieja.</strong>
+						<span style="font-size:12px">Una vulnerabilidad publicada estos días todavía no aparece marcada.</span>
+					<?php endif; ?>
 					<?php $proxima = SWPK_Wordfence::proxima_descarga(); ?>
 					<?php if ( $proxima > time() ) : ?>
 						<br><span style="color:#50575e;font-size:12px">
-							Próxima descarga a partir del <?php echo esc_html( wp_date( 'j \d\e F, H:i', $proxima ) ); ?>.
+							Próxima descarga a partir del <?php echo esc_html( SWPK_Frescura::fmt( 'j \d\e F, H:i', $proxima ) ); ?>.
 							<?php if ( SWPK_Wordfence::esperar_hasta() > time() ) : ?>
 								<strong>Wordfence pidió esperar</strong>, así que el panel no va a insistir:
 								insistir contra su límite puede terminar en que suspendan la llave.
@@ -197,7 +224,7 @@ $a = SWPK_Ajustes::todos();
 			<tr><td>Próxima corrida automática</td><td>
 				<?php
 				$ts = wp_next_scheduled( SWPK_Sincronizador::HOOK );
-				echo $ts ? esc_html( mysql2date( 'j M Y, H:i', gmdate( 'Y-m-d H:i:s', $ts + ( (int) get_option( 'gmt_offset' ) * 3600 ) ) ) ) : 'no programada';
+				echo $ts ? esc_html( SWPK_Frescura::fmt( 'j M Y, H:i', gmdate( 'Y-m-d H:i:s', $ts + ( (int) get_option( 'gmt_offset' ) * 3600 ) ) ) ) : 'no programada';
 				?>
 			</td></tr>
 			<tr>

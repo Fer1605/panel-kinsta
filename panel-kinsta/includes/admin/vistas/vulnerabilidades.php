@@ -87,8 +87,10 @@ $por_nivel[ SWPK_Riesgo::SIN_DATOS ] = 0;
 <div class="wrap">
 	<h1>Vulnerabilidades y pendientes</h1>
 	<?php SWPK_Admin::mostrar_mensaje(); ?>
+	<?php SWPK_Frescura::aviso(); ?>
 	<?php SWPK_Admin::tira_de_perfil(); ?>
 	<?php SWPK_Admin::aviso_demo(); ?>
+	<?php SWPK_Frescura::sello(); ?>
 
 	<?php SWPK_Vista::selector_de_grupo( 'panel-kinsta-vulnerabilidades', $tag, $por_tag, [], $detalles ); ?>
 

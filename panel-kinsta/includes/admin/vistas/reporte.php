@@ -96,9 +96,12 @@ $regreso   = SWPK_Vista::url_de_regreso();
 			<p class="swpk-rep-meta">
 				<strong><?php echo esc_html( $sitio->nombre_visible ); ?></strong> ·
 				<?php echo esc_html( $sitio->dominio ); ?><br>
-				Periodo: del <?php echo esc_html( mysql2date( 'j \d\e F \d\e Y', $desde ) ); ?>
-				al <?php echo esc_html( mysql2date( 'j \d\e F \d\e Y', $hasta ) ); ?><br>
-				Generado el <?php echo esc_html( current_time( 'j \d\e F \d\e Y, H:i' ) ); ?>
+				Periodo: del <?php echo esc_html( SWPK_Frescura::fmt( 'j \d\e F \d\e Y', $desde ) ); ?>
+				al <?php echo esc_html( SWPK_Frescura::fmt( 'j \d\e F \d\e Y', $hasta ) ); ?><br>
+				Generado el <?php echo esc_html( SWPK_Frescura::fmt( 'j \d\e F \d\e Y, H:i', current_time( 'mysql' ) ) ); ?>
+			</p>
+			<p class="swpk-rep-meta" style="margin-top:8px">
+				<?php echo esc_html( SWPK_Frescura::linea_de_texto() ); ?>
 			</p>
 		</div>
 
@@ -113,7 +116,7 @@ $regreso   = SWPK_Vista::url_de_regreso();
 				<tbody>
 				<?php foreach ( $avisos as $a ) : ?>
 					<tr>
-						<td><?php echo esc_html( mysql2date( 'd/m/Y H:i', $a->enviado_en ) ); ?></td>
+						<td><?php echo esc_html( SWPK_Frescura::fmt( 'd/m/Y H:i', $a->enviado_en ) ); ?></td>
 						<td><?php echo esc_html( SWPK_Bitacora::tipos()[ $a->tipo ] ?? $a->tipo ); ?></td>
 						<td><?php echo esc_html( (string) $a->asunto ); ?></td>
 						<td style="font-size:12px"><?php echo esc_html( (string) $a->destinatarios ); ?></td>
@@ -136,7 +139,7 @@ $regreso   = SWPK_Vista::url_de_regreso();
 				<tbody>
 				<?php foreach ( array_slice( $cambios, 0, 120 ) as $c ) : ?>
 					<tr>
-						<td><?php echo esc_html( mysql2date( 'd/m/Y H:i', $c->ocurrio_en ) ); ?></td>
+						<td><?php echo esc_html( SWPK_Frescura::fmt( 'd/m/Y H:i', $c->ocurrio_en ) ); ?></td>
 						<td><?php echo esc_html( SWPK_Eventos::etiquetas()[ $c->tipo ] ?? $c->tipo ); ?></td>
 						<td><?php echo esc_html( $c->titulo ); ?></td>
 					</tr>
@@ -145,7 +148,26 @@ $regreso   = SWPK_Vista::url_de_regreso();
 			</table>
 		<?php endif; ?>
 
-		<h3 class="swpk-rep-h3">3. Estado al día de hoy</h3>
+		<?php
+		// El módulo instalado lo reportó el proveedor cuando escaneó el sitio; si
+		// nunca lo escaneó, lo más cercano que tenemos es la última corrida. Este
+		// papel se abre meses después, así que el título lleva la fecha del dato
+		// y no la de hoy: "estado al día de hoy" es exactamente la frase que se
+		// vuelve mentira el día que la corrida se detiene y nadie se entera.
+		$origen = (string) ( $sitio->inventario_en ?: SWPK_Frescura::corrida() );
+		?>
+		<h3 class="swpk-rep-h3">
+			3. Estado del sitio
+			<?php echo '' !== $origen ? 'al ' . esc_html( SWPK_Frescura::fmt( 'j \d\e F \d\e Y', $origen ) ) : '(sin fecha: nunca se obtuvo el dato)'; ?>
+		</h3>
+		<p style="color:#646970;font-size:12px;margin:-2px 0 10px">
+			<?php if ( '' === $origen ) : ?>
+				De este sitio no hay inventario: no se puede afirmar qué tiene instalado.
+			<?php else : ?>
+				Esta lista es la foto de ese día, no de este momento: se tomó
+				<?php echo esc_html( SWPK_Frescura::hace( $origen ) ); ?>.
+			<?php endif; ?>
+		</p>
 		<?php if ( ! $hallazgos ) : ?>
 			<p style="color:#50575e">
 				<?php
@@ -181,6 +203,7 @@ $regreso   = SWPK_Vista::url_de_regreso();
 			Este reporte lo generó automáticamente el panel de mantenimiento a partir de los registros
 			del sistema. Cada notificación listada quedó guardada con su fecha, su destinatario y su
 			contenido en el momento en que se envió.<br>
+			<?php echo esc_html( SWPK_Frescura::linea_de_texto() ); ?><br>
 			Los datos de vulnerabilidades provienen de Wordfence Intelligence (Defiant, Inc.), usados
 			bajo su licencia. Los identificadores CVE son de MITRE.
 		</div>

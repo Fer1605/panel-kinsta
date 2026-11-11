@@ -52,6 +52,7 @@ require_once SWPK_RUTA . 'includes/class-usuarios.php';
 require_once SWPK_RUTA . 'includes/class-receptor.php';
 require_once SWPK_RUTA . 'includes/class-monitor.php';
 require_once SWPK_RUTA . 'includes/class-sincronizador.php';
+require_once SWPK_RUTA . 'includes/class-frescura.php';
 require_once SWPK_RUTA . 'includes/class-exportar.php';
 require_once SWPK_RUTA . 'includes/admin/class-vista.php';
 require_once SWPK_RUTA . 'includes/admin/class-admin.php';

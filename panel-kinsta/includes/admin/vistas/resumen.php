@@ -51,9 +51,11 @@ foreach ( $sitios as $s ) {
 <div class="wrap">
 	<h1>Panel Kinsta</h1>
 	<?php SWPK_Admin::mostrar_mensaje(); ?>
+	<?php SWPK_Frescura::aviso(); ?>
 	<?php SWPK_Admin::tira_de_perfil(); ?>
 	<?php SWPK_Admin::aviso_demo(); ?>
 	<?php if ( SWPK_Perfiles::puede( SWPK_Perfiles::ADMINISTRAR ) ) { SWPK_Admin::barra_acciones(); } ?>
+	<?php SWPK_Frescura::sello(); ?>
 
 	<?php if ( $sin_datos ) : ?>
 		<div class="notice notice-warning">
@@ -137,7 +139,7 @@ foreach ( $sitios as $s ) {
 				<?php foreach ( $eventos as $e ) : ?>
 					<?php $sitio = SWPK_Inventario::obtener( $e->sitio_id ); ?>
 					<tr>
-						<td><?php echo esc_html( mysql2date( 'j M, H:i', $e->ocurrio_en ) ); ?></td>
+						<td><?php echo esc_html( SWPK_Frescura::fmt( 'j M, H:i', $e->ocurrio_en ) ); ?></td>
 						<td><?php echo esc_html( $etq_evt[ $e->tipo ] ?? $e->tipo ); ?></td>
 						<td><?php echo esc_html( $sitio->nombre_visible ?? $e->sitio_id ); ?></td>
 						<td><?php echo esc_html( $e->titulo ); ?></td>

@@ -78,7 +78,7 @@ $etiquetas = [
 			<?php foreach ( $en_pantalla as $r ) : ?>
 				<?php [ $texto, $color ] = $etiquetas[ $r->accion ] ?? [ $r->accion, '#50575e' ]; ?>
 				<tr>
-					<td><?php echo esc_html( mysql2date( 'j M Y, H:i:s', $r->ocurrio_en ) ); ?></td>
+					<td><?php echo esc_html( SWPK_Frescura::fmt( 'j M Y, H:i:s', $r->ocurrio_en ) ); ?></td>
 					<td><span style="color:<?php echo esc_attr( $color ); ?>;font-weight:600"><?php echo esc_html( $texto ); ?></span></td>
 					<td>
 						<?php echo esc_html( (string) $r->login ); ?>

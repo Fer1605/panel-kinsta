@@ -35,7 +35,7 @@ $historial = array_filter(
 				<?php
 				echo empty( $ultimo['cuando'] )
 					? 'Todavía no ha hecho ningún sondeo.'
-					: 'El último sondeo fue ' . esc_html( mysql2date( 'j M, H:i', (string) $ultimo['cuando'] ) ) . ', hace demasiado.';
+					: 'El último sondeo fue ' . esc_html( SWPK_Frescura::fmt( 'j M, H:i', (string) $ultimo['cuando'] ) ) . ', hace demasiado.';
 				?>
 			</p>
 			<p>
@@ -48,6 +48,8 @@ $historial = array_filter(
 		</div>
 	<?php endif; ?>
 
+	<?php SWPK_Frescura::sello(); ?>
+
 	<p>
 		<?php if ( SWPK_Perfiles::puede( SWPK_Perfiles::ADMINISTRAR ) ) : ?>
 			<a href="<?php echo esc_url( wp_nonce_url( admin_url( 'admin-post.php?action=swpk_sondear' ), 'swpk_sondear' ) ); ?>"
@@ -59,7 +61,7 @@ $historial = array_filter(
 			echo ! empty( $ultimo['cuando'] )
 				? sprintf(
 					'Último sondeo: %s · %d sitios · %d sin responder',
-					esc_html( mysql2date( 'j M, H:i', (string) $ultimo['cuando'] ) ),
+					esc_html( SWPK_Frescura::fmt( 'j M, H:i', (string) $ultimo['cuando'] ) ),
 					(int) ( $ultimo['sondeados'] ?? 0 ),
 					(int) ( $ultimo['abajo'] ?? 0 )
 				)
@@ -126,7 +128,7 @@ $historial = array_filter(
 					<td style="color:<?php echo 'abajo' === $e->estado ? '#b32d2e' : '#50575e'; ?>">
 						<?php echo esc_html( (string) $e->motivo ); ?>
 					</td>
-					<td><?php echo $e->desde ? esc_html( mysql2date( 'j M, H:i', $e->desde ) ) : '—'; ?></td>
+					<td><?php echo $e->desde ? esc_html( SWPK_Frescura::fmt( 'j M, H:i', $e->desde ) ) : '—'; ?></td>
 					<td>
 						<?php echo (int) $e->caidas_mes; ?>
 						<?php if ( $e->segundos_caido ) : ?>
@@ -164,7 +166,7 @@ $historial = array_filter(
 			<tbody>
 			<?php foreach ( $historial as $h ) : ?>
 				<tr>
-					<td><?php echo esc_html( mysql2date( 'j M Y, H:i', $h->ocurrio_en ) ); ?></td>
+					<td><?php echo esc_html( SWPK_Frescura::fmt( 'j M Y, H:i', $h->ocurrio_en ) ); ?></td>
 					<td>
 						<?php if ( SWPK_Eventos::SITIO_CAIDO === $h->tipo ) : ?>
 							<span style="color:#b32d2e">Se cayó</span>

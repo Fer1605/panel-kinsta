@@ -251,6 +251,17 @@ class SWPK_Admin {
 			.swpk-plano{white-space:pre-wrap;font-family:inherit;font-size:14px;line-height:1.6;margin:0}
 			.swpk-plano-largo{max-height:380px;overflow-y:auto;padding-right:14px;
 				border-bottom:1px solid #f0f0f1}
+			.swpk-sello{background:#fff;border:1px solid #dcdcde;border-left:4px solid #72aee6;
+				padding:12px 16px;margin:16px 0;max-width:840px;font-size:13px;line-height:1.5}
+			.swpk-sello-mal{border-left-color:#b32d2e;background:#fcf0f1}
+			.swpk-sello-t{font-weight:600;color:#1d2327;margin-bottom:8px}
+			.swpk-sello ul{margin:0;padding:0;list-style:none}
+			.swpk-sello li{display:flex;flex-wrap:wrap;gap:4px 12px;padding:3px 0}
+			.swpk-sello-q{color:#50575e;flex:1 1 320px}
+			.swpk-sello-c{color:#1d2327;font-variant-numeric:tabular-nums;white-space:nowrap}
+			.swpk-sello li.swpk-viejo .swpk-sello-c{color:#b32d2e;font-weight:600}
+			.swpk-sello-p{flex:1 1 100%;color:#b32d2e}
+			.swpk-sello-ahora{margin-top:9px;padding-top:9px;border-top:1px solid #f0f0f1;color:#50575e}
 		</style>
 		<?php
 	}
@@ -271,14 +282,14 @@ class SWPK_Admin {
 
 	public static function barra_acciones(): void {
 		$url = wp_nonce_url( admin_url( 'admin-post.php?action=swpk_correr' ), 'swpk_correr' );
-		$ult = SWPK_Inventario::ultima_sincronizacion();
+		$ult = SWPK_Frescura::corrida();
 		?>
 		<p>
 			<a href="<?php echo esc_url( $url ); ?>" class="button button-primary">Correr ahora</a>
 			<span style="margin-left:10px;color:#50575e">
 				<?php
 				echo '' !== $ult
-					? 'Última corrida: ' . esc_html( mysql2date( 'j \d\e F, H:i', $ult ) )
+					? 'Último dato bueno: ' . esc_html( SWPK_Frescura::fecha_y_edad( $ult ) )
 					: 'Todavía no se ha corrido ninguna vez.';
 				?>
 			</span>
