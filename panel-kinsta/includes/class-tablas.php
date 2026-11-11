@@ -21,7 +21,7 @@ defined( 'ABSPATH' ) || exit;
 
 class SWPK_Tablas {
 
-	public const VERSION = 2;
+	public const VERSION = 3;
 
 	public static function tabla( string $nombre ): string {
 		global $wpdb;
@@ -143,6 +143,28 @@ class SWPK_Tablas {
 				PRIMARY KEY (id),
 				KEY sitio_fecha (sitio_id, enviado_en),
 				KEY tipo (tipo)
+			) {$collate};"
+		);
+
+		$mon = self::tabla( 'monitor' );
+
+		dbDelta(
+			"CREATE TABLE {$mon} (
+				id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+				sitio_id VARCHAR(64) NOT NULL,
+				url VARCHAR(191) NOT NULL DEFAULT '',
+				estado VARCHAR(16) NOT NULL DEFAULT 'desconocido',
+				codigo SMALLINT UNSIGNED NOT NULL DEFAULT 0,
+				ms INT UNSIGNED NOT NULL DEFAULT 0,
+				motivo VARCHAR(191) NOT NULL DEFAULT '',
+				fallos_seguidos SMALLINT UNSIGNED NOT NULL DEFAULT 0,
+				desde DATETIME NULL,
+				ultimo_sondeo DATETIME NULL,
+				caidas_mes SMALLINT UNSIGNED NOT NULL DEFAULT 0,
+				segundos_caido INT UNSIGNED NOT NULL DEFAULT 0,
+				PRIMARY KEY (id),
+				UNIQUE KEY sitio_id (sitio_id),
+				KEY estado (estado)
 			) {$collate};"
 		);
 

@@ -153,6 +153,53 @@ la sesión cuando el código es correcto. Las reglas que lo sostienen:
    agente prueba el envío antes y **se niega a activar la verificación si el
    envío falla**.
 
+## El monitor de caídas
+
+El panel revisa cada sitio cada cinco minutos desde su propio servidor, en
+paralelo con `curl_multi`. No depende de que el hosting avise: **un aviso que
+depende del hosting no sirve para enterarse de que el hosting se cayó.** Esa es
+la razón de que el panel viva fuera del hosting que vigila.
+
+Qué cuenta como caído:
+
+| Estado | Cuándo |
+|---|---|
+| **Responde** | 2xx o 3xx y el contenido no delata un error |
+| **Sin responder** | No contesta, tarda demasiado, devuelve 5xx, o contesta 200 **mostrando un error de WordPress** |
+| **Respuesta rara** | 4xx. Puede ser un cortafuegos bloqueando al monitor y no una caída real: se marca, no se grita |
+
+El tercer caso del segundo renglón es el que más se escapa: un sitio con
+"Error establishing a database connection" devuelve 200 y cualquier monitor
+ingenuo lo da por sano. Para el visitante ese sitio está caído.
+
+**No avisa al primer fallo.** Hacen falta dos sondeos fallidos seguidos —diez
+minutos— antes de declarar la caída. Un monitor que grita por cada parpadeo de
+red deja de leerse en una semana, y entonces no sirve para nada.
+
+Los errores de red se traducen antes de mandarlos: *el dominio no resuelve*,
+*el servidor rechazó la conexión*, *el certificado está vencido*. Para quien
+está en soporte no es lo mismo un problema de DNS que un hosting caído, y "no
+respondió" obliga a ir a averiguarlo a mano.
+
+### WP-Cron no sirve para esto
+
+WP-Cron se dispara con las visitas al sitio. **Un panel que casi nadie visita no
+ejecuta nada**, y un monitor que no corre es peor que no tener monitor: da falsa
+tranquilidad. El panel detecta esto y lo avisa en pantalla.
+
+En producción hay que apagarlo y poner una tarea programada de verdad. En
+`wp-config.php`:
+
+```php
+define( 'DISABLE_WP_CRON', true );
+```
+
+Y en el panel del servidor (Plesk → Tareas programadas), cada 5 minutos:
+
+```
+/usr/bin/php /ruta/al/sitio/wp-cron.php >/dev/null 2>&1
+```
+
 ## Cómo está armado
 
 ```
@@ -168,6 +215,9 @@ panel-kinsta/
     ├── class-wordfence.php       feed de vulnerabilidades (lectura en trozos)
     ├── class-riesgo.php          cruce de versiones instaladas contra el feed
     ├── class-eventos.php         comparación entre fotos: qué cambió
+    ├── class-monitor.php         sondeo de disponibilidad cada 5 minutos
+    ├── class-receptor.php        recibe los reportes firmados de los agentes
+    ├── class-usuarios.php        línea base de usuarios y alerta de admin nuevo
     ├── class-bitacora.php        registro de notificaciones
     ├── class-textos.php          los avisos, redactados por audiencia
     ├── kinsta/
@@ -212,9 +262,10 @@ software que realmente está instalado.
 ## Estado
 
 En desarrollo. Funciona el inventario, el cruce de vulnerabilidades, la
-comparación diaria, los textos de aviso y la bitácora. Falta el envío automático
-de los correos, el monitor de caídas, los perfiles de acceso y el plugin
-acompañante que lee los usuarios administradores de cada sitio.
+comparación diaria, los textos de aviso, la bitácora, el agente con su reporte
+firmado y su verificación en dos pasos, y el monitor de caídas. Falta el envío
+automático de los correos periódicos, los perfiles de acceso al panel y la
+exportación.
 
 ## Atribución
 

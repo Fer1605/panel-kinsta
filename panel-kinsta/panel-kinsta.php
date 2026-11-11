@@ -46,6 +46,7 @@ require_once SWPK_RUTA . 'includes/class-eventos.php';
 require_once SWPK_RUTA . 'includes/class-bitacora.php';
 require_once SWPK_RUTA . 'includes/class-usuarios.php';
 require_once SWPK_RUTA . 'includes/class-receptor.php';
+require_once SWPK_RUTA . 'includes/class-monitor.php';
 require_once SWPK_RUTA . 'includes/class-sincronizador.php';
 require_once SWPK_RUTA . 'includes/admin/class-admin.php';
 
@@ -83,7 +84,9 @@ function swpk_fuente(): SWPK_Fuente {
 
 register_activation_hook( __FILE__, [ 'SWPK_Tablas', 'crear' ] );
 register_activation_hook( __FILE__, [ 'SWPK_Sincronizador', 'programar' ] );
+register_activation_hook( __FILE__, [ 'SWPK_Monitor', 'programar' ] );
 register_deactivation_hook( __FILE__, [ 'SWPK_Sincronizador', 'desprogramar' ] );
+register_deactivation_hook( __FILE__, [ 'SWPK_Monitor', 'desprogramar' ] );
 
 add_action(
 	'plugins_loaded',
@@ -91,6 +94,7 @@ add_action(
 		SWPK_Tablas::revisar_version();
 		SWPK_Sincronizador::init();
 		SWPK_Receptor::init();
+		SWPK_Monitor::init();
 		if ( is_admin() ) {
 			SWPK_Admin::init();
 		}

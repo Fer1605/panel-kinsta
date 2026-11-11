@@ -22,6 +22,7 @@ class SWPK_Admin {
 		add_action( 'admin_post_swpk_correr', [ __CLASS__, 'accion_correr' ] );
 		add_action( 'admin_post_swpk_guardar_ajustes', [ __CLASS__, 'accion_guardar_ajustes' ] );
 		add_action( 'admin_post_swpk_probar', [ __CLASS__, 'accion_probar' ] );
+		add_action( 'admin_post_swpk_sondear', [ __CLASS__, 'accion_sondear' ] );
 		add_action( 'admin_head', [ __CLASS__, 'estilos' ] );
 	}
 
@@ -49,6 +50,7 @@ class SWPK_Admin {
 		add_submenu_page( self::SLUG, 'Resumen', 'Resumen', $cap, self::SLUG, [ __CLASS__, 'pantalla_resumen' ] );
 		add_submenu_page( self::SLUG, 'Sitios', 'Sitios', $cap, self::SLUG . '-sitios', [ __CLASS__, 'pantalla_sitios' ] );
 		add_submenu_page( self::SLUG, 'Vulnerabilidades', 'Vulnerabilidades', $cap, self::SLUG . '-vulnerabilidades', [ __CLASS__, 'pantalla_vulnerabilidades' ] );
+		add_submenu_page( self::SLUG, 'Caídas', 'Caídas', $cap, self::SLUG . '-caidas', [ __CLASS__, 'pantalla_caidas' ] );
 		add_submenu_page( self::SLUG, 'Bitácora', 'Bitácora', $cap, self::SLUG . '-bitacora', [ __CLASS__, 'pantalla_bitacora' ] );
 		add_submenu_page(
 			self::SLUG,
@@ -145,6 +147,13 @@ class SWPK_Admin {
 		require SWPK_RUTA . 'includes/admin/vistas/vulnerabilidades.php';
 	}
 
+	public static function pantalla_caidas(): void {
+		if ( ! self::puede_ver() ) {
+			wp_die( 'Sin permiso.' );
+		}
+		require SWPK_RUTA . 'includes/admin/vistas/caidas.php';
+	}
+
 	public static function pantalla_bitacora(): void {
 		if ( ! self::puede_ver() ) {
 			wp_die( 'Sin permiso.' );
@@ -197,6 +206,24 @@ class SWPK_Admin {
 			: 'ok:' . rawurlencode( 'La conexión con ' . swpk_fuente()->nombre() . ' funciona.' );
 
 		wp_safe_redirect( admin_url( 'admin.php?page=' . self::SLUG . '-ajustes&swpk_msg=' . $mensaje ) );
+		exit;
+	}
+
+	public static function accion_sondear(): void {
+		if ( ! self::puede_administrar() ) {
+			wp_die( 'Sin permiso.' );
+		}
+		check_admin_referer( 'swpk_sondear' );
+
+		$r = SWPK_Monitor::sondear_todos();
+
+		wp_safe_redirect(
+			admin_url(
+				'admin.php?page=' . self::SLUG . '-caidas&swpk_msg=ok:' . rawurlencode(
+					sprintf( '%d sitios sondeados, %d sin responder, %d cambios de estado.', $r['sondeados'], $r['abajo'], $r['cambios'] )
+				)
+			)
+		);
 		exit;
 	}
 
