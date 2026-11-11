@@ -52,6 +52,26 @@ class SWA_Dos_Factores {
 	private const META_RESPALDO = '_swa_respaldo';
 	private const META_LISTO    = '_swa_configurado';
 
+	/**
+	 * Cuántos códigos seguidos pueden quedar sin usarse antes de que el propio
+	 * plugin se apague.
+	 *
+	 * ─── Por qué hace falta esto ────────────────────────────────────────────
+	 *
+	 * La prueba de correo se hace una vez, al instalar. Pero el correo se puede
+	 * romper DESPUÉS: el SMTP se cae, se vence una credencial, el proveedor
+	 * empieza a marcar los mensajes como spam. Y el caso traicionero es que
+	 * wp_mail sigue diciendo que sí: el mensaje sale del servidor y nunca llega.
+	 *
+	 * Desde dentro del sitio no hay forma de saber si un correo llegó. Pero sí
+	 * hay una señal indirecta y bastante clara: si se piden cinco códigos
+	 * seguidos y ninguno se usa, es que no están llegando.
+	 *
+	 * Cuando eso pasa, el plugin se apaga solo. Vale más un sitio con una capa
+	 * menos que un sitio al que nadie puede entrar.
+	 */
+	private const CODIGOS_PERDIDOS = 5;
+
 	private const VIGENCIA      = 600;  // 10 minutos
 	private const MAX_INTENTOS  = 5;
 	private const BLOQUEO       = 900;  // 15 minutos
@@ -67,6 +87,42 @@ class SWA_Dos_Factores {
 		if ( SWA_Ajustes::obtener( 'cerrar_xmlrpc' ) ) {
 			add_filter( 'xmlrpc_enabled', '__return_false' );
 		}
+	}
+
+	/**
+	 * El plugin se apaga solo cuando deduce que los códigos no están llegando.
+	 *
+	 * No borra nada ni toca al usuario: solo deja de pedir el segundo paso y
+	 * anota por qué, para que el panel lo reporte en su siguiente corrida y
+	 * alguien vaya a ver qué pasó con el correo de ese sitio.
+	 */
+	private static function apagarse_sola( int $perdidos ): void {
+		if ( ! SWA_Ajustes::obtener( '2fa_activo' ) ) {
+			return;
+		}
+
+		SWA_Ajustes::guardar( [ '2fa_activo' => 0 ] );
+
+		update_option(
+			'swa_2fa_apagada_sola',
+			[
+				'cuando'   => current_time( 'mysql' ),
+				'perdidos' => $perdidos,
+				'motivo'   => sprintf(
+					'Se pidieron %d códigos seguidos y ninguno se usó. Lo más probable es que el correo de este sitio no esté llegando.',
+					$perdidos
+				),
+			],
+			false
+		);
+
+		do_action( 'swa_2fa_apagada_sola', $perdidos );
+	}
+
+	/** @return array<string,mixed> */
+	public static function apagado_automatico(): array {
+		$v = get_option( 'swa_2fa_apagada_sola', [] );
+		return is_array( $v ) ? $v : [];
 	}
 
 	public static function apagado(): bool {
@@ -139,6 +195,15 @@ class SWA_Dos_Factores {
 		update_user_meta( $usuario->ID, self::META_HASH, wp_hash_password( $codigo ) );
 		update_user_meta( $usuario->ID, self::META_EXPIRA, time() + self::VIGENCIA );
 		delete_user_meta( $usuario->ID, self::META_INTENTOS );
+
+		// Se cuenta al pedirlo; se pone en cero al usarlo. Si el contador sube
+		// sin bajar, los códigos no están llegando a nadie.
+		$perdidos = (int) get_option( 'swa_codigos_sin_usar', 0 ) + 1;
+		update_option( 'swa_codigos_sin_usar', $perdidos, false );
+
+		if ( $perdidos >= self::CODIGOS_PERDIDOS ) {
+			self::apagarse_sola( $perdidos );
+		}
 
 		$sitio = get_bloginfo( 'name' );
 
@@ -237,6 +302,9 @@ class SWA_Dos_Factores {
 		if ( self::codigo_valido( $usuario, $codigo ) || self::respaldo_valido( $usuario, $codigo ) ) {
 			self::limpiar( $usuario->ID );
 			update_user_meta( $usuario->ID, self::META_LISTO, 1 );
+
+			// Llegó y se usó: el correo funciona. Contador a cero.
+			delete_option( 'swa_codigos_sin_usar' );
 
 			wp_set_auth_cookie( $usuario->ID, $recordar );
 			do_action( 'swa_segundo_paso_superado', $usuario );

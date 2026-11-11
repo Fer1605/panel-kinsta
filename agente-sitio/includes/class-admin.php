@@ -9,6 +9,7 @@ class SWA_Admin {
 		add_action( 'admin_menu', [ __CLASS__, 'menu' ] );
 		add_action( 'admin_post_swa_guardar', [ __CLASS__, 'guardar' ] );
 		add_action( 'admin_post_swa_probar_correo', [ __CLASS__, 'probar_correo' ] );
+		add_action( 'admin_post_swa_confirmar_correo', [ __CLASS__, 'confirmar_correo' ] );
 		add_action( 'admin_post_swa_registrar', [ __CLASS__, 'registrar' ] );
 		add_action( 'admin_post_swa_reportar', [ __CLASS__, 'reportar' ] );
 		add_action( 'admin_post_swa_respaldo', [ __CLASS__, 'respaldo' ] );
@@ -99,8 +100,12 @@ class SWA_Admin {
 			</p>
 			<p>
 				<?php if ( $puede ) : ?>
-					<strong style="color:#008a20">✓ Este sitio sí envía correo.</strong>
-					Probado el <?php echo esc_html( (string) ( $correo['probado'] ?? '' ) ); ?>.
+					<strong style="color:#008a20">✓ Confirmado: el correo llega.</strong>
+					Probado el <?php echo esc_html( (string) ( $correo['probado'] ?? '' ) ); ?> y confirmado
+					por <?php echo esc_html( (string) ( $correo['confirmado_por'] ?? 'alguien' ) ); ?>.
+				<?php elseif ( SWA_Correo::envio_aceptado() ) : ?>
+					<strong style="color:#dba617">Se mandó, falta confirmar que llegó.</strong>
+					Se envió a <?php echo esc_html( (string) ( $correo['destino'] ?? '' ) ); ?>.
 				<?php elseif ( $correo ) : ?>
 					<strong style="color:#d63638">✗ El envío falló.</strong>
 					<?php echo esc_html( (string) ( $correo['error'] ?: 'sin detalle del error' ) ); ?>
@@ -108,7 +113,44 @@ class SWA_Admin {
 					<strong style="color:#dba617">Todavía no se ha probado.</strong>
 				<?php endif; ?>
 			</p>
-			<p><a class="button" href="<?php echo esc_url( self::url( 'swa_probar_correo' ) ); ?>">Probar el envío</a></p>
+
+			<?php if ( SWA_Correo::envio_aceptado() && ! $puede ) : ?>
+				<div class="notice notice-warning inline" style="max-width:720px">
+					<p>
+						<strong>Andá a ver tu bandeja antes de seguir.</strong> Que WordPress diga que
+						mandó el correo no significa que haya llegado: con un SMTP mal configurado el
+						mensaje sale del servidor y se pierde en el camino, o llega horas después. Eso
+						es justo lo que dejaría a los administradores sin poder entrar.
+					</p>
+					<p>
+						<a class="button button-primary" href="<?php echo esc_url( self::url( 'swa_confirmar_correo' ) ); ?>">
+							Sí, me llegó
+						</a>
+						<a class="button" href="<?php echo esc_url( self::url( 'swa_probar_correo' ) ); ?>">Volver a probar</a>
+					</p>
+				</div>
+			<?php else : ?>
+				<p>
+					<a class="button" href="<?php echo esc_url( self::url( 'swa_probar_correo' ) ); ?>">
+						<?php echo $puede ? 'Volver a probar' : 'Probar el envío'; ?>
+					</a>
+				</p>
+			<?php endif; ?>
+
+			<?php $apagado = SWA_Dos_Factores::apagado_automatico(); ?>
+			<?php if ( $apagado ) : ?>
+				<div class="notice notice-error" style="max-width:720px">
+					<p>
+						<strong>La verificación en dos pasos se apagó sola el
+						<?php echo esc_html( (string) ( $apagado['cuando'] ?? '' ) ); ?>.</strong>
+					</p>
+					<p><?php echo esc_html( (string) ( $apagado['motivo'] ?? '' ) ); ?></p>
+					<p>
+						Nadie quedó encerrado: el sitio volvió a pedir solo la contraseña. Antes de
+						volver a activarla hay que arreglar el correo y confirmar que llega.
+					</p>
+				</div>
+			<?php endif; ?>
 
 			<hr>
 
@@ -116,8 +158,12 @@ class SWA_Admin {
 
 			<?php if ( ! $puede ) : ?>
 				<div class="notice notice-error inline" style="max-width:720px"><p>
-					<strong>No se puede activar todavía.</strong> Primero hay que lograr que el sitio
-					envíe correo. Activarla ahora dejaría a los administradores sin poder entrar.
+					<strong>No se puede activar todavía.</strong>
+					<?php
+					echo SWA_Correo::envio_aceptado()
+						? 'Falta confirmar que el correo de prueba llegó de verdad. Está arriba.'
+						: 'Primero hay que lograr que el sitio envíe correo. Activarla ahora dejaría a los administradores sin poder entrar.';
+					?>
 				</p></div>
 			<?php endif; ?>
 
@@ -267,6 +313,16 @@ class SWA_Admin {
 		$e['ok']
 			? self::volver( 'El correo salió bien, a ' . $e['destino'] . '. Revisá que haya llegado.' )
 			: self::volver( 'El envío falló: ' . ( $e['error'] ?: 'sin detalle' ), true );
+	}
+
+	public static function confirmar_correo(): void {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_die( 'Sin permiso.' );
+		}
+		check_admin_referer( 'swa_confirmar_correo' );
+
+		SWA_Correo::confirmar_recibido();
+		self::volver( 'Confirmado. Ya se puede activar la verificación en dos pasos.' );
 	}
 
 	public static function registrar(): void {
