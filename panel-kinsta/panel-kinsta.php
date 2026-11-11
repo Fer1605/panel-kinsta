@@ -50,6 +50,7 @@ require_once SWPK_RUTA . 'includes/class-usuarios.php';
 require_once SWPK_RUTA . 'includes/class-receptor.php';
 require_once SWPK_RUTA . 'includes/class-monitor.php';
 require_once SWPK_RUTA . 'includes/class-sincronizador.php';
+require_once SWPK_RUTA . 'includes/admin/class-vista.php';
 require_once SWPK_RUTA . 'includes/admin/class-admin.php';
 
 /**
@@ -99,6 +100,7 @@ add_action(
 		SWPK_Receptor::init();
 		SWPK_Monitor::init();
 		SWPK_Accesos::init();
+		SWPK_Perfiles::init();
 		if ( is_admin() ) {
 			SWPK_Admin::init();
 		}

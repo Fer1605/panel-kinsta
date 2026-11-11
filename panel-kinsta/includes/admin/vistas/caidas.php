@@ -3,6 +3,7 @@
 defined( 'ABSPATH' ) || exit;
 
 $estados = SWPK_Monitor::estados();
+[ $en_pantalla, $pagina, $paginas ] = SWPK_Vista::paginar( $estados, SWPK_Vista::pagina_pedida(), 25 );
 $ultimo  = SWPK_Monitor::ultimo_sondeo();
 $al_dia  = SWPK_Monitor::esta_al_dia();
 
@@ -87,6 +88,7 @@ $historial = array_filter(
 		</div>
 
 		<h2>Estado ahora</h2>
+		<?php SWPK_Vista::paginador( $pagina, $paginas, count( $estados ) ); ?>
 		<table class="widefat striped swpk-tabla">
 			<thead>
 				<tr>
@@ -100,7 +102,7 @@ $historial = array_filter(
 				</tr>
 			</thead>
 			<tbody>
-			<?php foreach ( $estados as $e ) : ?>
+			<?php foreach ( $en_pantalla as $e ) : ?>
 				<?php
 				$sitio = SWPK_Inventario::obtener( $e->sitio_id );
 				[ $color, $texto ] = match ( $e->estado ) {
@@ -134,6 +136,7 @@ $historial = array_filter(
 			<?php endforeach; ?>
 			</tbody>
 		</table>
+		<?php SWPK_Vista::paginador( $pagina, $paginas, count( $estados ) ); ?>
 	<?php else : ?>
 		<div class="notice notice-info"><p>
 			Todavía no hay sitios vigilados. El monitor usa los dominios del inventario: primero hay

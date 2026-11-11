@@ -8,16 +8,22 @@ $a = SWPK_Ajustes::todos();
 	<h1>Ajustes del panel</h1>
 	<?php SWPK_Admin::mostrar_mensaje(); ?>
 
-	<?php if ( SWPK_Ajustes::llave_en_base_de_datos() ) : ?>
+	<?php if ( SWPK_Ajustes::llaves_en_claro() ) : ?>
 		<div class="notice notice-warning">
 			<p>
-				<strong>La llave de Kinsta está guardada en la base de datos.</strong> Eso sirve para
-				probar, pero no para producción: la llave viaja en cada respaldo de base de datos, y
-				los respaldos se mandan por correo y se dejan en carpetas. Lo correcto es moverla a
-				<code>wp-config.php</code>:
+				Hay llaves guardadas sin cifrar de una versión anterior
+				(<?php echo esc_html( implode( ' y ', SWPK_Ajustes::llaves_en_claro() ) ); ?>).
+				Se arregla solo al guardar de nuevo, o
+				<a href="<?php echo esc_url( wp_nonce_url( admin_url( 'admin-post.php?action=swpk_cifrar' ), 'swpk_cifrar' ) ); ?>">cifrarlas ahora</a>.
 			</p>
-			<p><code>define( 'SWPK_KINSTA_API_KEY', 'la-llave' );<br>define( 'SWPK_KINSTA_COMPANY_ID', 'el-company-id' );</code></p>
-			<p>Cuando la constante exista, manda sobre lo que haya en la base de datos.</p>
+		</div>
+	<?php elseif ( ! SWPK_Ajustes::cifrado_disponible() ) : ?>
+		<div class="notice notice-error">
+			<p>
+				<strong>Este WordPress no tiene claves de seguridad definidas</strong>, así que las
+				llaves no se pueden cifrar. Hay que generarlas en <code>wp-config.php</code> antes de
+				guardar nada aquí.
+			</p>
 		</div>
 	<?php endif; ?>
 
@@ -54,11 +60,10 @@ $a = SWPK_Ajustes::todos();
 					<input type="password" class="regular-text" name="api_key" id="api_key"
 						value="" autocomplete="off" placeholder="<?php echo '' !== $a['api_key'] ? '•••••••• (ya configurada)' : ''; ?>">
 					<p class="description">
-						Se deja en blanco para no reimprimir el secreto. Escribir algo la reemplaza.<br>
+						El campo se muestra en blanco para no reimprimir el secreto. Escribir algo la reemplaza.<br>
 						<strong>Kinsta no ofrece llaves de solo lectura:</strong> al crearla solo se elige
 						nombre y caducidad, y hereda los permisos de quien la crea. La garantía de solo
-						lectura es de este plugin, que únicamente hace peticiones GET. Se puede
-						comprobar: <code>grep -rn "wp_remote_" panel-kinsta/</code>
+						lectura es de este plugin, que únicamente hace peticiones de consulta.
 					</p>
 				</td>
 			</tr>
@@ -141,6 +146,21 @@ $a = SWPK_Ajustes::todos();
 				echo $ts ? esc_html( mysql2date( 'j M Y, H:i', gmdate( 'Y-m-d H:i:s', $ts + ( (int) get_option( 'gmt_offset' ) * 3600 ) ) ) ) : 'no programada';
 				?>
 			</td></tr>
+			<tr>
+				<td>Llaves</td>
+				<td>
+					<?php if ( SWPK_Ajustes::llaves_en_claro() ) : ?>
+						<span style="color:#dba617">Hay alguna sin cifrar</span>
+					<?php else : ?>
+						<span style="color:#008a20">✓ Cifradas en la base de datos</span>
+						<br><span style="color:#50575e;font-size:12px">
+							Se cifran con las claves de seguridad de este WordPress, que están en
+							<code>wp-config.php</code> y no en la base. Un respaldo de la base de datos,
+							por sí solo, no sirve para sacarlas.
+						</span>
+					<?php endif; ?>
+				</td>
+			</tr>
 			<tr><td>Versión del plugin</td><td><?php echo esc_html( SWPK_VERSION ); ?></td></tr>
 		</tbody>
 	</table>

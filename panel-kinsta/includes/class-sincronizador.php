@@ -137,6 +137,16 @@ class SWPK_Sincronizador {
 			++$n;
 		}
 
+		// Guardar cuándo miró Kinsta cada sitio. Un sitio que no aparezca aquí
+		// es un sitio del que no tenemos datos, y eso tiene que verse: una lista
+		// de plugins vacía no es "está limpio", es "no sabemos".
+		$tabla_sitios = SWPK_Tablas::tabla( 'sitios' );
+		$wpdb->query( "UPDATE {$tabla_sitios} SET inventario_en = NULL" );
+
+		foreach ( $fuente->frescura() as $sitio_id => $cuando ) {
+			$wpdb->update( $tabla_sitios, [ 'inventario_en' => $cuando ], [ 'sitio_id' => $sitio_id ] );
+		}
+
 		// Detectar qué sitios ya tienen un plugin de 2FA activo sale gratis de
 		// esta misma foto: no cuesta ni una llamada extra (§4.8 del plan).
 		self::marcar_cobertura_2fa( $fecha );

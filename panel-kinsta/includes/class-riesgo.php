@@ -18,6 +18,7 @@ class SWPK_Riesgo {
 	public const MEDIO   = 'medio';
 	public const BAJO    = 'bajo';
 	public const AL_DIA  = 'al_dia';
+	public const SIN_DATOS = 'sin_datos';
 
 	public static function nombres(): array {
 		return [
@@ -26,6 +27,7 @@ class SWPK_Riesgo {
 			self::MEDIO   => 'Medio',
 			self::BAJO    => 'Bajo',
 			self::AL_DIA  => 'Al día',
+			self::SIN_DATOS => 'Sin datos',
 		];
 	}
 
@@ -36,6 +38,7 @@ class SWPK_Riesgo {
 			self::MEDIO   => '#dba617',
 			self::BAJO    => '#2271b1',
 			self::AL_DIA  => '#008a20',
+			self::SIN_DATOS => '#8c8f94',
 		];
 	}
 
@@ -164,8 +167,19 @@ class SWPK_Riesgo {
 		return $aplican;
 	}
 
-	/** El nivel de riesgo de un sitio: el peor de sus hallazgos. */
+	/**
+	 * El nivel de riesgo de un sitio: el peor de sus hallazgos.
+	 *
+	 * Con una excepción que importa: si el proveedor nunca escaneó ese sitio, no
+	 * hay hallazgos — pero eso NO es "al día". Decir que un sitio está sano
+	 * cuando no se sabe nada de él es el error que este panel existe para evitar.
+	 */
 	public static function nivel_del_sitio( string $sitio_id ): string {
+		$sitio = SWPK_Inventario::obtener( $sitio_id );
+		if ( $sitio && empty( $sitio->inventario_en ) ) {
+			return self::SIN_DATOS;
+		}
+
 		$peor = self::AL_DIA;
 
 		foreach ( self::hallazgos( $sitio_id ) as $h ) {

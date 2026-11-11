@@ -34,21 +34,60 @@ class SWPK_Http {
 	private const BASE    = 'https://api.kinsta.com/v2';
 	private const TIMEOUT = 25;
 
+	/** @var array<int,float> Momento de cada petición, para respetar el límite. */
+	private static array $historial = [];
+
+	private const POR_MINUTO = 100; // el límite real es 120; se deja holgura
+
 	public function __construct( private string $api_key ) {}
+
+	/**
+	 * Frena si vamos a pasarnos del límite de Kinsta.
+	 *
+	 * Son 120 peticiones por minuto por empresa, y leer el inventario completo
+	 * son dos peticiones por sitio: con 107 sitios, 214. Sin freno, a mitad de
+	 * la corrida Kinsta empieza a devolver 429 y el inventario queda a medias
+	 * sin que nadie se entere. Mejor que la corrida tarde dos minutos.
+	 */
+	private function esperar_si_hace_falta(): void {
+		$ahora = microtime( true );
+
+		self::$historial = array_values(
+			array_filter( self::$historial, static fn( $t ) => $ahora - $t < 60 )
+		);
+
+		if ( count( self::$historial ) >= self::POR_MINUTO ) {
+			$espera = 61 - ( $ahora - self::$historial[0] );
+			if ( $espera > 0 ) {
+				usleep( (int) ( $espera * 1000000 ) );
+			}
+			self::$historial = [];
+		}
+
+		self::$historial[] = microtime( true );
+	}
 
 	/**
 	 * Una petición GET a la API de Kinsta.
 	 *
-	 * @param string              $ruta    Ruta relativa, por ejemplo "/sites".
-	 * @param array<string,mixed> $query   Parámetros de la URL.
-	 * @param array<string,mixed> $filtros Filtros que Kinsta documenta en el
-	 *                                     cuerpo de un GET (sí, en el cuerpo).
-	 *                                     Varias librerías HTTP descartan el
-	 *                                     cuerpo en un GET sin avisar, así que
-	 *                                     quien llame a esto debe poder filtrar
-	 *                                     también del lado del panel.
+	 * ─── Sobre los filtros que Kinsta documenta en el cuerpo de un GET ──────
+	 *
+	 * Los endpoints de plugins y temas documentan sus filtros (status, column,
+	 * order_by) dentro del CUERPO de una petición GET. Eso no se puede hacer
+	 * desde WordPress: su capa HTTP, al ver un GET, intenta convertir el cuerpo
+	 * en parámetros de URL con http_build_query(), y si el cuerpo es una cadena
+	 * JSON revienta con un error fatal. No lo ignora en silencio: tumba el
+	 * proceso. Comprobado contra la API real el 11 de noviembre de 2026.
+	 *
+	 * Así que aquí no se manda cuerpo. El filtrado y el orden los hace el panel
+	 * con los datos ya recibidos, que de todas formas era lo que había que hacer:
+	 * pedir "solo los vulnerables" y recibir todo sin darse cuenta sería peor que
+	 * no filtrar nunca.
+	 *
+	 * @param string              $ruta  Ruta relativa, por ejemplo "/sites".
+	 * @param array<string,mixed> $query Parámetros de la URL.
 	 */
-	public function get( string $ruta, array $query = [], array $filtros = [] ): array|WP_Error {
+	public function get( string $ruta, array $query = [] ): array|WP_Error {
 		if ( '' === trim( $this->api_key ) ) {
 			return new WP_Error( 'swpk_sin_llave', 'No hay llave de la API de Kinsta configurada.' );
 		}
@@ -68,10 +107,7 @@ class SWPK_Http {
 			'user-agent'  => 'PanelKinsta/' . SWPK_VERSION . '; +https://github.com/Fer1605/panel-kinsta',
 		];
 
-		if ( $filtros ) {
-			$args['headers']['Content-Type'] = 'application/json';
-			$args['body']                    = wp_json_encode( $filtros );
-		}
+		$this->esperar_si_hace_falta();
 
 		$respuesta = wp_remote_get( $url, $args );
 

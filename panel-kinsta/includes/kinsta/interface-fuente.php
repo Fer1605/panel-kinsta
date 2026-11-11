@@ -40,6 +40,20 @@ interface SWPK_Fuente {
 	 */
 	public function temas(): array|WP_Error;
 
+	/**
+	 * Cuándo fue la última vez que el proveedor miró lo instalado en cada sitio.
+	 *
+	 * No es un detalle: si el proveedor nunca escaneó un sitio, su lista de
+	 * plugins llega vacía. Un panel que muestre eso como "sin pendientes" está
+	 * diciendo que el sitio está sano cuando en realidad no sabe nada de él, y
+	 * eso es exactamente lo contrario de para lo que existe este panel.
+	 *
+	 * Llamar después de plugins() o temas().
+	 *
+	 * @return array<string,string> sitio_id => fecha, o cadena vacía si nunca.
+	 */
+	public function frescura(): array;
+
 	/** Comprueba que la fuente responde. */
 	public function probar(): true|WP_Error;
 }

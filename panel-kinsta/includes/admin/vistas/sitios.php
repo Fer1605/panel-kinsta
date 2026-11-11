@@ -1,16 +1,24 @@
 <?php
-/** Los sitios, agrupados por etiqueta. */
+/**
+ * Sitios: primero se elige el grupo, después se filtra, y el resultado va
+ * paginado. Con 107 sitios, una sola lista con todo encima no se lee.
+ */
 defined( 'ABSPATH' ) || exit;
 
-$sitios  = SWPK_Perfiles::sitios_visibles();
-$asignar = SWPK_Perfiles::puede( SWPK_Perfiles::ADMINISTRAR );
+$todos    = SWPK_Perfiles::sitios_visibles();
+$asignar  = SWPK_Perfiles::puede( SWPK_Perfiles::ADMINISTRAR );
 $asesoras = $asignar ? SWPK_Perfiles::asesoras() : [];
-$nombres = SWPK_Etiquetas::nombres();
 
-$por_tag = [];
-foreach ( $sitios as $s ) {
-	$por_tag[ $s->tag ][] = $s;
-}
+$tag      = SWPK_Vista::tag_pedido();
+$nivel    = SWPK_Vista::nivel_pedido();
+$busqueda = SWPK_Vista::busqueda_pedida();
+
+$por_tag   = SWPK_Vista::conteo_por_tag( $todos );
+$del_grupo = SWPK_Vista::filtrar( $todos, $tag, '', '' );
+$por_nivel = SWPK_Vista::conteo_por_nivel( $del_grupo );
+
+$filtrados = SWPK_Vista::filtrar( $todos, $tag, $nivel, $busqueda );
+[ $pagina_de_sitios, $pagina, $paginas ] = SWPK_Vista::paginar( $filtrados, SWPK_Vista::pagina_pedida() );
 ?>
 <div class="wrap">
 	<h1>Sitios</h1>
@@ -18,57 +26,69 @@ foreach ( $sitios as $s ) {
 	<?php SWPK_Admin::tira_de_perfil(); ?>
 	<?php SWPK_Admin::aviso_demo(); ?>
 
-	<?php if ( ! $sitios ) : ?>
+	<?php if ( ! $todos ) : ?>
 		<div class="notice notice-info"><p>
 			<?php
 			echo SWPK_Perfiles::puede( SWPK_Perfiles::VER_TODO )
 				? 'No hay inventario todavía. Corré la sincronización desde el Resumen.'
-				: 'Todavía no tenés sitios asignados. Pedile a dirección que te los asigne desde esta misma pantalla.';
+				: 'Todavía no tenés sitios asignados. Pedile a dirección que te los asigne.';
 			?>
 		</p></div>
+		</div>
+		<?php return; ?>
 	<?php endif; ?>
 
-	<?php if ( $asignar && $sitios ) : ?>
-		<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
-		<input type="hidden" name="action" value="swpk_asignar">
-		<?php wp_nonce_field( 'swpk_asignar' ); ?>
+	<?php SWPK_Vista::selector_de_grupo( 'panel-kinsta-sitios', $tag, $por_tag ); ?>
+
+	<?php if ( '' === $tag ) : ?>
+		</div>
+		<?php return; ?>
 	<?php endif; ?>
 
-	<?php foreach ( $nombres as $tag => $nombre ) : ?>
-		<?php if ( empty( $por_tag[ $tag ] ) ) { continue; } ?>
+	<?php if ( ! SWPK_Etiquetas::es_nuestro( $tag ) ) : ?>
+		<p style="color:#50575e;max-width:800px;margin:0">
+			Estos sitios los administra el cliente. Quedan fuera de la doble autenticación y de la
+			lectura de usuarios: no podemos instalarles nada mientras no se les venda. Lo que sí se
+			vigila es todo lo que viene del hosting, que es justo lo que hay que avisarles.
+		</p>
+	<?php endif; ?>
 
-		<h2><?php echo esc_html( $nombre ); ?> <span style="color:#50575e;font-weight:400">(<?php echo count( $por_tag[ $tag ] ); ?>)</span></h2>
+	<?php SWPK_Vista::filtro_de_riesgo( $nivel, $por_nivel ); ?>
+	<?php SWPK_Vista::buscador( 'panel-kinsta-sitios', $busqueda, [ 'tag' => $tag, 'nivel' => $nivel ] ); ?>
+	<?php SWPK_Vista::paginador( $pagina, $paginas, count( $filtrados ) ); ?>
 
-		<?php if ( ! SWPK_Etiquetas::es_nuestro( $tag ) ) : ?>
-			<p style="color:#50575e;max-width:760px">
-				Estos sitios los administra el cliente. Quedan fuera de la doble autenticación y de
-				la lectura de usuarios: no podemos instalarles nada mientras no se les venda. Lo que
-				sí se les vigila es todo lo que viene de Kinsta —plugins, versiones y
-				vulnerabilidades— que es justo lo que hay que avisarles.
-			</p>
+	<?php if ( ! $pagina_de_sitios ) : ?>
+		<div class="notice notice-info inline"><p>Ningún sitio coincide con ese filtro.</p></div>
+	<?php else : ?>
+
+		<?php if ( $asignar ) : ?>
+			<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+			<input type="hidden" name="action" value="swpk_asignar">
+			<?php wp_nonce_field( 'swpk_asignar' ); ?>
 		<?php endif; ?>
 
 		<table class="widefat striped swpk-tabla">
 			<thead>
 				<tr>
 					<th>Sitio</th>
-					<th style="width:90px">Riesgo</th>
-					<th style="width:150px">Pendientes</th>
-					<th style="width:80px">WordPress</th>
+					<th style="width:95px">Estado</th>
+					<th style="width:140px">Pendientes</th>
+					<th style="width:85px">WordPress</th>
 					<th style="width:60px">PHP</th>
-					<th style="width:160px">Doble autenticación</th>
-					<th style="width:120px">Usuarios</th>
-					<th style="width:170px">Asesora</th>
+					<?php if ( SWPK_Etiquetas::es_nuestro( $tag ) ) : ?>
+						<th style="width:120px">Doble paso</th>
+					<?php endif; ?>
+					<th style="width:165px">Asesora</th>
 					<?php if ( $asignar ) : ?>
-						<th style="width:200px">Contacto del cliente</th>
+						<th style="width:190px">Contacto del cliente</th>
 					<?php endif; ?>
 				</tr>
 			</thead>
 			<tbody>
-			<?php foreach ( $por_tag[ $tag ] as $s ) : ?>
+			<?php foreach ( $pagina_de_sitios as $s ) : ?>
 				<?php
+				$nivel_s   = SWPK_Riesgo::nivel_del_sitio( $s->sitio_id );
 				$hallazgos = SWPK_Riesgo::hallazgos( $s->sitio_id );
-				$nivel     = SWPK_Riesgo::nivel_del_sitio( $s->sitio_id );
 				$vulns     = 0;
 				foreach ( $hallazgos as $h ) {
 					if ( 'actualizacion_pendiente' !== $h['motivo'] ) {
@@ -81,33 +101,28 @@ foreach ( $sitios as $s ) {
 						<strong><?php echo esc_html( $s->nombre_visible ); ?></strong><br>
 						<span class="swpk-mono" style="color:#50575e"><?php echo esc_html( $s->dominio ); ?></span>
 					</td>
-					<td><?php echo wp_kses_post( SWPK_Admin::nivel_badge( $nivel ) ); ?></td>
+					<td><?php echo wp_kses_post( SWPK_Admin::nivel_badge( $nivel_s ) ); ?></td>
 					<td>
-						<?php if ( $vulns ) : ?>
-							<strong style="color:#b32d2e"><?php echo (int) $vulns; ?> con vulnerabilidad</strong><br>
+						<?php if ( SWPK_Riesgo::SIN_DATOS === $nivel_s ) : ?>
+							<span style="color:#8c8f94">el hosting no ha escaneado este sitio</span>
+						<?php else : ?>
+							<?php if ( $vulns ) : ?>
+								<strong style="color:#b32d2e"><?php echo (int) $vulns; ?> con vulnerabilidad</strong><br>
+							<?php endif; ?>
+							<?php echo count( $hallazgos ) - $vulns; ?> por actualizar
 						<?php endif; ?>
-						<?php echo count( $hallazgos ) - $vulns; ?> por actualizar
 					</td>
 					<td><?php echo esc_html( $s->version_wp ?: '—' ); ?></td>
 					<td><?php echo esc_html( $s->version_php ?: '—' ); ?></td>
-					<td>
-						<?php if ( ! SWPK_Etiquetas::es_nuestro( $tag ) ) : ?>
-							<span style="color:#50575e">Fuera de alcance</span>
-						<?php elseif ( $s->tiene_2fa ) : ?>
-							<span style="color:#008a20">✓ <?php echo esc_html( $s->plugin_2fa ); ?></span>
-						<?php else : ?>
-							<span style="color:#d63638">Pendiente</span>
-						<?php endif; ?>
-					</td>
-					<td>
-						<?php if ( ! SWPK_Etiquetas::es_nuestro( $tag ) ) : ?>
-							<span style="color:#50575e">Fuera de alcance</span>
-						<?php elseif ( $s->cobertura_agente ) : ?>
-							<span style="color:#008a20">✓ Con agente</span>
-						<?php else : ?>
-							<span style="color:#dba617">Sin cobertura</span>
-						<?php endif; ?>
-					</td>
+					<?php if ( SWPK_Etiquetas::es_nuestro( $tag ) ) : ?>
+						<td>
+							<?php if ( $s->tiene_2fa ) : ?>
+								<span style="color:#008a20">✓ <?php echo esc_html( $s->plugin_2fa ); ?></span>
+							<?php else : ?>
+								<span style="color:#d63638">Pendiente</span>
+							<?php endif; ?>
+						</td>
+					<?php endif; ?>
 					<td>
 						<?php if ( $asignar ) : ?>
 							<select name="asesora[<?php echo esc_attr( $s->sitio_id ); ?>]" style="width:100%">
@@ -137,17 +152,19 @@ foreach ( $sitios as $s ) {
 			<?php endforeach; ?>
 			</tbody>
 		</table>
-	<?php endforeach; ?>
 
-	<?php if ( $asignar && $sitios ) : ?>
-		<p style="max-width:840px;color:#50575e;margin-top:18px">
-			<strong>El contacto del cliente importa sobre todo en los <em>no auto update</em>.</strong>
-			En los sitios nuestros, los destinatarios del aviso salen del agente instalado: son los
-			administradores del sitio. En los que administra el cliente no hay agente —y son justo
-			los que más hay que avisar— así que su correo tiene que escribirse aquí a mano o el
-			aviso no tiene a dónde salir.
-		</p>
-		<?php submit_button( 'Guardar asignaciones' ); ?>
-		</form>
+		<?php if ( $asignar ) : ?>
+			<?php if ( ! SWPK_Etiquetas::es_nuestro( $tag ) ) : ?>
+				<p style="max-width:820px;color:#50575e;margin-top:12px">
+					<strong>En este grupo el contacto del cliente hay que escribirlo a mano.</strong>
+					En los sitios nuestros los destinatarios del aviso los da el agente instalado, pero
+					aquí no hay agente — y son justo los que más hay que avisar.
+				</p>
+			<?php endif; ?>
+			<?php submit_button( 'Guardar esta página' ); ?>
+			</form>
+		<?php endif; ?>
+
+		<?php SWPK_Vista::paginador( $pagina, $paginas, count( $filtrados ) ); ?>
 	<?php endif; ?>
 </div>

@@ -102,7 +102,8 @@ class SWPK_Fuente_Api implements SWPK_Fuente {
 				)
 			),
 			'version_wp'     => (string) ( $entorno['wordpress_version'] ?? '' ),
-			'version_php'    => (string) ( $entorno['container_info']['php_engine_version'] ?? '' ),
+			// Viene como "php8.5"; en pantalla estorba el prefijo.
+			'version_php'    => ltrim( (string) ( $entorno['container_info']['php_engine_version'] ?? '' ), 'phpPHP' ),
 		];
 	}
 
@@ -114,68 +115,127 @@ class SWPK_Fuente_Api implements SWPK_Fuente {
 		return $this->software( 'wp-themes', 'themes', 'tema' );
 	}
 
+	/** @var array<int,array<string,mixed>>|null */
+	private ?array $cache_sitios = null;
+
+	/** @var array<string,string> sitio_id => última vez que Kinsta miró lo instalado */
+	private array $frescura = [];
+
+	public function frescura(): array {
+		return $this->frescura;
+	}
+
+	private function sitios_cacheados(): array|WP_Error {
+		if ( null === $this->cache_sitios ) {
+			$s = $this->sitios();
+			if ( is_wp_error( $s ) ) {
+				return $s;
+			}
+			$this->cache_sitios = $s;
+		}
+
+		return $this->cache_sitios;
+	}
+
 	/**
-	 * Lee plugins o temas de toda la empresa.
+	 * Lee los plugins o temas instalados, sitio por sitio.
 	 *
-	 * Kinsta documenta los filtros (status, column, order_by) en el CUERPO de un
-	 * GET. Se mandan, pero no se confía en ellos: si el servidor los ignora
-	 * —cosa que pasa— llega el listado completo y el panel filtra por su cuenta.
-	 * Pedir "column: vulnerable" y recibir todo sin filtrar, sin darse cuenta,
-	 * sería peor que no filtrar nunca.
+	 * ─── Por qué sitio por sitio y no con el endpoint de empresa ────────────
+	 *
+	 * El endpoint de empresa parecía la opción obvia: una sola llamada para
+	 * todo. Pero contra la API real resultó que **pagina de 30 en 30** —declara
+	 * 338 y entrega 30— y los parámetros que controlan eso (limit, offset)
+	 * Kinsta los espera tipados, es decir en el cuerpo de un GET, que es
+	 * justamente lo que no se puede mandar desde WordPress.
+	 *
+	 * El endpoint por entorno no pagina: entrega la lista completa del sitio.
+	 * Cuesta dos peticiones por sitio —214 con 107 sitios— y por eso el cliente
+	 * HTTP va frenando solo para no pasarse del límite por minuto. La corrida
+	 * tarda un par de minutos, pero corre una vez al día de madrugada y el dato
+	 * queda completo, que es lo que importa.
+	 *
+	 * Comprobado contra la API real el 11 de noviembre de 2026.
 	 */
 	private function software( string $ruta, string $clave, string $tipo ): array|WP_Error {
-		$r = $this->http->get(
-			'/company/' . rawurlencode( $this->company_id ) . '/' . $ruta,
-			[],
-			[ 'order_by' => [ 'field' => 'name', 'order' => 'ascend' ] ]
-		);
-
-		if ( is_wp_error( $r ) ) {
-			return $r;
+		$sitios = $this->sitios_cacheados();
+		if ( is_wp_error( $sitios ) ) {
+			return $sitios;
 		}
 
-		$items = $r['company'][ $clave ]['items'] ?? [];
-		if ( ! is_array( $items ) ) {
-			return new WP_Error( 'swpk_forma', sprintf( 'La respuesta de /%s no trae company.%s.items.', $ruta, $clave ) );
-		}
+		$filas  = [];
+		$fallos = 0;
 
-		// Kinsta agrupa por software y lista dentro los entornos donde está
-		// instalado. El panel lo quiere al revés: una fila por sitio y software.
-		$filas = [];
-		foreach ( $items as $item ) {
-			$slug   = (string) ( $item['name'] ?? '' );
-			$titulo = (string) ( $item['title'] ?? $slug );
+		foreach ( $sitios as $sitio ) {
+			$entorno = (string) $sitio['entorno_id'];
+			if ( '' === $entorno ) {
+				continue;
+			}
 
-			foreach ( (array) ( $item['environments'] ?? [] ) as $env ) {
-				$version    = (string) ( $env['plugin_version'] ?? $env['theme_version'] ?? $env['version'] ?? '' );
-				$disponible = (string) ( $env['plugin_update'] ?? $env['theme_update'] ?? $env['update_version'] ?? '' );
-				$estado     = (string) ( $env['plugin_status'] ?? $env['theme_status'] ?? $env['status'] ?? '' );
+			$r = $this->http->get( '/sites/environments/' . rawurlencode( $entorno ) . '/' . $ruta );
 
-				// "hay actualización" no viene como booleano en ningún campo:
-				// se deduce de que exista una versión superior a la instalada.
-				$hay_actualizacion = '' !== $disponible
-					&& 'available' !== strtolower( $disponible )
+			if ( is_wp_error( $r ) ) {
+				// Un sitio que falle no debe tumbar la corrida entera: se anota
+				// y se sigue. Peor que un dato incompleto es no tener ninguno.
+				++$fallos;
+				continue;
+			}
+
+			// Kinsta devuelve cuándo miró este sitio por última vez. Si viene en
+			// 1970 es que nunca lo miró: la lista vacía no significa "sin
+			// plugins", significa "sin datos". Hay que poder distinguirlo.
+			$mirado = (string) ( $r['environment'][ $clave ]['last_updated_at'] ?? '' );
+			$ts     = $mirado ? strtotime( $mirado ) : 0;
+
+			if ( $ts > 86400 ) {
+				$actual = $this->frescura[ (string) $sitio['sitio_id'] ] ?? '';
+				$nuevo  = gmdate( 'Y-m-d H:i:s', $ts );
+				if ( '' === $actual || $nuevo > $actual ) {
+					$this->frescura[ (string) $sitio['sitio_id'] ] = $nuevo;
+				}
+			}
+
+			foreach ( (array) ( $r['environment'][ $clave ]['items'] ?? [] ) as $item ) {
+				$version    = (string) ( $item['version'] ?? '' );
+				$disponible = (string) ( $item['update_version'] ?? '' );
+				$estado     = strtolower( (string) ( $item['update'] ?? 'none' ) );
+
+				// "Hay actualización" no viene como booleano: se deduce de que
+				// update no sea "none" y de que exista una versión superior.
+				$hay = 'none' !== $estado
+					&& '' !== $disponible
 					&& SWPK_Versiones::es_menor( $version, $disponible );
 
-				if ( ! $hay_actualizacion && in_array( strtolower( $disponible ), [ 'available', 'yes' ], true ) ) {
-					$hay_actualizacion = true;
-					$disponible        = (string) ( $item['latest_version'] ?? '' );
-				}
-
 				$filas[] = [
-					'sitio_nombre'       => (string) ( $env['site_display_name'] ?? '' ),
-					'entorno_nombre'     => (string) ( $env['display_name'] ?? '' ),
+					'sitio_id'           => (string) $sitio['sitio_id'],
+					'sitio_nombre'       => (string) $sitio['nombre_visible'],
+					'entorno_nombre'     => 'Live',
 					'tipo'               => $tipo,
-					'slug'               => $slug,
-					'titulo'             => $titulo,
+					'slug'               => (string) ( $item['name'] ?? '' ),
+					'titulo'             => (string) ( $item['title'] ?? $item['name'] ?? '' ),
 					'version'            => $version,
-					'version_disponible' => $hay_actualizacion ? $disponible : '',
-					'hay_actualizacion'  => $hay_actualizacion,
-					'es_vulnerable'      => (bool) ( $env['is_version_vulnerable'] ?? $item['is_latest_version_vulnerable'] ?? false ),
-					'auto_update'        => (string) ( $env['auto_update_type'] ?? '' ),
-					'activo'             => 'active' === strtolower( $estado ),
+					'version_disponible' => $hay ? $disponible : '',
+					'hay_actualizacion'  => $hay,
+					'es_vulnerable'      => (bool) ( $item['is_version_vulnerable'] ?? false ),
+					'auto_update'        => (string) ( $item['auto_update_type'] ?? '' ),
+					'activo'             => 'active' === strtolower( (string) ( $item['status'] ?? '' ) ),
 				];
 			}
+		}
+
+		if ( $fallos && ! $filas ) {
+			return new WP_Error(
+				'swpk_sin_inventario',
+				sprintf( 'No se pudo leer el inventario de ninguno de los %d sitios.', count( $sitios ) )
+			);
+		}
+
+		if ( $fallos ) {
+			SWPK_Eventos::registrar(
+				'lectura_incompleta',
+				'',
+				sprintf( 'No se pudo leer %s de %d sitio(s). El inventario de esos quedó sin actualizar.', $tipo, $fallos ),
+				'alto'
+			);
 		}
 
 		return $filas;

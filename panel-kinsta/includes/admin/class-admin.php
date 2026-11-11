@@ -22,6 +22,9 @@ class SWPK_Admin {
 		add_action( 'admin_post_swpk_probar', [ __CLASS__, 'accion_probar' ] );
 		add_action( 'admin_post_swpk_sondear', [ __CLASS__, 'accion_sondear' ] );
 		add_action( 'admin_post_swpk_asignar', [ __CLASS__, 'accion_asignar' ] );
+		add_action( 'admin_post_swpk_cifrar', [ __CLASS__, 'accion_cifrar' ] );
+		add_action( 'admin_post_swpk_crear_acceso', [ __CLASS__, 'accion_crear_acceso' ] );
+		add_action( 'admin_post_swpk_quitar_acceso', [ __CLASS__, 'accion_quitar_acceso' ] );
 		add_action( 'admin_head', [ __CLASS__, 'estilos' ] );
 	}
 
@@ -64,6 +67,7 @@ class SWPK_Admin {
 		add_submenu_page( self::SLUG, 'Vulnerabilidades', 'Vulnerabilidades', $ver, self::SLUG . '-vulnerabilidades', [ __CLASS__, 'pantalla_vulnerabilidades' ] );
 		add_submenu_page( self::SLUG, 'Caídas', 'Caídas', $tecnico, self::SLUG . '-caidas', [ __CLASS__, 'pantalla_caidas' ] );
 		add_submenu_page( self::SLUG, 'Bitácora', 'Bitácora', $ver, self::SLUG . '-bitacora', [ __CLASS__, 'pantalla_bitacora' ] );
+		add_submenu_page( self::SLUG, 'Equipo', 'Equipo', $admin, self::SLUG . '-equipo', [ __CLASS__, 'pantalla_equipo' ] );
 		add_submenu_page( self::SLUG, 'Accesos', 'Accesos', $admin, self::SLUG . '-accesos', [ __CLASS__, 'pantalla_accesos' ] );
 		add_submenu_page( self::SLUG, 'Ajustes', 'Ajustes', $admin, self::SLUG . '-ajustes', [ __CLASS__, 'pantalla_ajustes' ] );
 	}
@@ -99,6 +103,50 @@ class SWPK_Admin {
 			.swpk-tabla td,.swpk-tabla th{vertical-align:middle}
 			.swpk-mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px}
 			.swpk-copiable{width:100%;min-height:150px;font-family:ui-monospace,Menlo,monospace;font-size:12px}
+
+			/* Elegir grupo */
+			.swpk-grupos{display:flex;gap:12px;flex-wrap:wrap;margin:18px 0}
+			.swpk-grupo{display:block;flex:1;min-width:190px;background:#fff;border:1px solid #c3c4c7;
+				border-radius:8px;padding:16px 18px;text-decoration:none;color:#1d2327;transition:.12s}
+			.swpk-grupo:hover{border-color:#2271b1;box-shadow:0 1px 5px rgba(0,0,0,.07);color:#1d2327}
+			.swpk-grupo-activo{border-color:#2271b1;border-width:2px;background:#f0f6fc;padding:15px 17px}
+			.swpk-grupo-n{display:block;font-size:30px;font-weight:600;line-height:1.1}
+			.swpk-grupo-t{display:block;font-weight:600;margin-top:3px}
+			.swpk-grupo-s{display:block;color:#646970;font-size:12px;margin-top:2px}
+
+			/* Filtros */
+			.swpk-filtros{display:flex;gap:7px;flex-wrap:wrap;align-items:center;margin:14px 0}
+			.swpk-filtros-t{color:#646970;font-size:13px;margin-right:3px}
+			.swpk-filtro{display:inline-flex;align-items:center;gap:6px;padding:4px 12px;border-radius:14px;
+				border:1px solid #c3c4c7;background:#fff;text-decoration:none;color:#1d2327;font-size:13px}
+			.swpk-filtro:hover{border-color:#2271b1;color:#1d2327}
+			.swpk-filtro-activo{background:#2271b1;border-color:#2271b1;color:#fff}
+			.swpk-filtro-activo:hover{color:#fff}
+			.swpk-filtro-n{background:rgba(0,0,0,.08);border-radius:9px;padding:0 6px;font-size:11px}
+			.swpk-filtro-activo .swpk-filtro-n{background:rgba(255,255,255,.25)}
+
+			/* Buscador y paginación */
+			.swpk-buscador{display:inline-flex;gap:6px;align-items:center;margin:0 0 14px}
+			.swpk-buscador input[type=search]{min-width:230px}
+			.swpk-paginador{display:flex;justify-content:space-between;align-items:center;
+				margin:14px 0;gap:12px;flex-wrap:wrap}
+			.swpk-cuenta{color:#646970;font-size:13px}
+			.swpk-pag{margin:0 10px;color:#646970;font-size:13px}
+
+			/* Texto para la asesora */
+			.swpk-mensaje{background:#fff;border:1px solid #c3c4c7;border-left:4px solid #2271b1;
+				border-radius:6px;padding:20px 24px;margin:14px 0;max-width:780px}
+			.swpk-mensaje h4{margin:0 0 4px;font-size:15px}
+			.swpk-mensaje-intro{margin:0 0 16px;color:#1d2327}
+			.swpk-mod{border-top:1px solid #f0f0f1;padding:14px 0 0;margin:14px 0 0}
+			.swpk-mod:first-of-type{border-top:0;padding-top:0;margin-top:0}
+			.swpk-mod-nombre{font-weight:600;font-size:14px}
+			.swpk-mod-ver{color:#646970;font-size:13px;margin:3px 0 7px}
+			.swpk-mod-ver b{color:#008a20}
+			.swpk-mod-que{margin:0;color:#1d2327}
+			.swpk-mod-ojo{color:#b32d2e;margin:7px 0 0;font-size:13px}
+			.swpk-cierre{margin:18px 0 0;padding-top:14px;border-top:1px solid #f0f0f1;color:#1d2327}
+			.swpk-copiar{margin-top:14px}
 		</style>
 		<?php
 	}
@@ -172,6 +220,13 @@ class SWPK_Admin {
 			wp_die( 'Sin permiso.' );
 		}
 		require SWPK_RUTA . 'includes/admin/vistas/caidas.php';
+	}
+
+	public static function pantalla_equipo(): void {
+		if ( ! self::puede_administrar() ) {
+			wp_die( 'Sin permiso.' );
+		}
+		require SWPK_RUTA . 'includes/admin/vistas/equipo.php';
 	}
 
 	public static function pantalla_accesos(): void {
@@ -272,6 +327,70 @@ class SWPK_Admin {
 		}
 
 		wp_safe_redirect( admin_url( 'admin.php?page=' . self::SLUG . '-sitios&swpk_msg=ok:' . rawurlencode( 'Asignaciones guardadas.' ) ) );
+		exit;
+	}
+
+	public static function accion_crear_acceso(): void {
+		if ( ! self::puede_administrar() ) {
+			wp_die( 'Sin permiso.' );
+		}
+		check_admin_referer( 'swpk_crear_acceso' );
+
+		$r = SWPK_Perfiles::crear_acceso(
+			sanitize_text_field( wp_unslash( (string) ( $_POST['nombre'] ?? '' ) ) ),
+			sanitize_email( wp_unslash( (string) ( $_POST['correo'] ?? '' ) ) ),
+			sanitize_key( wp_unslash( (string) ( $_POST['perfil'] ?? '' ) ) )
+		);
+
+		if ( is_wp_error( $r ) ) {
+			wp_safe_redirect( admin_url( 'admin.php?page=' . self::SLUG . '-equipo&swpk_msg=error:' . rawurlencode( $r->get_error_message() ) ) );
+			exit;
+		}
+
+		set_transient(
+			'swpk_acceso_nuevo',
+			[ 'nombre' => $r['usuario']->display_name, 'enlace' => $r['enlace'] ],
+			300
+		);
+
+		wp_safe_redirect( admin_url( 'admin.php?page=' . self::SLUG . '-equipo' ) );
+		exit;
+	}
+
+	public static function accion_quitar_acceso(): void {
+		if ( ! self::puede_administrar() ) {
+			wp_die( 'Sin permiso.' );
+		}
+
+		$id = isset( $_GET['usuario'] ) ? (int) $_GET['usuario'] : 0;
+		check_admin_referer( 'swpk_quitar_acceso_' . $id );
+
+		$u = get_user_by( 'id', $id );
+		if ( $u ) {
+			// Se le quita el perfil del panel, no se borra la cuenta: borrar
+			// usuarios de WordPress arrastra lo que hayan creado.
+			foreach ( array_keys( SWPK_Perfiles::roles() ) as $rol ) {
+				$u->remove_role( $rol );
+			}
+			global $wpdb;
+			$wpdb->update( SWPK_Tablas::tabla( 'sitios' ), [ 'asesora_id' => 0 ], [ 'asesora_id' => $id ] );
+		}
+
+		wp_safe_redirect( admin_url( 'admin.php?page=' . self::SLUG . '-equipo&swpk_msg=ok:' . rawurlencode( 'Acceso retirado.' ) ) );
+		exit;
+	}
+
+	public static function accion_cifrar(): void {
+		if ( ! self::puede_administrar() ) {
+			wp_die( 'Sin permiso.' );
+		}
+		check_admin_referer( 'swpk_cifrar' );
+
+		$n = SWPK_Ajustes::cifrar_lo_viejo();
+
+		wp_safe_redirect(
+			admin_url( 'admin.php?page=' . self::SLUG . '-ajustes&swpk_msg=ok:' . rawurlencode( sprintf( '%d llave(s) cifradas.', $n ) ) )
+		);
 		exit;
 	}
 

@@ -60,16 +60,20 @@ class SWPK_Wordfence {
 	 * filas que nunca vamos a consultar.
 	 */
 	public static function actualizar(): int|WP_Error {
-		if ( SWPK_Ajustes::en_modo_demo() ) {
-			return self::cargar_demo();
-		}
-
+		// Esto NO depende del modo de Kinsta, a propósito. Son dos fuentes
+		// independientes: se puede estar trabajando con un inventario de prueba
+		// y aun así cruzar contra las vulnerabilidades reales. De hecho es la
+		// mejor combinación para enseñar el panel, porque los CVE que salen son
+		// de verdad. Lo único que decide es si hay llave.
 		$llave = (string) SWPK_Ajustes::obtener( 'wordfence_key' );
+
 		if ( '' === $llave ) {
-			return new WP_Error(
-				'swpk_sin_wordfence',
-				'Falta la llave de Wordfence Intelligence. Es una cuenta gratuita en wordfence.com, sección Integrations.'
-			);
+			return SWPK_Ajustes::en_modo_demo()
+				? self::cargar_demo()
+				: new WP_Error(
+					'swpk_sin_wordfence',
+					'Falta la llave de Wordfence Intelligence. Es una cuenta gratuita en wordfence.com, sección Integrations.'
+				);
 		}
 
 		$slugs = self::slugs_instalados();

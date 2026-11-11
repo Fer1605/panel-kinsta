@@ -3,7 +3,8 @@
 defined( 'ABSPATH' ) || exit;
 
 $filtro    = isset( $_GET['accion'] ) ? sanitize_key( (string) $_GET['accion'] ) : '';
-$registros = SWPK_Accesos::listar( 200, $filtro );
+$registros = SWPK_Accesos::listar( 500, $filtro );
+[ $en_pantalla, $pagina, $paginas ] = SWPK_Vista::paginar( $registros, SWPK_Vista::pagina_pedida(), 25 );
 $fallidos  = SWPK_Accesos::fallidos_recientes( 24 );
 
 $etiquetas = [
@@ -56,6 +57,8 @@ $etiquetas = [
 		<?php endforeach; ?>
 	</p>
 
+	<?php SWPK_Vista::paginador( $pagina, $paginas, count( $registros ), 'registros' ); ?>
+
 	<?php if ( ! $registros ) : ?>
 		<div class="notice notice-info"><p>
 			Todavía no hay registros. Se van a llenar solos en cuanto alguien entre o salga del panel.
@@ -72,7 +75,7 @@ $etiquetas = [
 				</tr>
 			</thead>
 			<tbody>
-			<?php foreach ( $registros as $r ) : ?>
+			<?php foreach ( $en_pantalla as $r ) : ?>
 				<?php [ $texto, $color ] = $etiquetas[ $r->accion ] ?? [ $r->accion, '#50575e' ]; ?>
 				<tr>
 					<td><?php echo esc_html( mysql2date( 'j M Y, H:i:s', $r->ocurrio_en ) ); ?></td>

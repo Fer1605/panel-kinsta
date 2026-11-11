@@ -15,7 +15,13 @@ if ( ! SWPK_Perfiles::puede( SWPK_Perfiles::VER_TODO ) ) {
 	$registros = array_filter( $registros, static fn( $r ) => in_array( (string) $r->sitio_id, $mios, true ) );
 }
 
-$registros = array_slice( $registros, 0, 200 );
+$tipo_filtro = isset( $_GET['tipo'] ) ? sanitize_key( (string) $_GET['tipo'] ) : '';
+if ( '' !== $tipo_filtro ) {
+	$registros = array_filter( $registros, static fn( $r ) => $r->tipo === $tipo_filtro );
+}
+
+$registros = array_values( $registros );
+[ $en_pantalla, $pagina, $paginas ] = SWPK_Vista::paginar( $registros, SWPK_Vista::pagina_pedida(), 25 );
 $tipos     = SWPK_Bitacora::tipos();
 ?>
 <div class="wrap">
@@ -37,6 +43,18 @@ $tipos     = SWPK_Bitacora::tipos();
 		</p>
 	</div>
 
+	<div class="swpk-filtros">
+		<span class="swpk-filtros-t">Mostrar:</span>
+		<?php foreach ( [ '' => 'Todo' ] + $tipos as $clave => $nombre ) : ?>
+			<a class="swpk-filtro <?php echo $tipo_filtro === $clave ? 'swpk-filtro-activo' : ''; ?>"
+				href="<?php echo esc_url( '' === $clave ? remove_query_arg( [ 'tipo', 'p' ] ) : add_query_arg( [ 'tipo' => $clave, 'p' => 1 ] ) ); ?>">
+				<?php echo esc_html( $nombre ); ?>
+			</a>
+		<?php endforeach; ?>
+	</div>
+
+	<?php SWPK_Vista::paginador( $pagina, $paginas, count( $registros ), 'avisos' ); ?>
+
 	<?php if ( ! $registros ) : ?>
 		<div class="notice notice-info"><p>
 			Todavía no se ha enviado ningún aviso. La bitácora empieza a llenarse cuando se activen
@@ -55,7 +73,7 @@ $tipos     = SWPK_Bitacora::tipos();
 				</tr>
 			</thead>
 			<tbody>
-			<?php foreach ( $registros as $r ) : ?>
+			<?php foreach ( $en_pantalla as $r ) : ?>
 				<?php $sitio = SWPK_Inventario::obtener( $r->sitio_id ); ?>
 				<tr>
 					<td><?php echo esc_html( mysql2date( 'j M Y, H:i', $r->enviado_en ) ); ?></td>
@@ -76,5 +94,6 @@ $tipos     = SWPK_Bitacora::tipos();
 			<?php endforeach; ?>
 			</tbody>
 		</table>
+		<?php SWPK_Vista::paginador( $pagina, $paginas, count( $registros ), 'avisos' ); ?>
 	<?php endif; ?>
 </div>

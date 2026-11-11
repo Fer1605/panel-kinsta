@@ -21,8 +21,12 @@ $criticos    = 0;
 $con_pend    = 0;
 $sin_2fa     = 0;
 $nuestros    = 0;
+$sin_datos   = [];
 foreach ( $sitios as $s ) {
 	$nivel = SWPK_Riesgo::nivel_del_sitio( $s->sitio_id );
+	if ( SWPK_Riesgo::SIN_DATOS === $nivel ) {
+		$sin_datos[] = $s->nombre_visible;
+	}
 	if ( in_array( $nivel, [ SWPK_Riesgo::CRITICO, SWPK_Riesgo::ALTO ], true ) ) {
 		++$criticos;
 	}
@@ -50,6 +54,24 @@ foreach ( $sitios as $s ) {
 	<?php SWPK_Admin::tira_de_perfil(); ?>
 	<?php SWPK_Admin::aviso_demo(); ?>
 	<?php if ( SWPK_Perfiles::puede( SWPK_Perfiles::ADMINISTRAR ) ) { SWPK_Admin::barra_acciones(); } ?>
+
+	<?php if ( $sin_datos ) : ?>
+		<div class="notice notice-warning">
+			<p>
+				<strong>De <?php echo count( $sin_datos ); ?> sitio(s) no tenemos datos de qué hay instalado.</strong>
+				El proveedor de hosting nunca escaneó su contenido, así que devuelve una lista vacía.
+			</p>
+			<p>
+				<em>Una lista vacía no significa "está limpio": significa que no sabemos.</em> Por eso
+				aparecen como <strong>Sin datos</strong> y no como "al día". Son:
+				<?php echo esc_html( implode( ', ', array_slice( $sin_datos, 0, 12 ) ) ); ?><?php echo count( $sin_datos ) > 12 ? '…' : ''; ?>.
+			</p>
+			<p>
+				Normalmente se resuelve solo en cuanto el hosting los escanee. Si pasan días así, hay
+				que pedirle soporte al proveedor.
+			</p>
+		</div>
+	<?php endif; ?>
 
 	<?php if ( ! $sitios ) : ?>
 		<div class="notice notice-info"><p>
@@ -85,6 +107,12 @@ foreach ( $sitios as $s ) {
 				<div class="swpk-n"><?php echo (int) $avisos; ?></div>
 				<div class="swpk-r">Avisos enviados este mes</div>
 			</div>
+			<?php if ( $sin_datos ) : ?>
+				<div class="swpk-tarjeta">
+					<div class="swpk-n" style="color:#8c8f94"><?php echo count( $sin_datos ); ?></div>
+					<div class="swpk-r">Sitios sin datos del hosting</div>
+				</div>
+			<?php endif; ?>
 		</div>
 
 		<h2>Lo que pasó en la última corrida</h2>

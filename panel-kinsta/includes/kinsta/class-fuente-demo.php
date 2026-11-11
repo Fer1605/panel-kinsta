@@ -34,6 +34,14 @@ class SWPK_Fuente_Demo implements SWPK_Fuente {
 		return true;
 	}
 
+	public function frescura(): array {
+		$mapa = [];
+		foreach ( (array) $this->sitios() as $s ) {
+			$mapa[ (string) $s['sitio_id'] ] = current_time( 'mysql' );
+		}
+		return $mapa;
+	}
+
 	public function sitios(): array|WP_Error {
 		$definicion = [
 			// nombre, etiqueta de MyKinsta, versión de WP, PHP, estado

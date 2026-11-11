@@ -92,6 +92,133 @@ class SWPK_Perfiles {
 		}
 	}
 
+	/** Qué ve y qué no ve cada perfil, en palabras, para enseñarlo en pantalla. */
+	public static function descripciones(): array {
+		return [
+			self::DIRECCION => [
+				've'    => [ 'Todos los sitios', 'Vulnerabilidades y pendientes', 'Caídas', 'Bitácora de avisos', 'Registro de accesos', 'Ajustes y llaves' ],
+				'no_ve' => [],
+			],
+			self::VENTAS => [
+				've'    => [ 'Solo los sitios que tiene asignados', 'Qué actualizar en ellos y por qué importa', 'El texto listo para cotizar', 'Los avisos que se le mandaron a esos clientes' ],
+				'no_ve' => [ 'Los sitios de otras asesoras', 'Caídas', 'Registro de accesos', 'Ajustes y llaves' ],
+			],
+			self::SOPORTE => [
+				've'    => [ 'Todos los sitios', 'Vulnerabilidades y pendientes', 'Caídas y recuperaciones', 'Bitácora de avisos' ],
+				'no_ve' => [ 'Registro de accesos', 'Ajustes y llaves' ],
+			],
+		];
+	}
+
+	/**
+	 * Deja el escritorio de WordPress lo más desnudo posible para quien solo
+	 * entra a ver el panel.
+	 *
+	 * Una asesora no tiene por qué toparse con Entradas, Medios ni Herramientas:
+	 * no puede usarlos y solo estorban. Y al entrar, que caiga directo en el
+	 * panel en vez de en un escritorio de WordPress que no le dice nada.
+	 */
+	public static function init(): void {
+		add_action( 'admin_menu', [ __CLASS__, 'limpiar_menu' ], 999 );
+		add_filter( 'login_redirect', [ __CLASS__, 'a_donde_entra' ], 10, 3 );
+		add_action( 'admin_bar_menu', [ __CLASS__, 'limpiar_barra' ], 999 );
+	}
+
+	/** ¿Esta persona solo viene al panel? */
+	public static function es_solo_panel(): bool {
+		return current_user_can( self::VER ) && ! current_user_can( 'manage_options' );
+	}
+
+	public static function limpiar_menu(): void {
+		if ( ! self::es_solo_panel() ) {
+			return;
+		}
+
+		foreach ( [ 'index.php', 'edit.php', 'upload.php', 'edit.php?post_type=page', 'edit-comments.php', 'tools.php', 'profile.php' ] as $pagina ) {
+			remove_menu_page( $pagina );
+		}
+	}
+
+	public static function limpiar_barra( WP_Admin_Bar $barra ): void {
+		if ( ! self::es_solo_panel() ) {
+			return;
+		}
+
+		foreach ( [ 'wp-logo', 'comments', 'new-content', 'dashboard' ] as $nodo ) {
+			$barra->remove_node( $nodo );
+		}
+	}
+
+	public static function a_donde_entra( string $destino, string $pedido, $usuario ): string {
+		if ( $usuario instanceof WP_User && user_can( $usuario, self::VER ) && ! user_can( $usuario, 'manage_options' ) ) {
+			return admin_url( 'admin.php?page=' . SWPK_Admin::SLUG );
+		}
+
+		return $destino;
+	}
+
+	/**
+	 * Crea un acceso al panel.
+	 *
+	 * No se inventa una contraseña ni se manda por correo en texto: se crea la
+	 * cuenta y se genera el enlace de WordPress para que la persona ponga la
+	 * suya. Así la contraseña no pasa por ningún lado donde quede escrita.
+	 *
+	 * @return array{usuario:WP_User,enlace:string}|WP_Error
+	 */
+	public static function crear_acceso( string $nombre, string $correo, string $perfil ): array|WP_Error {
+		$correo = sanitize_email( $correo );
+		$nombre = sanitize_text_field( $nombre );
+
+		if ( ! is_email( $correo ) ) {
+			return new WP_Error( 'swpk_correo', 'Ese correo no es válido.' );
+		}
+
+		if ( email_exists( $correo ) ) {
+			return new WP_Error( 'swpk_existe', 'Ya hay una cuenta con ese correo.' );
+		}
+
+		if ( ! isset( self::roles()[ $perfil ] ) ) {
+			return new WP_Error( 'swpk_perfil', 'Ese perfil no existe.' );
+		}
+
+		$login = sanitize_user( current( explode( '@', $correo ) ), true );
+		$base  = $login;
+		$i     = 2;
+		while ( username_exists( $login ) ) {
+			$login = $base . $i;
+			++$i;
+		}
+
+		$id = wp_insert_user(
+			[
+				'user_login'   => $login,
+				'user_email'   => $correo,
+				'user_pass'    => wp_generate_password( 32, true, true ),
+				'display_name' => '' !== $nombre ? $nombre : $login,
+				'role'         => $perfil,
+			]
+		);
+
+		if ( is_wp_error( $id ) ) {
+			return $id;
+		}
+
+		$usuario = get_user_by( 'id', $id );
+		$clave   = get_password_reset_key( $usuario );
+
+		$enlace = is_wp_error( $clave )
+			? ''
+			: network_site_url( 'wp-login.php?action=rp&key=' . $clave . '&login=' . rawurlencode( $usuario->user_login ), 'login' );
+
+		return [ 'usuario' => $usuario, 'enlace' => $enlace ];
+	}
+
+	/** @return array<int,WP_User> */
+	public static function del_equipo(): array {
+		return get_users( [ 'role__in' => array_keys( self::roles() ), 'orderby' => 'display_name' ] );
+	}
+
 	public static function puede( string $permiso ): bool {
 		return current_user_can( $permiso ) || current_user_can( 'manage_options' );
 	}
