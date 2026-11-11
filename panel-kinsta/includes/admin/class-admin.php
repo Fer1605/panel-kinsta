@@ -248,6 +248,9 @@ class SWPK_Admin {
 			.swpk-mod-ojo{color:#b32d2e;margin:7px 0 0;font-size:13px}
 			.swpk-cierre{margin:18px 0 0;padding-top:14px;border-top:1px solid #f0f0f1;color:#1d2327}
 			.swpk-copiar{margin-top:14px}
+			.swpk-plano{white-space:pre-wrap;font-family:inherit;font-size:14px;line-height:1.6;margin:0}
+			.swpk-plano-largo{max-height:380px;overflow-y:auto;padding-right:14px;
+				border-bottom:1px solid #f0f0f1}
 		</style>
 		<?php
 	}

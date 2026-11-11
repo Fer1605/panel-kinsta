@@ -117,7 +117,18 @@ $plano = SWPK_Textos::para_asesora( $sitio, $hallazgos );
 		</p>
 
 		<div class="swpk-mensaje">
-			<pre style="white-space:pre-wrap;font-family:inherit;font-size:14px;line-height:1.6;margin:0"><?php echo esc_html( $plano ); ?></pre>
+			<?php
+			// Con 23 módulos el mensaje mide dos pantallas y empuja todo lo demás
+			// fuera de la vista. Se deja en una caja con su propio scroll: se lee
+			// completo si se quiere, pero no se come la pantalla.
+			$lineas_largo = substr_count( $plano, "\n" ) > 28;
+			?>
+			<pre class="swpk-plano <?php echo $lineas_largo ? 'swpk-plano-largo' : ''; ?>"><?php echo esc_html( $plano ); ?></pre>
+			<?php if ( $lineas_largo ) : ?>
+				<p style="color:#50575e;font-size:12px;margin:8px 0 0">
+					El mensaje sigue dentro de la caja. El botón copia el texto completo, no solo lo que se ve.
+				</p>
+			<?php endif; ?>
 			<textarea id="swpk-plano" style="position:absolute;left:-9999px" readonly><?php echo esc_textarea( $plano ); ?></textarea>
 			<p class="swpk-copiar">
 				<button type="button" class="button button-primary"
