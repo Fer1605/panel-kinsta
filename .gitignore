@@ -1,0 +1,24 @@
+# ── Material interno: NO va al repositorio público ───────────────────────────
+# Contiene la transcripción de la reunión, nombres de clientes y el alcance
+# comercial. El repositorio es público; esto se queda en la máquina.
+FASE-1.md
+PLAN.md
+docs/
+*.mp4
+*.wav
+*.m4a
+
+# ── Nunca, bajo ninguna circunstancia ────────────────────────────────────────
+*.key
+*.pem
+.env
+.env.*
+credenciales*
+wp-config.php
+
+# ── Basura del sistema ───────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+node_modules/
+vendor/
+*.log

@@ -1,0 +1,174 @@
+# Panel Kinsta
+
+Panel de control y evidencia para una cartera de sitios WordPress alojados en
+[Kinsta](https://kinsta.com). Consolida en un solo lugar qué tiene instalado
+cada sitio, qué le falta actualizar, qué tiene una vulnerabilidad conocida y
+qué se le notificó al cliente — con fecha.
+
+Está hecho como plugin de WordPress: se instala en un WordPress propio, aparte
+de los sitios que vigila, para que siga funcionando aunque el hosting vigilado
+se caiga.
+
+## Qué resuelve
+
+Una agencia con muchos sitios en Kinsta puede ver cada sitio por separado en
+MyKinsta, pero no el conjunto. Y cuando un sitio desactualizado se infecta, no
+hay forma rápida de demostrar que al cliente se le avisó.
+
+Este panel resuelve las dos cosas:
+
+- **El conjunto.** Todos los sitios agrupados por etiqueta, con su versión de
+  WordPress, sus plugins, qué está pendiente de actualizar y qué está
+  vulnerable.
+- **La evidencia.** Cada aviso que manda queda registrado con qué se notificó,
+  a quién y cuándo.
+
+## Solo lectura, por diseño
+
+Kinsta **no ofrece llaves de API de solo lectura**: al crear una llave solo se
+elige nombre y caducidad, no hay alcances, y la llave hereda los permisos de
+quien la crea. Tampoco existe un rol de MyKinsta que pueda ver los sitios sin
+poder administrarlos.
+
+Por eso la restricción vive en el código, donde se puede comprobar:
+
+```bash
+grep -rn "wp_remote_" panel-kinsta/
+```
+
+Solo debe aparecer `wp_remote_get`, y solo en `includes/kinsta/class-http.php`.
+La clase `SWPK_Http` expone un único método de red y no acepta el verbo HTTP
+como parámetro. Para que el panel pudiera actualizar un plugin, reiniciar PHP o
+crear un usuario en la cuenta de hosting, alguien tendría que escribir código
+nuevo, y eso queda en el historial del repositorio.
+
+La llave se configura como constante en `wp-config.php`, nunca en la base de
+datos:
+
+```php
+define( 'SWPK_KINSTA_API_KEY',    'la-llave' );
+define( 'SWPK_KINSTA_COMPANY_ID', 'el-company-id' );
+define( 'SWPK_WORDFENCE_KEY',     'la-llave-de-wordfence' );
+```
+
+Si la encuentra en la base de datos, el panel lo advierte en pantalla: una
+llave ahí viaja dentro de cada respaldo.
+
+## Fuentes de datos
+
+| Fuente | Qué aporta | Costo |
+|---|---|---|
+| **API de Kinsta** (v2) | Sitios, etiquetas, entornos, versión de WordPress y PHP, plugins y temas con su versión, si hay actualización, si la versión es vulnerable y si tiene actualización automática | incluido en el hosting |
+| **Wordfence Intelligence** | El *por qué*: CVE, severidad CVSS, descripción y qué versión corrige cada vulnerabilidad | gratis, uso comercial permitido |
+| **api.wordpress.org** | Si un plugin fue retirado del repositorio (no va a recibir parches nunca más) | gratis |
+
+Kinsta responde un sí/no por plugin. Wordfence es lo que convierte ese sí/no en
+una frase que se le puede explicar a un cliente.
+
+## Modo de prueba
+
+El panel funciona completo **sin llave de Kinsta**. En modo de prueba genera una
+cartera de sitios inventados —con vulnerabilidades, plugins atrasados y sitios
+al día— para poder desarrollarlo, probarlo y enseñarlo antes de tener accesos.
+
+Los identificadores de vulnerabilidad de ese modo llevan el prefijo `DEMO-` a
+propósito, y el panel muestra un aviso en todas las pantallas.
+
+Se cambia en **Panel Kinsta → Ajustes → Modo**.
+
+## Instalación para desarrollo
+
+Requiere PHP 8.1 o superior y WordPress 6.4 o superior.
+
+Con [Studio](https://developer.wordpress.com/studio/) (gratis, macOS y Windows):
+
+```bash
+studio create --path ~/Studio/panel --name "Panel" --php 8.3
+ln -s /ruta/a/este/repo/panel-kinsta ~/Studio/panel/wp-content/plugins/panel-kinsta
+cd ~/Studio/panel && studio wp plugin activate panel-kinsta
+```
+
+Y la primera corrida:
+
+```bash
+studio wp eval 'print_r( SWPK_Sincronizador::correr() );'
+```
+
+Con cualquier otro WordPress local, basta con copiar o enlazar la carpeta
+`panel-kinsta/` dentro de `wp-content/plugins/` y activarla.
+
+## Cómo está armado
+
+```
+panel-kinsta/
+├── panel-kinsta.php              arranque y selección de la fuente de datos
+└── includes/
+    ├── class-tablas.php          esquema (6 tablas)
+    ├── class-ajustes.php         configuración; la constante manda sobre la BD
+    ├── class-etiquetas.php       traduce las etiquetas del hosting a 3 grupos
+    ├── class-versiones.php       comparación de versiones tolerante
+    ├── class-inventario.php      el inventario consolidado
+    ├── class-sincronizador.php   la corrida diaria
+    ├── class-wordfence.php       feed de vulnerabilidades (lectura en trozos)
+    ├── class-riesgo.php          cruce de versiones instaladas contra el feed
+    ├── class-eventos.php         comparación entre fotos: qué cambió
+    ├── class-bitacora.php        registro de notificaciones
+    ├── class-textos.php          los avisos, redactados por audiencia
+    ├── kinsta/
+    │   ├── interface-fuente.php  el contrato
+    │   ├── class-http.php        cliente HTTP — SOLO GET
+    │   ├── class-fuente-api.php  la API real
+    │   └── class-fuente-demo.php datos de prueba
+    └── admin/                    el panel
+```
+
+El hosting está detrás de `SWPK_Fuente`, no escrito por todo el código: agregar
+otro proveedor es escribir una clase que implemente esa interfaz.
+
+### Dos decisiones que no son obvias
+
+**La historia se construye con fotos diarias.** Kinsta no guarda un historial de
+actualizaciones consultable. El panel toma una foto del estado cada día y la
+compara con la anterior; de esa comparación salen los eventos ("este plugin pasó
+de 3.1 a 3.2"). Consecuencia honesta: el conteo empieza el día que se enciende el
+panel y no se puede reconstruir hacia atrás.
+
+**El feed de vulnerabilidades se lee en trozos.** Los endpoints de Wordfence
+devuelven el feed completo y no aceptan parámetros — no se puede consultar por
+plugin. Son decenas de MB, así que `json_decode` del archivo entero agota la
+memoria de PHP. `SWPK_Wordfence::recorrer_feed()` va entregando un registro a la
+vez contando llaves y comillas, y solo se guardan las vulnerabilidades del
+software que realmente está instalado.
+
+## Límites de la API de Kinsta
+
+- **120 peticiones por minuto** por empresa. Por eso se usan los endpoints de
+  nivel empresa: el inventario completo son 3 llamadas al día, no 2 por sitio.
+- `siteLabels` viene en camelCase mientras el resto de la respuesta es
+  snake_case.
+- Los endpoints de plugins documentan sus filtros **en el cuerpo de un GET**.
+  Varias librerías HTTP descartan ese cuerpo sin avisar, así que el panel manda
+  los filtros pero no confía en ellos y vuelve a filtrar de su lado.
+- El inventario de plugins no es en tiempo real: es una foto que Kinsta refresca
+  por su cuenta, y viene con su `last_updated_at`.
+- La API está marcada como beta pública.
+
+## Estado
+
+En desarrollo. Funciona el inventario, el cruce de vulnerabilidades, la
+comparación diaria, los textos de aviso y la bitácora. Falta el envío automático
+de los correos, el monitor de caídas, los perfiles de acceso y el plugin
+acompañante que lee los usuarios administradores de cada sitio.
+
+## Atribución
+
+Los datos de vulnerabilidades provienen de
+[Wordfence Intelligence](https://www.wordfence.com/threat-intel/) (Defiant,
+Inc.), usados bajo su
+[licencia](https://www.wordfence.com/wti-community-edition-terms-and-conditions/),
+que exige enlazar el registro de cada vulnerabilidad y reproducir su aviso de
+copyright donde se muestren. Los identificadores CVE son de MITRE.
+
+## Licencia
+
+GPL-2.0-or-later, como WordPress.
