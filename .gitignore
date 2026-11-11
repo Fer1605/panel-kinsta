@@ -25,3 +25,6 @@ vendor/
 
 # Guía de pruebas: tiene contraseñas de los sitios locales
 PRUEBAS.md
+
+# Exportaciones del documento del jefe
+*.pdf
