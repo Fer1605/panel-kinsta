@@ -21,7 +21,7 @@ defined( 'ABSPATH' ) || exit;
 
 class SWPK_Tablas {
 
-	public const VERSION = 1;
+	public const VERSION = 2;
 
 	public static function tabla( string $nombre ): string {
 		global $wpdb;
@@ -143,6 +143,48 @@ class SWPK_Tablas {
 				PRIMARY KEY (id),
 				KEY sitio_fecha (sitio_id, enviado_en),
 				KEY tipo (tipo)
+			) {$collate};"
+		);
+
+		$age = self::tabla( 'agentes' );
+		$usr = self::tabla( 'usuarios' );
+
+		dbDelta(
+			"CREATE TABLE {$age} (
+				id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+				sitio_url VARCHAR(191) NOT NULL,
+				sitio_id VARCHAR(64) NOT NULL DEFAULT '',
+				nombre VARCHAR(191) NOT NULL DEFAULT '',
+				token VARCHAR(64) NOT NULL,
+				secreto VARCHAR(128) NOT NULL,
+				version VARCHAR(16) NOT NULL DEFAULT '',
+				registrado_en DATETIME NOT NULL,
+				ultimo_reporte DATETIME NULL,
+				puede_enviar_correo TINYINT(1) NOT NULL DEFAULT 0,
+				error_correo TEXT NULL,
+				dos_pasos TINYINT(1) NOT NULL DEFAULT 0,
+				xmlrpc_abierto TINYINT(1) NOT NULL DEFAULT 1,
+				PRIMARY KEY (id),
+				UNIQUE KEY sitio_url (sitio_url),
+				UNIQUE KEY token (token)
+			) {$collate};"
+		);
+
+		dbDelta(
+			"CREATE TABLE {$usr} (
+				id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+				sitio_url VARCHAR(191) NOT NULL,
+				usuario_id BIGINT UNSIGNED NOT NULL,
+				login VARCHAR(191) NOT NULL DEFAULT '',
+				correo VARCHAR(191) NOT NULL DEFAULT '',
+				nombre VARCHAR(191) NOT NULL DEFAULT '',
+				roles VARCHAR(191) NOT NULL DEFAULT '',
+				alta DATETIME NULL,
+				dos_pasos TINYINT(1) NOT NULL DEFAULT 0,
+				visto_en DATETIME NOT NULL,
+				PRIMARY KEY (id),
+				UNIQUE KEY sitio_usuario (sitio_url, usuario_id),
+				KEY correo (correo)
 			) {$collate};"
 		);
 

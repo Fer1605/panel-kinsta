@@ -99,6 +99,60 @@ studio wp eval 'print_r( SWPK_Sincronizador::correr() );'
 Con cualquier otro WordPress local, basta con copiar o enlazar la carpeta
 `panel-kinsta/` dentro de `wp-content/plugins/` y activarla.
 
+## Dos plugins
+
+| | Dónde se instala | Qué hace |
+|---|---|---|
+| **`panel-kinsta/`** | En un WordPress propio, uno solo | Lee el hosting, cruza vulnerabilidades, avisa y deja constancia |
+| **`agente-sitio/`** | En cada sitio vigilado | Reporta quién tiene acceso de administrador y activa la verificación en dos pasos |
+
+El agente existe porque la API de Kinsta **no tiene endpoint para listar los
+usuarios de WordPress**: tiene para crear un administrador, para preguntar si un
+correo ya existe y para generar un enlace de acceso, pero no para descubrir
+usuarios que no sabíamos que existían — que es justo lo que hay que detectar
+cuando un malware crea una cuenta.
+
+El sitio llama al panel, no al revés: **el sitio vigilado no abre ningún endpoint
+nuevo.** Cada reporte va firmado con HMAC-SHA256 y una marca de tiempo, con un
+secreto propio de ese sitio que el panel le entregó al registrarlo. Que el
+reporte deje de llegar también es información: un sitio callado 48 horas aparece
+marcado.
+
+Lo que sale del sitio: id, usuario, correo, roles y fecha de alta de cada usuario
+con rol de control, si la verificación en dos pasos está activa y si el sitio
+logra enviar correo. **No salen contraseñas, ni contenido, ni nada más de la base
+de datos.**
+
+### La verificación en dos pasos
+
+Está escrita en el agente en lugar de depender de un plugin de terceros, por dos
+razones: un solo plugin por sitio en vez de dos, y que el panel pueda llevar el
+marcador de cobertura sin hurgar en las tablas de otro fabricante.
+
+El flujo es el de siempre: WordPress valida la contraseña, el agente le quita la
+sesión recién creada, manda un código de seis dígitos por correo y solo entrega
+la sesión cuando el código es correcto. Las reglas que lo sostienen:
+
+- Código generado con `random_int`, **guardado cifrado**, de un solo uso y con 10
+  minutos de vigencia.
+- Cinco intentos y bloqueo de 15 minutos.
+- Un testigo de un solo uso impide probar códigos contra un usuario sin haber
+  pasado antes su contraseña.
+- Códigos de respaldo, también cifrados.
+- Solo a los roles con control. **Nunca a suscriptores o clientes de tienda:**
+  pedirle un código por correo a cada comprador tumba la venta.
+- Salida de emergencia: `define( 'SWA_2FA_APAGADO', true );` en `wp-config.php`.
+
+**Dos límites que conviene tener claros:**
+
+1. **Esto protege el formulario de login y nada más.** No protege XML-RPC ni la
+   API REST con contraseñas de aplicación, porque esas vías no pasan por el
+   formulario. El agente ofrece cerrar XML-RPC en la misma visita.
+2. **El sitio tiene que poder enviar correo.** Si `wp_mail` está roto, el código
+   no llega y los administradores quedan fuera de su propio sitio. Por eso el
+   agente prueba el envío antes y **se niega a activar la verificación si el
+   envío falla**.
+
 ## Cómo está armado
 
 ```

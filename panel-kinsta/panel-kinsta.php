@@ -44,6 +44,8 @@ require_once SWPK_RUTA . 'includes/class-riesgo.php';
 require_once SWPK_RUTA . 'includes/class-textos.php';
 require_once SWPK_RUTA . 'includes/class-eventos.php';
 require_once SWPK_RUTA . 'includes/class-bitacora.php';
+require_once SWPK_RUTA . 'includes/class-usuarios.php';
+require_once SWPK_RUTA . 'includes/class-receptor.php';
 require_once SWPK_RUTA . 'includes/class-sincronizador.php';
 require_once SWPK_RUTA . 'includes/admin/class-admin.php';
 
@@ -88,6 +90,7 @@ add_action(
 	static function (): void {
 		SWPK_Tablas::revisar_version();
 		SWPK_Sincronizador::init();
+		SWPK_Receptor::init();
 		if ( is_admin() ) {
 			SWPK_Admin::init();
 		}

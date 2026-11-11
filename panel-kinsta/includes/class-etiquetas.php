@@ -54,10 +54,16 @@ class SWPK_Etiquetas {
 				return $mapa_manual[ $nombre ];
 			}
 
-			// Adivinanza por palabras. El orden importa: "no auto update"
-			// contiene "auto update", así que lo negativo se revisa primero.
+			// Adivinanza por palabras. Dos cosas que importan:
+			//
+			//  - El orden: "no auto update" contiene "auto update", así que lo
+			//    negativo se revisa primero o todo cae en el grupo equivocado.
+			//  - La negación puede venir pegada. Una etiqueta real se llama
+			//    "NoUpdate(Externo SW)", sin espacio, y un \b entre "no" y
+			//    "update" no existe ahí. Por eso no se usa \b al final.
 			$tiene_update = str_contains( $nombre, 'update' ) || str_contains( $nombre, 'actualiza' );
-			$niega        = preg_match( '/\b(no|sin|not)\b/', $nombre ) === 1;
+			$niega        = preg_match( '/\b(no|sin|not)\s*-?\s*(update|auto|actualiza)/', $nombre ) === 1
+				|| str_contains( $nombre, 'externo' );
 
 			if ( $tiene_update && $niega ) {
 				return self::NO_UPDATE;
