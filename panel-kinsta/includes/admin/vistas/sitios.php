@@ -109,7 +109,7 @@ $filtrados = SWPK_Vista::filtrar( $todos, $tag, $nivel, $busqueda );
 					<td><?php echo wp_kses_post( SWPK_Admin::nivel_badge( $nivel_s ) ); ?></td>
 					<td>
 						<?php if ( SWPK_Riesgo::SIN_DATOS === $nivel_s ) : ?>
-							<span style="color:#8c8f94"><?php echo esc_html( SWPK_Admin::proveedor() ); ?> nunca lo ha escaneado</span>
+							<span style="color:#8c8f94">sin escanear por <?php echo esc_html( SWPK_Admin::proveedor() ); ?></span>
 						<?php else : ?>
 							<?php if ( $vulns ) : ?>
 								<strong style="color:#b32d2e"><?php echo (int) $vulns; ?> con vulnerabilidad</strong><br>

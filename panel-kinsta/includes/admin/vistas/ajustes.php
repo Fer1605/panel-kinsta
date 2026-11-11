@@ -80,25 +80,62 @@ $a = SWPK_Ajustes::todos();
 			</tr>
 		</table>
 
-		<h2>Las tres etiquetas de MyKinsta</h2>
-		<p class="description" style="max-width:760px">
-			El panel adivina a qué grupo pertenece cada sitio por el nombre de su etiqueta. Si los
-			nombres reales no se parecen a lo esperado, se escriben aquí tal como están en MyKinsta.
-		</p>
-		<table class="form-table" role="presentation">
-			<tr>
-				<th scope="row"><label for="etiqueta_desarrollo">Desarrollo</label></th>
-				<td><input type="text" class="regular-text" name="etiqueta_desarrollo" id="etiqueta_desarrollo" value="<?php echo esc_attr( $a['etiqueta_desarrollo'] ); ?>"></td>
-			</tr>
-			<tr>
-				<th scope="row"><label for="etiqueta_auto">Auto update</label></th>
-				<td><input type="text" class="regular-text" name="etiqueta_auto" id="etiqueta_auto" value="<?php echo esc_attr( $a['etiqueta_auto'] ); ?>"></td>
-			</tr>
-			<tr>
-				<th scope="row"><label for="etiqueta_no_update">No auto update</label></th>
-				<td><input type="text" class="regular-text" name="etiqueta_no_update" id="etiqueta_no_update" value="<?php echo esc_attr( $a['etiqueta_no_update'] ); ?>"></td>
-			</tr>
-		</table>
+		<h2>Cómo se agrupan los sitios</h2>
+		<?php $etiquetas = SWPK_Etiquetas::descubrir(); ?>
+
+		<?php if ( ! $etiquetas ) : ?>
+			<p style="max-width:780px;color:#50575e">
+				Todavía no hay sitios leídos, así que no se sabe con qué etiquetas los agrupa
+				<?php echo esc_html( SWPK_Admin::proveedor() ); ?>. Aparecerán solas después de la
+				primera sincronización.
+			</p>
+		<?php else : ?>
+			<p style="max-width:820px;color:#3c434a">
+				Estas son las etiquetas que <?php echo esc_html( SWPK_Admin::proveedor() ); ?> devuelve,
+				tal como están escritas allá. El panel las detectó solo y adivinó a qué grupo
+				corresponde cada una. <strong>Solo hay que tocar esto si alguna quedó en el grupo
+				equivocado.</strong>
+			</p>
+
+			<table class="widefat striped swpk-tabla" style="max-width:760px">
+				<thead>
+					<tr>
+						<th>Etiqueta en <?php echo esc_html( SWPK_Admin::proveedor() ); ?></th>
+						<th style="width:90px">Sitios</th>
+						<th style="width:210px">Grupo del panel</th>
+					</tr>
+				</thead>
+				<tbody>
+				<?php foreach ( $etiquetas as $clave => $e ) : ?>
+					<tr>
+						<td>
+							<span class="swpk-mono"><?php echo esc_html( $e['nombre'] ); ?></span>
+							<?php if ( ! $e['manual'] ) : ?>
+								<br><span style="color:#50575e;font-size:12px">detectada sola</span>
+							<?php else : ?>
+								<br><span style="color:#2271b1;font-size:12px">corregida a mano</span>
+							<?php endif; ?>
+						</td>
+						<td><?php echo (int) $e['sitios']; ?></td>
+						<td>
+							<select name="etiqueta[<?php echo esc_attr( $clave ); ?>]" style="width:100%">
+								<?php foreach ( SWPK_Etiquetas::nombres() as $tag => $nombre_tag ) : ?>
+									<option value="<?php echo esc_attr( $tag ); ?>" <?php selected( $e['tag'], $tag ); ?>>
+										<?php echo esc_html( $nombre_tag ); ?>
+									</option>
+								<?php endforeach; ?>
+							</select>
+						</td>
+					</tr>
+				<?php endforeach; ?>
+				</tbody>
+			</table>
+
+			<p style="max-width:820px;color:#50575e;margin-top:10px">
+				Al cambiar un grupo hay que volver a correr la sincronización para que los sitios se
+				reacomoden.
+			</p>
+		<?php endif; ?>
 
 		<h2>Correos</h2>
 		<table class="form-table" role="presentation">

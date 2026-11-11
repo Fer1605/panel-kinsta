@@ -1,11 +1,20 @@
 <?php
 /**
- * Traduce las etiquetas de MyKinsta a los tres tags del panel.
+ * Traduce las etiquetas del proveedor a los tres grupos del panel.
  *
- * El jefe dijo "desarrollo productivo, desarrollo auto update y no auto update,
- * CREO que se llama" (00:26). O sea que ni él tiene los nombres exactos. En vez
- * de esperar ese dato para empezar, el panel adivina por palabras y deja que se
- * corrija a mano en Ajustes cuando lo sepamos.
+ * ─── Las etiquetas no se escriben a mano ────────────────────────────────────
+ *
+ * El panel las descubre solo: lee las que vienen en la respuesta del proveedor,
+ * cuenta cuántos sitios tiene cada una y adivina a qué grupo corresponde por las
+ * palabras de su nombre.
+ *
+ * Pedirle a alguien que escriba "NoUpdate(Externo SW)" tal cual, sin un espacio
+ * de más ni de menos, es pedir un error de dedo que dejaría 13 sitios fuera del
+ * reporte sin que nadie se entere. Y mañana, con otro proveedor, los nombres
+ * serán otros o el concepto ni existirá.
+ *
+ * Lo único que queda a mano es corregir una adivinanza equivocada, y se corrige
+ * eligiendo de una lista de las etiquetas que de verdad existen, no escribiendo.
  */
 
 defined( 'ABSPATH' ) || exit;
@@ -16,6 +25,76 @@ class SWPK_Etiquetas {
 	public const AUTO       = 'auto_update';
 	public const NO_UPDATE  = 'no_update';
 	public const SIN        = 'sin_etiqueta';
+
+	public const OPCION_MAPA = 'swpk_mapa_etiquetas';
+
+	/**
+	 * Las etiquetas que de verdad existen en la cuenta, con cuántos sitios tiene
+	 * cada una y a qué grupo se asignó.
+	 *
+	 * @return array<string,array{nombre:string,sitios:int,tag:string,manual:bool}>
+	 */
+	public static function descubrir(): array {
+		global $wpdb;
+
+		$tabla = SWPK_Tablas::tabla( 'sitios' );
+		$filas = $wpdb->get_col( "SELECT etiquetas FROM {$tabla}" ) ?: [];
+		$mapa  = self::mapa_guardado();
+
+		$encontradas = [];
+
+		foreach ( $filas as $json ) {
+			$etiquetas = json_decode( (string) $json, true );
+			if ( ! is_array( $etiquetas ) ) {
+				continue;
+			}
+
+			foreach ( $etiquetas as $e ) {
+				$nombre = trim( (string) ( $e['name'] ?? '' ) );
+				if ( '' === $nombre ) {
+					continue;
+				}
+
+				$clave = strtolower( $nombre );
+
+				if ( ! isset( $encontradas[ $clave ] ) ) {
+					$encontradas[ $clave ] = [
+						'nombre' => $nombre,
+						'sitios' => 0,
+						'tag'    => $mapa[ $clave ] ?? self::adivinar( $nombre ),
+						'manual' => isset( $mapa[ $clave ] ),
+					];
+				}
+
+				++$encontradas[ $clave ]['sitios'];
+			}
+		}
+
+		uasort( $encontradas, static fn( $a, $b ) => $b['sitios'] <=> $a['sitios'] );
+
+		return $encontradas;
+	}
+
+	/** @return array<string,string> etiqueta en minúsculas => grupo */
+	public static function mapa_guardado(): array {
+		$m = get_option( self::OPCION_MAPA, [] );
+		return is_array( $m ) ? $m : [];
+	}
+
+	public static function guardar_mapa( array $mapa ): void {
+		$limpio = [];
+
+		foreach ( $mapa as $etiqueta => $tag ) {
+			$etiqueta = strtolower( trim( (string) $etiqueta ) );
+			$tag      = sanitize_key( (string) $tag );
+
+			if ( '' !== $etiqueta && isset( self::nombres()[ $tag ] ) ) {
+				$limpio[ $etiqueta ] = $tag;
+			}
+		}
+
+		update_option( self::OPCION_MAPA, $limpio, false );
+	}
 
 	public static function nombres(): array {
 		return [
@@ -32,48 +111,68 @@ class SWPK_Etiquetas {
 	}
 
 	/**
-	 * @param array<int,array{id?:string,name?:string}> $etiquetas Lo que viene en siteLabels.
+	 * @param array<int,array{id?:string,name?:string}> $etiquetas Lo que viene en la respuesta.
 	 */
 	public static function clasificar( array $etiquetas ): string {
-		$ajustes = SWPK_Ajustes::todos();
-
-		$mapa_manual = [
-			trim( strtolower( (string) $ajustes['etiqueta_no_update'] ) )  => self::NO_UPDATE,
-			trim( strtolower( (string) $ajustes['etiqueta_auto'] ) )       => self::AUTO,
-			trim( strtolower( (string) $ajustes['etiqueta_desarrollo'] ) ) => self::DESARROLLO,
-		];
-		unset( $mapa_manual[''] );
+		$mapa = self::mapa_guardado();
 
 		foreach ( $etiquetas as $etiqueta ) {
-			$nombre = strtolower( trim( (string) ( $etiqueta['name'] ?? '' ) ) );
+			$nombre = trim( (string) ( $etiqueta['name'] ?? '' ) );
 			if ( '' === $nombre ) {
 				continue;
 			}
 
-			if ( isset( $mapa_manual[ $nombre ] ) ) {
-				return $mapa_manual[ $nombre ];
+			// Una corrección a mano manda sobre la adivinanza.
+			$clave = strtolower( $nombre );
+			if ( isset( $mapa[ $clave ] ) ) {
+				return $mapa[ $clave ];
 			}
 
-			// Adivinanza por palabras. Dos cosas que importan:
-			//
-			//  - El orden: "no auto update" contiene "auto update", así que lo
-			//    negativo se revisa primero o todo cae en el grupo equivocado.
-			//  - La negación puede venir pegada. Una etiqueta real se llama
-			//    "NoUpdate(Externo SW)", sin espacio, y un \b entre "no" y
-			//    "update" no existe ahí. Por eso no se usa \b al final.
-			$tiene_update = str_contains( $nombre, 'update' ) || str_contains( $nombre, 'actualiza' );
-			$niega        = preg_match( '/\b(no|sin|not)\s*-?\s*(update|auto|actualiza)/', $nombre ) === 1
-				|| str_contains( $nombre, 'externo' );
+			$adivinado = self::adivinar( $nombre );
+			if ( self::SIN !== $adivinado ) {
+				return $adivinado;
+			}
+		}
 
-			if ( $tiene_update && $niega ) {
-				return self::NO_UPDATE;
-			}
-			if ( $tiene_update && ( str_contains( $nombre, 'auto' ) || str_contains( $nombre, 'automat' ) ) ) {
-				return self::AUTO;
-			}
-			if ( str_contains( $nombre, 'desarrollo' ) || str_contains( $nombre, 'develop' ) || str_contains( $nombre, 'dev' ) ) {
-				return self::DESARROLLO;
-			}
+		return self::SIN;
+	}
+
+	/**
+	 * A qué grupo suena el nombre de una etiqueta.
+	 *
+	 * Dos cosas que importan:
+	 *
+	 *  - El orden: "no auto update" contiene "auto update", así que lo negativo
+	 *    se revisa primero o todo cae en el grupo equivocado.
+	 *  - La negación puede venir pegada. Una etiqueta real se llama
+	 *    "NoUpdate(Externo SW)", sin espacio, y un \b entre "no" y "update" no
+	 *    existe ahí. Por eso no se usa \b al final.
+	 */
+	public static function adivinar( string $nombre ): string {
+		$n = strtolower( trim( remove_accents( $nombre ) ) );
+
+		if ( '' === $n ) {
+			return self::SIN;
+		}
+
+		$tiene_update = str_contains( $n, 'update' ) || str_contains( $n, 'actualiza' );
+		$niega        = preg_match( '/\b(no|sin|not)\s*-?\s*(update|auto|actualiza)/', $n ) === 1
+			|| str_contains( $n, 'externo' );
+
+		if ( $tiene_update && $niega ) {
+			return self::NO_UPDATE;
+		}
+
+		if ( $tiene_update && ( str_contains( $n, 'auto' ) || str_contains( $n, 'automat' ) ) ) {
+			return self::AUTO;
+		}
+
+		if ( str_contains( $n, 'desarrollo' ) || str_contains( $n, 'develop' ) || str_contains( $n, 'staging' ) || preg_match( '/\bdev\b/', $n ) ) {
+			return self::DESARROLLO;
+		}
+
+		if ( str_contains( $n, 'produc' ) || str_contains( $n, 'live' ) ) {
+			return self::AUTO;
 		}
 
 		return self::SIN;

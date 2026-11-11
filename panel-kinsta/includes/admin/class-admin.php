@@ -479,10 +479,15 @@ class SWPK_Admin {
 		}
 		check_admin_referer( 'swpk_ajustes' );
 
+		// Las etiquetas ya no se escriben: se eligen de las que el proveedor
+		// devuelve, y solo si la detección automática se equivocó.
+		if ( isset( $_POST['etiqueta'] ) && is_array( $_POST['etiqueta'] ) ) {
+			SWPK_Etiquetas::guardar_mapa( (array) wp_unslash( $_POST['etiqueta'] ) );
+		}
+
 		$campos = [
 			'modo', 'company_id', 'api_key', 'wordfence_key', 'correo_soporte',
-			'correo_ventas', 'dominios_propios', 'etiqueta_desarrollo',
-			'etiqueta_auto', 'etiqueta_no_update',
+			'correo_ventas', 'dominios_propios',
 		];
 
 		$nuevos = [];

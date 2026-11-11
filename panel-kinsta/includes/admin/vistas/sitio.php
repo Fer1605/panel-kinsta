@@ -75,13 +75,13 @@ $plano = SWPK_Textos::para_asesora( $sitio, $hallazgos );
 	<?php if ( null === $dias ) : ?>
 		<div class="notice notice-warning">
 			<p>
-				<strong><?php echo esc_html( SWPK_Admin::proveedor() ); ?> nunca ha escaneado este sitio</strong>,
+				<strong>Este sitio no ha sido escaneado por <?php echo esc_html( SWPK_Admin::proveedor() ); ?></strong>,
 				así que su lista de módulos llega vacía. Una lista vacía no significa que el sitio esté
 				limpio: significa que no sabemos qué tiene.
 			</p>
 			<p>
-				<?php echo esc_html( SWPK_Admin::proveedor() ); ?> arma esa lista por su cuenta, sitio por
-				sitio, cada uno a su ritmo. Normalmente aparece sola en unos días. Si pasa una semana
+				Esa lista la arma <?php echo esc_html( SWPK_Admin::proveedor() ); ?> por su cuenta, sitio por
+				sitio y cada uno a su ritmo. Normalmente aparece sola en unos días. Si pasa una semana
 				así, vale la pena abrirles un ticket.
 			</p>
 		</div>
@@ -89,14 +89,14 @@ $plano = SWPK_Textos::para_asesora( $sitio, $hallazgos );
 		<div class="notice notice-warning">
 			<p>
 				<strong>Este dato tiene <?php echo (int) $dias; ?> días.</strong>
-				<?php echo esc_html( SWPK_Admin::proveedor() ); ?> no vuelve a revisar este sitio desde el
+				No ha vuelto a ser revisado por <?php echo esc_html( SWPK_Admin::proveedor() ); ?> desde el
 				<?php echo esc_html( mysql2date( 'j \d\e F', (string) $sitio->inventario_en ) ); ?>, así que
 				lo de abajo puede estar desactualizado.
 			</p>
 		</div>
 	<?php else : ?>
 		<p style="color:#50575e;margin:-6px 0 16px">
-			<?php echo esc_html( SWPK_Admin::proveedor() ); ?> revisó qué hay instalado en este sitio el
+			Lo que hay instalado en este sitio fue revisado por <?php echo esc_html( SWPK_Admin::proveedor() ); ?> el
 			<?php echo esc_html( mysql2date( 'j \d\e F \a \l\a\s H:i', (string) $sitio->inventario_en ) ); ?>
 			<?php echo 0 === $dias ? '(hoy)' : sprintf( '(hace %d día%s)', (int) $dias, 1 === $dias ? '' : 's' ); ?>.
 		</p>
