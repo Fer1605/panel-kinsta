@@ -36,9 +36,11 @@ Por eso la restricción vive en el código, donde se puede comprobar:
 grep -rn "wp_remote_" panel-kinsta/
 ```
 
-Solo debe aparecer `wp_remote_get`, y solo en `includes/kinsta/class-http.php`.
-La clase `SWPK_Http` expone un único método de red y no acepta el verbo HTTP
-como parámetro. Para que el panel pudiera actualizar un plugin, reiniciar PHP o
+En todo el plugin solo debe aparecer `wp_remote_get`. El panel habla con tres
+direcciones —`api.kinsta.com`, `wordfence.com` y `api.wordpress.org`— y la de
+Kinsta se arma únicamente en `includes/kinsta/class-http.php`, cuya clase
+`SWPK_Http` expone un solo método de red y no acepta el verbo HTTP como
+parámetro. Para que el panel pudiera actualizar un plugin, reiniciar PHP o
 crear un usuario en la cuenta de hosting, alguien tendría que escribir código
 nuevo, y eso queda en el historial del repositorio.
 

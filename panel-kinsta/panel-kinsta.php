@@ -19,7 +19,7 @@
  * Kinsta no se puede limitar desde Kinsta (no hay roles de solo lectura ni
  * alcances por llave), así que la garantía está aquí, en el código, y es
  * auditable: buscar "wp_remote_" en este repositorio devuelve únicamente
- * peticiones GET.
+ * peticiones GET, y las de Kinsta salen todas de un solo archivo.
  * ────────────────────────────────────────────────────────────────────────────
  */
 

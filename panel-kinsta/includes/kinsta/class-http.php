@@ -18,7 +18,12 @@
  *
  * Auditoría de un minuto:
  *     grep -rn "wp_remote_" panel-kinsta/
- * Solo debe aparecer wp_remote_get, y solo en este archivo.
+ * En todo el plugin solo debe aparecer wp_remote_get. Si alguna vez sale un
+ * wp_remote_post, un wp_remote_request o un 'method' => 'PUT', es que alguien
+ * agregó escritura.
+ *
+ * Y de las tres direcciones a las que el panel habla —api.kinsta.com,
+ * wordfence.com y api.wordpress.org— la de Kinsta solo se arma en este archivo.
  * ────────────────────────────────────────────────────────────────────────────
  */
 
