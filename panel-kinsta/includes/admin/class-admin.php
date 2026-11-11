@@ -159,6 +159,7 @@ class SWPK_Admin {
 			.swpk-grupo:hover{border-color:#2271b1;box-shadow:0 1px 5px rgba(0,0,0,.07);color:#1d2327}
 			.swpk-grupo-activo{border-color:#2271b1;border-width:2px;background:#f0f6fc;padding:15px 17px}
 			.swpk-grupo-n{display:block;font-size:30px;font-weight:600;line-height:1.1}
+			.swpk-grupo-de{font-size:15px;font-weight:400;color:#646970;margin-left:5px}
 			.swpk-grupo-t{display:block;font-weight:600;margin-top:3px}
 			.swpk-grupo-s{display:block;color:#646970;font-size:12px;margin-top:2px}
 

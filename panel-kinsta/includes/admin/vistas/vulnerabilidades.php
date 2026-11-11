@@ -21,9 +21,53 @@ $tiene_algo = static fn( $s ) => ! in_array(
 	true
 );
 
-$con_algo  = array_values( array_filter( SWPK_Vista::filtrar( $todos, $tag, $nivel, $busqueda ), $tiene_algo ) );
-$al_dia    = count( array_filter( $del_grupo, static fn( $s ) => SWPK_Riesgo::AL_DIA === SWPK_Riesgo::nivel_del_sitio( $s->sitio_id ) ) );
-$sin_datos = count( array_filter( $del_grupo, static fn( $s ) => SWPK_Riesgo::SIN_DATOS === SWPK_Riesgo::nivel_del_sitio( $s->sitio_id ) ) );
+$con_algo = array_values( array_filter( SWPK_Vista::filtrar( $todos, $tag, $nivel, $busqueda ), $tiene_algo ) );
+
+/**
+ * El desglose de cada grupo, para la tarjeta.
+ *
+ * La tarjeta no puede decir "82": eso se lee como "82 sitios con
+ * vulnerabilidades". Dice "31 de 82" y abajo qué pasa con los otros 51.
+ */
+$detalles = [];
+foreach ( SWPK_Etiquetas::nombres() as $t => $nombre_tag ) {
+	$del_t = SWPK_Vista::filtrar( $todos, $t, '', '' );
+	if ( ! $del_t ) {
+		continue;
+	}
+
+	$pend = 0;
+	$dia  = 0;
+	$sin  = 0;
+
+	foreach ( $del_t as $s ) {
+		$n = SWPK_Riesgo::nivel_del_sitio( $s->sitio_id );
+		if ( SWPK_Riesgo::AL_DIA === $n ) {
+			++$dia;
+		} elseif ( SWPK_Riesgo::SIN_DATOS === $n ) {
+			++$sin;
+		} else {
+			++$pend;
+		}
+	}
+
+	$resto = [];
+	if ( $dia ) {
+		$resto[] = $dia . ' al día';
+	}
+	if ( $sin ) {
+		$resto[] = $sin . ' sin escanear';
+	}
+
+	$detalles[ $t ] = [
+		'n'   => $pend,
+		'de'  => count( $del_t ),
+		'sub' => $resto ? implode( ' · ', $resto ) : 'todos con algo pendiente',
+	];
+}
+
+$al_dia    = $detalles[ $tag ]['de'] ?? 0;
+$sin_datos = 0;
 
 $orden = [ SWPK_Riesgo::CRITICO => 0, SWPK_Riesgo::ALTO => 1, SWPK_Riesgo::MEDIO => 2, SWPK_Riesgo::BAJO => 3 ];
 usort(
@@ -46,7 +90,7 @@ $por_nivel[ SWPK_Riesgo::SIN_DATOS ] = 0;
 	<?php SWPK_Admin::tira_de_perfil(); ?>
 	<?php SWPK_Admin::aviso_demo(); ?>
 
-	<?php SWPK_Vista::selector_de_grupo( 'panel-kinsta-vulnerabilidades', $tag, $por_tag ); ?>
+	<?php SWPK_Vista::selector_de_grupo( 'panel-kinsta-vulnerabilidades', $tag, $por_tag, [], $detalles ); ?>
 
 	<?php if ( '' === $tag ) : ?>
 		</div>
@@ -57,22 +101,6 @@ $por_nivel[ SWPK_Riesgo::SIN_DATOS ] = 0;
 		<?php SWPK_Vista::filtro_de_riesgo( $nivel, $por_nivel ); ?>
 		<?php SWPK_Vista::buscador( 'panel-kinsta-vulnerabilidades', $busqueda, [ 'tag' => $tag, 'nivel' => $nivel ] ); ?>
 	<?php SWPK_Vista::cerrar_barra(); ?>
-
-	<?php
-	// Decir explícitamente cuántos del grupo quedan fuera de esta lista. Si no,
-	// "tengo 12 sitios en desarrollo y solo veo 3" parece un error del panel.
-	$fuera = [];
-	if ( $al_dia ) {
-		$fuera[] = sprintf( '%d al día', $al_dia );
-	}
-	if ( $sin_datos ) {
-		$fuera[] = sprintf( '%d que %s nunca ha escaneado', $sin_datos, SWPK_Admin::proveedor() );
-	}
-	?>
-	<p class="swpk-cuenta" style="margin:0 0 10px">
-		<strong><?php echo count( $con_algo ); ?></strong> de <?php echo count( $del_grupo ); ?> sitios de este
-		grupo tienen algo pendiente<?php echo $fuera ? ' (' . esc_html( implode( ', ', $fuera ) ) . ')' : ''; ?>.
-	</p>
 
 	<?php SWPK_Vista::paginador( $pagina, $paginas, count( $con_algo ), 'sitios con pendientes' ); ?>
 

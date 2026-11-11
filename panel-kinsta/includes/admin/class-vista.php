@@ -19,8 +19,17 @@ class SWPK_Vista {
 
 	public const POR_PAGINA = 20;
 
-	/** Los tres grupos, como tarjetas grandes para elegir. */
-	public static function selector_de_grupo( string $pagina, string $actual, array $conteos, array $extra = [] ): void {
+	/**
+	 * Los tres grupos, como tarjetas grandes para elegir.
+	 *
+	 * En la pantalla de Sitios el número es la cantidad de sitios del grupo. En
+	 * la de Vulnerabilidades no puede serlo: poner 82 ahí se lee como "82 sitios
+	 * con vulnerabilidades", cuando en realidad son 31. Por eso la tarjeta
+	 * acepta un "31 de 82" y una línea con el desglose de los que quedan fuera.
+	 *
+	 * @param array<string,array{n:int,de?:int,sub?:string}> $detalles Por tag.
+	 */
+	public static function selector_de_grupo( string $pagina, string $actual, array $conteos, array $extra = [], array $detalles = [] ): void {
 		$base = add_query_arg( array_merge( [ 'page' => $pagina ], $extra ), admin_url( 'admin.php' ) );
 		?>
 		<div class="swpk-grupos">
@@ -29,13 +38,26 @@ class SWPK_Vista {
 				if ( empty( $conteos[ $tag ] ) && SWPK_Etiquetas::SIN === $tag ) {
 					continue;
 				}
-				$es = $actual === $tag;
+
+				$es  = $actual === $tag;
+				$det = $detalles[ $tag ] ?? null;
 				?>
 				<a class="swpk-grupo <?php echo $es ? 'swpk-grupo-activo' : ''; ?>"
-					href="<?php echo esc_url( $es ? remove_query_arg( 'tag', $base ) : add_query_arg( 'tag', $tag, $base ) ); ?>">
-					<span class="swpk-grupo-n"><?php echo (int) ( $conteos[ $tag ] ?? 0 ); ?></span>
+					href="<?php echo esc_url( $es ? remove_query_arg( [ 'tag', 'nivel', 'p', 'q' ], $base ) : add_query_arg( 'tag', $tag, $base ) ); ?>">
+
+					<?php if ( $det ) : ?>
+						<span class="swpk-grupo-n" style="color:<?php echo $det['n'] ? '#b32d2e' : '#008a20'; ?>">
+							<?php echo (int) $det['n']; ?><span class="swpk-grupo-de">de <?php echo (int) ( $det['de'] ?? 0 ); ?></span>
+						</span>
+					<?php else : ?>
+						<span class="swpk-grupo-n"><?php echo (int) ( $conteos[ $tag ] ?? 0 ); ?></span>
+					<?php endif; ?>
+
 					<span class="swpk-grupo-t"><?php echo esc_html( $nombre ); ?></span>
-					<?php if ( ! SWPK_Etiquetas::es_nuestro( $tag ) && SWPK_Etiquetas::SIN !== $tag ) : ?>
+
+					<?php if ( $det && ! empty( $det['sub'] ) ) : ?>
+						<span class="swpk-grupo-s"><?php echo esc_html( $det['sub'] ); ?></span>
+					<?php elseif ( ! SWPK_Etiquetas::es_nuestro( $tag ) && SWPK_Etiquetas::SIN !== $tag ) : ?>
 						<span class="swpk-grupo-s">los administra el cliente</span>
 					<?php else : ?>
 						<span class="swpk-grupo-s">los administramos nosotros</span>
@@ -46,8 +68,11 @@ class SWPK_Vista {
 
 		<?php if ( '' === $actual ) : ?>
 			<p style="color:#50575e;margin-top:-4px">
-				Elegí un grupo para ver sus sitios. Así no se mezclan los que administramos nosotros
-				con los que administra el cliente, que se tratan distinto.
+				<?php
+				echo $detalles
+					? 'Elegí un grupo para ver qué tiene pendiente cada sitio.'
+					: 'Elegí un grupo para ver sus sitios. Así no se mezclan los que administramos nosotros con los que administra el cliente, que se tratan distinto.';
+				?>
 			</p>
 		<?php endif; ?>
 		<?php
