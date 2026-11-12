@@ -175,7 +175,7 @@ class SWPK_Receptor {
 	public static function callados( int $horas = 48 ): array {
 		global $wpdb;
 		$tabla  = SWPK_Tablas::tabla( 'agentes' );
-		$limite = gmdate( 'Y-m-d H:i:s', time() - $horas * HOUR_IN_SECONDS );
+		$limite = SWPK_Frescura::limite( $horas * HOUR_IN_SECONDS );
 
 		return $wpdb->get_results(
 			$wpdb->prepare( "SELECT * FROM {$tabla} WHERE ultimo_reporte IS NULL OR ultimo_reporte < %s", $limite )

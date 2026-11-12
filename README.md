@@ -53,6 +53,13 @@ define( 'SWPK_KINSTA_COMPANY_ID', 'el-company-id' );
 define( 'SWPK_WORDFENCE_KEY',     'la-llave-de-wordfence' );
 ```
 
+**Y una línea que no es opcional:** el WordPress donde viva el panel tiene que
+estar en la zona horaria de verdad —`America/Guatemala`— antes de la primera
+corrida. El panel guarda casi todas sus fechas en hora local y compara contra
+ese mismo reloj; si se deja en UTC y se cambia después, las fechas escritas
+antes del cambio quedan corridas seis horas, y son justo las fechas que el panel
+enseña para que nadie dude de cuándo es un dato.
+
 Si la encuentra en la base de datos, el panel lo advierte en pantalla: una
 llave ahí viaja dentro de cada respaldo.
 

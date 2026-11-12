@@ -523,6 +523,6 @@ class SWPK_Monitor {
 		if ( empty( $u['cuando'] ) ) {
 			return false;
 		}
-		return ( time() - strtotime( (string) $u['cuando'] ) ) < 20 * MINUTE_IN_SECONDS;
+		return ( SWPK_Frescura::ahora_ts() - strtotime( (string) $u['cuando'] ) ) < 20 * MINUTE_IN_SECONDS;
 	}
 }

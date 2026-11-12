@@ -107,6 +107,13 @@ class SWPK_Inventario {
 			return null;
 		}
 
+		// Aquí SÍ va time() y no SWPK_Frescura::ahora_ts(), al revés que en el
+		// resto del panel: `inventario_en` no lo escribe current_time(), lo
+		// escribe Kinsta, y Kinsta lo da en UTC. Comparar un instante en UTC
+		// contra el reloj local lo correría seis horas.
+		//
+		// Si algún día esta columna pasa a guardarse en hora local, esta línea
+		// hay que cambiarla con ella.
 		return (int) floor( ( time() - $cuando ) / DAY_IN_SECONDS );
 	}
 

@@ -237,7 +237,7 @@ class SWPK_Correos {
 
 	/** Resumen diario a soporte: qué cambió ayer. */
 	public static function diario_soporte(): array {
-		$desde   = gmdate( 'Y-m-d H:i:s', strtotime( '-1 day' ) );
+		$desde   = SWPK_Frescura::limite( DAY_IN_SECONDS );
 		$eventos = array_filter(
 			SWPK_Eventos::recientes( 200 ),
 			static fn( $e ) => $e->ocurrio_en >= $desde
@@ -261,8 +261,11 @@ class SWPK_Correos {
 
 	/** Resumen mensual a los clientes de los sitios que sí administramos. */
 	public static function mensual_clientes(): array {
-		$desde = gmdate( 'Y-m-01 00:00:00', strtotime( 'first day of last month' ) );
-		$hasta = gmdate( 'Y-m-t 23:59:59', strtotime( 'last day of last month' ) );
+		// El mes pasado según el reloj de aquí, no según UTC: si no, el 1 a las
+		// 00:30 de Guatemala el panel creería que todavía es el mes anterior.
+		$ahora = SWPK_Frescura::ahora_ts();
+		$desde = gmdate( 'Y-m-01 00:00:00', strtotime( 'first day of last month', $ahora ) );
+		$hasta = gmdate( 'Y-m-t 23:59:59', strtotime( 'last day of last month', $ahora ) );
 
 		$resumen = [ 'enviados' => 0, 'sin_destinatario' => 0, 'sin_novedad' => 0 ];
 

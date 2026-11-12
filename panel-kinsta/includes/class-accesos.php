@@ -132,7 +132,7 @@ class SWPK_Accesos {
 			$wpdb->prepare(
 				"SELECT COUNT(*) FROM {$tabla} WHERE accion = %s AND ocurrio_en > %s",
 				self::FALLIDO,
-				gmdate( 'Y-m-d H:i:s', time() - $horas * HOUR_IN_SECONDS )
+				SWPK_Frescura::limite( $horas * HOUR_IN_SECONDS )
 			)
 		);
 	}

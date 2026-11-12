@@ -93,7 +93,7 @@ class SWPK_Wordfence {
 			return $espera;
 		}
 
-		$ultima = strtotime( self::ultima_actualizacion() ?: '' );
+		$ultima = self::ultima_en_epoch();
 
 		return $ultima ? $ultima + self::MINIMO_ENTRE_DESCARGAS : time();
 	}
@@ -141,7 +141,7 @@ class SWPK_Wordfence {
 		}
 
 		// Segundo freno: ya se bajó hoy. El feed se publica una vez al día.
-		$ultima = strtotime( self::ultima_actualizacion() ?: '' );
+		$ultima = self::ultima_en_epoch();
 		if ( $ultima && ( time() - $ultima ) < self::MINIMO_ENTRE_DESCARGAS ) {
 			return new WP_Error(
 				'swpk_wf_reciente',
@@ -392,6 +392,25 @@ class SWPK_Wordfence {
 		return $wpdb->get_results(
 			$wpdb->prepare( "SELECT * FROM {$tabla} WHERE slug = %s AND informativa = 0", $slug )
 		) ?: [];
+	}
+
+	/**
+	 * La última descarga como instante real, no como texto de hora local.
+	 *
+	 * Hace falta porque esta clase mezcla dos relojes sin remedio: la fecha de
+	 * la descarga se guarda en hora local (current_time) y el freno de espera
+	 * en segundos de verdad (time()). Compararlas directo funciona solo
+	 * mientras el sitio esté en UTC; con la zona de Guatemala puesta, el freno
+	 * de 20 horas se abriría seis horas antes de tiempo, que es justo lo que
+	 * puede terminar con la llave suspendida.
+	 */
+	private static function ultima_en_epoch(): int {
+		$texto = self::ultima_actualizacion();
+		if ( '' === $texto ) {
+			return 0;
+		}
+
+		return (int) strtotime( get_gmt_from_date( $texto ) );
 	}
 
 	public static function ultima_actualizacion(): string {

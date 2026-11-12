@@ -99,13 +99,43 @@ class SWPK_Frescura {
 
 	// ── Los veredictos ──────────────────────────────────────────────────────
 
+	/**
+	 * El reloj con el que el panel guarda las fechas.
+	 *
+	 * ─── Por qué esto no es time() ──────────────────────────────────────────
+	 *
+	 * Casi todo lo que el panel guarda sale de current_time('mysql'), que
+	 * escribe la HORA LOCAL. Pero time() y strtotime() trabajan en UTC, porque
+	 * WordPress le fija UTC a PHP. Mientras el sitio esté configurado en UTC
+	 * las dos coinciden y nadie se entera.
+	 *
+	 * El día que se le ponga la zona de Guatemala —que es lo correcto— dejan de
+	 * coincidir por seis horas, y entonces el panel dice que un dato de hace un
+	 * minuto tiene seis horas. Justo la función que existe para que nadie dude
+	 * de la hora sería la primera en mentir.
+	 *
+	 * Así que todo lo que compare contra una fecha guardada usa este reloj, no
+	 * time(). Se descubrió antes de cambiar la zona, no después.
+	 */
+	public static function ahora_ts(): int {
+		return (int) current_time( 'timestamp' );
+	}
+
+	/**
+	 * Una fecha de hace N segundos, escrita en el mismo reloj en que se guardan
+	 * las cosas. Para los "dame lo de las últimas 24 horas".
+	 */
+	public static function limite( int $segundos ): string {
+		return gmdate( 'Y-m-d H:i:s', self::ahora_ts() - $segundos );
+	}
+
 	/** Segundos desde una hora guardada. null = nunca pasó. */
 	public static function edad( string $cuando ): ?int {
 		if ( '' === $cuando ) {
 			return null;
 		}
 		$ts = strtotime( $cuando );
-		return $ts ? max( 0, time() - $ts ) : null;
+		return $ts ? max( 0, self::ahora_ts() - $ts ) : null;
 	}
 
 	public static function corrida_al_dia(): bool {
