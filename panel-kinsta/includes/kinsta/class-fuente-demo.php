@@ -83,15 +83,15 @@ class SWPK_Fuente_Demo implements SWPK_Fuente {
 		return $sitios;
 	}
 
-	public function plugins(): array|WP_Error {
-		return $this->software( 'plugin' );
+	public function plugins( ?string $solo = null ): array|WP_Error {
+		return $this->software( 'plugin', $solo );
 	}
 
-	public function temas(): array|WP_Error {
-		return $this->software( 'tema' );
+	public function temas( ?string $solo = null ): array|WP_Error {
+		return $this->software( 'tema', $solo );
 	}
 
-	private function software( string $tipo ): array {
+	private function software( string $tipo, ?string $solo = null ): array {
 		$sitios = $this->sitios();
 
 		if ( 'tema' === $tipo ) {
@@ -118,6 +118,10 @@ class SWPK_Fuente_Demo implements SWPK_Fuente {
 		$filas = [];
 
 		foreach ( $sitios as $sitio ) {
+			if ( null !== $solo && (string) $sitio['sitio_id'] !== $solo ) {
+				continue;
+			}
+
 			$tag      = SWPK_Etiquetas::clasificar( $sitio['etiquetas'] );
 			$atrasado = SWPK_Etiquetas::NO_UPDATE === $tag;
 

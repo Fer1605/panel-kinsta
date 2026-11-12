@@ -52,6 +52,18 @@ $plano = SWPK_Textos::para_asesora( $sitio, $hallazgos );
 		<span style="color:#50575e;margin-left:8px">qué se le notificó y cuándo, listo para imprimir o guardar en PDF</span>
 	</p>
 
+	<?php if ( SWPK_Perfiles::puede( SWPK_Perfiles::ADMINISTRAR ) ) : ?>
+		<p>
+			<a class="button" href="<?php echo esc_url( SWPK_Admin::url_analizar( $sitio_id ) ); ?>">
+				Analizar este sitio ahora
+			</a>
+			<span style="color:#50575e;margin-left:8px">
+				vuelve a preguntarle a <?php echo esc_html( SWPK_Admin::proveedor() ); ?> qué tiene instalado
+				y revisa si responde, sin esperar a la corrida de mañana
+			</span>
+		</p>
+	<?php endif; ?>
+
 	<div class="swpk-tarjetas">
 		<div class="swpk-tarjeta">
 			<div class="swpk-n" style="color:<?php echo count( $con_vuln ) ? '#b32d2e' : '#008a20'; ?>"><?php echo count( $con_vuln ); ?></div>

@@ -1,41 +1,64 @@
 <?php
 /**
- * Resumen: una sola tabla con los 107 sitios, del peor al que no tiene nada.
+ * Inicio: el diario de lo que pasó. No un tablero del estado de la cartera.
  *
- * Tercera versión de esta pantalla, y las dos anteriores sobran por lo mismo.
- * La primera abría con ocho contadores y el jefe los rechazó. La segunda los
- * cambió por una cola de trabajo con etiquetas de color, píldoras rojas y
- * cuatro apartados, y salió peor: más desorden, no menos.
+ * ─── Por qué esta pantalla cambió tres veces ────────────────────────────────
  *
- * Lo que pidió, dicho tres veces de tres maneras, es lo mismo: "algo simple",
- * "mucha información, pero no en paquete", "veo las últimas notificaciones y
- * actualizaciones, eso únicamente". Eso es una tabla.
+ * Las tres versiones anteriores contestaban "¿cómo está la cartera?" y por eso
+ * siempre salía o un paquete de contadores o un muro de 107 filas. Pero eso no
+ * es lo que pidió:
  *
- * Así que aquí no hay secciones, ni tarjetas, ni colores de adorno. Una línea
- * que dice cómo está la cosa, y debajo los 107 sitios en una tabla ordenada de
- * peor a mejor. El orden hace el trabajo que antes hacían los títulos: lo que
- * hay que atender está arriba por ser lo peor, no por estar en un apartado.
+ *   "Entro a ese panel y veo las últimas notificaciones y actualizaciones.
+ *    Eso, su únicamente."                                              (07:58)
  *
- * El rojo se usa una sola vez y para una sola cosa: que la falla se pueda
- * aprovechar desde internet sin tener cuenta en el sitio. Si el rojo marcara
- * tres cosas distintas volvería a no marcar ninguna.
+ *   "Mira, en esta corrida del día pasó esto. No pasó nada, perfecto, se queda
+ *    como está. Eso no me afecta."                                     (04:34)
+ *
+ * Esa segunda frase es la que faltaba leer. No abre el panel a evaluar 107
+ * sitios: lo abre a ver qué pasó desde la última vez. Y una pantalla de estado
+ * tiene que resumir 107 cosas siempre, mientras que una de "qué pasó" tiene
+ * cinco filas en un día normal — y en un día tranquilo puede decir que no pasó
+ * nada, que es exactamente la respuesta que él dijo que le sirve.
+ *
+ * Ninguna de las tres versiones anteriores podía decir "no pasó nada".
+ *
+ * ─── Lo que un diario no cuenta, y cómo se tapa ─────────────────────────────
+ *
+ * Un sitio que lleva tres semanas con una falla sin atender no genera eventos:
+ * no cambió nada. Por eso arriba va una línea que dice cuántos siguen
+ * pendientes de antes, con su enlace. Es el único puente que hace falta.
+ *
+ * Los 107 sitios viven en la pantalla de Sitios, agrupados por etiqueta y con
+ * los botones para actuar. Ahí es donde uno va a trabajar; aquí, a enterarse.
  */
 defined( 'ABSPATH' ) || exit;
 
-$estado    = SWPK_Estado::calcular();
-$veredicto = SWPK_Estado::veredicto( $estado );
-$filas     = SWPK_Estado::tabla( $estado );
+$estado   = SWPK_Estado::calcular();
+$sin_leer = count( $estado['urgentes'] );
 
-$nombres_nivel = SWPK_Riesgo::nombres() + [ 'caido' => 'Caído' ];
-$nombres_grupo = SWPK_Etiquetas::nombres();
+$sitios = [];
+foreach ( SWPK_Perfiles::sitios_visibles() as $s ) {
+	$sitios[ (string) $s->sitio_id ] = $s;
+}
 
-$visibles = array_map( static fn( $s ) => (string) $s->sitio_id, SWPK_Perfiles::sitios_visibles() );
-$eventos  = array_filter(
-	SWPK_Eventos::recientes( 60 ),
-	static fn( $e ) => SWPK_Perfiles::puede( SWPK_Perfiles::VER_TODO ) || in_array( (string) $e->sitio_id, $visibles, true )
+$eventos = array_filter(
+	SWPK_Eventos::recientes( 120 ),
+	static fn( $e ) => isset( $sitios[ (string) $e->sitio_id ] ) || SWPK_Perfiles::puede( SWPK_Perfiles::VER_TODO )
 );
-$eventos  = array_slice( $eventos, 0, 20 );
-$etq_evt  = SWPK_Eventos::etiquetas();
+
+// Agrupados por día, el de hoy primero. El día de hoy aparece siempre, tenga
+// o no tenga nada: es el que contesta "¿pasó algo?".
+$hoy      = current_time( 'Y-m-d' );
+$por_dia  = [ $hoy => [] ];
+foreach ( $eventos as $e ) {
+	$dia = substr( (string) $e->ocurrio_en, 0, 10 );
+	$por_dia[ $dia ][] = $e;
+}
+
+$por_dia = array_slice( $por_dia, 0, 8, true );
+$etq_evt = SWPK_Eventos::etiquetas();
+$grupos  = SWPK_Etiquetas::nombres();
+$de_hoy  = count( $por_dia[ $hoy ] ?? [] );
 ?>
 <div class="wrap">
 	<h1>Panel Kinsta</h1>
@@ -45,7 +68,7 @@ $etq_evt  = SWPK_Eventos::etiquetas();
 	<?php SWPK_Admin::aviso_demo(); ?>
 	<?php if ( SWPK_Perfiles::puede( SWPK_Perfiles::ADMINISTRAR ) ) { SWPK_Admin::barra_acciones(); } ?>
 
-	<?php if ( ! $filas ) : ?>
+	<?php if ( ! $estado['total'] ) : ?>
 
 		<div class="notice notice-info"><p>
 			Todavía no hay inventario. Dale a <strong>Correr ahora</strong> para traer los sitios
@@ -55,112 +78,84 @@ $etq_evt  = SWPK_Eventos::etiquetas();
 	<?php else : ?>
 
 		<p class="swpk-linea">
-			<strong><?php echo esc_html( $veredicto['titulo'] ); ?>.</strong>
-			<?php echo esc_html( $veredicto['detalle'] ); ?>
+			<strong>
+				<?php
+				echo 0 === $de_hoy
+					? esc_html( sprintf( 'Hoy no ha cambiado nada en los %d sitios.', (int) $estado['total'] ) )
+					: esc_html( sprintf( 'Hoy cambiaron %d cosas.', $de_hoy ) );
+				?>
+			</strong>
+			<?php if ( $sin_leer ) : ?>
+				Y <?php echo (int) $sin_leer; ?> sitio(s) siguen con algo sin atender desde antes:
+				<a href="<?php echo esc_url( admin_url( 'admin.php?page=panel-kinsta-vulnerabilidades' ) ); ?>">verlos</a>.
+			<?php else : ?>
+				Y no hay nada sin atender de antes.
+			<?php endif; ?>
 		</p>
 
 		<table class="widefat striped swpk-tabla">
 			<thead>
 				<tr>
-					<th>Sitio</th>
-					<th style="width:120px">Grupo</th>
-					<th style="width:100px">Estado</th>
-					<th>Qué tiene pendiente</th>
-					<th style="width:110px">Revisado</th>
+					<th style="width:70px">Hora</th>
+					<th style="width:210px">Sitio</th>
+					<th style="width:130px">Grupo</th>
+					<th>Qué pasó</th>
 				</tr>
 			</thead>
 			<tbody>
-			<?php foreach ( $filas as $f ) : ?>
-				<tr>
-					<td>
-						<a href="<?php echo esc_url( SWPK_Vista::url_del_sitio( $f['sitio_id'], 'resumen' ) ); ?>">
-							<?php echo esc_html( $f['nombre'] ); ?>
-						</a>
-					</td>
-					<td class="swpk-gris"><?php echo esc_html( $nombres_grupo[ $f['tag'] ] ?? $f['tag'] ); ?></td>
-					<td><?php echo esc_html( $nombres_nivel[ $f['nivel'] ] ?? $f['nivel'] ); ?></td>
-					<td>
-						<?php if ( 'caido' === $f['nivel'] ) : ?>
-							<?php echo esc_html( $f['explicacion'] ); ?>
-							<?php if ( ! empty( $f['desde'] ) ) : ?>
-								<span class="swpk-gris">desde <?php echo esc_html( SWPK_Frescura::fmt( 'j M, H:i', $f['desde'] ) ); ?></span>
-							<?php endif; ?>
-						<?php elseif ( SWPK_Riesgo::SIN_DATOS === $f['nivel'] ) : ?>
-							<span class="swpk-gris"><?php echo esc_html( SWPK_Admin::proveedor() ); ?> no lo ha escaneado: no sabemos qué tiene.</span>
-						<?php elseif ( '' === $f['modulo'] ) : ?>
-							<span class="swpk-gris">—</span>
-						<?php else : ?>
-							<?php
-							// Solo la primera frase. El resto de la explicación es
-							// para el mensaje al cliente, no para una tabla que se
-							// recorre con la vista: en una celda, dos renglones de
-							// más por fila son cien renglones de más en la página.
-							$corta = (string) $f['explicacion'];
-							$punto = strpos( $corta, '. ' );
-							if ( false !== $punto ) {
-								$corta = substr( $corta, 0, $punto + 1 );
-							}
-							?>
-							<strong><?php echo esc_html( $f['modulo'] ); ?></strong>
-							<span class="swpk-mono"><?php echo esc_html( $f['version'] ); ?><?php echo '' !== $f['disponible'] ? ' → ' . esc_html( $f['disponible'] ) : ''; ?></span>
-							<?php if ( $f['cuantos'] > 1 ) : ?>
-								<span class="swpk-gris">y <?php echo (int) $f['cuantos'] - 1; ?> más</span>
-							<?php endif; ?>
-							<br><?php echo esc_html( $corta ); ?>
-							<?php if ( $f['publicas'] ) : ?>
-								<br><span class="swpk-rojo">
-									<?php
-									printf(
-										esc_html( 1 === $f['publicas']
-											? '%d se aprovecha desde internet sin cuenta'
-											: '%d se aprovechan desde internet sin cuenta' ),
-										(int) $f['publicas']
-									);
-									?>
-								</span>
-							<?php endif; ?>
-						<?php endif; ?>
-					</td>
-					<td class="swpk-gris">
-						<?php echo esc_html( '' !== $f['revisado_en'] ? SWPK_Frescura::fmt( 'j M, H:i', $f['revisado_en'] ) : 'nunca' ); ?>
+			<?php foreach ( $por_dia as $dia => $del_dia ) : ?>
+				<tr class="swpk-dia">
+					<td colspan="4">
+						<?php
+						// ucfirst y no CSS: text-transform:capitalize mayusculiza
+						// cada palabra y deja "Jueves 12 De Noviembre".
+						echo esc_html( ucfirst( SWPK_Frescura::fmt( 'l j \d\e F', $dia . ' 12:00:00' ) ) );
+						?>
+						<?php if ( $dia === $hoy ) : ?><span class="swpk-gris"> · hoy</span><?php endif; ?>
 					</td>
 				</tr>
+				<?php if ( ! $del_dia ) : ?>
+					<tr>
+						<td colspan="4" class="swpk-gris">
+							No cambió nada.
+							<?php if ( $dia === $hoy && ! SWPK_Frescura::corrida_al_dia() ) : ?>
+								<strong style="color:#b32d2e">Ojo: la corrida de hoy tampoco pasó, así que esto no quiere decir que no haya pasado nada.</strong>
+							<?php endif; ?>
+						</td>
+					</tr>
+				<?php else : ?>
+					<?php foreach ( $del_dia as $e ) : ?>
+						<?php $s = $sitios[ (string) $e->sitio_id ] ?? null; ?>
+						<tr>
+							<td class="swpk-gris"><?php echo esc_html( SWPK_Frescura::fmt( 'H:i', $e->ocurrio_en ) ); ?></td>
+							<td>
+								<?php if ( $s ) : ?>
+									<a href="<?php echo esc_url( SWPK_Vista::url_del_sitio( (string) $e->sitio_id, 'resumen' ) ); ?>">
+										<?php echo esc_html( $s->nombre_visible ); ?>
+									</a>
+								<?php else : ?>
+									<span class="swpk-gris">—</span>
+								<?php endif; ?>
+							</td>
+							<td class="swpk-gris"><?php echo esc_html( $s ? ( $grupos[ $s->tag ] ?? $s->tag ) : '' ); ?></td>
+							<td<?php echo 'critico' === $e->severidad ? ' class="swpk-rojo"' : ''; ?>>
+								<?php echo esc_html( $etq_evt[ $e->tipo ] ?? $e->tipo ); ?>:
+								<?php echo esc_html( $e->titulo ); ?>
+							</td>
+						</tr>
+					<?php endforeach; ?>
+				<?php endif; ?>
 			<?php endforeach; ?>
 			</tbody>
 		</table>
 
-		<?php SWPK_Frescura::sello(); ?>
+		<p class="swpk-nota">
+			Esto es lo que cambió, no el estado de la cartera. Los 107 sitios, agrupados por
+			etiqueta y con los botones para revisarlos uno por uno, están en
+			<a href="<?php echo esc_url( admin_url( 'admin.php?page=panel-kinsta-sitios' ) ); ?>">Sitios</a>.
+		</p>
 
-		<h2>Lo que cambió desde la corrida anterior</h2>
-		<?php if ( ! $eventos ) : ?>
-			<p>
-				Nada todavía. La historia empieza con la segunda corrida: el panel compara el
-				inventario de hoy con el de ayer, y hoy no hay con qué comparar. Kinsta no guarda un
-				historial consultable, así que no se puede reconstruir hacia atrás.
-			</p>
-		<?php else : ?>
-			<table class="widefat striped swpk-tabla">
-				<thead>
-					<tr>
-						<th style="width:140px">Cuándo</th>
-						<th style="width:170px">Qué</th>
-						<th>Sitio</th>
-						<th>Detalle</th>
-					</tr>
-				</thead>
-				<tbody>
-				<?php foreach ( $eventos as $e ) : ?>
-					<?php $sitio = SWPK_Inventario::obtener( $e->sitio_id ); ?>
-					<tr>
-						<td><?php echo esc_html( SWPK_Frescura::fmt( 'j M, H:i', $e->ocurrio_en ) ); ?></td>
-						<td><?php echo esc_html( $etq_evt[ $e->tipo ] ?? $e->tipo ); ?></td>
-						<td><?php echo esc_html( $sitio->nombre_visible ?? $e->sitio_id ); ?></td>
-						<td><?php echo esc_html( $e->titulo ); ?></td>
-					</tr>
-				<?php endforeach; ?>
-				</tbody>
-			</table>
-		<?php endif; ?>
+		<?php SWPK_Frescura::sello(); ?>
 
 	<?php endif; ?>
 

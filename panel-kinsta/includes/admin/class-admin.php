@@ -18,6 +18,7 @@ class SWPK_Admin {
 	public static function init(): void {
 		add_action( 'admin_menu', [ __CLASS__, 'menu' ] );
 		add_action( 'admin_post_swpk_correr', [ __CLASS__, 'accion_correr' ] );
+		add_action( 'admin_post_swpk_analizar_sitio', [ __CLASS__, 'accion_analizar_sitio' ] );
 		add_action( 'admin_post_swpk_guardar_ajustes', [ __CLASS__, 'accion_guardar_ajustes' ] );
 		add_action( 'admin_post_swpk_probar', [ __CLASS__, 'accion_probar' ] );
 		add_action( 'admin_post_swpk_sondear', [ __CLASS__, 'accion_sondear' ] );
@@ -268,6 +269,9 @@ class SWPK_Admin {
 			.swpk-linea{max-width:900px;font-size:14px;line-height:1.6;margin:14px 0 16px}
 			.swpk-gris{color:#8c8f94}
 			.swpk-rojo{color:#b32d2e;font-weight:600}
+			.swpk-nota{max-width:900px;color:#50575e;font-size:13px;margin-top:10px}
+			.swpk-dia td{background:#f6f7f7 !important;font-weight:600;color:#1d2327;
+				border-top:1px solid #dcdcde}
 		</style>
 		<?php
 	}
@@ -416,6 +420,67 @@ class SWPK_Admin {
 
 		wp_safe_redirect( admin_url( 'admin.php?page=' . self::SLUG . '&swpk_msg=' . $mensaje ) );
 		exit;
+	}
+
+	/**
+	 * "Analizar este sitio ahora", el botón que pidió el jefe.
+	 *
+	 * Vuelve al mismo sitio desde donde se pulsó, porque se usa desde la lista
+	 * y desde la ficha: mandar siempre al Resumen obligaría a volver a buscar
+	 * el sitio que se acaba de revisar.
+	 */
+	public static function accion_analizar_sitio(): void {
+		if ( ! self::puede_administrar() ) {
+			wp_die( 'Sin permiso.' );
+		}
+
+		$sitio_id = isset( $_GET['sitio'] ) ? sanitize_text_field( wp_unslash( (string) $_GET['sitio'] ) ) : '';
+		check_admin_referer( 'swpk_analizar_' . $sitio_id );
+
+		$r = SWPK_Sincronizador::analizar_sitio( $sitio_id );
+
+		if ( is_wp_error( $r ) ) {
+			$mensaje = 'error:' . rawurlencode( $r->get_error_message() );
+		} elseif ( $r['sin_datos'] ) {
+			// No se dice "no tiene nada": se dice que no contestó. La
+			// diferencia es la razón de ser de medio panel.
+			$mensaje = 'error:' . rawurlencode(
+				sprintf(
+					'%s no devolvió la lista de módulos de este sitio, así que no hay nada nuevo que guardar. Lo que se ve sigue siendo el dato de la última corrida — no es que el sitio esté limpio.',
+					self::proveedor()
+				)
+			);
+		} else {
+			$mensaje = 'ok:' . rawurlencode(
+				sprintf(
+					'Revisado ahora mismo: %d módulos%s%s.',
+					$r['modulos'],
+					$r['eventos'] ? sprintf( ', %d cambio(s) desde la última vez', $r['eventos'] ) : ', sin cambios desde la última vez',
+					'abajo' === $r['sondeo'] ? ' — y el sitio NO está respondiendo' : ''
+				)
+			);
+		}
+
+		$volver = isset( $_GET['volver'] ) ? sanitize_text_field( wp_unslash( (string) $_GET['volver'] ) ) : '';
+		$destino = '' !== $volver
+			? add_query_arg( 'swpk_msg', $mensaje, admin_url( $volver ) )
+			: admin_url( 'admin.php?page=' . self::SLUG . '-sitio&sitio=' . rawurlencode( $sitio_id ) . '&swpk_msg=' . $mensaje );
+
+		wp_safe_redirect( $destino );
+		exit;
+	}
+
+	/** La dirección del botón de analizar, para la ficha y para la lista. */
+	public static function url_analizar( string $sitio_id, string $volver = '' ): string {
+		$args = [ 'action' => 'swpk_analizar_sitio', 'sitio' => $sitio_id ];
+		if ( '' !== $volver ) {
+			$args['volver'] = $volver;
+		}
+
+		return wp_nonce_url(
+			add_query_arg( $args, admin_url( 'admin-post.php' ) ),
+			'swpk_analizar_' . $sitio_id
+		);
 	}
 
 	public static function accion_probar(): void {

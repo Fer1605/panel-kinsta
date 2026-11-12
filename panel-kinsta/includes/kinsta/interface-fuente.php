@@ -40,14 +40,14 @@ interface SWPK_Fuente {
 	 *
 	 * @return array<int,array<string,mixed>>|WP_Error
 	 */
-	public function plugins(): array|WP_Error;
+	public function plugins( ?string $solo = null ): array|WP_Error;
 
 	/**
 	 * Temas de toda la empresa.
 	 *
 	 * @return array<int,array<string,mixed>>|WP_Error
 	 */
-	public function temas(): array|WP_Error;
+	public function temas( ?string $solo = null ): array|WP_Error;
 
 	/**
 	 * Cuándo fue la última vez que el proveedor miró lo instalado en cada sitio.

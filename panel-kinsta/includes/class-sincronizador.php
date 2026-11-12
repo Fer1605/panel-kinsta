@@ -98,6 +98,124 @@ class SWPK_Sincronizador {
 		return $resumen;
 	}
 
+	/**
+	 * Vuelve a leer UN sitio, ahora mismo, sin tocar a los demás.
+	 *
+	 * Lo pidió el jefe: "debe poder consultarse o correrse manualmente los
+	 * procesos o consultar un sitio por si alguien pregunta puedo hacerlo
+	 * manual y no esperar". Sirve para los 107, porque todo esto sale de la API
+	 * del hosting: también para los 13 que administra el cliente.
+	 *
+	 * ─── Por qué no se puede reusar tomar_foto() ────────────────────────────
+	 *
+	 * Porque tomar_foto() es destructiva a propósito: borra `inventario_en` de
+	 * TODOS los sitios y lo vuelve a llenar con lo que Kinsta conteste en esa
+	 * corrida, para que un sitio que Kinsta dejó de reportar aparezca como "sin
+	 * datos" y no se quede con la fecha vieja. Correrla para un sitio dejaría a
+	 * los otros 106 marcados como si nunca los hubieran escaneado.
+	 *
+	 * Así que esta hace lo mismo pero acotado: reemplaza las filas de hoy de
+	 * ese sitio, actualiza su fecha y la de nadie más, compara contra su propia
+	 * foto anterior, y lo sondea de paso.
+	 *
+	 * @return array<string,mixed>|WP_Error
+	 */
+	public static function analizar_sitio( string $sitio_id ): array|WP_Error {
+		global $wpdb;
+
+		$sitio = SWPK_Inventario::obtener( $sitio_id );
+		if ( ! $sitio ) {
+			return new WP_Error( 'swpk_sin_sitio', 'Ese sitio no está en el inventario.' );
+		}
+
+		$fuente  = swpk_fuente();
+		$plugins = $fuente->plugins( $sitio_id );
+		if ( is_wp_error( $plugins ) ) {
+			return $plugins;
+		}
+
+		$temas = $fuente->temas( $sitio_id );
+		if ( is_wp_error( $temas ) ) {
+			return $temas;
+		}
+
+		$modulos = array_merge( $plugins, $temas );
+
+		// Una lista vacía NO es "no tiene nada instalado": es "Kinsta no nos
+		// dijo". Pasa de verdad — Kinsta contesta con su fecha de escaneo y sin
+		// módulos — y si se escribiera, la comparación contra la foto anterior
+		// levantaría un "se desinstaló" por cada módulo que el sitio sí tiene.
+		//
+		// Se descubrió probando este mismo botón: once eventos falsos de golpe,
+		// en un sitio al que nadie había tocado. Es el mismo error que el panel
+		// ya evita en la corrida diaria, y aquí lo había reintroducido.
+		if ( ! $modulos ) {
+			return [
+				'modulos'   => 0,
+				'eventos'   => 0,
+				'sondeo'    => (string) ( SWPK_Monitor::sondear_uno( $sitio_id, (string) $sitio->dominio )['estado'] ?? '' ),
+				'sin_datos' => true,
+			];
+		}
+
+		$tabla = SWPK_Tablas::tabla( 'fotos' );
+		$fecha = current_time( 'Y-m-d' );
+
+		// Fuera lo de hoy de este sitio antes de escribir: si un módulo se
+		// desinstaló desde la corrida de la madrugada, un replace lo dejaría
+		// ahí para siempre.
+		$wpdb->delete( $tabla, [ 'fecha' => $fecha, 'sitio_id' => $sitio_id ] );
+
+		$n = 0;
+		foreach ( $modulos as $fila ) {
+			if ( '' === (string) ( $fila['slug'] ?? '' ) ) {
+				continue;
+			}
+
+			$wpdb->replace(
+				$tabla,
+				[
+					'fecha'              => $fecha,
+					'sitio_id'           => $sitio_id,
+					'tipo'               => $fila['tipo'],
+					'slug'               => $fila['slug'],
+					'titulo'             => $fila['titulo'],
+					'version'            => $fila['version'],
+					'version_disponible' => $fila['version_disponible'],
+					'hay_actualizacion'  => $fila['hay_actualizacion'] ? 1 : 0,
+					'es_vulnerable'      => $fila['es_vulnerable'] ? 1 : 0,
+					'auto_update'        => $fila['auto_update'],
+					'activo'             => $fila['activo'] ? 1 : 0,
+				]
+			);
+			++$n;
+		}
+
+		// La fecha de este sitio, y la de nadie más.
+		$frescura = $fuente->frescura();
+		$wpdb->update(
+			SWPK_Tablas::tabla( 'sitios' ),
+			[ 'inventario_en' => $frescura[ $sitio_id ] ?? null ],
+			[ 'sitio_id' => $sitio_id ]
+		);
+
+		$eventos = SWPK_Eventos::comparar_fotos( $fecha, $sitio_id );
+
+		// Y de paso, si responde. Es una petición más y es la otra mitad de
+		// "cómo está este sitio".
+		$r      = SWPK_Monitor::sondear_uno( $sitio_id, (string) $sitio->dominio );
+		$sondeo = (string) ( $r['estado'] ?? '' );
+
+		SWPK_Estado::olvidar();
+
+		return [
+			'modulos' => $n,
+			'eventos' => $eventos,
+			'sondeo'  => $sondeo,
+			'sin_datos' => empty( $frescura[ $sitio_id ] ),
+		];
+	}
+
 	/** Guarda la foto del día: una fila por sitio y por plugin o tema. */
 	public static function tomar_foto(): int|WP_Error {
 		global $wpdb;

@@ -37,6 +37,8 @@ class SWPK_Eventos {
 			self::CORREO_EXTRANO => 'Correo de dominio extraño',
 			self::SITIO_CAIDO    => 'Sitio caído',
 			self::SITIO_REPUESTO => 'Sitio repuesto',
+			'agente_registrado'  => 'Plugin instalado en el sitio',
+			'administrador_eliminado' => 'Administrador eliminado',
 		];
 	}
 
@@ -121,20 +123,30 @@ class SWPK_Eventos {
 	 * comparación, el panel solo sabría decir cómo están las cosas hoy, y lo
 	 * que el jefe pidió es "este mes actualizamos seis veces" (01:18).
 	 */
-	public static function comparar_fotos( string $fecha_hoy ): int {
+	public static function comparar_fotos( string $fecha_hoy, string $solo = '' ): int {
 		global $wpdb;
 		$tabla = SWPK_Tablas::tabla( 'fotos' );
 
-		$fecha_previa = $wpdb->get_var(
-			$wpdb->prepare( "SELECT MAX(fecha) FROM {$tabla} WHERE fecha < %s", $fecha_hoy )
-		);
+		// Con $solo la comparación se acota a un sitio. Lo usa el botón de
+		// "analizar este sitio ahora": si comparara la cartera entera, un
+		// análisis suelto a media tarde levantaría eventos de los otros 106
+		// como si hubieran cambiado en ese momento.
+		$fecha_previa = '' !== $solo
+			? $wpdb->get_var( $wpdb->prepare( "SELECT MAX(fecha) FROM {$tabla} WHERE fecha < %s AND sitio_id = %s", $fecha_hoy, $solo ) )
+			: $wpdb->get_var( $wpdb->prepare( "SELECT MAX(fecha) FROM {$tabla} WHERE fecha < %s", $fecha_hoy ) );
 
 		if ( ! $fecha_previa ) {
 			return 0; // Primera corrida: no hay con qué comparar.
 		}
 
-		$hoy    = self::indexar( $wpdb->get_results( $wpdb->prepare( "SELECT * FROM {$tabla} WHERE fecha = %s", $fecha_hoy ) ) ?: [] );
-		$previo = self::indexar( $wpdb->get_results( $wpdb->prepare( "SELECT * FROM {$tabla} WHERE fecha = %s", $fecha_previa ) ) ?: [] );
+		$leer = static function ( string $fecha ) use ( $wpdb, $tabla, $solo ): array {
+			return '' !== $solo
+				? ( $wpdb->get_results( $wpdb->prepare( "SELECT * FROM {$tabla} WHERE fecha = %s AND sitio_id = %s", $fecha, $solo ) ) ?: [] )
+				: ( $wpdb->get_results( $wpdb->prepare( "SELECT * FROM {$tabla} WHERE fecha = %s", $fecha ) ) ?: [] );
+		};
+
+		$hoy    = self::indexar( $leer( $fecha_hoy ) );
+		$previo = self::indexar( $leer( (string) $fecha_previa ) );
 
 		$n = 0;
 

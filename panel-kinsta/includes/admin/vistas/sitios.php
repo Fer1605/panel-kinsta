@@ -19,6 +19,22 @@ $por_nivel = SWPK_Vista::conteo_por_nivel( $del_grupo );
 
 $filtrados = SWPK_Vista::filtrar( $todos, $tag, $nivel, $busqueda );
 [ $pagina_de_sitios, $pagina, $paginas ] = SWPK_Vista::paginar( $filtrados, SWPK_Vista::pagina_pedida() );
+
+// A dónde vuelve el botón de analizar: a esta misma página, con sus filtros.
+// Analizar un sitio desde la página 3 del grupo y aterrizar en el Resumen
+// obliga a volver a buscarlo.
+$volver = add_query_arg(
+	array_filter(
+		[
+			'page'  => 'panel-kinsta-sitios',
+			'tag'   => $tag,
+			'nivel' => $nivel,
+			'q'     => $busqueda,
+			'p'     => $pagina > 1 ? $pagina : '',
+		]
+	),
+	'admin.php'
+);
 ?>
 <div class="wrap">
 	<h1>Sitios</h1>
@@ -61,6 +77,12 @@ $filtrados = SWPK_Vista::filtrar( $todos, $tag, $nivel, $busqueda );
 		<span>
 			<?php SWPK_Vista::buscador( 'panel-kinsta-sitios', $busqueda, [ 'tag' => $tag, 'nivel' => $nivel ] ); ?>
 			<?php SWPK_Admin::boton_exportar( 'sitios' ); ?>
+			<?php if ( $asignar ) : ?>
+				<a class="button" href="<?php echo esc_url( wp_nonce_url( admin_url( 'admin-post.php?action=swpk_correr' ), 'swpk_correr' ) ); ?>"
+					title="Vuelve a revisar los 107 sitios. Tarda un par de minutos.">
+					Revisar todos
+				</a>
+			<?php endif; ?>
 		</span>
 	<?php SWPK_Vista::cerrar_barra(); ?>
 	<?php SWPK_Vista::paginador( $pagina, $paginas, count( $filtrados ) ); ?>
@@ -89,6 +111,7 @@ $filtrados = SWPK_Vista::filtrar( $todos, $tag, $nivel, $busqueda );
 					<th style="width:165px">Asesora</th>
 					<?php if ( $asignar ) : ?>
 						<th style="width:190px">Contacto del cliente</th>
+						<th style="width:90px"></th>
 					<?php endif; ?>
 				</tr>
 			</thead>
@@ -161,6 +184,13 @@ $filtrados = SWPK_Vista::filtrar( $todos, $tag, $nivel, $busqueda );
 								name="contacto[<?php echo esc_attr( $s->sitio_id ); ?>]"
 								value="<?php echo esc_attr( (string) $s->contacto_cliente ); ?>"
 								placeholder="<?php echo SWPK_Etiquetas::es_nuestro( $tag ) ? 'lo da el agente' : 'correo del cliente'; ?>">
+						</td>
+						<td>
+							<a class="button button-small"
+								href="<?php echo esc_url( SWPK_Admin::url_analizar( (string) $s->sitio_id, $volver ) ); ?>"
+								title="Vuelve a preguntarle a <?php echo esc_attr( SWPK_Admin::proveedor() ); ?> qué tiene este sitio, ahora mismo">
+								Analizar
+							</a>
 						</td>
 					<?php endif; ?>
 				</tr>

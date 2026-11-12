@@ -111,12 +111,12 @@ class SWPK_Fuente_Api implements SWPK_Fuente {
 		];
 	}
 
-	public function plugins(): array|WP_Error {
-		return $this->software( 'wp-plugins', 'plugins', 'plugin' );
+	public function plugins( ?string $solo = null ): array|WP_Error {
+		return $this->software( 'wp-plugins', 'plugins', 'plugin', $solo );
 	}
 
-	public function temas(): array|WP_Error {
-		return $this->software( 'wp-themes', 'themes', 'tema' );
+	public function temas( ?string $solo = null ): array|WP_Error {
+		return $this->software( 'wp-themes', 'themes', 'tema', $solo );
 	}
 
 	/** @var array<int,array<string,mixed>>|null */
@@ -160,7 +160,7 @@ class SWPK_Fuente_Api implements SWPK_Fuente {
 	 *
 	 * Comprobado contra la API real el 11 de noviembre de 2026.
 	 */
-	private function software( string $ruta, string $clave, string $tipo ): array|WP_Error {
+	private function software( string $ruta, string $clave, string $tipo, ?string $solo = null ): array|WP_Error {
 		$sitios = $this->sitios_cacheados();
 		if ( is_wp_error( $sitios ) ) {
 			return $sitios;
@@ -170,6 +170,13 @@ class SWPK_Fuente_Api implements SWPK_Fuente {
 		$fallos = 0;
 
 		foreach ( $sitios as $sitio ) {
+			// Con $solo esto consulta un sitio y no los 107: son dos llamadas y
+			// un par de segundos, que es lo que hace viable el botón de
+			// "analizar este sitio ahora" sin esperar a la corrida de mañana.
+			if ( null !== $solo && (string) $sitio['sitio_id'] !== $solo ) {
+				continue;
+			}
+
 			$entorno = (string) $sitio['entorno_id'];
 			if ( '' === $entorno ) {
 				continue;

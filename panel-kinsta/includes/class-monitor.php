@@ -127,6 +127,32 @@ class SWPK_Monitor {
 		return [ 'sondeados' => count( $resultados ), 'abajo' => $abajo, 'cambios' => $cambios ];
 	}
 
+	/**
+	 * Sondea UN sitio y guarda el resultado.
+	 *
+	 * sondear() solo mide: ni arma la dirección ni escribe nada. Esto es lo que
+	 * hace falta detrás del botón de "analizar este sitio ahora", y vive aquí
+	 * para que no haya dos sitios distintos donde se decide qué cuenta como
+	 * caído.
+	 *
+	 * @return array<string,mixed> lo que devolvió el sondeo, vacío si no hay dominio
+	 */
+	public static function sondear_uno( string $sitio_id, string $dominio ): array {
+		$dominio = trim( $dominio );
+		if ( '' === $dominio ) {
+			return [];
+		}
+
+		$r = self::sondear( [ $sitio_id => self::url( $dominio ) ] );
+		$uno = $r[ $sitio_id ] ?? [];
+
+		if ( $uno ) {
+			self::guardar( $sitio_id, $uno );
+		}
+
+		return $uno;
+	}
+
 	private static function url( string $dominio ): string {
 		if ( str_starts_with( $dominio, 'http://' ) || str_starts_with( $dominio, 'https://' ) ) {
 			return $dominio;
