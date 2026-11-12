@@ -150,8 +150,33 @@ class SWPK_Eventos {
 
 		$n = 0;
 
+		// De qué sitios teníamos datos antes y de cuáles tenemos ahora. Hace
+		// falta en los dos sentidos, porque Kinsta no contesta de los 108 todos
+		// los días y su silencio no es una noticia sobre el sitio:
+		//
+		//   sin datos hoy, con datos antes  -> NO es "se desinstaló todo"
+		//   con datos hoy, sin datos antes  -> NO es "se instaló todo"
+		//
+		// Las dos pasaron de verdad el 12 de noviembre de 2026, en la misma
+		// corrida: 402 desinstalados falsos en 25 sitios y 13 instalados falsos
+		// en 2. Ninguno de esos módulos se tocó.
+		$con_datos_hoy   = [];
+		$con_datos_antes = [];
+		foreach ( $hoy as $fila ) {
+			$con_datos_hoy[ $fila->sitio_id ] = true;
+		}
+		foreach ( $previo as $fila ) {
+			$con_datos_antes[ $fila->sitio_id ] = true;
+		}
+
 		foreach ( $hoy as $clave => $fila ) {
 			if ( ! isset( $previo[ $clave ] ) ) {
+				// Primera vez que tenemos datos de este sitio: lo que hay es lo
+				// que hay, no algo que alguien acabara de instalar.
+				if ( ! isset( $con_datos_antes[ $fila->sitio_id ] ) ) {
+					continue;
+				}
+
 				self::registrar(
 					self::NUEVO_PLUGIN,
 					$fila->sitio_id,
@@ -201,6 +226,11 @@ class SWPK_Eventos {
 		}
 
 		foreach ( $previo as $clave => $fila ) {
+			// Silencio de Kinsta, no desinstalación. Ver el comentario de arriba.
+			if ( ! isset( $con_datos_hoy[ $fila->sitio_id ] ) ) {
+				continue;
+			}
+
 			if ( ! isset( $hoy[ $clave ] ) ) {
 				self::registrar(
 					self::PLUGIN_QUITADO,

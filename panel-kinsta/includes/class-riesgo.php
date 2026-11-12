@@ -79,7 +79,22 @@ class SWPK_Riesgo {
 		global $wpdb;
 
 		$tabla = SWPK_Tablas::tabla( 'fotos' );
-		$fecha = '' !== $fecha ? $fecha : (string) $wpdb->get_var( "SELECT MAX(fecha) FROM {$tabla}" );
+
+		// La última foto DE ESTE SITIO, no la de la cartera.
+		//
+		// No es lo mismo: Kinsta no contesta de los 108 todos los días. Con el
+		// MAX global, un sitio del que hoy no vino nada se mira contra la fecha
+		// de hoy, encuentra cero módulos y sale "Al día" — con sus 35 módulos
+		// intactos y una vulnerabilidad dentro. Es la mentira más cara que este
+		// panel puede contar, y la contó: el 12 de noviembre de 2026, de 25
+		// sitios a la vez.
+		//
+		// Con el MAX por sitio, ese sitio se mira contra su último dato bueno.
+		// Viejo, sí — y para eso está la columna "Revisado" y la tira de
+		// frescura, que dicen de cuándo es.
+		$fecha = '' !== $fecha
+			? $fecha
+			: (string) $wpdb->get_var( $wpdb->prepare( "SELECT MAX(fecha) FROM {$tabla} WHERE sitio_id = %s", $sitio_id ) );
 
 		if ( '' === $fecha ) {
 			return [];
