@@ -68,6 +68,15 @@ $tipos     = SWPK_Bitacora::tipos();
 		es el respaldo: sirve para demostrar qué se avisó, a quién y cuándo.
 	</p>
 
+	<p style="max-width:820px;color:#3c434a">
+		<strong>Ojo con qué es y qué no:</strong> esta pantalla guarda <em>lo que se avisó</em>, no
+		<em>lo que pasó</em>. Si un sitio se actualizó y todavía nadie le escribió al cliente, el
+		cambio está en <a href="<?php echo esc_url( admin_url( 'admin.php?page=panel-kinsta' ) ); ?>">Inicio</a>
+		y aquí no aparece. Y cada aviso queda tal como salió: si después se corrige el dato que lo
+		originó, el aviso se queda escrito igual — una constancia que se reescribe sola no sirve
+		como constancia.
+	</p>
+
 	<div class="notice notice-warning inline" style="max-width:820px">
 		<p>
 			<strong>Una precisión que importa el día que alguien reclame:</strong> esta bitácora prueba
