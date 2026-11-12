@@ -56,13 +56,12 @@ class SWPK_Wordfence {
 	 * El feed se publica una vez al día: pedirlo más seguido no trae nada nuevo.
 	 * Así que el límite va aquí, en el código, y no en que alguien se acuerde:
 	 *
-	 *  - No se vuelve a pedir si hace menos de MINIMO_ENTRE_DESCARGAS que se
+	 *  - No se vuelve a pedir si ya se bajó hoy (por día de calendario, para
 	 *    bajó bien. No es un error: simplemente no hace falta.
 	 *  - Si Wordfence contesta 429, se anota hasta cuándo no insistir, y la
 	 *    espera se va duplicando. Insistir contra un 429 es justo lo que lleva
 	 *    a que suspendan la llave.
 	 */
-	private const MINIMO_ENTRE_DESCARGAS = 20 * HOUR_IN_SECONDS;
 	private const ESPERA_INICIAL         = 6 * HOUR_IN_SECONDS;
 	private const ESPERA_MAXIMA          = 48 * HOUR_IN_SECONDS;
 
@@ -93,9 +92,16 @@ class SWPK_Wordfence {
 			return $espera;
 		}
 
-		$ultima = self::ultima_en_epoch();
+		// Si ya se bajó hoy, la próxima es con la corrida de mañana. Si no, ya
+		// mismo: la siguiente corrida que pase se lo trae.
+		if ( ! self::descargado_hoy() ) {
+			return time();
+		}
 
-		return $ultima ? $ultima + self::MINIMO_ENTRE_DESCARGAS : time();
+		// wp_timezone() y no aritmética con gmt_offset: la zona la define
+		// timezone_string, y restar el offset a mano se rompe el día que
+		// cambie el horario de verano en algún sitio donde se instale esto.
+		return ( new DateTimeImmutable( 'tomorrow 06:30', wp_timezone() ) )->getTimestamp();
 	}
 
 	public static function atribucion(): string {
@@ -140,14 +146,25 @@ class SWPK_Wordfence {
 			);
 		}
 
-		// Segundo freno: ya se bajó hoy. El feed se publica una vez al día.
-		$ultima = self::ultima_en_epoch();
-		if ( $ultima && ( time() - $ultima ) < self::MINIMO_ENTRE_DESCARGAS ) {
+		// Segundo freno: ya se bajó HOY, contando días de calendario y no una
+		// ventana de 20 horas que se va corriendo sola.
+		//
+		// Con la ventana rodante, cada corrida manual movía el reloj y la
+		// descarga se iba desplazando: el panel terminaba cruzando el
+		// inventario de hoy contra una lista de vulnerabilidades de ayer por la
+		// tarde. Y eso es justo lo que no debe pasar, porque el panel existe
+		// para cruzar las dos cosas y las dos tienen que ser del mismo momento.
+		//
+		// Por día de calendario, la corrida de las 6:30 siempre se trae el feed
+		// —es el primer intento del día— y cualquier corrida manual posterior
+		// ya no vuelve a pedirlo. Una descarga al día, que es lo que Wordfence
+		// publica y lo que su límite tolera.
+		if ( self::descargado_hoy() ) {
 			return new WP_Error(
 				'swpk_wf_reciente',
 				sprintf(
-					'El feed ya se descargó el %s. Se publica una vez al día, así que no hace falta volver a pedirlo todavía.',
-					SWPK_Frescura::fmt( 'j \d\e F \a \l\a\s H:i', $ultima )
+					'El feed ya se descargó hoy, el %s. Se publica una vez al día, así que no hace falta volver a pedirlo.',
+					SWPK_Frescura::fecha( self::ultima_actualizacion() )
 				)
 			);
 		}
@@ -392,6 +409,18 @@ class SWPK_Wordfence {
 		return $wpdb->get_results(
 			$wpdb->prepare( "SELECT * FROM {$tabla} WHERE slug = %s AND informativa = 0", $slug )
 		) ?: [];
+	}
+
+	/**
+	 * ¿Ya se bajó el feed hoy?
+	 *
+	 * Por día de calendario del sitio, no por horas transcurridas: así la
+	 * descarga queda anclada a la corrida diaria en vez de ir deslizándose cada
+	 * vez que alguien corre el panel a mano.
+	 */
+	public static function descargado_hoy(): bool {
+		$ultima = self::ultima_actualizacion();
+		return '' !== $ultima && substr( $ultima, 0, 10 ) === current_time( 'Y-m-d' );
 	}
 
 	/**

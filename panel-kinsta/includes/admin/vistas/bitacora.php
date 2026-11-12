@@ -57,11 +57,30 @@ if ( '' !== $tipo_filtro ) {
 $registros = array_values( $registros );
 [ $en_pantalla, $pagina, $paginas ] = SWPK_Vista::paginar( $registros, SWPK_Vista::pagina_pedida(), 25 );
 $tipos     = SWPK_Bitacora::tipos();
+$seccion = isset( $_GET['seccion'] ) ? sanitize_key( (string) $_GET['seccion'] ) : 'notificaciones';
+$url_sec = static fn( string $s ) => add_query_arg(
+	[ 'page' => 'panel-kinsta-bitacora', 'seccion' => $s ],
+	admin_url( 'admin.php' )
+);
 ?>
 <div class="wrap">
-	<h1>Bitácora de notificaciones</h1>
+	<h1>Bitácora</h1>
 	<?php SWPK_Admin::mostrar_mensaje(); ?>
 	<?php SWPK_Admin::tira_de_perfil(); ?>
+
+	<h2 class="nav-tab-wrapper">
+		<a class="nav-tab <?php echo 'movimientos' === $seccion ? 'nav-tab-active' : ''; ?>"
+			href="<?php echo esc_url( $url_sec( 'movimientos' ) ); ?>">Movimientos</a>
+		<a class="nav-tab <?php echo 'movimientos' !== $seccion ? 'nav-tab-active' : ''; ?>"
+			href="<?php echo esc_url( $url_sec( 'notificaciones' ) ); ?>">Notificaciones</a>
+	</h2>
+
+	<?php if ( 'movimientos' === $seccion ) : ?>
+		<?php require SWPK_RUTA . 'includes/admin/vistas/bitacora-movimientos.php'; ?>
+		<p class="swpk-atribucion"><?php echo wp_kses_post( SWPK_Wordfence::atribucion() ); ?></p>
+		</div>
+		<?php return; ?>
+	<?php endif; ?>
 
 	<p style="max-width:820px;color:#3c434a">
 		Todo lo que el panel notifica queda aquí con su fecha, su destinatario y su contenido. Esto
@@ -69,9 +88,9 @@ $tipos     = SWPK_Bitacora::tipos();
 	</p>
 
 	<p style="max-width:820px;color:#3c434a">
-		<strong>Ojo con qué es y qué no:</strong> esta pantalla guarda <em>lo que se avisó</em>, no
+		<strong>Ojo con qué es y qué no:</strong> esta pestaña guarda <em>lo que se avisó</em>, no
 		<em>lo que pasó</em>. Si un sitio se actualizó y todavía nadie le escribió al cliente, el
-		cambio está en <a href="<?php echo esc_url( admin_url( 'admin.php?page=panel-kinsta' ) ); ?>">Inicio</a>
+		cambio está en <a href="<?php echo esc_url( $url_sec( 'movimientos' ) ); ?>">Movimientos</a>
 		y aquí no aparece. Y cada aviso queda tal como salió: si después se corrige el dato que lo
 		originó, el aviso se queda escrito igual — una constancia que se reescribe sola no sirve
 		como constancia.

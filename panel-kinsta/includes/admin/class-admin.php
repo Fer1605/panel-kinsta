@@ -272,6 +272,10 @@ class SWPK_Admin {
 			.swpk-nota{max-width:900px;color:#50575e;font-size:13px;margin-top:10px}
 			.swpk-dia td{background:#f6f7f7 !important;font-weight:600;color:#1d2327;
 				border-top:1px solid #dcdcde}
+			.swpk-rango{display:flex;gap:14px;align-items:flex-end;flex-wrap:wrap;
+				margin:16px 0 4px;padding:14px 16px;background:#fff;border:1px solid #dcdcde;
+				border-radius:4px;max-width:900px}
+			.swpk-rango label{font-size:12px;color:#50575e}
 		</style>
 		<?php
 	}

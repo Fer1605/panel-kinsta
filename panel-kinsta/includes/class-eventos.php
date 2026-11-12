@@ -24,6 +24,24 @@ class SWPK_Eventos {
 	public const SITIO_CAIDO     = 'sitio_caido';
 	public const SITIO_REPUESTO  = 'sitio_repuesto';
 
+	/**
+	 * Lo que NO hace falta mirar: son buenas noticias.
+	 *
+	 * Un plugin que se actualizó solo es el sistema funcionando. Si cada uno se
+	 * lleva su renglón, un día normal son 128 renglones de cosas que salieron
+	 * bien, y lo que sí hay que atender queda enterrado entre ellas.
+	 *
+	 * Estas se cuentan y se resumen en una línea; el resto se enseña una por
+	 * sitio.
+	 */
+	public static function rutinarios(): array {
+		return [ self::ACTUALIZADO, self::RESUELTA, self::SITIO_REPUESTO ];
+	}
+
+	public static function es_rutinario( string $tipo ): bool {
+		return in_array( $tipo, self::rutinarios(), true );
+	}
+
 	public static function etiquetas(): array {
 		return [
 			self::ACTUALIZADO    => 'Se actualizó',
@@ -267,6 +285,45 @@ class SWPK_Eventos {
 
 		return $wpdb->get_results(
 			$wpdb->prepare( "SELECT * FROM {$tabla} ORDER BY ocurrio_en DESC, id DESC LIMIT %d", $limite )
+		) ?: [];
+	}
+
+	/**
+	 * Los movimientos de un rango de fechas, con filtros.
+	 *
+	 * El jefe lo pidió así en la reunión: "quiero saber cuántas veces se le
+	 * notificó al cliente en el mes o en la semana. O en rango de fechas"
+	 * (01:29) y "este mes actualizamos seis veces tal proyecto" (01:18).
+	 *
+	 * Inicio enseña los últimos días y agrupado, que es para enterarse. Esto es
+	 * para buscar: un sitio, un tipo, un periodo.
+	 *
+	 * @return array<int,object>
+	 */
+	public static function entre( string $desde, string $hasta, string $sitio_id = '', string $tipo = '', int $limite = 1000 ): array {
+		global $wpdb;
+		$tabla = SWPK_Tablas::tabla( 'eventos' );
+
+		$donde  = [ 'ocurrio_en BETWEEN %s AND %s' ];
+		$params = [ $desde . ' 00:00:00', $hasta . ' 23:59:59' ];
+
+		if ( '' !== $sitio_id ) {
+			$donde[]  = 'sitio_id = %s';
+			$params[] = $sitio_id;
+		}
+
+		if ( '' !== $tipo ) {
+			$donde[]  = 'tipo = %s';
+			$params[] = $tipo;
+		}
+
+		$params[] = $limite;
+
+		return $wpdb->get_results(
+			$wpdb->prepare(
+				"SELECT * FROM {$tabla} WHERE " . implode( ' AND ', $donde ) . ' ORDER BY ocurrio_en DESC, id DESC LIMIT %d',
+				...$params
+			)
 		) ?: [];
 	}
 
