@@ -81,10 +81,11 @@ class SWPK_Estado {
 			return $guardado;
 		}
 
-		$urgentes  = [];
-		$resto     = [];
-		$sin_datos = [];
-		$al_dia    = 0;
+		$urgentes     = [];
+		$resto        = [];
+		$sin_datos    = [];
+		$al_dia_filas = [];
+		$al_dia       = 0;
 		$sin_2fa   = 0;
 		$nuestros  = 0;
 
@@ -99,17 +100,29 @@ class SWPK_Estado {
 				}
 			}
 
+			$basico = [
+				'sitio_id'    => $sitio_id,
+				'nombre'      => (string) $s->nombre_visible,
+				'dominio'     => (string) $s->dominio,
+				'tag'         => (string) $s->tag,
+				'nivel'       => $nivel,
+				'revisado_en' => (string) ( $s->inventario_en ?? '' ),
+				'modulo'      => '',
+				'version'     => '',
+				'disponible'  => '',
+				'explicacion' => '',
+				'cuantos'     => 0,
+				'publicas'    => 0,
+			];
+
 			if ( SWPK_Riesgo::SIN_DATOS === $nivel ) {
-				$sin_datos[] = [
-					'sitio_id' => $sitio_id,
-					'nombre'   => (string) $s->nombre_visible,
-					'dias'     => SWPK_Inventario::dias_sin_escanear( $s ),
-				];
+				$sin_datos[] = $basico + [ 'dias' => SWPK_Inventario::dias_sin_escanear( $s ) ];
 				continue;
 			}
 
 			if ( SWPK_Riesgo::AL_DIA === $nivel ) {
 				++$al_dia;
+				$al_dia_filas[] = $basico;
 				continue;
 			}
 
@@ -145,6 +158,7 @@ class SWPK_Estado {
 			'urgentes'  => $urgentes,
 			'resto'     => $resto,
 			'sin_datos' => $sin_datos,
+			'al_dia_filas' => $al_dia_filas,
 			'al_dia'    => $al_dia,
 			'sin_2fa'   => $sin_2fa,
 			'nuestros'  => $nuestros,
@@ -212,6 +226,7 @@ class SWPK_Estado {
 			'dominio'     => (string) $sitio->dominio,
 			'tag'         => (string) $sitio->tag,
 			'nivel'       => $nivel,
+			'revisado_en' => (string) ( $sitio->inventario_en ?? '' ),
 			'modulo'      => $peor ? SWPK_Textos::limpiar_titulo( (string) $peor['titulo'] ) : '',
 			'version'     => $peor ? (string) $peor['version'] : '',
 			'disponible'  => $peor ? (string) $peor['version_disponible'] : '',
@@ -236,14 +251,43 @@ class SWPK_Estado {
 			}
 			$sitio    = SWPK_Inventario::obtener( (string) $e->sitio_id );
 			$caidos[] = [
-				'sitio_id' => (string) $e->sitio_id,
-				'nombre'   => (string) ( $sitio->nombre_visible ?? $e->sitio_id ),
-				'motivo'   => (string) $e->motivo,
-				'desde'    => (string) $e->desde,
+				'sitio_id'    => (string) $e->sitio_id,
+				'nombre'      => (string) ( $sitio->nombre_visible ?? $e->sitio_id ),
+				'dominio'     => (string) ( $sitio->dominio ?? '' ),
+				'tag'         => (string) ( $sitio->tag ?? '' ),
+				'nivel'       => 'caido',
+				'revisado_en' => (string) ( $sitio->inventario_en ?? '' ),
+				'modulo'      => '',
+				'version'     => '',
+				'disponible'  => '',
+				'explicacion' => (string) ( $e->motivo ?: 'No contesta.' ),
+				'cuantos'     => 0,
+				'publicas'    => 0,
+				'desde'       => (string) $e->desde,
 			];
 		}
 
 		return $caidos;
+	}
+
+	/**
+	 * Los sitios en una sola lista, del peor al que no tiene nada.
+	 *
+	 * Sin secciones y sin cortes: la pantalla es una tabla y el orden hace el
+	 * trabajo que antes hacían los títulos. Lo que hay que atender queda arriba
+	 * por ser lo peor, no por estar en un apartado aparte.
+	 *
+	 * @param array<string,mixed> $estado
+	 * @return array<int,array<string,mixed>>
+	 */
+	public static function tabla( array $estado ): array {
+		return array_merge(
+			$estado['caidos'],
+			$estado['urgentes'],
+			$estado['resto'],
+			$estado['sin_datos'],
+			$estado['al_dia_filas']
+		);
 	}
 
 	/**

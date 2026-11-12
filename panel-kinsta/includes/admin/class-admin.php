@@ -263,34 +263,11 @@ class SWPK_Admin {
 			.swpk-sello-p{flex:1 1 100%;color:#b32d2e}
 			.swpk-sello-ahora{margin-top:9px;padding-top:9px;border-top:1px solid #f0f0f1;color:#50575e}
 
-			/* El veredicto: lo primero y, muchos días, lo único que se lee. */
-			.swpk-veredicto{border-left:5px solid;border-radius:4px;padding:18px 22px;margin:18px 0 10px;
-				max-width:900px;background:#fff;border-top:1px solid #dcdcde;border-right:1px solid #dcdcde;
-				border-bottom:1px solid #dcdcde}
-			.swpk-v-titulo{font-size:22px;font-weight:600;line-height:1.3;color:#1d2327}
-			.swpk-v-detalle{margin-top:5px;font-size:14px;color:#50575e}
-			.swpk-v-bien{border-left-color:#008a20}
-			.swpk-v-ojo{border-left-color:#dba617}
-			.swpk-v-mal{border-left-color:#b32d2e}
-
-			.swpk-seccion{font-size:15px;margin:26px 0 8px;color:#1d2327}
-
-			/* La cola de trabajo: una fila por sitio, no un contador. */
-			.swpk-cola{margin:0;padding:0;list-style:none;max-width:900px;
-				border:1px solid #dcdcde;border-radius:4px;background:#fff;overflow:hidden}
-			.swpk-item{padding:12px 16px;border-bottom:1px solid #f0f0f1}
-			.swpk-item:last-child{border-bottom:0}
-			.swpk-cola-suave .swpk-item{padding:9px 16px}
-			.swpk-item-cab{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
-			.swpk-item-sitio{font-size:15px;font-weight:600;text-decoration:none}
-			.swpk-item-pub{margin-left:auto;background:#fcf0f1;color:#b32d2e;font-size:12px;
-				font-weight:600;padding:2px 9px;border-radius:10px;white-space:nowrap}
-			.swpk-item-det{margin-top:4px;color:#3c434a;font-size:13px;line-height:1.5}
-			.swpk-item-mas{color:#8c8f94}
-			.swpk-nota{max-width:900px;color:#50575e;font-size:13px;margin-top:8px}
-
-			.swpk-bien{max-width:900px;margin:22px 0 4px;padding:12px 16px;background:#f6f7f7;
-				border-left:4px solid #008a20;border-radius:3px;color:#3c434a;font-size:13px}
+			/* El Resumen es una tabla. Lo único que necesita: una línea arriba,
+			   gris para lo que acompaña y rojo para una sola cosa. */
+			.swpk-linea{max-width:900px;font-size:14px;line-height:1.6;margin:14px 0 16px}
+			.swpk-gris{color:#8c8f94}
+			.swpk-rojo{color:#b32d2e;font-weight:600}
 		</style>
 		<?php
 	}
