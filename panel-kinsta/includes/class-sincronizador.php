@@ -91,6 +91,10 @@ class SWPK_Sincronizador {
 
 		update_option( 'swpk_ultima_corrida', $resumen, false );
 
+		// Lo que la pantalla de Resumen tenga guardado ya no vale: acaba de
+		// cambiar justo lo que resume.
+		SWPK_Estado::olvidar();
+
 		return $resumen;
 	}
 

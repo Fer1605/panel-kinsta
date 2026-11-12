@@ -52,7 +52,14 @@ class SWPK_Riesgo {
 		};
 	}
 
-	private static function peso( string $nivel ): int {
+	/**
+	 * El peso de un nivel, para ordenar.
+	 *
+	 * Es pública porque SWPK_Estado ordena la lista de lo que hay que atender
+	 * por gravedad, y replicar esta tabla en otro archivo es la forma segura de
+	 * que un día dejen de coincidir.
+	 */
+	public static function peso( string $nivel ): int {
 		return match ( $nivel ) {
 			self::CRITICO => 4,
 			self::ALTO    => 3,

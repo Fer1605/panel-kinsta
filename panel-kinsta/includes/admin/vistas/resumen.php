@@ -1,52 +1,70 @@
 <?php
-/** Resumen: el panel "en paquete" que pidió el jefe (00:00). */
+/**
+ * Resumen: qué está bien y qué está mal, sin tener que interpretar nada.
+ *
+ * Esta pantalla abría con ocho contadores y el jefe los rechazó dos veces, con
+ * meses de diferencia: "mucha información, pero no en paquete" en la reunión, y
+ * "no pequeños resumenes de numeros" por escrito. Ahora abre con una frase que
+ * dice el estado, y debajo la lista de lo que hay que atender con el nombre del
+ * sitio puesto. Los conteos por grupo siguen en la pantalla de Sitios, que es
+ * donde sirven para filtrar.
+ *
+ * El trabajo de armar todo eso vive en SWPK_Estado; aquí solo se pinta.
+ */
 defined( 'ABSPATH' ) || exit;
 
-$sitios   = SWPK_Perfiles::sitios_visibles();
+$estado    = SWPK_Estado::calcular();
+$veredicto = SWPK_Estado::veredicto( $estado );
 
-$conteo   = array_fill_keys( array_keys( SWPK_Etiquetas::nombres() ), 0 );
-foreach ( $sitios as $s ) {
-	$conteo[ $s->tag ] = ( $conteo[ $s->tag ] ?? 0 ) + 1;
-}
-$nombres  = SWPK_Etiquetas::nombres();
-$visibles = array_map( static fn( $s ) => (string) $s->sitio_id, $sitios );
-$eventos  = array_filter(
+$visibles = array_map(
+	static fn( $s ) => (string) $s->sitio_id,
+	SWPK_Perfiles::sitios_visibles()
+);
+
+$eventos = array_filter(
 	SWPK_Eventos::recientes( 60 ),
 	static fn( $e ) => SWPK_Perfiles::puede( SWPK_Perfiles::VER_TODO ) || in_array( (string) $e->sitio_id, $visibles, true )
 );
-$eventos  = array_slice( $eventos, 0, 25 );
-$etq_evt  = SWPK_Eventos::etiquetas();
+$eventos = array_slice( $eventos, 0, 25 );
+$etq_evt = SWPK_Eventos::etiquetas();
 
-$criticos    = 0;
-$con_pend    = 0;
-$sin_2fa     = 0;
-$nuestros    = 0;
-$sin_datos   = [];
-foreach ( $sitios as $s ) {
-	$nivel = SWPK_Riesgo::nivel_del_sitio( $s->sitio_id );
-	if ( SWPK_Riesgo::SIN_DATOS === $nivel ) {
-		$sin_datos[] = $s->nombre_visible;
-	}
-	if ( in_array( $nivel, [ SWPK_Riesgo::CRITICO, SWPK_Riesgo::ALTO ], true ) ) {
-		++$criticos;
-	}
-	if ( SWPK_Riesgo::AL_DIA !== $nivel ) {
-		++$con_pend;
-	}
-	if ( SWPK_Etiquetas::es_nuestro( $s->tag ) ) {
-		++$nuestros;
-		if ( ! $s->tiene_2fa ) {
-			++$sin_2fa;
-		}
-	}
-}
-
-$mes_desde = current_time( 'Y-m-01 00:00:00' );
-$mes_hasta = current_time( 'Y-m-d H:i:s' );
-$avisos    = 0;
-foreach ( $sitios as $s ) {
-	$avisos += SWPK_Bitacora::conteo( $s->sitio_id, $mes_desde, $mes_hasta );
-}
+/** Una fila de la cola de trabajo. */
+$pintar_item = static function ( array $f ): void {
+	$url = SWPK_Vista::url_del_sitio( $f['sitio_id'], 'resumen' );
+	?>
+	<li class="swpk-item">
+		<div class="swpk-item-cab">
+			<?php echo wp_kses_post( SWPK_Admin::nivel_badge( $f['nivel'] ) ); ?>
+			<a class="swpk-item-sitio" href="<?php echo esc_url( $url ); ?>"><?php echo esc_html( $f['nombre'] ); ?></a>
+			<?php if ( $f['publicas'] ) : ?>
+				<span class="swpk-item-pub">
+					<?php
+					printf(
+						esc_html( 1 === $f['publicas']
+							? '%d se aprovecha desde internet sin cuenta'
+							: '%d se aprovechan desde internet sin cuenta' ),
+						(int) $f['publicas']
+					);
+					?>
+				</span>
+			<?php endif; ?>
+		</div>
+		<div class="swpk-item-det">
+			<?php if ( '' !== $f['modulo'] ) : ?>
+				<strong><?php echo esc_html( $f['modulo'] ); ?></strong>
+				<?php if ( '' !== $f['version'] ) : ?>
+					<span class="swpk-mono"><?php echo esc_html( $f['version'] ); ?><?php echo '' !== $f['disponible'] ? ' → ' . esc_html( $f['disponible'] ) : ''; ?></span>
+				<?php endif; ?>
+				·
+			<?php endif; ?>
+			<?php echo esc_html( $f['explicacion'] ); ?>
+			<?php if ( $f['cuantos'] > 1 ) : ?>
+				<span class="swpk-item-mas">y <?php echo (int) $f['cuantos'] - 1; ?> módulo(s) más en este sitio</span>
+			<?php endif; ?>
+		</div>
+	</li>
+	<?php
+};
 ?>
 <div class="wrap">
 	<h1>Panel Kinsta</h1>
@@ -55,75 +73,121 @@ foreach ( $sitios as $s ) {
 	<?php SWPK_Admin::tira_de_perfil(); ?>
 	<?php SWPK_Admin::aviso_demo(); ?>
 	<?php if ( SWPK_Perfiles::puede( SWPK_Perfiles::ADMINISTRAR ) ) { SWPK_Admin::barra_acciones(); } ?>
-	<?php SWPK_Frescura::sello(); ?>
 
-	<?php if ( $sin_datos ) : ?>
-		<div class="notice notice-warning">
-			<p>
-				<strong>De <?php echo count( $sin_datos ); ?> sitio(s) no tenemos datos de qué hay instalado.</strong>
-				No han sido escaneados por <?php echo esc_html( SWPK_Admin::proveedor() ); ?>, así que su lista de módulos llega vacía.
-			</p>
-			<p>
-				<em>Una lista vacía no significa "está limpio": significa que no sabemos.</em> Por eso
-				aparecen como <strong>Sin datos</strong> y no como "al día". Son:
-				<?php echo esc_html( implode( ', ', array_slice( $sin_datos, 0, 12 ) ) ); ?><?php echo count( $sin_datos ) > 12 ? '…' : ''; ?>.
-			</p>
-			<p>
-				Esa lista la arma <?php echo esc_html( SWPK_Admin::proveedor() ); ?> por su cuenta, sitio por
-				sitio y cada uno a su ritmo, así que normalmente aparece sola en unos días. Si pasa una
-				semana así, vale la pena abrirles un ticket.
-			</p>
-		</div>
-	<?php endif; ?>
+	<?php if ( ! $estado['total'] ) : ?>
 
-	<?php if ( ! $sitios ) : ?>
 		<div class="notice notice-info"><p>
 			Todavía no hay inventario. Dale a <strong>Correr ahora</strong> para traer los sitios
-			y tomar la primera foto.
+			y tomar el primer inventario.
 		</p></div>
+
 	<?php else : ?>
 
-		<div class="swpk-tarjetas">
-			<?php foreach ( $nombres as $tag => $nombre ) : ?>
-				<?php if ( 0 === $conteo[ $tag ] && SWPK_Etiquetas::SIN === $tag ) { continue; } ?>
-				<div class="swpk-tarjeta">
-					<div class="swpk-n"><?php echo (int) $conteo[ $tag ]; ?></div>
-					<div class="swpk-r"><?php echo esc_html( $nombre ); ?></div>
-				</div>
-			<?php endforeach; ?>
+		<div class="swpk-veredicto swpk-v-<?php echo esc_attr( $veredicto['tono'] ); ?>">
+			<div class="swpk-v-titulo"><?php echo esc_html( $veredicto['titulo'] ); ?></div>
+			<div class="swpk-v-detalle"><?php echo esc_html( $veredicto['detalle'] ); ?></div>
 		</div>
 
-		<div class="swpk-tarjetas">
-			<div class="swpk-tarjeta">
-				<div class="swpk-n" style="color:#b32d2e"><?php echo (int) $criticos; ?></div>
-				<div class="swpk-r">Sitios con riesgo alto o crítico</div>
-			</div>
-			<div class="swpk-tarjeta">
-				<div class="swpk-n"><?php echo (int) $con_pend; ?></div>
-				<div class="swpk-r">Sitios con algo pendiente</div>
-			</div>
-			<div class="swpk-tarjeta">
-				<div class="swpk-n"><?php echo (int) $sin_2fa; ?> <span style="font-size:15px;color:#50575e">de <?php echo (int) $nuestros; ?></span></div>
-				<div class="swpk-r">Sitios nuestros sin doble autenticación</div>
-			</div>
-			<div class="swpk-tarjeta">
-				<div class="swpk-n"><?php echo (int) $avisos; ?></div>
-				<div class="swpk-r">Avisos enviados este mes</div>
-			</div>
-			<?php if ( $sin_datos ) : ?>
-				<div class="swpk-tarjeta">
-					<div class="swpk-n" style="color:#8c8f94"><?php echo count( $sin_datos ); ?></div>
-					<div class="swpk-r">Sitios sin escanear por <?php echo esc_html( SWPK_Admin::proveedor() ); ?></div>
-				</div>
+		<?php if ( $estado['caidos'] ) : ?>
+			<h2 class="swpk-seccion">No responden ahora mismo</h2>
+			<ul class="swpk-cola">
+				<?php foreach ( $estado['caidos'] as $c ) : ?>
+					<li class="swpk-item">
+						<div class="swpk-item-cab">
+							<span class="swpk-nivel" style="background:#b32d2e">Caído</span>
+							<a class="swpk-item-sitio" href="<?php echo esc_url( SWPK_Vista::url_del_sitio( $c['sitio_id'], 'resumen' ) ); ?>"><?php echo esc_html( $c['nombre'] ); ?></a>
+						</div>
+						<div class="swpk-item-det">
+							<?php echo esc_html( $c['motivo'] ?: 'No contesta.' ); ?>
+							<?php if ( $c['desde'] ) : ?>
+								<span class="swpk-item-mas">desde <?php echo esc_html( SWPK_Frescura::fmt( 'j M, H:i', $c['desde'] ) ); ?></span>
+							<?php endif; ?>
+						</div>
+					</li>
+				<?php endforeach; ?>
+			</ul>
+		<?php endif; ?>
+
+		<?php if ( $estado['urgentes'] ) : ?>
+			<h2 class="swpk-seccion">Lo que no puede esperar</h2>
+			<ul class="swpk-cola">
+				<?php foreach ( $estado['urgentes'] as $f ) { $pintar_item( $f ); } ?>
+			</ul>
+		<?php endif; ?>
+
+		<?php if ( $estado['resto'] ) : ?>
+			<h2 class="swpk-seccion">Lo de esta semana</h2>
+			<ul class="swpk-cola swpk-cola-suave">
+				<?php foreach ( array_slice( $estado['resto'], 0, 8 ) as $f ) { $pintar_item( $f ); } ?>
+			</ul>
+			<?php if ( count( $estado['resto'] ) > 8 ) : ?>
+				<p class="swpk-nota">
+					Y <?php echo count( $estado['resto'] ) - 8; ?> sitio(s) más con cosas pendientes, ninguna urgente.
+					<a href="<?php echo esc_url( admin_url( 'admin.php?page=panel-kinsta-vulnerabilidades' ) ); ?>">Verlos todos</a>.
+				</p>
 			<?php endif; ?>
+		<?php endif; ?>
+
+		<?php if ( $estado['sin_datos'] ) : ?>
+			<h2 class="swpk-seccion">De estos no sabemos qué tienen</h2>
+			<ul class="swpk-cola swpk-cola-suave">
+				<?php foreach ( $estado['sin_datos'] as $s ) : ?>
+					<li class="swpk-item">
+						<div class="swpk-item-cab">
+							<span class="swpk-nivel" style="background:#8c8f94">Sin datos</span>
+							<a class="swpk-item-sitio" href="<?php echo esc_url( SWPK_Vista::url_del_sitio( $s['sitio_id'], 'resumen' ) ); ?>"><?php echo esc_html( $s['nombre'] ); ?></a>
+						</div>
+						<div class="swpk-item-det">
+							<?php echo esc_html( SWPK_Admin::proveedor() ); ?> no lo ha escaneado, así que su lista de
+							módulos llega vacía. <em>Vacía no quiere decir limpia: quiere decir que no sabemos.</em>
+						</div>
+					</li>
+				<?php endforeach; ?>
+			</ul>
+			<p class="swpk-nota">
+				Esa lista la arma <?php echo esc_html( SWPK_Admin::proveedor() ); ?> por su cuenta, sitio por sitio y
+				cada uno a su ritmo, así que normalmente aparece sola en unos días. Si pasa una semana así,
+				vale la pena abrirles un ticket.
+			</p>
+		<?php endif; ?>
+
+		<div class="swpk-bien">
+			<strong>Lo que sí está bien:</strong>
+			<?php echo (int) $estado['al_dia']; ?> de <?php echo (int) $estado['total']; ?> sitios no tienen nada pendiente<?php
+			if ( ! $estado['caidos'] ) {
+				echo ' · ninguno está caído';
+			}
+			// El doble paso solo se nombra aquí cuando ya hay alguno. "0 de 94
+			// ya lo tienen" no es una buena noticia, y meterlo en la línea de
+			// lo que está bien es la clase de maquillaje que vuelve inútil a
+			// un panel.
+			$con_2fa = (int) $estado['nuestros'] - (int) $estado['sin_2fa'];
+			if ( $con_2fa > 0 ) {
+				printf(
+					' · %d de %d sitios nuestros ya tienen la verificación en dos pasos',
+					$con_2fa,
+					(int) $estado['nuestros']
+				);
+			}
+			?>.
 		</div>
 
-		<h2>Lo que pasó en la última corrida</h2>
+		<?php if ( $estado['nuestros'] && (int) $estado['nuestros'] === (int) $estado['sin_2fa'] ) : ?>
+			<p class="swpk-nota">
+				Pendiente aparte, que no es de hoy ni de esta semana: ninguno de los
+				<?php echo (int) $estado['nuestros']; ?> sitios nuestros tiene todavía la verificación en dos
+				pasos. Se activa al instalar el plugin, sitio por sitio.
+			</p>
+		<?php endif; ?>
+
+		<?php SWPK_Frescura::sello(); ?>
+
+		<h2 class="swpk-seccion">Lo que cambió desde la corrida anterior</h2>
 		<?php if ( ! $eventos ) : ?>
 			<p>
-				Nada todavía. La historia empieza con la segunda corrida: el panel compara la foto
-				de hoy con la de ayer, y hoy no hay con qué comparar. Kinsta no guarda un historial
-				consultable, así que no se puede reconstruir hacia atrás.
+				Nada todavía. La historia empieza con la segunda corrida: el panel compara el
+				inventario de hoy con el de ayer, y hoy no hay con qué comparar. Kinsta no guarda un
+				historial consultable, así que no se puede reconstruir hacia atrás.
 			</p>
 		<?php else : ?>
 			<table class="widefat striped swpk-tabla">
@@ -148,6 +212,7 @@ foreach ( $sitios as $s ) {
 				</tbody>
 			</table>
 		<?php endif; ?>
+
 	<?php endif; ?>
 
 	<p class="swpk-atribucion"><?php echo wp_kses_post( SWPK_Wordfence::atribucion() ); ?></p>
