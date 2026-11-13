@@ -53,6 +53,16 @@ class SWPK_Llaves {
 	/** Cuánto dura en pantalla la llave recién creada, en segundos. */
 	public const ASOMO = 300;
 
+	/**
+	 * Dónde vive la huella del token de MCP.
+	 *
+	 * La huella y no el token: en la base de datos no queda nada con lo que
+	 * alguien se pueda conectar. Es la misma regla que la contraseña, y por el
+	 * mismo motivo — con la misma consecuencia, que la dirección se enseña una
+	 * sola vez y si se pierde se revoca la llave y se hace otra.
+	 */
+	public const META_TOKEN = 'swpk_mcp_token';
+
 	public static function init(): void {
 		// Solo la lista de Usuarios, no cualquier consulta de usuarios: la
 		// pantalla "Conectarse" también pregunta por el rol y necesita que le
@@ -69,6 +79,29 @@ class SWPK_Llaves {
 		$u = $usuario instanceof WP_User ? $usuario : get_user_by( 'id', (int) $usuario );
 
 		return $u instanceof WP_User && in_array( SWPK_Perfiles::API, (array) $u->roles, true );
+	}
+
+	/**
+	 * La llave dueña de una dirección de MCP, o null.
+	 *
+	 * Se busca por la huella, nunca por el token en claro, así que una consulta
+	 * a mano contra la base de datos no sirve para entrar.
+	 */
+	public static function por_token( string $token ): ?WP_User {
+		if ( 32 !== strlen( $token ) ) {
+			return null;
+		}
+
+		$encontradas = get_users(
+			[
+				'role'       => SWPK_Perfiles::API,
+				'meta_key'   => self::META_TOKEN,
+				'meta_value' => hash( 'sha256', $token ),
+				'number'     => 1,
+			]
+		);
+
+		return $encontradas ? $encontradas[0] : null;
 	}
 
 	/** @return array<int,WP_User> */
@@ -178,7 +211,7 @@ class SWPK_Llaves {
 	/**
 	 * Crea una llave y devuelve su contraseña en claro, una sola vez.
 	 *
-	 * @return array{nombre:string,login:string,clave:string,error:string}|WP_Error
+	 * @return array{nombre:string,login:string,clave:string,token:string,error:string}|WP_Error
 	 */
 	public static function crear( string $nombre ): array|WP_Error {
 		$nombre = sanitize_text_field( $nombre );
@@ -220,6 +253,12 @@ class SWPK_Llaves {
 			return $id;
 		}
 
+		// La dirección de MCP se genera siempre, con contraseñas de aplicación o
+		// sin ellas: es la vía que no exige consola, y no tiene sentido que
+		// dependa de un mecanismo de WordPress que este servidor podría no tener.
+		$token = bin2hex( random_bytes( 16 ) );
+		update_user_meta( (int) $id, self::META_TOKEN, hash( 'sha256', $token ) );
+
 		$clave = '';
 		$error = '';
 
@@ -238,7 +277,7 @@ class SWPK_Llaves {
 			$error = 'WordPress las exige por HTTPS y este servidor no lo tiene';
 		}
 
-		return [ 'nombre' => $nombre, 'login' => $login, 'clave' => $clave, 'error' => $error ];
+		return [ 'nombre' => $nombre, 'login' => $login, 'clave' => $clave, 'token' => $token, 'error' => $error ];
 	}
 
 	/**

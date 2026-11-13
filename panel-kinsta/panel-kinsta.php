@@ -52,6 +52,7 @@ require_once SWPK_RUTA . 'includes/class-correos.php';
 require_once SWPK_RUTA . 'includes/class-usuarios.php';
 require_once SWPK_RUTA . 'includes/class-receptor.php';
 require_once SWPK_RUTA . 'includes/class-api.php';
+require_once SWPK_RUTA . 'includes/class-mcp.php';
 require_once SWPK_RUTA . 'includes/class-monitor.php';
 require_once SWPK_RUTA . 'includes/class-sincronizador.php';
 require_once SWPK_RUTA . 'includes/class-frescura.php';
@@ -108,6 +109,7 @@ add_action(
 		SWPK_Sincronizador::init();
 		SWPK_Receptor::init();
 		SWPK_Api::init();
+		SWPK_Mcp::init();
 		SWPK_Monitor::init();
 		SWPK_Correos::init();
 		SWPK_Exportar::init();

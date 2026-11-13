@@ -1,6 +1,15 @@
-# Conector MCP del Panel Kinsta
+# Conector MCP del Panel Kinsta — la vía local
 
-Esto es lo que hace que **Claude Desktop pueda preguntarle al panel**.
+> **Lo normal ya no es esto.** El panel sirve MCP por su cuenta: en Claude
+> Desktop se agrega como conector personalizado pegando una dirección, sin bajar
+> nada y sin Node. La dirección sale al crear una llave, en *Conectarse (API)*.
+>
+> Esto de aquí es la vía secundaria, y sirve para una cosa que la otra no puede:
+> **hablar con un panel que corre en tu propia máquina.** El conector remoto no
+> llega a `localhost`, porque quien abre la conexión es la nube de Anthropic y
+> no tu computadora. Para probar en local, esto; para todo lo demás, la URL.
+
+Esto es lo que hace que **Claude Desktop pueda preguntarle a un panel local**.
 
 El panel ya contesta por API. Pero Claude Desktop no consume una API de ese
 tipo: no hay dónde pegarle una dirección con usuario y contraseña. Habla un

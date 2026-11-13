@@ -308,6 +308,7 @@ panel-kinsta/
     ├── class-monitor.php         sondeo de disponibilidad cada 5 minutos
     ├── class-receptor.php        recibe los reportes firmados de los agentes
     ├── class-api.php             la puerta de consulta: 10 rutas, sin lógica propia
+    ├── class-mcp.php             el mismo panel, hablando MCP por una URL
     ├── class-usuarios.php        línea base de usuarios y alerta de admin nuevo
     ├── class-bitacora.php        registro de notificaciones
     ├── class-textos.php          los avisos, redactados por audiencia
@@ -318,7 +319,7 @@ panel-kinsta/
     │   └── class-fuente-demo.php datos de prueba
     └── admin/                    el panel
 
-conector-mcp/                 el traductor para Claude Desktop (Node, sin dependencias)
+conector-mcp/                 puente local a MCP (Node); la vía normal es la URL del panel
 ```
 
 El hosting está detrás de `SWPK_Fuente`, no escrito por todo el código: agregar
@@ -391,23 +392,42 @@ datos deshace cualquiera de los cuatro. Esto cierra el camino fácil, que es la
 pantalla de Usuarios; lo otro ya exige el servidor, y ese día la llave de la API
 es el menor de los problemas.
 
-### El conector para Claude Desktop
+### Claude Desktop: el panel habla MCP
 
-Claude Desktop no consume una API REST: habla MCP. `conector-mcp/` es el
-traductor — un archivo de Node sin dependencias, porque esto se lo tiene que
-poder instalar alguien que no programa y `npm install` en la máquina de otro es
-donde mueren estas cosas. Expone las siete rutas de lectura como herramientas;
-las tres de proceso quedan fuera a propósito, para que una conversación no pueda
-lanzar más de 200 peticiones a Kinsta a media pregunta. `node index.mjs --probar` comprueba la
-conexión antes de tocar Claude Desktop.
+Claude Desktop no consume una API REST. Habla MCP, y el panel lo sirve él mismo
+en `includes/class-mcp.php`: **se agrega como conector personalizado pegando una
+dirección, y nada más.** Sin bajar nada, sin Node, sin editar archivos.
 
-**La configuración la arma el panel, no un instructivo.** Al crear una llave, la
-ventana entrega el bloque de `claude_desktop_config.json` ya hecho, con la
-dirección de ese panel y esa llave adentro, listo para copiar. Se hace así
-porque la dirección cambia —localhost hoy, un servidor mañana— y una dirección
-vieja copiada de un documento es un fallo que no se nota hasta que alguien dice
-"no me funciona". Lo único que queda de relleno es la ruta local al conector,
-que el panel no puede saber.
+La dirección sale al crear una llave y la URL *es* la credencial — por eso se
+enseña una sola vez y en la base de datos queda solo su huella (SHA-256), igual
+que una contraseña. Hereda el alcance de su llave, así que una llave de ventas
+contesta sobre sus sitios y nada más; revocar la llave mata la dirección y la
+contraseña a la vez.
+
+Siete herramientas, una por ruta de lectura. `tools/call` no trae lógica propia:
+arma la misma `WP_REST_Request` que haría cualquiera desde fuera y la manda por
+`rest_do_request`, así que el recorte por perfil y el registro son los mismos.
+Las tres rutas de proceso no se entregan, porque una conversación no debería
+poder lanzar más de 200 peticiones a Kinsta a media pregunta. Cada consulta
+queda en `swpk_accesos` marcada con `· MCP`.
+
+**Lo que hay que saber antes de prometerlo:** Claude Desktop no se conecta desde
+la computadora de quien lo usa. Manda la dirección a la nube de Anthropic y es
+la nube la que abre la conexión al servidor. De ahí se sigue que **tiene que ser
+HTTPS y público**: `localhost` y las direcciones privadas las rechaza de
+entrada, así que esto no se puede probar en una máquina de la casa ni siquiera
+por quien la tiene enfrente. No es un límite del código y no se rodea con código.
+
+La alternativa era OAuth, con su "iniciar sesión" por persona. Es más fino y es
+a dónde ir el día que cada quien deba entrar con lo suyo; hoy sería pedir más
+pasos para conseguir lo mismo.
+
+### `conector-mcp/`, la vía local
+
+Un archivo de Node, sin dependencias, que hace de puente desde una máquina hacia
+un panel que esa máquina sí alcanza. **Es la vía secundaria:** sirve para probar
+contra un panel local, que es justo lo que el conector remoto no puede hacer.
+Para el uso normal está la dirección de arriba.
 
 ## Límites de la API de Kinsta
 

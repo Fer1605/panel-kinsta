@@ -165,16 +165,22 @@ class SWPK_Api {
 	 * `rest_post_dispatch` — solo salía por HTTP, que es por donde entran las
 	 * llaves de verdad.
 	 *
+	 * Es pública porque el servidor de MCP anota por aquí también: su
+	 * permission_callback sufre exactamente el mismo doble disparo, y tener
+	 * dos formas de escribir en el registro sería tener una sin guardia.
+	 *
 	 * Se descarta esa segunda pasada y no las repetidas en general: de las dos
 	 * formas de equivocarse, anotar de más es ruido y anotar de menos es una
 	 * mentira, así que lo que se calla es exactamente este caso conocido.
 	 */
-	private static function anotar_llamada( string $ruta, bool $permitido ): void {
+	public static function anotar_llamada( string $ruta, bool $permitido ): void {
 		if ( doing_filter( 'rest_post_dispatch' ) ) {
 			return;
 		}
 
-		SWPK_Accesos::anotar_api( $ruta, $permitido );
+		// Una consulta que entró por MCP se anota marcada: en el registro hay que
+		// poder distinguir a quién le contestamos por dónde, no solo qué pidió.
+		SWPK_Accesos::anotar_api( $ruta . ( SWPK_Mcp::$en_curso ? ' · MCP' : '' ), $permitido );
 	}
 
 	private static function comprobar( WP_REST_Request $peticion, string $permiso ): bool|WP_Error {
@@ -675,40 +681,6 @@ class SWPK_Api {
 	 *
 	 * @return array<int,array<string,string>>
 	 */
-	/**
-	 * La configuración lista para pegar en Claude Desktop.
-	 *
-	 * Claude Desktop no consume una API REST: no tiene dónde recibir una
-	 * dirección con usuario y contraseña. Habla MCP, y lo que entiende es un
-	 * archivo de configuración con un comando que arrancar. Esto lo arma aquí,
-	 * con la dirección de este panel ya puesta, para que lo único que haya que
-	 * hacer sea copiar y pegar.
-	 *
-	 * Se arma en el panel y no a mano porque la dirección cambia —localhost hoy,
-	 * un servidor mañana— y una dirección vieja copiada de un instructivo es un
-	 * fallo que no se nota hasta que alguien dice "no me funciona".
-	 *
-	 * La ruta al conector sí queda de relleno: el panel no puede saber dónde
-	 * bajó cada quien la carpeta del repositorio.
-	 */
-	public static function config_mcp( string $llave = '' ): string {
-		return (string) wp_json_encode(
-			[
-				'mcpServers' => [
-					'panel-kinsta' => [
-						'command' => 'node',
-						'args'    => [ '/ruta/a/conector-mcp/index.mjs' ],
-						'env'     => [
-							'PANEL_URL'   => home_url(),
-							'PANEL_LLAVE' => '' !== $llave ? $llave : 'USUARIO:CONTRASEÑA',
-						],
-					],
-				],
-			],
-			JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE
-		);
-	}
-
 	public static function catalogo(): array {
 		return [
 			[
