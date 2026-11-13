@@ -3,8 +3,8 @@
  * Los eventos: lo que cambió de un día para otro.
  *
  * "Mira, en esta corrida del día pasó esto" (04:34). Kinsta no guarda historial
- * consultable, así que la historia la construye el panel comparando la foto de
- * hoy con la de ayer. Antes de la primera foto no hay nada, y eso hay que
+ * consultable, así que la historia la construye el panel comparando el inventario de
+ * hoy con la de ayer. Antes de el primer inventario no hay nada, y eso hay que
  * decirlo en pantalla en vez de mostrar un cero que parece un dato.
  */
 
@@ -86,7 +86,7 @@ class SWPK_Eventos {
 		// Un mismo cambio no se anota dos veces el mismo día.
 		//
 		// El botón de "analizar este sitio ahora" vuelve a comparar contra la
-		// foto anterior, así que pulsarlo dos veces registraba otra vez los
+		// inventario anterior, así que pulsarlo dos veces registraba otra vez los
 		// mismos cambios. Con 23 módulos eran 30 eventos donde había 10.
 		//
 		// Se compara por tipo, sitio, módulo y día. Las caídas no traen módulo
@@ -166,7 +166,7 @@ class SWPK_Eventos {
 	}
 
 	/**
-	 * Compara la foto de hoy con la anterior y registra los cambios.
+	 * Compara el inventario de hoy con la anterior y registra los cambios.
 	 *
 	 * Esto es lo que convierte un inventario en una historia: sin la
 	 * comparación, el panel solo sabría decir cómo están las cosas hoy, y lo
@@ -241,7 +241,7 @@ class SWPK_Eventos {
 		//
 		// Kinsta escanea cada sitio cuando le toca, muy desparejo: medido sobre
 		// los 108, el mismo día había 67 escaneados hoy, 27 de hace tres días y
-		// uno sin tocar desde abril. Si entre dos fotos su fecha de escaneo NO
+		// uno sin tocar desde abril. Si entre dos inventarios su fecha de escaneo NO
 		// avanzó, la lista tendría que ser idéntica. Si cambió igual, el cambio
 		// no es del sitio: es de la respuesta.
 		//
@@ -267,10 +267,25 @@ class SWPK_Eventos {
 			}
 		}
 
-		self::$ultimo_salto = $sin_escaneo_nuevo;
+		// Ojo con la diferencia entre estas dos listas, que al principio las
+		// confundí y la nota de la corrida salió mintiendo:
+		//
+		//   $sin_escaneo_nuevo -> sitios que Kinsta no volvió a mirar. Son
+		//     muchos y es NORMAL: midiendo los 108, unos 40 al día. No tiene
+		//     nada de raro y no hay que contarlo.
+		//
+		//   self::$ultimo_salto -> sitios donde ADEMÁS la lista venía distinta
+		//     y hubo que callar un evento. Eso sí es raro y hay que decirlo.
+		//
+		// La primera corrida con esto puesto reportó "la lista cambió" de un
+		// sitio cuyas dos inventarios eran idénticas. Una nota que se equivoca deja de
+		// leerse, y entonces el día que diga algo cierto nadie la va a mirar.
+		self::$ultimo_salto = [];
 
 		foreach ( $hoy as $clave => $fila ) {
-			if ( isset( $sin_escaneo_nuevo[ $fila->sitio_id ] ) ) {
+			if ( ! isset( $previo[ $clave ] ) && isset( $sin_escaneo_nuevo[ $fila->sitio_id ] ) ) {
+				// Aparece algo que antes no estaba, sin escaneo nuevo detrás.
+				self::$ultimo_salto[ $fila->sitio_id ] = true;
 				continue;
 			}
 
@@ -293,6 +308,15 @@ class SWPK_Eventos {
 			}
 
 			$antes = $previo[ $clave ];
+
+			// Sin escaneo nuevo, ni la versión ni la marca de vulnerable
+			// deberían haberse movido. Si se movieron, se movió la respuesta,
+			// no el sitio.
+			if ( isset( $sin_escaneo_nuevo[ $fila->sitio_id ] )
+				&& ( $antes->version !== $fila->version || $antes->es_vulnerable !== $fila->es_vulnerable ) ) {
+				self::$ultimo_salto[ $fila->sitio_id ] = true;
+				continue;
+			}
 
 			if ( $antes->version !== $fila->version && SWPK_Versiones::es_menor( $antes->version, $fila->version ) ) {
 				self::registrar(
@@ -335,7 +359,9 @@ class SWPK_Eventos {
 				continue;
 			}
 
-			if ( isset( $sin_escaneo_nuevo[ $fila->sitio_id ] ) ) {
+			if ( ! isset( $hoy[ $clave ] ) && isset( $sin_escaneo_nuevo[ $fila->sitio_id ] ) ) {
+				// Falta algo que antes estaba, sin escaneo nuevo detrás.
+				self::$ultimo_salto[ $fila->sitio_id ] = true;
 				continue;
 			}
 

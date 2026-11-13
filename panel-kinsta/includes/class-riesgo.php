@@ -2,7 +2,7 @@
 /**
  * El motor de riesgo: convierte datos en una frase que se puede copiar.
  *
- * Cruza lo que hay instalado (foto del día) con el feed de Wordfence y decide
+ * Cruza lo que hay instalado (inventario del día) con el feed de Wordfence y decide
  * qué tan urgente es cada cosa. La severidad NO se inventa: se usa el rating
  * que publica Wordfence (None, Low, Medium, High, Critical), porque inventar
  * cortes propios es la forma más rápida de perder credibilidad cuando el
@@ -80,7 +80,7 @@ class SWPK_Riesgo {
 
 		$tabla = SWPK_Tablas::tabla( 'fotos' );
 
-		// La última foto DE ESTE SITIO, no la de la cartera.
+		// La última inventario DE ESTE SITIO, no la de la cartera.
 		//
 		// No es lo mismo: Kinsta no contesta de los 108 todos los días. Con el
 		// MAX global, un sitio del que hoy no vino nada se mira contra la fecha

@@ -79,6 +79,7 @@ $regreso   = SWPK_Vista::url_de_regreso();
 		<form method="get" style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;margin-bottom:6px">
 			<input type="hidden" name="page" value="panel-kinsta-reporte">
 			<input type="hidden" name="sitio" value="<?php echo esc_attr( $sitio_id ); ?>">
+			<?php SWPK_Vista::rastro_oculto(); // cambiar el periodo no debe hacernos olvidar de dónde venimos ?>
 			<label>Desde<br><input type="date" name="desde" value="<?php echo esc_attr( $desde ); ?>"></label>
 			<label>Hasta<br><input type="date" name="hasta" value="<?php echo esc_attr( $hasta ); ?>"></label>
 			<button class="button">Cambiar el periodo</button>
@@ -164,7 +165,8 @@ $regreso   = SWPK_Vista::url_de_regreso();
 			<?php if ( '' === $origen ) : ?>
 				De este sitio no hay inventario: no se puede afirmar qué tiene instalado.
 			<?php else : ?>
-				Esta lista es la foto de ese día, no de este momento: se tomó
+				Este es el inventario que el panel tenía registrado ese día, no el de este
+				momento: se obtuvo
 				<?php echo esc_html( SWPK_Frescura::hace( $origen ) ); ?>.
 			<?php endif; ?>
 		</p>

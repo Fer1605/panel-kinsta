@@ -43,7 +43,7 @@ defined( 'ABSPATH' ) || exit;
 class SWPK_Estado {
 
 	/**
-	 * El recorrido es caro: nivel_del_sitio() consulta la foto y cruza el feed
+	 * El recorrido es caro: nivel_del_sitio() consulta el inventario y cruza el feed
 	 * de Wordfence módulo por módulo, 107 veces. Cinco minutos de caché hacen
 	 * que recargar la pantalla no vuelva a pagarlo, y la corrida diaria lo
 	 * olvida al terminar para que nunca se vea algo viejo sin avisar.

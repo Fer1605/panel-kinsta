@@ -4,9 +4,9 @@
  *
  * Orden, y cada paso depende del anterior:
  *   1. Inventario de sitios (etiquetas, versiones de WordPress y PHP)
- *   2. Foto del día: qué plugin y qué versión hay en cada sitio
+ *   2. Inventario del día: qué plugin y qué versión hay en cada sitio
  *   3. Feed de Wordfence, filtrado a lo que tenemos instalado
- *   4. Comparación con la foto anterior → eventos
+ *   4. Comparación con el inventario anterior → eventos
  *
  * Nota sobre WP-Cron: se dispara con las visitas al sitio. En el panel —que
  * casi nadie visita— eso significa que la corrida puede no ocurrir. Cuando esté
@@ -136,7 +136,7 @@ class SWPK_Sincronizador {
 	 *
 	 * Así que esta hace lo mismo pero acotado: reemplaza las filas de hoy de
 	 * ese sitio, actualiza su fecha y la de nadie más, compara contra su propia
-	 * foto anterior, y lo sondea de paso.
+	 * inventario anterior, y lo sondea de paso.
 	 *
 	 * @return array<string,mixed>|WP_Error
 	 */
@@ -163,7 +163,7 @@ class SWPK_Sincronizador {
 
 		// Una lista vacía NO es "no tiene nada instalado": es "Kinsta no nos
 		// dijo". Pasa de verdad — Kinsta contesta con su fecha de escaneo y sin
-		// módulos — y si se escribiera, la comparación contra la foto anterior
+		// módulos — y si se escribiera, la comparación contra el inventario anterior
 		// levantaría un "se desinstaló" por cada módulo que el sitio sí tiene.
 		//
 		// Se descubrió probando este mismo botón: once eventos falsos de golpe,
@@ -237,7 +237,7 @@ class SWPK_Sincronizador {
 		];
 	}
 
-	/** Guarda la foto del día: una fila por sitio y por plugin o tema. */
+	/** Guarda el inventario del día: una fila por sitio y por plugin o tema. */
 	public static function tomar_foto(): int|WP_Error {
 		global $wpdb;
 
@@ -286,7 +286,7 @@ class SWPK_Sincronizador {
 					'es_vulnerable'      => $fila['es_vulnerable'] ? 1 : 0,
 					'auto_update'        => $fila['auto_update'],
 					'activo'             => $fila['activo'] ? 1 : 0,
-					// Cuándo miró Kinsta ESTE sitio, guardado con la foto.
+					// Cuándo miró Kinsta ESTE sitio, guardado con el inventario.
 					// Es lo que después permite distinguir "la lista cambió
 					// porque las cosas cambiaron" de "la lista cambió porque
 					// Kinsta contestó mal": si esta fecha no avanzó, la lista
@@ -308,7 +308,7 @@ class SWPK_Sincronizador {
 		}
 
 		// Detectar qué sitios ya tienen un plugin de 2FA activo sale gratis de
-		// esta misma foto: no cuesta ni una llamada extra (§4.8 del plan).
+		// este mismo inventario: no cuesta ni una llamada extra (§4.8 del plan).
 		self::marcar_cobertura_2fa( $fecha );
 
 		return $n;

@@ -54,7 +54,7 @@ class SWPK_Plantillas {
 	 *
 	 * Un correo se lee a los tres días, o se reenvía a los dos meses. Si el
 	 * cliente contesta "esto ya lo arreglamos", hay que poder decir de qué día
-	 * era la foto sin tener que entrar al panel a adivinarlo.
+	 * era el inventario sin tener que entrar al panel a adivinarlo.
 	 *
 	 * No se nombra al hosting ni a Wordfence: este pie también lo lee el
 	 * cliente, y ahí el proveedor no le dice nada.
@@ -167,7 +167,7 @@ class SWPK_Plantillas {
 			$c .= sprintf(
 				'<p style="background:#fcf0f1;border-left:4px solid %s;padding:12px 14px;margin:0 0 18px">'
 				. '<strong>Ojo: este resumen no es de hoy.</strong><br>'
-				. 'El último dato bueno entró el %s. Lo de abajo es esa foto, no la de ahora, '
+				. 'El último dato bueno entró el %s. Lo de abajo es ese inventario, no el de ahora, '
 				. 'así que "cero cambios" aquí no quiere decir que no haya pasado nada: quiere '
 				. 'decir que el panel no pudo mirar. Hay que revisar la tarea programada.</p>',
 				self::ROJO,

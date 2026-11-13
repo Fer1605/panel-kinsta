@@ -16,7 +16,7 @@ if ( $ver ) {
 
 	if ( $uno && ( SWPK_Perfiles::puede( SWPK_Perfiles::VER_TODO ) || SWPK_Perfiles::puede_ver_sitio( (string) $uno->sitio_id ) ) ) {
 		echo '<div class="wrap">';
-		SWPK_Vista::volver( esc_url( remove_query_arg( 'ver' ) ), 'Volver a la bitácora' );
+		SWPK_Vista::volver( esc_url( remove_query_arg( 'ver' ) ), 'Volver a Notificaciones' );
 		printf( '<h1>%s</h1>', esc_html( (string) $uno->asunto ) );
 		printf(
 			'<p style="color:#50575e">%s · a %s · <strong>%s</strong></p>',
@@ -34,34 +34,50 @@ if ( $ver ) {
 		echo wp_kses_post( (string) $uno->cuerpo );
 		echo '</div>';
 
-		SWPK_Vista::volver( esc_url( remove_query_arg( 'ver' ) ), 'Volver a la bitácora' );
+		SWPK_Vista::volver( esc_url( remove_query_arg( 'ver' ) ), 'Volver a Notificaciones' );
 		echo '</div>';
 		return;
 	}
 }
 
-$registros = SWPK_Bitacora::listar( 400 );
+// Abre en Movimientos a propósito: es la pestaña que contesta "¿qué pasó?",
+// que es con lo que uno entra. Notificaciones contesta "¿a quién se le avisó?",
+// que se consulta cuando alguien reclama, no todos los días.
+$seccion = isset( $_GET['seccion'] ) ? sanitize_key( (string) $_GET['seccion'] ) : 'movimientos';
+$url_sec = static fn( string $s ) => add_query_arg(
+	[ 'page' => 'panel-kinsta-bitacora', 'seccion' => $s ],
+	admin_url( 'admin.php' )
+);
+
+$tipo_filtro = isset( $_GET['tipo'] ) ? sanitize_key( (string) $_GET['tipo'] ) : '';
+$tipos       = SWPK_Bitacora::tipos();
+
+// El rango, igual que en Movimientos: del día 1 del mes a hoy. Sin esto la
+// pestaña solo sabía contestar "los últimos 400 avisos", que no es la pregunta
+// que hace nadie.
+$desde = isset( $_GET['desde'] ) && $_GET['desde']
+	? sanitize_text_field( wp_unslash( (string) $_GET['desde'] ) )
+	: current_time( 'Y-m-01' );
+
+$hasta = isset( $_GET['hasta'] ) && $_GET['hasta']
+	? sanitize_text_field( wp_unslash( (string) $_GET['hasta'] ) )
+	: current_time( 'Y-m-d' );
+
+$registros = SWPK_Bitacora::entre( $desde, $hasta, $tipo_filtro );
 
 // Una asesora ve la constancia de SUS sitios. La bitácora es evidencia, y
-// la evidencia que le sirve es la de los clientes que ella atiende.
+// la evidencia que le sirve es la de los clientes que ella atiende. Los avisos
+// de toda la cartera, que no son de ningún sitio, son de Dirección.
 if ( ! SWPK_Perfiles::puede( SWPK_Perfiles::VER_TODO ) ) {
 	$mios      = array_map( static fn( $s ) => (string) $s->sitio_id, SWPK_Perfiles::sitios_visibles() );
 	$registros = array_filter( $registros, static fn( $r ) => in_array( (string) $r->sitio_id, $mios, true ) );
 }
 
-$tipo_filtro = isset( $_GET['tipo'] ) ? sanitize_key( (string) $_GET['tipo'] ) : '';
-if ( '' !== $tipo_filtro ) {
-	$registros = array_filter( $registros, static fn( $r ) => $r->tipo === $tipo_filtro );
-}
-
 $registros = array_values( $registros );
 [ $en_pantalla, $pagina, $paginas ] = SWPK_Vista::paginar( $registros, SWPK_Vista::pagina_pedida(), 25 );
-$tipos     = SWPK_Bitacora::tipos();
-$seccion = isset( $_GET['seccion'] ) ? sanitize_key( (string) $_GET['seccion'] ) : 'notificaciones';
-$url_sec = static fn( string $s ) => add_query_arg(
-	[ 'page' => 'panel-kinsta-bitacora', 'seccion' => $s ],
-	admin_url( 'admin.php' )
-);
+
+// Para no mentir en la pantalla vacía. Ver abajo.
+$hubo_alguna_vez = SWPK_Bitacora::hay_alguno();
 ?>
 <div class="wrap">
 	<h1>Bitácora</h1>
@@ -111,6 +127,15 @@ $url_sec = static fn( string $s ) => add_query_arg(
 		<?php endif; ?>
 	</div>
 
+	<form method="get" class="swpk-rango">
+		<input type="hidden" name="page" value="panel-kinsta-bitacora">
+		<input type="hidden" name="seccion" value="notificaciones">
+		<input type="hidden" name="tipo" value="<?php echo esc_attr( $tipo_filtro ); ?>">
+		<label>Desde<br><input type="date" name="desde" value="<?php echo esc_attr( $desde ); ?>"></label>
+		<label>Hasta<br><input type="date" name="hasta" value="<?php echo esc_attr( $hasta ); ?>"></label>
+		<button class="button">Filtrar</button>
+	</form>
+
 	<div class="swpk-filtros">
 		<span class="swpk-filtros-t">Mostrar:</span>
 		<?php foreach ( [ '' => 'Todo' ] + $tipos as $clave => $nombre ) : ?>
@@ -121,14 +146,32 @@ $url_sec = static fn( string $s ) => add_query_arg(
 		<?php endforeach; ?>
 	</div>
 
+	<p class="swpk-linea">
+		<strong><?php echo count( $registros ); ?> aviso(s)</strong>
+		del <?php echo esc_html( SWPK_Frescura::fmt( 'j \d\e F', $desde . ' 12:00:00' ) ); ?>
+		al <?php echo esc_html( SWPK_Frescura::fmt( 'j \d\e F', $hasta . ' 12:00:00' ) ); ?>
+		<?php if ( '' !== $tipo_filtro ) : ?>
+			<span class="swpk-gris">· solo <?php echo esc_html( strtolower( $tipos[ $tipo_filtro ] ?? $tipo_filtro ) ); ?></span>
+		<?php endif; ?>
+	</p>
+
 	<p><?php SWPK_Admin::boton_exportar( 'bitacora' ); ?></p>
 
 	<?php SWPK_Vista::paginador( $pagina, $paginas, count( $registros ), 'avisos' ); ?>
 
 	<?php if ( ! $registros ) : ?>
+		<?php /* "Nunca ha salido nada" y "no hay nada en este rango" son dos cosas
+		         distintas, y esta pantalla decía la primera en los dos casos. Para una
+		         pantalla que es evidencia, decir de más es tan malo como decir de menos. */ ?>
 		<div class="notice notice-info"><p>
-			Todavía no se ha enviado ningún aviso. La bitácora empieza a llenarse cuando se activen
-			los correos automáticos.
+			<?php if ( ! $hubo_alguna_vez ) : ?>
+				Todavía no se ha enviado ningún aviso, de ninguna fecha. La bitácora empieza a
+				llenarse cuando se activen los correos automáticos.
+			<?php else : ?>
+				<strong>Ningún aviso en este rango de fechas<?php echo '' !== $tipo_filtro ? ' con ese filtro' : ''; ?>.</strong>
+				Sí hay avisos guardados de otras fechas: amplía el rango para verlos.
+				<a href="<?php echo esc_url( add_query_arg( [ 'page' => 'panel-kinsta-bitacora', 'seccion' => 'notificaciones', 'desde' => '2020-01-01', 'hasta' => current_time( 'Y-m-d' ) ], admin_url( 'admin.php' ) ) ); ?>">Ver todos</a>.
+			<?php endif; ?>
 		</p></div>
 	<?php else : ?>
 		<table class="widefat striped swpk-tabla">
@@ -159,6 +202,7 @@ $url_sec = static fn( string $s ) => add_query_arg(
 							'simulado'         => [ 'De prueba', '#2271b1' ],
 							'apagado'          => [ 'No salió', '#8c8f94' ],
 							'sin_destinatario' => [ 'Sin destinatario', '#dba617' ],
+							'sin_novedad'      => [ 'Sin novedad', '#8c8f94' ],
 							default            => [ 'Falló', '#d63638' ],
 						};
 						?>
@@ -168,7 +212,7 @@ $url_sec = static fn( string $s ) => add_query_arg(
 					</td>
 					<td>
 						<?php if ( $r->cuerpo ) : ?>
-							<a class="button button-small" href="<?php echo esc_url( add_query_arg( 'ver', (int) $r->id ) ); ?>">Leerlo</a>
+							<a class="button button-small" href="<?php echo esc_url( add_query_arg( [ 'seccion' => 'notificaciones', 'ver' => (int) $r->id ] ) ); ?>">Leerlo</a>
 						<?php endif; ?>
 					</td>
 				</tr>

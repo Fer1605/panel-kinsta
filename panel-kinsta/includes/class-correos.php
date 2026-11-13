@@ -230,6 +230,20 @@ class SWPK_Correos {
 			$resumen['resultados'][] = $persona->display_name . ': ' . $r;
 		}
 
+		// Lo mismo que arriba: una semana en que ninguna asesora tenía nada
+		// pendiente deja su constancia, en vez de no dejar nada.
+		if ( ! $resumen['asesoras'] ) {
+			SWPK_Bitacora::registrar(
+				SWPK_Bitacora::ASESORA,
+				[],
+				'Resumen semanal: ninguna asesora con sitios pendientes',
+				'',
+				'',
+				'sin_novedad',
+				'El panel revisó los sitios de cada asesora y ninguno tenía algo pendiente.'
+			);
+		}
+
 		update_option( 'swpk_ultimo_semanal', current_time( 'mysql' ), false );
 
 		return $resumen;
@@ -243,8 +257,24 @@ class SWPK_Correos {
 			static fn( $e ) => $e->ocurrio_en >= $desde
 		);
 
+		// Un día sin cambios NO se va callado. Antes esta función se salía por
+		// aquí sin escribir nada, y en la bitácora ese día simplemente no
+		// existía: imposible distinguir "el panel miró y no había nada" de "el
+		// panel no corrió". En una pantalla que es evidencia, eso es lo peor
+		// que puede pasar. El 12 de noviembre de 2026 no quedó constancia del
+		// correo diario por esta razón.
 		if ( ! $eventos ) {
-			return [ 'eventos' => 0, 'resultado' => 'nada que contar' ];
+			SWPK_Bitacora::registrar(
+				SWPK_Bitacora::SOPORTE,
+				self::destinatarios_soporte(),
+				'Resumen del día: sin cambios en la cartera',
+				'',
+				'',
+				'sin_novedad',
+				'El panel revisó y no hubo cambios que contar en las últimas 24 horas.'
+			);
+
+			return [ 'eventos' => 0, 'resultado' => 'sin_novedad' ];
 		}
 
 		$cuerpo = SWPK_Plantillas::diario_soporte( $eventos );
@@ -298,6 +328,27 @@ class SWPK_Correos {
 			if ( in_array( $r, [ 'enviado', 'simulado' ], true ) ) {
 				++$resumen['enviados'];
 			}
+		}
+
+		// Y lo mismo. Este es el caso que de verdad pasó: el 11 de noviembre de
+		// 2026 el mensual recorrió la cartera, no encontró actualizaciones del
+		// mes anterior en ningún sitio —el panel llevaba un día de vida— y se
+		// fue sin escribir una sola línea.
+		if ( ! $resumen['enviados'] ) {
+			SWPK_Bitacora::registrar(
+				SWPK_Bitacora::CLIENTE,
+				[],
+				'Reportes mensuales: ningún sitio con movimientos el mes pasado',
+				'',
+				'',
+				'sin_novedad',
+				sprintf(
+					'El panel revisó %d sitio(s) nuestros y ninguno tuvo actualizaciones entre el %s y el %s.',
+					(int) $resumen['sin_novedad'],
+					$desde,
+					$hasta
+				)
+			);
 		}
 
 		update_option( 'swpk_ultimo_mensual', current_time( 'mysql' ), false );

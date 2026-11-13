@@ -128,6 +128,52 @@ class SWPK_Bitacora {
 		) ?: [];
 	}
 
+	/**
+	 * Los avisos de un rango de fechas. La pregunta del minuto 02:48, pero de
+	 * toda la cartera y no de un sitio:
+	 *
+	 *   "Desde tal fecha hasta esta fecha, aquí está, se hicieron 10
+	 *    notificaciones."
+	 *
+	 * Movimientos ya tenía su rango; esta pestaña se había quedado con una
+	 * lista de los últimos 400 y nada más, que no contesta esa pregunta.
+	 *
+	 * @return array<int,object>
+	 */
+	public static function entre( string $desde, string $hasta, string $tipo = '', int $limite = 1000 ): array {
+		global $wpdb;
+		$tabla = SWPK_Tablas::tabla( 'bitacora' );
+
+		$donde  = [ 'enviado_en BETWEEN %s AND %s' ];
+		$params = [ $desde . ' 00:00:00', $hasta . ' 23:59:59' ];
+
+		if ( '' !== $tipo ) {
+			$donde[]  = 'tipo = %s';
+			$params[] = $tipo;
+		}
+
+		$params[] = $limite;
+
+		return $wpdb->get_results(
+			$wpdb->prepare(
+				"SELECT * FROM {$tabla} WHERE " . implode( ' AND ', $donde ) . ' ORDER BY enviado_en DESC, id DESC LIMIT %d',
+				...$params
+			)
+		) ?: [];
+	}
+
+	/**
+	 * Si alguna vez salió un aviso, de cualquier fecha.
+	 *
+	 * Hace falta para no mentir en la pantalla vacía: "todavía no se ha
+	 * enviado ningún aviso" y "no hay ninguno con estos filtros" son dos cosas
+	 * distintas, y antes la pantalla decía la primera en los dos casos.
+	 */
+	public static function hay_alguno(): bool {
+		global $wpdb;
+		return (bool) $wpdb->get_var( 'SELECT 1 FROM ' . SWPK_Tablas::tabla( 'bitacora' ) . ' LIMIT 1' );
+	}
+
 	/** Cuántos avisos se mandaron a un sitio entre dos fechas. La pregunta del minuto 02:48. */
 	public static function conteo( string $sitio_id, string $desde, string $hasta, string $tipo = '' ): int {
 		global $wpdb;

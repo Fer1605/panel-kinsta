@@ -46,7 +46,7 @@ $plano = SWPK_Textos::para_asesora( $sitio, $hallazgos );
 
 	<p>
 		<a class="button button-primary"
-			href="<?php echo esc_url( add_query_arg( [ 'page' => 'panel-kinsta-reporte', 'sitio' => $sitio_id, 'de' => isset( $_GET['de'] ) ? sanitize_key( (string) $_GET['de'] ) : '' ], admin_url( 'admin.php' ) ) ); ?>">
+			href="<?php echo esc_url( add_query_arg( [ 'page' => 'panel-kinsta-reporte', 'sitio' => $sitio_id ] + SWPK_Vista::rastro(), admin_url( 'admin.php' ) ) ); ?>">
 			Reporte para el cliente
 		</a>
 		<span style="color:#50575e;margin-left:8px">qué se le notificó y cuándo, listo para imprimir o guardar en PDF</span>

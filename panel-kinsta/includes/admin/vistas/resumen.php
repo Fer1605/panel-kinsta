@@ -218,7 +218,7 @@ $resumir = static function ( array $por_tipo ) use ( $etq_evt ): string {
 							<td class="swpk-gris"><?php echo esc_html( SWPK_Frescura::fmt( 'H:i', $f['hora'] ) ); ?></td>
 							<td>
 								<?php if ( $f['sitio'] ) : ?>
-									<a href="<?php echo esc_url( SWPK_Vista::url_del_sitio( (string) $f['sitio']->sitio_id, 'resumen' ) ); ?>">
+									<a href="<?php echo esc_url( SWPK_Vista::url_del_sitio( (string) $f['sitio']->sitio_id, 'panel-kinsta' ) ); ?>">
 										<?php echo esc_html( $f['nombre'] ); ?>
 									</a>
 								<?php else : ?>

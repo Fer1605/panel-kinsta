@@ -180,23 +180,72 @@ class SWPK_Vista {
 		);
 	}
 
-	/** La dirección de la lista de donde se vino, con su grupo y su filtro. */
+	/**
+	 * Las pantallas desde las que se puede entrar a la ficha de un sitio, y
+	 * cómo se llama el camino de vuelta a cada una.
+	 *
+	 * ─── Por qué una lista y no dos ─────────────────────────────────────────
+	 *
+	 * Antes aquí solo valían Sitios y Vulnerabilidades, y cualquier otro
+	 * origen caía en Vulnerabilidades. Resultado: se entraba a un sitio desde
+	 * la Bitácora y el botón decía "Volver a Vulnerabilidades" y llevaba ahí.
+	 *
+	 *   "Yo estaba en bitácora y estaba viendo qué estaba pasando. ¿Yo para
+	 *    qué quiero volver a vulnerabilidades? El botón me tiene que regresar
+	 *    de donde yo vengo."
+	 *
+	 * Tiene razón, y es una lista: el día que haya otra pantalla que enlace a
+	 * un sitio, se agrega aquí y el botón ya sabe volver.
+	 *
+	 * @var array<string,string>
+	 */
+	private const ORIGENES = [
+		'panel-kinsta'                  => 'Volver a Inicio',
+		'panel-kinsta-sitios'           => 'Volver a Sitios',
+		'panel-kinsta-vulnerabilidades' => 'Volver a Vulnerabilidades',
+		'panel-kinsta-bitacora'         => 'Volver a Bitácora',
+	];
+
+	/**
+	 * Lo que hay que recordar de la lista de origen para devolver a la persona
+	 * al mismo sitio donde estaba: su grupo, su filtro, su página, su búsqueda,
+	 * su pestaña y su rango de fechas.
+	 *
+	 * Viaja con el prefijo `de_` porque `desde`, `hasta` y `tipo` también son
+	 * parámetros de la ficha y del reporte: sin prefijo, cambiar el periodo de
+	 * un reporte le cambiaría el rango a la Bitácora a la que se vuelve.
+	 *
+	 * @var array<int,string>
+	 */
+	private const ESTADO = [ 'tag', 'nivel', 'p', 'q', 'seccion', 'desde', 'hasta', 'tipo' ];
+
+	/** La dirección de la lista de donde se vino, tal como la dejó la persona. */
 	public static function url_de_regreso(): array {
-		$origen = isset( $_GET['de'] ) ? sanitize_key( (string) $_GET['de'] ) : 'panel-kinsta-vulnerabilidades';
-		$origen = in_array( $origen, [ 'panel-kinsta-vulnerabilidades', 'panel-kinsta-sitios' ], true )
-			? $origen
-			: 'panel-kinsta-vulnerabilidades';
+		$origen = isset( $_GET['de'] ) ? sanitize_key( (string) $_GET['de'] ) : '';
+		if ( ! isset( self::ORIGENES[ $origen ] ) ) {
+			$origen = 'panel-kinsta-vulnerabilidades';
+		}
 
 		$args = [ 'page' => $origen ];
-		foreach ( [ 'tag', 'nivel', 'p', 'q' ] as $k ) {
-			if ( ! empty( $_GET[ $k ] ) ) {
-				$args[ $k ] = sanitize_text_field( wp_unslash( (string) $_GET[ $k ] ) );
+		foreach ( self::ESTADO as $k ) {
+			if ( ! empty( $_GET[ 'de_' . $k ] ) ) {
+				$args[ $k ] = sanitize_text_field( wp_unslash( (string) $_GET[ 'de_' . $k ] ) );
 			}
+		}
+
+		$texto = self::ORIGENES[ $origen ];
+
+		// La Bitácora son dos pestañas y no es lo mismo volver a una que a la
+		// otra: el botón dice a cuál.
+		if ( 'panel-kinsta-bitacora' === $origen ) {
+			$texto = 'notificaciones' === ( $args['seccion'] ?? 'movimientos' )
+				? 'Volver a Notificaciones'
+				: 'Volver a Movimientos';
 		}
 
 		return [
 			'url'   => add_query_arg( $args, admin_url( 'admin.php' ) ),
-			'texto' => 'panel-kinsta-sitios' === $origen ? 'Volver a Sitios' : 'Volver a Vulnerabilidades',
+			'texto' => $texto,
 		];
 	}
 
@@ -208,13 +257,44 @@ class SWPK_Vista {
 			'de'    => $origen,
 		];
 
-		foreach ( [ 'tag', 'nivel', 'p', 'q' ] as $k ) {
+		foreach ( self::ESTADO as $k ) {
 			if ( ! empty( $_GET[ $k ] ) ) {
-				$args[ $k ] = sanitize_text_field( wp_unslash( (string) $_GET[ $k ] ) );
+				$args[ 'de_' . $k ] = sanitize_text_field( wp_unslash( (string) $_GET[ $k ] ) );
 			}
 		}
 
 		return add_query_arg( $args, admin_url( 'admin.php' ) );
+	}
+
+	/**
+	 * El rastro de dónde se viene, para arrastrarlo un salto más.
+	 *
+	 * Hace falta porque de la ficha de un sitio se salta al reporte, y de ahí
+	 * hay que poder volver dos pasos atrás, a la lista original.
+	 *
+	 * @return array<string,string>
+	 */
+	public static function rastro(): array {
+		$args = [];
+
+		if ( ! empty( $_GET['de'] ) ) {
+			$args['de'] = sanitize_key( (string) $_GET['de'] );
+		}
+
+		foreach ( self::ESTADO as $k ) {
+			if ( ! empty( $_GET[ 'de_' . $k ] ) ) {
+				$args[ 'de_' . $k ] = sanitize_text_field( wp_unslash( (string) $_GET[ 'de_' . $k ] ) );
+			}
+		}
+
+		return $args;
+	}
+
+	/** El mismo rastro, como campos ocultos de un formulario. */
+	public static function rastro_oculto(): void {
+		foreach ( self::rastro() as $k => $v ) {
+			printf( '<input type="hidden" name="%s" value="%s">', esc_attr( $k ), esc_attr( $v ) );
+		}
 	}
 
 	public static function pagina_pedida(): int {

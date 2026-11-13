@@ -4,14 +4,14 @@
  *
  * ─── El problema que resuelve ───────────────────────────────────────────────
  *
- * El panel no vigila nada en vivo: toma fotos. Le pregunta a Kinsta una vez al
+ * El panel no vigila nada en vivo: toma inventario. Le pregunta a Kinsta una vez al
  * día, se baja la lista de vulnerabilidades una vez al día, y revisa si los
  * sitios responden cada cinco minutos. Lo que se ve en pantalla siempre es una
- * foto, nunca el momento.
+ * inventario, nunca el momento.
  *
- * Eso está bien mientras la foto sea de hoy. El peligro es el día en que la
+ * Eso está bien mientras el inventario sea de hoy. El peligro es el día en que la
  * corrida deja de pasar —el cron se rompe, la llave vence, Kinsta cambia la
- * API— y el panel sigue mostrando la última foto buena, en verde, sin decir que
+ * API— y el panel sigue mostrando el último inventario buena, en verde, sin decir que
  * es de hace cinco días. Nadie se daría cuenta. Y un panel que da falsa
  * tranquilidad es peor que no tener panel, porque se le cree.
  *
@@ -23,7 +23,7 @@
  *
  * Ningún dato se muestra sin su hora. Siempre dos horas, nunca una:
  *
- *   · cuándo se obtuvo el dato   (la foto)
+ *   · cuándo se obtuvo el dato   (el inventario)
  *   · cuándo lo estás viendo     (ahora)
  *
  * Con las dos juntas no hay nada que adivinar. Y cuando la distancia entre las
@@ -304,7 +304,7 @@ class SWPK_Frescura {
 			'que'    => sprintf( 'El panel le preguntó a %s qué hay en cada sitio', $proveedor ),
 			'cuando' => self::corrida(),
 			'al_dia' => self::corrida_al_dia(),
-			'si_no'  => 'La corrida diaria no ha pasado. Lo de abajo es la última foto buena.',
+			'si_no'  => 'La corrida diaria no ha pasado. Lo de abajo es el último inventario bueno.',
 		];
 
 		$resto = [
@@ -399,8 +399,8 @@ class SWPK_Frescura {
 				<?php endif; ?>
 
 				<p>
-					Mientras esto no se arregle, los números de abajo siguen siendo los de la última
-					foto buena. No están mal: están viejos. Una actualización que salió después no
+					Mientras esto no se arregle, los números de abajo siguen siendo los del último
+					inventario bueno. No están mal: están viejos. Una actualización que salió después no
 					aparece, y un sitio que ya se arregló sigue saliendo pendiente.
 				</p>
 				<p>

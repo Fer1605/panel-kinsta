@@ -5,8 +5,8 @@
  * Son cinco tablas y cada una existe por una razón concreta de la reunión:
  *
  *  - sitios            el inventario consolidado por etiqueta (00:26)
- *  - fotos             la foto diaria. Es lo que permite decir "este mes se
- *                      actualizó seis veces" (01:18). Sin foto no hay historia:
+ *  - inventarios       el inventario diario. Es lo que permite decir "este mes se
+ *                      actualizó seis veces" (01:18). Sin inventario no hay historia:
  *                      Kinsta no guarda historial consultable.
  *  - eventos           lo que cambió de un día para otro. "Mira, en esta
  *                      corrida del día pasó esto" (04:34)
