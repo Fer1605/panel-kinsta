@@ -398,9 +398,16 @@ traductor — un archivo de Node sin dependencias, porque esto se lo tiene que
 poder instalar alguien que no programa y `npm install` en la máquina de otro es
 donde mueren estas cosas. Expone las siete rutas de lectura como herramientas;
 las tres de proceso quedan fuera a propósito, para que una conversación no pueda
-lanzar más de 200 peticiones a Kinsta a media pregunta. Su README tiene la
-configuración y `node index.mjs --probar` comprueba la conexión antes de tocar
-nada.
+lanzar más de 200 peticiones a Kinsta a media pregunta. `node index.mjs --probar` comprueba la
+conexión antes de tocar Claude Desktop.
+
+**La configuración la arma el panel, no un instructivo.** Al crear una llave, la
+ventana entrega el bloque de `claude_desktop_config.json` ya hecho, con la
+dirección de ese panel y esa llave adentro, listo para copiar. Se hace así
+porque la dirección cambia —localhost hoy, un servidor mañana— y una dirección
+vieja copiada de un documento es un fallo que no se nota hasta que alguien dice
+"no me funciona". Lo único que queda de relleno es la ruta local al conector,
+que el panel no puede saber.
 
 ## Límites de la API de Kinsta
 

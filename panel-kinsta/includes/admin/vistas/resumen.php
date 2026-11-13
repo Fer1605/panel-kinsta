@@ -75,13 +75,25 @@ foreach ( $eventos as $e ) {
 	unset( $fila );
 }
 
-// Un día se parte en dos: lo que hay que mirar, con su renglón por sitio, y lo
-// rutinario, que es el sistema funcionando y se resume en una línea. Sin esa
-// separación un día normal son 141 renglones y lo que importa queda enterrado
-// entre 128 actualizaciones que salieron bien.
+// Un día se parte en dos montones, pero los dos se ENSEÑAN: arriba lo que
+// necesita atención, abajo lo que salió bien solo.
+//
+// Antes el segundo montón solo se contaba, y eso dejaba días que decían
+// "nada que mirar" justo encima de una línea admitiendo que sí hubo
+// movimiento:
+//
+//   "no puede ser que hoy no se haya actualizado ninguno (...) si tiene
+//    registro de que un sitio hizo movimientos, aquí debería de aparecer"
+//
+// Tenía razón: un contador no es el dato, es la promesa de que el dato está
+// en otra parte. Siguen separados —mezclarlos entierra lo urgente entre 128
+// actualizaciones que salieron bien— pero ya no se esconde nada.
+$solos_dia   = [];
 $resumen_dia = [];
+
 foreach ( $por_dia as $dia => $del_dia ) {
 	$mirar = [];
+	$solos = [];
 	$bien  = [ 'sitios' => 0, 'modulos' => 0 ];
 
 	foreach ( $del_dia as $clave => $f ) {
@@ -89,19 +101,23 @@ foreach ( $por_dia as $dia => $del_dia ) {
 			$mirar[ $clave ] = $f;
 			continue;
 		}
+
+		$solos[ $clave ] = $f;
 		++$bien['sitios'];
+
 		foreach ( $f['por_tipo'] as $lista ) {
 			$bien['modulos'] += count( $lista );
 		}
 	}
 
 	$por_dia[ $dia ]     = $mirar;
+	$solos_dia[ $dia ]   = $solos;
 	$resumen_dia[ $dia ] = $bien;
 }
 
-$por_dia = array_slice( $por_dia, 0, 8, true );
-$etq_evt = SWPK_Eventos::etiquetas();
-$de_hoy  = count( $por_dia[ $hoy ] ?? [] );
+$por_dia  = array_slice( $por_dia, 0, 8, true );
+$etq_evt  = SWPK_Eventos::etiquetas();
+$de_hoy   = count( $por_dia[ $hoy ] ?? [] );
 $bien_hoy = $resumen_dia[ $hoy ] ?? [ 'sitios' => 0, 'modulos' => 0 ];
 
 /** "3 módulos actualizados: Elementor, WooCommerce y 1 más" */
@@ -123,6 +139,33 @@ $resumir = static function ( array $por_tipo ) use ( $etq_evt ): string {
 	}
 
 	return implode( ' — ', $trozos );
+};
+
+/**
+ * Un renglón de sitio. Lo usan los dos montones a propósito: lo que necesita
+ * atención y lo que salió bien solo se leen igual —misma hora, mismo nombre,
+ * misma etiqueta, mismo detalle— y lo único que cambia es el tono. Así nadie
+ * tiene que aprender dos formatos para leer un día.
+ */
+$fila = static function ( array $f, bool $solo ) use ( $resumir ): void {
+	?>
+	<tr<?php echo $solo ? ' class="swpk-solo"' : ''; ?>>
+		<td class="swpk-gris"><?php echo esc_html( SWPK_Frescura::fmt( 'H:i', $f['hora'] ) ); ?></td>
+		<td>
+			<?php if ( $f['sitio'] ) : ?>
+				<a href="<?php echo esc_url( SWPK_Vista::url_del_sitio( (string) $f['sitio']->sitio_id, 'panel-kinsta' ) ); ?>">
+					<?php echo esc_html( $f['nombre'] ); ?>
+				</a>
+			<?php else : ?>
+				<?php echo esc_html( $f['nombre'] ); ?>
+			<?php endif; ?>
+		</td>
+		<td><?php echo $f['sitio'] ? SWPK_Admin::grupo_badge( (string) $f['sitio']->tag ) : ''; ?></td>
+		<td<?php echo $f['grave'] ? ' class="swpk-rojo"' : ''; ?>>
+			<?php echo esc_html( $resumir( $f['por_tipo'] ) ); ?>
+		</td>
+	</tr>
+	<?php
 };
 ?>
 <div class="wrap">
@@ -149,11 +192,12 @@ $resumir = static function ( array $por_tipo ) use ( $etq_evt ): string {
 					echo esc_html( sprintf( 'Hoy no ha cambiado nada en los %d sitios.', (int) $estado['total'] ) );
 				} elseif ( 0 === $de_hoy ) {
 					echo esc_html( sprintf(
-						'Hoy no hay nada que mirar: hubo movimiento en %s, y todo salió bien solo.',
-						SWPK_Vista::plural( (int) $bien_hoy['sitios'], 'sitio', 'sitios' )
+						'Hoy ningún sitio necesita atención. Hubo movimiento en %s, y %s.',
+						SWPK_Vista::plural( (int) $bien_hoy['sitios'], 'sitio', 'sitios' ),
+						1 === (int) $bien_hoy['sitios'] ? 'salió bien solo' : 'salieron bien solos'
 					) );
 				} else {
-					echo esc_html( sprintf( 'Hoy hay %s con algo que mirar.', SWPK_Vista::plural( $de_hoy, 'sitio', 'sitios' ) ) );
+					echo esc_html( sprintf( 'Hoy %s atención.', SWPK_Vista::plural( $de_hoy, 'sitio necesita', 'sitios necesitan' ) ) );
 				}
 				?>
 			</strong>
@@ -166,7 +210,7 @@ $resumir = static function ( array $por_tipo ) use ( $etq_evt ): string {
 		</p>
 
 		<?php SWPK_Vista::abrir_barra(); ?>
-			<span class="swpk-gris">Los últimos días, un renglón por sitio.</span>
+			<span class="swpk-gris">Los últimos días, un renglón por sitio: lo que necesita atención y lo que salió bien solo.</span>
 			<span>
 				<?php SWPK_Vista::buscador( 'panel-kinsta', $busqueda, [] ); ?>
 				<a class="button" href="<?php echo esc_url( admin_url( 'admin.php?page=panel-kinsta-bitacora&seccion=movimientos' ) ); ?>">
@@ -196,14 +240,15 @@ $resumir = static function ( array $por_tipo ) use ( $etq_evt ): string {
 			<tbody>
 			<?php foreach ( $por_dia as $dia => $del_dia ) : ?>
 				<?php
-				$bien      = $resumen_dia[ $dia ] ?? [ 'sitios' => 0, 'modulos' => 0 ];
-				$del_resto = [];
+				$bien  = $resumen_dia[ $dia ] ?? [ 'sitios' => 0, 'modulos' => 0 ];
+				$solos = $solos_dia[ $dia ] ?? [];
+				$resto = [];
 
 				if ( $del_dia ) {
-					$del_resto[] = SWPK_Vista::plural( count( $del_dia ), 'sitio que mirar', 'sitios que mirar' );
+					$resto[] = SWPK_Vista::plural( count( $del_dia ), 'sitio necesita atención', 'sitios necesitan atención' );
 				}
-				if ( $bien['sitios'] ) {
-					$del_resto[] = sprintf( '%d sin nada que hacer', (int) $bien['sitios'] );
+				if ( $solos ) {
+					$resto[] = SWPK_Vista::plural( count( $solos ), 'salió bien solo', 'salieron bien solos' );
 				}
 				?>
 				<tr class="swpk-dia<?php echo $dia === $hoy ? ' swpk-dia-hoy' : ''; ?>">
@@ -213,20 +258,19 @@ $resumir = static function ( array $por_tipo ) use ( $etq_evt ): string {
 								<?php echo esc_html( ucfirst( SWPK_Frescura::fmt( 'l j \d\e F', $dia . ' 12:00:00' ) ) ); ?><?php if ( $dia === $hoy ) : ?> &mdash; hoy<?php endif; ?>
 							</span>
 							<span class="swpk-dia-r">
-								<?php echo esc_html( $del_resto ? implode( ' · ', $del_resto ) : 'no cambió nada' ); ?>
+								<?php echo esc_html( $resto ? implode( ' · ', $resto ) : 'sin cambios' ); ?>
 							</span>
 						</span>
 					</td>
 				</tr>
-				<?php if ( ! $del_dia ) : ?>
+
+				<?php if ( ! $del_dia && ! $solos ) : ?>
 					<tr>
 						<td colspan="4" class="swpk-gris">
 							<?php if ( '' !== $busqueda ) : ?>
-								Nada de ese sitio este día.
-							<?php elseif ( $bien['sitios'] ) : ?>
-								Nada que mirar.
+								Ese sitio no cambió nada este día.
 							<?php else : ?>
-								No cambió nada.
+								No hubo ningún cambio: todo quedó igual que el día anterior.
 								<?php if ( $dia === $hoy && ! SWPK_Frescura::corrida_al_dia() ) : ?>
 									<strong class="swpk-rojo">Ojo: la corrida de hoy tampoco pasó, así que esto no quiere decir que no haya pasado nada.</strong>
 								<?php endif; ?>
@@ -234,47 +278,21 @@ $resumir = static function ( array $por_tipo ) use ( $etq_evt ): string {
 						</td>
 					</tr>
 				<?php else : ?>
-					<?php foreach ( $del_dia as $f ) : ?>
-						<tr>
-							<td class="swpk-gris"><?php echo esc_html( SWPK_Frescura::fmt( 'H:i', $f['hora'] ) ); ?></td>
-							<td>
-								<?php if ( $f['sitio'] ) : ?>
-									<a href="<?php echo esc_url( SWPK_Vista::url_del_sitio( (string) $f['sitio']->sitio_id, 'panel-kinsta' ) ); ?>">
-										<?php echo esc_html( $f['nombre'] ); ?>
-									</a>
-								<?php else : ?>
-									<?php echo esc_html( $f['nombre'] ); ?>
-								<?php endif; ?>
-							</td>
-							<td>
-								<?php echo $f['sitio'] ? SWPK_Admin::grupo_badge( (string) $f['sitio']->tag ) : ''; ?>
-							</td>
-							<td<?php echo $f['grave'] ? ' class="swpk-rojo"' : ''; ?>>
-								<?php echo esc_html( $resumir( $f['por_tipo'] ) ); ?>
+					<?php foreach ( $del_dia as $f ) { $fila( $f, false ); } ?>
+
+					<?php if ( $solos ) : ?>
+						<tr class="swpk-sub">
+							<td colspan="4">
+								<?php
+								printf(
+									'Salieron bien solos — nadie tuvo que entrar a ninguno (%s)',
+									esc_html( SWPK_Vista::plural( (int) $bien['modulos'], 'movimiento', 'movimientos' ) )
+								);
+								?>
 							</td>
 						</tr>
-					<?php endforeach; ?>
-				<?php endif; ?>
-				<?php if ( $bien['sitios'] && '' === $busqueda ) : ?>
-					<tr>
-						<td colspan="4" class="swpk-gris">
-							<?php
-							// Estos son los sitios del día en los que TODO lo que pasó fue
-							// rutinario: un módulo que se actualizó solo, una vulnerabilidad
-							// que se resolvió con esa actualización, o un sitio que volvió.
-							// El renglón dice qué pasó y quién lo hizo —nadie—, porque un
-							// contador de buenas noticias que no se entiende no es una buena
-							// noticia: es un número más que alguien va a tener que preguntar.
-							$n_sitios = (int) $bien['sitios'];
-							printf(
-								'Y además, <strong>%s</strong> %s que nadie entrara: %s que salieron bien solos (módulos actualizados, vulnerabilidades resueltas, sitios que volvieron).',
-								esc_html( SWPK_Vista::plural( $n_sitios, 'sitio', 'sitios' ) ),
-								esc_html( 1 === $n_sitios ? 'no necesitó' : 'no necesitaron' ),
-								esc_html( SWPK_Vista::plural( (int) $bien['modulos'], 'movimiento', 'movimientos' ) )
-							);
-							?>
-						</td>
-					</tr>
+						<?php foreach ( $solos as $f ) { $fila( $f, true ); } ?>
+					<?php endif; ?>
 				<?php endif; ?>
 			<?php endforeach; ?>
 			</tbody>

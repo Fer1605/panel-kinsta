@@ -300,6 +300,13 @@ class SWPK_Admin {
 			.swpk-dia-f{font-size:14px;font-weight:700}
 			.swpk-dia-hoy .swpk-dia-f{color:#135e96}
 			.swpk-dia-r{font-size:12px;color:#50575e;font-weight:400}
+
+			/* El segundo montón del día: lo que salió bien solo. Se enseña entero,
+			   con nombre de sitio y todo, pero más callado — no compite con lo que
+			   sí hay que atender, que va arriba. */
+			.swpk-sub td{background:#f6f7f7 !important;color:#50575e;font-size:12px;
+				padding:8px 10px !important;border-top:1px solid #dcdcde}
+			.swpk-solo td{color:#646970}
 			.swpk-rango{display:flex;gap:14px;align-items:flex-end;flex-wrap:wrap;
 				margin:16px 0 4px;padding:14px 16px;background:#fff;border:1px solid #dcdcde;
 				border-radius:4px;max-width:900px}

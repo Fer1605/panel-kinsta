@@ -113,7 +113,12 @@ $llamadas = array_slice( $llamadas, 0, 25 );
 		.swpk-campo { display: block; margin: 0 0 16px; }
 		.swpk-campo-t { display: block; font-weight: 600; margin-bottom: 5px; }
 		.swpk-campo .swpk-pista { font-weight: 400; color: #646970; margin: 0 0 6px; }
-		.swpk-fila { display: flex; gap: 8px; }
+		.swpk-fila { display: flex; gap: 8px; align-items: flex-start; }
+		.swpk-fila textarea {
+			flex: 1 1 auto; min-width: 0; resize: vertical;
+			font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+			font-size: 12px; line-height: 1.45; background: #f6f7f7;
+		}
 		.swpk-fila input {
 			flex: 1 1 auto; min-width: 0;
 			font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
@@ -172,6 +177,19 @@ $llamadas = array_slice( $llamadas, 0, 25 );
 						</div>
 					</div>
 
+					<div class="swpk-campo" style="margin-top:18px">
+						<span class="swpk-campo-t">Para Claude Desktop</span>
+						<p class="swpk-pista">
+							Ya viene armado con esta llave y la dirección del panel. Va en
+							<code>claude_desktop_config.json</code>, cambiando la ruta del conector por
+							la de tu carpeta. El paso 5 de esta pantalla dice dónde está ese archivo.
+						</p>
+						<span class="swpk-fila">
+							<textarea readonly rows="10" onclick="this.select()"><?php echo esc_textarea( SWPK_Api::config_mcp( $par ) ); ?></textarea>
+							<button type="button" class="button swpk-copiar">Copiar</button>
+						</span>
+					</div>
+
 				<?php else : ?>
 
 					<p class="swpk-modal-aviso">
@@ -221,7 +239,7 @@ $llamadas = array_slice( $llamadas, 0, 25 );
 				var boton = ev.target.closest( '.swpk-copiar' );
 				if ( ! boton ) { return; }
 
-				var campo = boton.parentNode.querySelector( 'input' );
+				var campo = boton.parentNode.querySelector( 'input, textarea' );
 				if ( ! campo ) { return; }
 
 				if ( navigator.clipboard && navigator.clipboard.writeText ) {
@@ -395,7 +413,72 @@ $llamadas = array_slice( $llamadas, 0, 25 );
 	}() );
 	</script>
 
-	<h2>5 · Lo que ya se consultó</h2>
+	<h2>5 · Conectar Claude Desktop</h2>
+
+	<p style="max-width:860px;color:#3c434a">
+		Claude Desktop <strong>no consume esta API directamente</strong>: no tiene dónde recibir una
+		dirección con usuario y contraseña. Habla otro protocolo, MCP. En el repositorio va un
+		conector que hace de traductor — un archivo de Node, sin nada que instalar aparte.
+	</p>
+
+	<ol style="max-width:860px;color:#3c434a;line-height:1.7">
+		<li>
+			<strong>Crear la llave</strong> aquí arriba. Al crearla sale una ventana que ya trae
+			la configuración armada, con esta dirección y esa llave adentro, y un botón para
+			copiarla. <strong>Se enseña una sola vez.</strong>
+		</li>
+		<li>
+			<strong>Bajar el conector</strong>: es la carpeta <code>conector-mcp/</code> del
+			repositorio. Anotar dónde quedó guardada.
+		</li>
+		<li>
+			<strong>Pegar la configuración</strong> en el archivo de Claude Desktop, cambiando
+			<code>/ruta/a/conector-mcp/index.mjs</code> por la ruta real de esa carpeta:
+			<br><code>~/Library/Application Support/Claude/claude_desktop_config.json</code> en Mac
+			<br><code>%APPDATA%\Claude\claude_desktop_config.json</code> en Windows
+			<br>Si el archivo no existe, se crea. Si ya tiene otros conectores, este se agrega
+			dentro de <code>mcpServers</code> sin borrar los demás.
+		</li>
+		<li>
+			<strong>Cerrar y volver a abrir Claude Desktop.</strong> Los conectores se leen al
+			arrancar, así que mientras no se reinicie no aparece.
+		</li>
+	</ol>
+
+	<p style="max-width:860px;color:#3c434a">
+		Así se ve. Esta es la plantilla con la dirección de este panel; la de la ventana trae
+		además la llave puesta:
+	</p>
+
+	<pre style="max-width:860px;background:#1d2327;color:#c3c4c7;padding:14px;border-radius:4px;font-size:12px;overflow:auto"><?php echo esc_html( SWPK_Api::config_mcp() ); ?></pre>
+
+	<?php if ( ! $alcanzable ) : ?>
+		<div class="notice notice-warning inline" style="max-width:860px">
+			<p>
+				Ojo con esto: la dirección de arriba es de esta máquina. El conector va a funcionar
+				en <strong>esta computadora</strong> y en ninguna otra. Para que lo use alguien más,
+				el panel tiene que estar en un servidor al que se pueda llegar — lo mismo que hace
+				falta para todo lo demás de esta pantalla.
+			</p>
+		</div>
+	<?php endif; ?>
+
+	<p style="max-width:860px;color:#3c434a">
+		Después se le pregunta en español: <em>¿qué sitios necesitan atención hoy?</em>,
+		<em>¿cuántas veces se actualizó tal proyecto este mes?</em>, <em>¿quién tiene acceso de
+		administrador a este sitio?</em> — y contesta con lo que hay en el panel.
+	</p>
+
+	<p class="swpk-nota">
+		El conector <strong>solo lee</strong>. Las tres rutas que disparan procesos no se le
+		entregan: una llave recibiría 403 de todos modos, y una conversación no debería poder
+		lanzar más de 200 peticiones al hosting porque a alguien le pareció buena idea a media
+		pregunta. Eso tiene su botón en el panel, donde queda escrito quién lo apretó. Antes de
+		tocar Claude Desktop se puede comprobar la conexión con
+		<code>node index.mjs --probar</code>, que dice en una línea qué está mal si algo lo está.
+	</p>
+
+	<h2>6 · Lo que ya se consultó</h2>
 
 	<p style="max-width:860px;color:#3c434a">
 		Cada llamada queda escrita, la que pasa y la que se rechaza. Hace falta porque una contraseña
