@@ -23,6 +23,14 @@ class SWPK_Accesos {
 	public const FALLIDO = 'fallido';
 	public const BLOQUEO = 'bloqueo';
 
+	// Una consulta por la API y una consulta rechazada. Quedan en el mismo
+	// registro que las entradas al panel a propósito: una llave de aplicación
+	// se salta la verificación en dos pasos, así que lo único que queda de ella
+	// es esta fila. Si no se anotara, una llave filtrada podría leer la cartera
+	// entera sin dejar rastro.
+	public const API        = 'api';
+	public const API_NEGADO = 'api_negado';
+
 	public static function init(): void {
 		// Prioridad 20 a propósito: la verificación en dos pasos se engancha en
 		// wp_login con prioridad 10 y corta la ejecución para mostrar su
@@ -66,7 +74,19 @@ class SWPK_Accesos {
 		self::anotar( self::FALLIDO, (int) ( $usuario->ID ?? 0 ), $login );
 	}
 
-	private static function anotar( string $accion, int $usuario_id, string $login ): void {
+	/** Una llamada a la API: qué pidió y si se le dejó. */
+	public static function anotar_api( string $detalle, bool $permitido ): void {
+		$usuario = wp_get_current_user();
+
+		self::anotar(
+			$permitido ? self::API : self::API_NEGADO,
+			(int) ( $usuario->ID ?? 0 ),
+			(string) ( $usuario->user_login ?? '' ),
+			$detalle
+		);
+	}
+
+	private static function anotar( string $accion, int $usuario_id, string $login, string $detalle = '' ): void {
 		global $wpdb;
 
 		$wpdb->insert(
@@ -76,6 +96,7 @@ class SWPK_Accesos {
 				'usuario_id' => $usuario_id,
 				'login'      => sanitize_text_field( $login ),
 				'accion'     => $accion,
+				'detalle'    => mb_substr( sanitize_text_field( $detalle ), 0, 191 ),
 				'ip'         => self::ip(),
 				'agente'     => isset( $_SERVER['HTTP_USER_AGENT'] )
 					? mb_substr( sanitize_text_field( wp_unslash( (string) $_SERVER['HTTP_USER_AGENT'] ) ), 0, 255 )

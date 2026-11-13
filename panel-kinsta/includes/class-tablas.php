@@ -21,7 +21,7 @@ defined( 'ABSPATH' ) || exit;
 
 class SWPK_Tablas {
 
-	public const VERSION = 8;
+	public const VERSION = 9;
 
 	public static function tabla( string $nombre ): string {
 		global $wpdb;
@@ -225,6 +225,7 @@ class SWPK_Tablas {
 				usuario_id BIGINT UNSIGNED NOT NULL DEFAULT 0,
 				login VARCHAR(191) NOT NULL DEFAULT '',
 				accion VARCHAR(32) NOT NULL DEFAULT 'entrada',
+				detalle VARCHAR(191) NOT NULL DEFAULT '',
 				ip VARCHAR(64) NOT NULL DEFAULT '',
 				agente TEXT NULL,
 				PRIMARY KEY (id),

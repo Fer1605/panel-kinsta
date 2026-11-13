@@ -31,6 +31,8 @@ class SWPK_Admin {
 		add_action( 'admin_post_swpk_correo_diario', [ __CLASS__, 'accion_correo_diario' ] );
 		add_action( 'admin_post_swpk_correo_mensual', [ __CLASS__, 'accion_correo_mensual' ] );
 		add_action( 'admin_post_swpk_quitar_acceso', [ __CLASS__, 'accion_quitar_acceso' ] );
+		add_action( 'admin_post_swpk_crear_llave', [ __CLASS__, 'accion_crear_llave' ] );
+		add_action( 'admin_post_swpk_revocar_llave', [ __CLASS__, 'accion_revocar_llave' ] );
 		add_action( 'admin_head', [ __CLASS__, 'estilos' ] );
 		add_filter( 'parent_file', [ __CLASS__, 'menu_abierto' ] );
 		add_filter( 'submenu_file', [ __CLASS__, 'submenu_marcado' ] );
@@ -83,6 +85,7 @@ class SWPK_Admin {
 		add_submenu_page( self::SLUG, 'Bitácora', 'Bitácora', $ver, self::SLUG . '-bitacora', [ __CLASS__, 'pantalla_bitacora' ] );
 		add_submenu_page( self::SLUG, 'Equipo', 'Equipo', $admin, self::SLUG . '-equipo', [ __CLASS__, 'pantalla_equipo' ] );
 		add_submenu_page( self::SLUG, 'Accesos', 'Accesos', $admin, self::SLUG . '-accesos', [ __CLASS__, 'pantalla_accesos' ] );
+		add_submenu_page( self::SLUG, 'Conectarse (API)', 'Conectarse (API)', $admin, self::SLUG . '-api', [ __CLASS__, 'pantalla_api' ] );
 		add_submenu_page( self::SLUG, 'Ajustes', 'Ajustes', $admin, self::SLUG . '-ajustes', [ __CLASS__, 'pantalla_ajustes' ] );
 	}
 
@@ -400,6 +403,13 @@ class SWPK_Admin {
 		require SWPK_RUTA . 'includes/admin/vistas/ajustes.php';
 	}
 
+	public static function pantalla_api(): void {
+		if ( ! self::puede_administrar() ) {
+			wp_die( 'Sin permiso.' );
+		}
+		require SWPK_RUTA . 'includes/admin/vistas/api.php';
+	}
+
 	// ── Acciones ────────────────────────────────────────────────────────────
 
 	public static function accion_correr(): void {
@@ -588,6 +598,117 @@ class SWPK_Admin {
 		}
 
 		wp_safe_redirect( admin_url( 'admin.php?page=' . self::SLUG . '-equipo&swpk_msg=ok:' . rawurlencode( 'Acceso retirado.' ) ) );
+		exit;
+	}
+
+	/**
+	 * Crea una llave de consulta: la cuenta y su contraseña de aplicación, de
+	 * una vez.
+	 *
+	 * La contraseña se enseña una sola vez y no se guarda en ninguna parte
+	 * nuestra: WordPress solo conserva su huella. Es lo correcto y además es lo
+	 * que ya hace el panel con los accesos de personas — nunca se inventa una
+	 * contraseña y se manda por correo en texto.
+	 */
+	public static function accion_crear_llave(): void {
+		if ( ! self::puede_administrar() ) {
+			wp_die( 'Sin permiso.' );
+		}
+		check_admin_referer( 'swpk_crear_llave' );
+
+		$nombre = sanitize_text_field( wp_unslash( (string) ( $_POST['nombre'] ?? '' ) ) );
+		if ( '' === $nombre ) {
+			self::volver_a_api( 'Ponle un nombre: sirve para saber a qué sistema revocarle el acceso.', true );
+		}
+
+		$login = 'llave-' . sanitize_user( sanitize_title( $nombre ), true );
+		$base  = $login;
+		$i     = 2;
+		while ( username_exists( $login ) ) {
+			$login = $base . '-' . $i;
+			++$i;
+		}
+
+		// Una llave no es una persona y no tiene correo, pero WordPress exige
+		// uno y único. Se le pone uno del propio panel; si el panel vive en una
+		// dirección sin punto (localhost), uno reservado que no existe para
+		// nadie, para no mandarle correo por error a un dominio ajeno.
+		$anfitrion = (string) wp_parse_url( home_url(), PHP_URL_HOST );
+		$dominio   = str_contains( $anfitrion, '.' ) ? $anfitrion : 'panel.invalid';
+
+		$id = wp_insert_user(
+			[
+				'user_login'   => $login,
+				'user_email'   => $login . '@' . $dominio,
+				'user_pass'    => wp_generate_password( 48, true, true ),
+				'display_name' => $nombre,
+				'role'         => SWPK_Perfiles::API,
+			]
+		);
+
+		if ( is_wp_error( $id ) ) {
+			self::volver_a_api( $id->get_error_message(), true );
+		}
+
+		$clave = '';
+		$error = '';
+
+		if ( wp_is_application_passwords_available() ) {
+			$creada = WP_Application_Passwords::create_new_application_password(
+				(int) $id,
+				[ 'name' => 'Panel Kinsta · ' . $nombre ]
+			);
+
+			if ( is_wp_error( $creada ) ) {
+				$error = $creada->get_error_message();
+			} else {
+				$clave = (string) $creada[0];
+			}
+		} else {
+			$error = 'WordPress las exige por HTTPS y este servidor no lo tiene';
+		}
+
+		set_transient(
+			'swpk_llave_nueva',
+			[ 'nombre' => $nombre, 'login' => $login, 'clave' => $clave, 'error' => $error ],
+			300
+		);
+
+		wp_safe_redirect( admin_url( 'admin.php?page=' . self::SLUG . '-api' ) );
+		exit;
+	}
+
+	public static function accion_revocar_llave(): void {
+		if ( ! self::puede_administrar() ) {
+			wp_die( 'Sin permiso.' );
+		}
+
+		$id = isset( $_GET['usuario'] ) ? (int) $_GET['usuario'] : 0;
+		check_admin_referer( 'swpk_revocar_llave_' . $id );
+
+		$u = get_user_by( 'id', $id );
+
+		// Solo llaves: este botón no puede servir para dejar fuera a una
+		// persona del equipo por un id cambiado a mano en la dirección.
+		if ( ! $u || ! in_array( SWPK_Perfiles::API, (array) $u->roles, true ) ) {
+			self::volver_a_api( 'Esa no es una llave de consulta.', true );
+		}
+
+		// Se borran sus contraseñas de aplicación Y se le quita el perfil: lo
+		// primero corta las que estén en uso, lo segundo evita que una llave
+		// nueva sobre esa misma cuenta vuelva a tener acceso sin decidirlo.
+		if ( class_exists( 'WP_Application_Passwords' ) ) {
+			WP_Application_Passwords::delete_all_application_passwords( $id );
+		}
+		$u->remove_role( SWPK_Perfiles::API );
+
+		self::volver_a_api( sprintf( 'Llave revocada: %s. Lo que la usara deja de poder consultar.', $u->display_name ) );
+	}
+
+	private static function volver_a_api( string $mensaje, bool $error = false ): void {
+		wp_safe_redirect(
+			admin_url( 'admin.php?page=' . self::SLUG . '-api&swpk_msg=' . ( $error ? 'error:' : 'ok:' ) . rawurlencode( $mensaje ) )
+		);
 		exit;
 	}
 

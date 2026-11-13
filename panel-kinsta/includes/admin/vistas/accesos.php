@@ -12,6 +12,8 @@ $etiquetas = [
 	SWPK_Accesos::SALIDA  => [ 'Salió', '#50575e' ],
 	SWPK_Accesos::FALLIDO => [ 'Intento fallido', '#d63638' ],
 	SWPK_Accesos::BLOQUEO => [ 'Bloqueado por intentos', '#b32d2e' ],
+	SWPK_Accesos::API     => [ 'Consulta por API', '#2271b1' ],
+	SWPK_Accesos::API_NEGADO => [ 'API rechazada', '#d63638' ],
 ];
 ?>
 <div class="wrap">
@@ -84,6 +86,9 @@ $etiquetas = [
 						<?php echo esc_html( (string) $r->login ); ?>
 						<?php if ( ! $r->usuario_id && SWPK_Accesos::FALLIDO === $r->accion ) : ?>
 							<br><span style="color:#50575e;font-size:12px">ese usuario no existe</span>
+						<?php endif; ?>
+						<?php if ( ! empty( $r->detalle ) ) : ?>
+							<br><code style="font-size:11px"><?php echo esc_html( (string) $r->detalle ); ?></code>
 						<?php endif; ?>
 					</td>
 					<td class="swpk-mono"><?php echo esc_html( (string) $r->ip ?: '—' ); ?></td>

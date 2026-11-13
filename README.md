@@ -180,7 +180,7 @@ la sesión cuando el código es correcto. Las reglas que lo sostienen:
 
 ## Perfiles de acceso
 
-Tres roles propios de WordPress, no los de siempre. Si una asesora necesitara
+Tres roles propios de WordPress para personas, más uno para programas. Si una asesora necesitara
 ser *administradora* para ver su panel, tendría acceso a instalar plugins y
 editar código en el sitio desde el cual se consulta la información de todos los
 clientes.
@@ -190,6 +190,7 @@ clientes.
 | **Dirección** | Todo, más los ajustes y el registro de accesos | — |
 | **Ventas** | Solo los sitios que tiene asignados: qué actualizar, por qué importa, y la constancia de lo que se le avisó a ese cliente | Caídas, accesos, ajustes, llaves |
 | **Soporte** | Todos los sitios, del lado técnico: caídas, vulnerabilidades, estado de los agentes | Accesos, ajustes, llaves |
+| **Llave de consulta** | Lo mismo que soporte, pero por la API y solo de lectura | Accesos, ajustes, llaves, y **disparar cualquier proceso** |
 
 Que ventas vea solo lo suyo no es desconfianza: un panel con 107 sitios donde
 solo 12 son los tuyos no se usa. El recorte es lo que lo hace útil.
@@ -305,6 +306,7 @@ panel-kinsta/
     ├── class-accesos.php         entradas, salidas e intentos fallidos
     ├── class-monitor.php         sondeo de disponibilidad cada 5 minutos
     ├── class-receptor.php        recibe los reportes firmados de los agentes
+    ├── class-api.php             la puerta de consulta: 10 rutas, sin lógica propia
     ├── class-usuarios.php        línea base de usuarios y alerta de admin nuevo
     ├── class-bitacora.php        registro de notificaciones
     ├── class-textos.php          los avisos, redactados por audiencia
@@ -334,6 +336,30 @@ memoria de PHP. `SWPK_Wordfence::recorrer_feed()` va entregando un registro a la
 vez contando llaves y comillas, y solo se guardan las vulnerabilidades del
 software que realmente está instalado.
 
+## La API de consulta del panel
+
+Diez rutas en `swpk/v1`, siete de lectura y tres que disparan los mismos
+procesos que los botones. **Ninguna trae lógica propia:** cada una envuelve la
+función que ya alimenta su pantalla, que es lo único que impide que el panel y
+la API se contradigan. La pantalla *Conectarse (API)* tiene la dirección, el
+botón para crear una llave, el catálogo de rutas y un probador en vivo.
+
+- **Identificación:** contraseñas de aplicación de WordPress, con autenticación
+  básica. Exigen HTTPS, salvo en entornos de desarrollo.
+- **Alcance:** el del perfil de la llave. Una llave de ventas recibe sus sitios
+  y nada más, en todas las rutas. Un sitio que no es suyo contesta 404, no 403:
+  a quien no tiene por qué verlo no se le confirma que exista.
+- **Rastro:** cada llamada queda en `swpk_accesos`, la que pasa y la que se
+  rechaza, con la ruta que pidió. Hace falta porque una contraseña de aplicación
+  se salta la verificación en dos pasos, así que esa fila es lo único que queda
+  de ella.
+- **Fecha:** toda respuesta lleva `obtenido_en`, `generado_en` y los relojes
+  completos. Un JSON sin fecha es una afirmación sin fecha.
+- **No escribe.** Lee y dispara procesos. Nada más.
+
+La llave de Kinsta no sale del plugin: si hace falta el dato fresco, se dispara
+un proceso y el panel pregunta con la suya.
+
 ## Límites de la API de Kinsta
 
 - **120 peticiones por minuto** por empresa. Por eso se usan los endpoints de
@@ -352,10 +378,12 @@ software que realmente está instalado.
 En desarrollo. Funciona el inventario, el cruce de vulnerabilidades, la
 comparación diaria, los textos de aviso, la bitácora, el agente con su reporte
 firmado y su verificación en dos pasos, el monitor de caídas, los perfiles de
-acceso, el registro de entradas, los correos automáticos y la exportación.
+acceso, el registro de entradas, los correos automáticos, la exportación y la
+API de consulta.
 
 Falta el despliegue del agente en los sitios, que no es programar sino entrar a
-cada uno.
+cada uno. Y para que la API sirva de algo desde fuera, falta que el panel viva
+en un servidor al que se pueda llegar: hoy corre en una máquina de la casa.
 
 ## Atribución
 

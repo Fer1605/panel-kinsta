@@ -50,6 +50,7 @@ require_once SWPK_RUTA . 'includes/class-plantillas.php';
 require_once SWPK_RUTA . 'includes/class-correos.php';
 require_once SWPK_RUTA . 'includes/class-usuarios.php';
 require_once SWPK_RUTA . 'includes/class-receptor.php';
+require_once SWPK_RUTA . 'includes/class-api.php';
 require_once SWPK_RUTA . 'includes/class-monitor.php';
 require_once SWPK_RUTA . 'includes/class-sincronizador.php';
 require_once SWPK_RUTA . 'includes/class-frescura.php';
@@ -105,11 +106,13 @@ add_action(
 		SWPK_Tablas::revisar_version();
 		SWPK_Sincronizador::init();
 		SWPK_Receptor::init();
+		SWPK_Api::init();
 		SWPK_Monitor::init();
 		SWPK_Correos::init();
 		SWPK_Exportar::init();
 		SWPK_Accesos::init();
 		SWPK_Perfiles::init();
+		SWPK_Perfiles::revisar_roles();
 		if ( is_admin() ) {
 			SWPK_Admin::init();
 		}

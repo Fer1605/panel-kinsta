@@ -37,6 +37,20 @@ class SWPK_Perfiles {
 	public const VENTAS    = 'swpk_ventas';
 	public const SOPORTE   = 'swpk_soporte';
 
+	/**
+	 * El cuarto perfil no es para una persona: es para un programa.
+	 *
+	 * Lee todo y no puede hacer nada más. No dispara procesos, no toca ajustes,
+	 * no ve el registro de accesos. El jefe pidió que las consultas tuvieran
+	 * API; esto es la llave con la que se consulta, y su límite es el punto:
+	 * una llave que vive dentro de otro sistema se puede filtrar, y lo que se
+	 * filtre no debe poder cambiar nada.
+	 */
+	public const API = 'swpk_api';
+
+	/** La marca que distingue una llave de una persona en pantalla. */
+	public const ES_LLAVE = 'swpk_es_llave';
+
 	// Permisos
 	public const VER          = 'swpk_ver_panel';
 	public const VER_TODO     = 'swpk_ver_todos_los_sitios';
@@ -45,12 +59,30 @@ class SWPK_Perfiles {
 	public const VER_ACCESOS  = 'swpk_ver_accesos';
 	public const ADMINISTRAR  = 'swpk_administrar_panel';
 
+	/**
+	 * Los permisos cambian al salir una versión nueva del plugin, pero
+	 * crear_roles() solo corre al activarlo. Sin esto, un panel que ya estaba
+	 * instalado se quedaría sin el perfil nuevo hasta que alguien desactive y
+	 * vuelva a activar el plugin — y nadie va a hacer eso.
+	 */
+	public const VERSION_ROLES = 2;
+
 	public static function roles(): array {
 		return [
 			self::DIRECCION => 'Panel · Dirección',
 			self::VENTAS    => 'Panel · Ventas',
 			self::SOPORTE   => 'Panel · Soporte',
+			self::API       => 'Panel · Llave de consulta (API)',
 		];
+	}
+
+	public static function revisar_roles(): void {
+		if ( (int) get_option( 'swpk_version_roles', 0 ) === self::VERSION_ROLES ) {
+			return;
+		}
+
+		self::crear_roles();
+		update_option( 'swpk_version_roles', self::VERSION_ROLES, false );
 	}
 
 	/** @return array<string,array<int,string>> */
@@ -59,6 +91,9 @@ class SWPK_Perfiles {
 			self::DIRECCION => [ self::VER, self::VER_TODO, self::VER_TECNICO, self::VER_BITACORA, self::VER_ACCESOS, self::ADMINISTRAR ],
 			self::VENTAS    => [ self::VER, self::VER_BITACORA ],
 			self::SOPORTE   => [ self::VER, self::VER_TODO, self::VER_TECNICO, self::VER_BITACORA ],
+			// Todo lo que es leer, nada de lo que es obrar. Sin VER_ACCESOS:
+			// quién entra al panel no es asunto de un sistema de fuera.
+			self::API       => [ self::VER, self::VER_TODO, self::VER_TECNICO, self::VER_BITACORA, self::ES_LLAVE ],
 		];
 	}
 
@@ -106,6 +141,11 @@ class SWPK_Perfiles {
 			self::SOPORTE => [
 				've'    => [ 'Todos los sitios', 'Vulnerabilidades y pendientes', 'Caídas y recuperaciones', 'Bitácora de avisos' ],
 				'no_ve' => [ 'Registro de accesos', 'Ajustes y llaves' ],
+			],
+			self::API => [
+				've'    => [ 'Todos los sitios, por consulta', 'Vulnerabilidades y pendientes', 'Quién tiene acceso a cada sitio', 'Movimientos y bitácora' ],
+				'no_ve' => [ 'Registro de accesos', 'Ajustes y llaves' ],
+				'no_hace' => [ 'Disparar la corrida', 'Analizar un sitio', 'Sondear caídas', 'Escribir cualquier cosa' ],
 			],
 		];
 	}
@@ -225,6 +265,11 @@ class SWPK_Perfiles {
 
 	/** El perfil del usuario actual, para mostrarlo y para decidir qué enseñar. */
 	public static function perfil_actual(): string {
+		// Primero la llave: tiene los permisos de soporte y se vería como
+		// soporte, que no es lo que es.
+		if ( current_user_can( self::ES_LLAVE ) ) {
+			return self::API;
+		}
 		if ( self::puede( self::ADMINISTRAR ) ) {
 			return self::DIRECCION;
 		}
