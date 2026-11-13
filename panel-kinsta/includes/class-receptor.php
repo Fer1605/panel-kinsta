@@ -85,6 +85,10 @@ class SWPK_Receptor {
 
 		$fila = [
 			'sitio_url'     => $sitio,
+			// Por las dos cosas: la dirección con la que el plugin se presenta
+			// y el id con el que Kinsta conoce al sitio. Se resuelve una vez,
+			// aquí, en vez de emparejar dominios cada vez que haga falta cruzar.
+			'sitio_id'      => SWPK_Usuarios::sitio_id( $sitio ),
 			'nombre'        => sanitize_text_field( (string) ( $datos['nombre'] ?? '' ) ),
 			'token'         => $token,
 			'secreto'       => $secreto,

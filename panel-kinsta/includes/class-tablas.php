@@ -21,7 +21,7 @@ defined( 'ABSPATH' ) || exit;
 
 class SWPK_Tablas {
 
-	public const VERSION = 7;
+	public const VERSION = 8;
 
 	public static function tabla( string $nombre ): string {
 		global $wpdb;
@@ -82,6 +82,7 @@ class SWPK_Tablas {
 				es_vulnerable TINYINT(1) NOT NULL DEFAULT 0,
 				auto_update VARCHAR(64) NOT NULL DEFAULT '',
 				activo TINYINT(1) NOT NULL DEFAULT 1,
+				escaneado_en DATETIME NULL,
 				PRIMARY KEY (id),
 				UNIQUE KEY foto (fecha, sitio_id, tipo, slug),
 				KEY sitio_fecha (sitio_id, fecha),
@@ -192,7 +193,8 @@ class SWPK_Tablas {
 				xmlrpc_abierto TINYINT(1) NOT NULL DEFAULT 1,
 				PRIMARY KEY (id),
 				UNIQUE KEY sitio_url (sitio_url),
-				UNIQUE KEY token (token)
+				UNIQUE KEY token (token),
+				KEY sitio_id (sitio_id)
 			) {$collate};"
 		);
 
@@ -200,6 +202,7 @@ class SWPK_Tablas {
 			"CREATE TABLE {$usr} (
 				id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
 				sitio_url VARCHAR(191) NOT NULL,
+				sitio_id VARCHAR(64) NOT NULL DEFAULT '',
 				usuario_id BIGINT UNSIGNED NOT NULL,
 				login VARCHAR(191) NOT NULL DEFAULT '',
 				correo VARCHAR(191) NOT NULL DEFAULT '',
@@ -210,6 +213,7 @@ class SWPK_Tablas {
 				visto_en DATETIME NOT NULL,
 				PRIMARY KEY (id),
 				UNIQUE KEY sitio_usuario (sitio_url, usuario_id),
+				KEY sitio_id (sitio_id),
 				KEY correo (correo)
 			) {$collate};"
 		);

@@ -67,6 +67,7 @@ class SWPK_Usuarios {
 		$primera_vez = ! $previos;
 		$cambios     = 0;
 		$vistos      = [];
+		$id_sitio    = self::sitio_id( $sitio_url );
 
 		// Cuántos administradores había y cuántos hay. Es el dato que el jefe
 		// pidió textualmente —"empezó con tres usuarios, de la nada subió a
@@ -99,6 +100,7 @@ class SWPK_Usuarios {
 
 			$fila = [
 				'sitio_url'  => $sitio_url,
+				'sitio_id'   => $id_sitio,
 				'usuario_id' => $id,
 				'login'      => $login,
 				'correo'     => $correo,
@@ -119,7 +121,7 @@ class SWPK_Usuarios {
 				if ( ! self::tiene_control( $roles_antes ) && self::tiene_control( $roles ) ) {
 					SWPK_Eventos::registrar(
 						SWPK_Eventos::ROL_SUBIO,
-						self::sitio_id( $sitio_url ),
+						$id_sitio,
 						sprintf(
 							'%s (%s) subió a administrador. Antes era: %s. El sitio pasó de %d a %d administradores.',
 							$login,
@@ -156,7 +158,7 @@ class SWPK_Usuarios {
 				// y no se pierda entre las altas normales.
 				SWPK_Eventos::registrar(
 					SWPK_Eventos::ADMIN_NUEVO,
-					self::sitio_id( $sitio_url ),
+					$id_sitio,
 					sprintf(
 						'Administrador nuevo: %s (%s). El sitio pasó de %d a %d administradores. %s',
 						$login,
@@ -182,7 +184,7 @@ class SWPK_Usuarios {
 				if ( $extrano ) {
 					SWPK_Eventos::registrar(
 						SWPK_Eventos::CORREO_EXTRANO,
-						self::sitio_id( $sitio_url ),
+						$id_sitio,
 						sprintf(
 							'%s usa %s, que no es dominio del sitio, ni nuestro, ni de un proveedor de correo conocido',
 							$login,
@@ -208,7 +210,7 @@ class SWPK_Usuarios {
 			if ( ! $primera_vez && self::tiene_control( array_filter( explode( ',', (string) $previo->roles ) ) ) ) {
 				SWPK_Eventos::registrar(
 					'administrador_eliminado',
-					self::sitio_id( $sitio_url ),
+					$id_sitio,
 					sprintf(
 						'Se eliminó al administrador %s (%s). El sitio pasó de %d a %d administradores.',
 						$previo->login,
@@ -322,7 +324,16 @@ class SWPK_Usuarios {
 	}
 
 	/** Enlaza el sitio reportado con el inventario de Kinsta, por dominio. */
-	private static function sitio_id( string $sitio_url ): string {
+	/**
+	 * El sitio_id que le corresponde a una dirección.
+	 *
+	 * Pública porque el registro del agente también lo necesita: un sitio tiene
+	 * que quedar guardado por las dos cosas, su id y su nombre/dirección. Con
+	 * una sola, cruzar lo que reporta el plugin con lo que da Kinsta depende de
+	 * emparejar dominios cada vez, y quien consulte desde fuera se encuentra el
+	 * mismo sitio con dos identificadores distintos.
+	 */
+	public static function sitio_id( string $sitio_url ): string {
 		$anfitrion = strtolower( (string) wp_parse_url( $sitio_url, PHP_URL_HOST ) );
 		$anfitrion = preg_replace( '/^www\./', '', $anfitrion ) ?? $anfitrion;
 

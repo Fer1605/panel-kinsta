@@ -86,7 +86,28 @@ class SWPK_Sincronizador {
 		}
 
 		$resumen['eventos'] = SWPK_Eventos::comparar_fotos( current_time( 'Y-m-d' ) );
-		$resumen['fin']     = current_time( 'mysql' );
+
+		// Los sitios cuyo cambio se ignoró por no tener escaneo nuevo salen en
+		// las notas. Saltarlos sin decirlo sería cambiar un ruido por un
+		// silencio, y el silencio es peor: nadie lo nota.
+		$saltados = SWPK_Eventos::saltados();
+		if ( $saltados ) {
+			$nombres = [];
+			foreach ( array_slice( $saltados, 0, 8 ) as $sitio_id ) {
+				$s         = SWPK_Inventario::obtener( (string) $sitio_id );
+				$nombres[] = (string) ( $s->nombre_visible ?? $sitio_id );
+			}
+
+			$resumen['notas'][] = sprintf(
+				'De %d sitio(s) la lista cambió pero %s no los había vuelto a escanear, así que no se tomó por bueno: %s%s.',
+				count( $saltados ),
+				SWPK_Admin::proveedor(),
+				implode( ', ', $nombres ),
+				count( $saltados ) > 8 ? '…' : ''
+			);
+		}
+
+		$resumen['fin'] = current_time( 'mysql' );
 
 		update_option( 'swpk_ultima_corrida', $resumen, false );
 
@@ -157,8 +178,9 @@ class SWPK_Sincronizador {
 			];
 		}
 
-		$tabla = SWPK_Tablas::tabla( 'fotos' );
-		$fecha = current_time( 'Y-m-d' );
+		$tabla    = SWPK_Tablas::tabla( 'fotos' );
+		$fecha    = current_time( 'Y-m-d' );
+		$frescura = $fuente->frescura();
 
 		// Fuera lo de hoy de este sitio antes de escribir: si un módulo se
 		// desinstaló desde la corrida de la madrugada, un replace lo dejaría
@@ -185,13 +207,13 @@ class SWPK_Sincronizador {
 					'es_vulnerable'      => $fila['es_vulnerable'] ? 1 : 0,
 					'auto_update'        => $fila['auto_update'],
 					'activo'             => $fila['activo'] ? 1 : 0,
+					'escaneado_en'       => $frescura[ $sitio_id ] ?? null,
 				]
 			);
 			++$n;
 		}
 
 		// La fecha de este sitio, y la de nadie más.
-		$frescura = $fuente->frescura();
 		$wpdb->update(
 			SWPK_Tablas::tabla( 'sitios' ),
 			[ 'inventario_en' => $frescura[ $sitio_id ] ?? null ],
@@ -230,11 +252,12 @@ class SWPK_Sincronizador {
 			return $temas;
 		}
 
-		$filas = array_merge( $plugins, $temas );
-		$mapa  = self::mapa_de_nombres();
-		$tabla = SWPK_Tablas::tabla( 'fotos' );
-		$fecha = current_time( 'Y-m-d' );
-		$n     = 0;
+		$filas    = array_merge( $plugins, $temas );
+		$mapa     = self::mapa_de_nombres();
+		$tabla    = SWPK_Tablas::tabla( 'fotos' );
+		$fecha    = current_time( 'Y-m-d' );
+		$frescura = $fuente->frescura();
+		$n        = 0;
 
 		foreach ( $filas as $fila ) {
 			// La API de empresa identifica el sitio por su nombre visible, no
@@ -263,6 +286,12 @@ class SWPK_Sincronizador {
 					'es_vulnerable'      => $fila['es_vulnerable'] ? 1 : 0,
 					'auto_update'        => $fila['auto_update'],
 					'activo'             => $fila['activo'] ? 1 : 0,
+					// Cuándo miró Kinsta ESTE sitio, guardado con la foto.
+					// Es lo que después permite distinguir "la lista cambió
+					// porque las cosas cambiaron" de "la lista cambió porque
+					// Kinsta contestó mal": si esta fecha no avanzó, la lista
+					// no debería haber cambiado.
+					'escaneado_en'       => $frescura[ $sitio_id ] ?? null,
 				]
 			);
 			++$n;
@@ -274,7 +303,7 @@ class SWPK_Sincronizador {
 		$tabla_sitios = SWPK_Tablas::tabla( 'sitios' );
 		$wpdb->query( "UPDATE {$tabla_sitios} SET inventario_en = NULL" );
 
-		foreach ( $fuente->frescura() as $sitio_id => $cuando ) {
+		foreach ( $frescura as $sitio_id => $cuando ) {
 			$wpdb->update( $tabla_sitios, [ 'inventario_en' => $cuando ], [ 'sitio_id' => $sitio_id ] );
 		}
 

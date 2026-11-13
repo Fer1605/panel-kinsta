@@ -83,6 +83,19 @@ class SWPK_Eventos {
 	): bool {
 		global $wpdb;
 
+		// Un mismo cambio no se anota dos veces el mismo día.
+		//
+		// El botón de "analizar este sitio ahora" vuelve a comparar contra la
+		// foto anterior, así que pulsarlo dos veces registraba otra vez los
+		// mismos cambios. Con 23 módulos eran 30 eventos donde había 10.
+		//
+		// Se compara por tipo, sitio, módulo y día. Las caídas no traen módulo
+		// y quedan fuera de la regla a propósito: un sitio puede caerse y
+		// reponerse varias veces en el mismo día, y cada vez es noticia.
+		if ( '' !== $slug && self::ya_anotado( $tipo, $sitio_id, $slug ) ) {
+			return true;
+		}
+
 		$ok = $wpdb->insert(
 			SWPK_Tablas::tabla( 'eventos' ),
 			[
@@ -102,6 +115,24 @@ class SWPK_Eventos {
 		}
 
 		return true;
+	}
+
+	/** ¿Ya está anotado hoy este mismo cambio, en este mismo módulo? */
+	private static function ya_anotado( string $tipo, string $sitio_id, string $slug ): bool {
+		global $wpdb;
+		$tabla = SWPK_Tablas::tabla( 'eventos' );
+
+		return (bool) $wpdb->get_var(
+			$wpdb->prepare(
+				"SELECT id FROM {$tabla}
+				 WHERE tipo = %s AND sitio_id = %s AND slug = %s AND DATE( ocurrio_en ) = %s
+				 LIMIT 1",
+				$tipo,
+				$sitio_id,
+				$slug,
+				current_time( 'Y-m-d' )
+			)
+		);
 	}
 
 	private const OPCION_FALLOS = 'swpk_eventos_perdidos';
@@ -141,6 +172,20 @@ class SWPK_Eventos {
 	 * comparación, el panel solo sabría decir cómo están las cosas hoy, y lo
 	 * que el jefe pidió es "este mes actualizamos seis veces" (01:18).
 	 */
+	/** @var array<string,bool> sitios cuyo cambio se ignoró por no tener escaneo nuevo */
+	private static array $ultimo_salto = [];
+
+	/**
+	 * Los sitios que la última comparación se saltó porque Kinsta no los había
+	 * vuelto a mirar. Se enseñan en la corrida: saltarlos callado sería cambiar
+	 * un ruido por un silencio.
+	 *
+	 * @return array<int,string>
+	 */
+	public static function saltados(): array {
+		return array_keys( self::$ultimo_salto );
+	}
+
 	public static function comparar_fotos( string $fecha_hoy, string $solo = '' ): int {
 		global $wpdb;
 		$tabla = SWPK_Tablas::tabla( 'fotos' );
@@ -180,14 +225,55 @@ class SWPK_Eventos {
 		// en 2. Ninguno de esos módulos se tocó.
 		$con_datos_hoy   = [];
 		$con_datos_antes = [];
+		$escaneo_hoy     = [];
+		$escaneo_antes   = [];
+
 		foreach ( $hoy as $fila ) {
 			$con_datos_hoy[ $fila->sitio_id ] = true;
+			$escaneo_hoy[ $fila->sitio_id ]   = (string) ( $fila->escaneado_en ?? '' );
 		}
 		foreach ( $previo as $fila ) {
 			$con_datos_antes[ $fila->sitio_id ] = true;
+			$escaneo_antes[ $fila->sitio_id ]   = (string) ( $fila->escaneado_en ?? '' );
 		}
 
+		// Y aquí el juez de verdad: ¿Kinsta volvió a mirar este sitio?
+		//
+		// Kinsta escanea cada sitio cuando le toca, muy desparejo: medido sobre
+		// los 108, el mismo día había 67 escaneados hoy, 27 de hace tres días y
+		// uno sin tocar desde abril. Si entre dos fotos su fecha de escaneo NO
+		// avanzó, la lista tendría que ser idéntica. Si cambió igual, el cambio
+		// no es del sitio: es de la respuesta.
+		//
+		// Sin esto había que entrar a comprobarlo a mano cada vez que algo
+		// parecía raro, y eso no escala: nadie va a estar mirando.
+		$sin_escaneo_nuevo = [];
+		foreach ( $con_datos_hoy as $sitio_id => $_ ) {
+			if ( ! isset( $con_datos_antes[ $sitio_id ] ) ) {
+				continue;
+			}
+
+			$antes = $escaneo_antes[ $sitio_id ] ?? '';
+			$ahora = $escaneo_hoy[ $sitio_id ] ?? '';
+
+			// Sin fechas no se puede juzgar: se deja pasar, que es como se
+			// comportaba antes de guardarlas.
+			if ( '' === $antes || '' === $ahora ) {
+				continue;
+			}
+
+			if ( $ahora <= $antes ) {
+				$sin_escaneo_nuevo[ $sitio_id ] = true;
+			}
+		}
+
+		self::$ultimo_salto = $sin_escaneo_nuevo;
+
 		foreach ( $hoy as $clave => $fila ) {
+			if ( isset( $sin_escaneo_nuevo[ $fila->sitio_id ] ) ) {
+				continue;
+			}
+
 			if ( ! isset( $previo[ $clave ] ) ) {
 				// Primera vez que tenemos datos de este sitio: lo que hay es lo
 				// que hay, no algo que alguien acabara de instalar.
@@ -246,6 +332,10 @@ class SWPK_Eventos {
 		foreach ( $previo as $clave => $fila ) {
 			// Silencio de Kinsta, no desinstalación. Ver el comentario de arriba.
 			if ( ! isset( $con_datos_hoy[ $fila->sitio_id ] ) ) {
+				continue;
+			}
+
+			if ( isset( $sin_escaneo_nuevo[ $fila->sitio_id ] ) ) {
 				continue;
 			}
 
