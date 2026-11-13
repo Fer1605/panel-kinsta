@@ -97,7 +97,7 @@ arsort( $por_tipo );
 </form>
 
 <p class="swpk-linea">
-	<strong><?php echo count( $movimientos ); ?> movimiento(s)</strong>
+	<strong><?php echo esc_html( SWPK_Vista::plural( count( $movimientos ), 'movimiento', 'movimientos' ) ); ?></strong>
 	del <?php echo esc_html( SWPK_Frescura::fmt( 'j \d\e F', $desde . ' 12:00:00' ) ); ?>
 	al <?php echo esc_html( SWPK_Frescura::fmt( 'j \d\e F', $hasta . ' 12:00:00' ) ); ?>.
 	<?php if ( $por_tipo ) : ?>

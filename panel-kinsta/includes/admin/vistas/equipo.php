@@ -125,7 +125,7 @@ $recien  = get_transient( 'swpk_acceso_nuevo' );
 					<td><?php echo esc_html( $roles[ $perfil ] ?? '—' ); ?></td>
 					<td>
 						<?php if ( SWPK_Perfiles::VENTAS === $perfil ) : ?>
-							<?php echo $asignados ? (int) $asignados . ' sitio(s)' : '<span style="color:#d63638">ninguno todavía</span>'; ?>
+							<?php echo $asignados ? esc_html( SWPK_Vista::plural( (int) $asignados, 'sitio', 'sitios' ) ) : '<span style="color:#d63638">ninguno todavía</span>'; ?>
 						<?php else : ?>
 							<span style="color:#50575e">todos</span>
 						<?php endif; ?>

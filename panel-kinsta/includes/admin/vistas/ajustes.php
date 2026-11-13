@@ -180,7 +180,7 @@ $a = SWPK_Ajustes::todos();
 				<tr>
 					<td>Avisos perdidos</td>
 					<td>
-						<strong style="color:#b32d2e"><?php echo count( $perdidos ); ?> evento(s) no se pudieron guardar.</strong>
+						<strong style="color:#b32d2e"><?php echo esc_html( SWPK_Vista::plural( count( $perdidos ), 'evento no se pudo guardar', 'eventos no se pudieron guardar' ) ); ?>.</strong>
 						<br><span style="font-size:12px">
 							Un panel que avisa no puede perder avisos callado. El último fue
 							<?php echo esc_html( SWPK_Frescura::fecha( (string) $perdidos[0]['cuando'] ) ); ?>:

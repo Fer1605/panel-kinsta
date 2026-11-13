@@ -307,6 +307,10 @@ class SWPK_Admin {
 			.swpk-sub td{background:#f6f7f7 !important;color:#50575e;font-size:12px;
 				padding:8px 10px !important;border-top:1px solid #dcdcde}
 			.swpk-solo td{color:#646970}
+			.swpk-mas td{background:#fbfbfc !important;padding:10px !important;font-size:13px}
+			.swpk-mas a{font-weight:600;text-decoration:none}
+			.swpk-mas a:hover{text-decoration:underline}
+			.swpk-mas .swpk-gris{margin-left:8px;font-size:12px}
 			.swpk-rango{display:flex;gap:14px;align-items:flex-end;flex-wrap:wrap;
 				margin:16px 0 4px;padding:14px 16px;background:#fff;border:1px solid #dcdcde;
 				border-radius:4px;max-width:900px}

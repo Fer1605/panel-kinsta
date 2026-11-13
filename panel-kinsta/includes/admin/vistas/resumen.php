@@ -115,6 +115,17 @@ foreach ( $por_dia as $dia => $del_dia ) {
 	$resumen_dia[ $dia ] = $bien;
 }
 
+// De los que salieron bien solos se enseñan los primeros diez y el resto se
+// manda a Movimientos, filtrado por ese día. Enseñarlos todos era lo que
+// pedía Fer y era lo correcto —un contador no es el dato— pero un día movido
+// son 60 u 80 renglones de buenas noticias, y entonces el Resumen deja de ser
+// un resumen. Diez caben en pantalla y bastan para ver de qué va el día; los
+// demás están a un clic, en la pantalla que existe justamente para verlos
+// todos.
+//
+// Los que necesitan atención NO se capan: esos son la razón de abrir esto.
+$tope_solos = 10;
+
 $por_dia  = array_slice( $por_dia, 0, 8, true );
 $etq_evt  = SWPK_Eventos::etiquetas();
 $de_hoy   = count( $por_dia[ $hoy ] ?? [] );
@@ -291,7 +302,33 @@ $fila = static function ( array $f, bool $solo ) use ( $resumir ): void {
 								?>
 							</td>
 						</tr>
-						<?php foreach ( $solos as $f ) { $fila( $f, true ); } ?>
+						<?php foreach ( array_slice( $solos, 0, $tope_solos, true ) as $f ) { $fila( $f, true ); } ?>
+
+						<?php if ( count( $solos ) > $tope_solos ) : ?>
+							<tr class="swpk-mas">
+								<td colspan="4">
+									<a href="<?php echo esc_url(
+										add_query_arg(
+											[
+												'page'    => 'panel-kinsta-bitacora',
+												'seccion' => 'movimientos',
+												'desde'   => $dia,
+												'hasta'   => $dia,
+											],
+											admin_url( 'admin.php' )
+										)
+									); ?>">
+										<?php
+										printf(
+											'Ver los %s de este día &rarr;',
+											esc_html( SWPK_Vista::plural( count( $solos ) - $tope_solos, 'sitio restante', 'sitios restantes' ) )
+										);
+										?>
+									</a>
+									<span class="swpk-gris">todos los movimientos del día, en Bitácora</span>
+								</td>
+							</tr>
+						<?php endif; ?>
 					<?php endif; ?>
 				<?php endif; ?>
 			<?php endforeach; ?>

@@ -147,7 +147,7 @@ $hubo_alguna_vez = SWPK_Bitacora::hay_alguno();
 	</div>
 
 	<p class="swpk-linea">
-		<strong><?php echo count( $registros ); ?> aviso(s)</strong>
+		<strong><?php echo esc_html( SWPK_Vista::plural( count( $registros ), 'aviso', 'avisos' ) ); ?></strong>
 		del <?php echo esc_html( SWPK_Frescura::fmt( 'j \d\e F', $desde . ' 12:00:00' ) ); ?>
 		al <?php echo esc_html( SWPK_Frescura::fmt( 'j \d\e F', $hasta . ' 12:00:00' ) ); ?>
 		<?php if ( '' !== $tipo_filtro ) : ?>
