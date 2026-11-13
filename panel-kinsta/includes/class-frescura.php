@@ -122,6 +122,22 @@ class SWPK_Frescura {
 	}
 
 	/**
+	 * El instante real en que ocurre una hora local.
+	 *
+	 * Es lo que necesita wp_schedule_event, que trabaja en segundos de verdad.
+	 * strtotime('tomorrow 06:30') los calcula en UTC, porque WordPress le fija
+	 * UTC a PHP, así que programar con eso deja la tarea seis horas antes: la
+	 * corrida de las 6:30 quedó agendada a las 12:30 de la noche, y los tres
+	 * correos con ella.
+	 *
+	 * Pasó justo al poner la zona de Guatemala. Las tareas ya programadas no se
+	 * recalculan solas: hay que desprogramar y volver a programar.
+	 */
+	public static function cuando( string $frase ): int {
+		return ( new DateTimeImmutable( $frase, wp_timezone() ) )->getTimestamp();
+	}
+
+	/**
 	 * Una fecha de hace N segundos, escrita en el mismo reloj en que se guardan
 	 * las cosas. Para los "dame lo de las últimas 24 horas".
 	 */

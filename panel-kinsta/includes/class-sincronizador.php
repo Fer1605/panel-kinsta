@@ -30,8 +30,7 @@ class SWPK_Sincronizador {
 		if ( ! wp_next_scheduled( self::HOOK ) ) {
 			// 6:30 am hora local: la corrida tiene que estar lista antes del
 			// correo de las asesoras de los lunes a las 7:00 (02:34).
-			$manana = strtotime( 'tomorrow 06:30', current_time( 'timestamp' ) );
-			wp_schedule_event( $manana, 'daily', self::HOOK );
+			wp_schedule_event( SWPK_Frescura::cuando( 'tomorrow 06:30' ), 'daily', self::HOOK );
 		}
 	}
 

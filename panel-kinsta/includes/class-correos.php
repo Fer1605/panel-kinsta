@@ -44,16 +44,16 @@ class SWPK_Correos {
 	public static function programar(): void {
 		// Lunes 7:00 am: "le mandamos un correo los lunes a las 7 de la mañana" (02:34).
 		if ( ! wp_next_scheduled( self::HOOK_SEMANAL ) ) {
-			wp_schedule_event( strtotime( 'next monday 07:00' ), 'weekly', self::HOOK_SEMANAL );
+			wp_schedule_event( SWPK_Frescura::cuando( 'next monday 07:00' ), 'weekly', self::HOOK_SEMANAL );
 		}
 
 		// Después de la corrida de las 6:30, para que el resumen tenga datos de hoy.
 		if ( ! wp_next_scheduled( self::HOOK_DIARIO ) ) {
-			wp_schedule_event( strtotime( 'tomorrow 07:30' ), 'daily', self::HOOK_DIARIO );
+			wp_schedule_event( SWPK_Frescura::cuando( 'tomorrow 07:30' ), 'daily', self::HOOK_DIARIO );
 		}
 
 		if ( ! wp_next_scheduled( self::HOOK_MENSUAL ) ) {
-			wp_schedule_event( strtotime( 'first day of next month 08:00' ), 'monthly', self::HOOK_MENSUAL );
+			wp_schedule_event( SWPK_Frescura::cuando( 'first day of next month 08:00' ), 'monthly', self::HOOK_MENSUAL );
 		}
 	}
 
