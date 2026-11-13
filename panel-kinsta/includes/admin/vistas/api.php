@@ -18,7 +18,7 @@ $base       = SWPK_Api::base();
 $alcanzable = SWPK_Api::alcanzable();
 $catalogo   = SWPK_Api::catalogo();
 $nueva      = get_transient( 'swpk_llave_nueva' );
-$llaves     = get_users( [ 'role' => SWPK_Perfiles::API, 'orderby' => 'display_name' ] );
+$llaves     = SWPK_Llaves::listar();
 $hay_app_pw = wp_is_application_passwords_available();
 $llamadas   = array_merge( SWPK_Accesos::listar( 25, SWPK_Accesos::API ), SWPK_Accesos::listar( 25, SWPK_Accesos::API_NEGADO ) );
 
@@ -76,27 +76,176 @@ $llamadas = array_slice( $llamadas, 0, 25 );
 		filtrar, y lo que se filtre no debe poder cambiar nada.
 	</p>
 
+	<p style="max-width:860px;color:#3c434a">
+		<strong>Las llaves no salen en Usuarios de WordPress, y no se pueden editar desde ahí.</strong>
+		Esta tabla es su única lista. Nadie —tampoco un administrador— les puede cambiar la
+		contraseña, subirles el perfil ni borrarlas desde la pantalla de usuarios: si se pudiera,
+		una llave de solo lectura se volvería administradora con un desplegable, o alguien la
+		borraría por limpieza sin saber qué estaba rompiendo. Las dos únicas cosas que se le hacen
+		a una llave son crearla y revocarla, y las dos están aquí.
+	</p>
+
 	<?php if ( $nueva ) : ?>
-		<div class="notice notice-success">
-			<p><strong>Llave creada: <?php echo esc_html( (string) $nueva['nombre'] ); ?></strong></p>
-			<?php if ( '' !== (string) $nueva['clave'] ) : ?>
-				<p>
-					Usuario <code><?php echo esc_html( (string) $nueva['login'] ); ?></code> ·
-					contraseña <code style="font-size:14px"><?php echo esc_html( (string) $nueva['clave'] ); ?></code>
+		<?php
+		// Se consume al mostrarse. La contraseña se enseña una vez y una sola, así
+		// que recargar la pantalla no la puede volver a sacar.
+		delete_transient( 'swpk_llave_nueva' );
+		$par = (string) $nueva['login'] . ':' . (string) $nueva['clave'];
+		?>
+		<style>
+		.swpk-telon {
+			position: fixed; inset: 0; z-index: 160000;
+			background: rgba( 0, 0, 0, .65 );
+			display: flex; align-items: center; justify-content: center;
+			padding: 20px;
+		}
+		.swpk-modal {
+			background: #fff; border-radius: 6px; max-width: 580px; width: 100%;
+			padding: 28px 30px 24px; box-shadow: 0 18px 50px rgba( 0, 0, 0, .35 );
+			max-height: 90vh; overflow: auto;
+		}
+		.swpk-modal h2 { margin: 0 0 2px; font-size: 21px; }
+		.swpk-modal-nombre { margin: 0 0 18px; color: #50575e; }
+		.swpk-modal-aviso {
+			background: #fcf0f1; border-left: 4px solid #d63638;
+			padding: 11px 14px; margin: 0 0 20px; color: #3c434a;
+		}
+		.swpk-campo { display: block; margin: 0 0 16px; }
+		.swpk-campo-t { display: block; font-weight: 600; margin-bottom: 5px; }
+		.swpk-campo .swpk-pista { font-weight: 400; color: #646970; margin: 0 0 6px; }
+		.swpk-fila { display: flex; gap: 8px; }
+		.swpk-fila input {
+			flex: 1 1 auto; min-width: 0;
+			font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+			font-size: 13px; background: #f6f7f7;
+		}
+		.swpk-fila .button { flex: 0 0 auto; }
+		.swpk-copiado { background: #008a20 !important; border-color: #008a20 !important; color: #fff !important; }
+		.swpk-dos { display: flex; gap: 14px; flex-wrap: wrap; }
+		.swpk-dos > .swpk-campo { flex: 1 1 220px; margin-bottom: 0; }
+		.swpk-modal-pie { margin: 22px 0 0; text-align: right; }
+		@media ( max-width: 600px ) {
+			.swpk-modal { padding: 20px; }
+			.swpk-fila { flex-wrap: wrap; }
+			.swpk-fila .button { width: 100%; }
+		}
+		</style>
+
+		<div class="swpk-telon" id="swpk-telon">
+			<div class="swpk-modal" role="dialog" aria-modal="true" aria-labelledby="swpk-modal-titulo">
+				<h2 id="swpk-modal-titulo">Tu llave está lista</h2>
+				<p class="swpk-modal-nombre"><?php echo esc_html( (string) $nueva['nombre'] ); ?></p>
+
+				<?php if ( '' !== (string) $nueva['clave'] ) : ?>
+
+					<p class="swpk-modal-aviso">
+						<strong>Cópiala ahora: no se vuelve a mostrar.</strong>
+						WordPress guarda solo su huella, igual que con cualquier contraseña. Si se
+						pierde no se recupera — se revoca esta llave y se crea otra, que son dos clics.
+					</p>
+
+					<div class="swpk-campo">
+						<span class="swpk-campo-t">La llave</span>
+						<p class="swpk-pista">Esto es lo que se le pega a un conector: una sola cosa.</p>
+						<span class="swpk-fila">
+							<input type="text" readonly value="<?php echo esc_attr( $par ); ?>" onclick="this.select()">
+							<button type="button" class="button button-primary swpk-copiar" id="swpk-primero">Copiar</button>
+						</span>
+					</div>
+
+					<p class="swpk-pista" style="margin:0 0 8px">Y por separado, si la vas a usar en Postman o en <code>curl</code>:</p>
+
+					<div class="swpk-dos">
+						<div class="swpk-campo">
+							<span class="swpk-campo-t">Usuario</span>
+							<span class="swpk-fila">
+								<input type="text" readonly value="<?php echo esc_attr( (string) $nueva['login'] ); ?>" onclick="this.select()">
+								<button type="button" class="button swpk-copiar">Copiar</button>
+							</span>
+						</div>
+						<div class="swpk-campo">
+							<span class="swpk-campo-t">Contraseña</span>
+							<span class="swpk-fila">
+								<input type="text" readonly value="<?php echo esc_attr( (string) $nueva['clave'] ); ?>" onclick="this.select()">
+								<button type="button" class="button swpk-copiar">Copiar</button>
+							</span>
+						</div>
+					</div>
+
+				<?php else : ?>
+
+					<p class="swpk-modal-aviso">
+						La cuenta quedó creada, pero este servidor no deja generar su contraseña
+						(<?php echo esc_html( (string) $nueva['error'] ); ?>). Habrá que generarla en el
+						servidor definitivo. El usuario es
+						<code><?php echo esc_html( (string) $nueva['login'] ); ?></code>.
+					</p>
+
+				<?php endif; ?>
+
+				<p class="swpk-modal-pie">
+					<button type="button" class="button" id="swpk-cerrar">Ya la copié</button>
 				</p>
-				<p>
-					<strong>Cópiala ahora.</strong> WordPress no la vuelve a mostrar: guarda solo su huella,
-					igual que con cualquier contraseña. Si se pierde, se revoca esta llave y se crea otra.
-				</p>
-			<?php else : ?>
-				<p>
-					La cuenta quedó creada, pero este servidor no deja generar su contraseña
-					(<?php echo esc_html( (string) $nueva['error'] ); ?>). Habrá que generarla en el
-					servidor definitivo, desde el perfil de ese usuario.
-				</p>
-			<?php endif; ?>
+			</div>
 		</div>
-		<?php delete_transient( 'swpk_llave_nueva' ); ?>
+
+		<script>
+		( function () {
+			var telon = document.getElementById( 'swpk-telon' );
+			if ( ! telon ) { return; }
+
+			function avisar( boton ) {
+				var antes = boton.textContent;
+				boton.textContent = 'Copiado';
+				boton.classList.add( 'swpk-copiado' );
+				setTimeout( function () {
+					boton.textContent = antes;
+					boton.classList.remove( 'swpk-copiado' );
+				}, 1800 );
+			}
+
+			// A mano con execCommand por si no hay portapapeles: el navegador solo
+			// lo da en HTTPS y en localhost, y este panel va a vivir en los dos
+			// lados. Sin esto, en un servidor sin certificado el botón no haría
+			// nada y no se sabría por qué.
+			function aMano( campo, boton ) {
+				campo.focus();
+				campo.select();
+				try {
+					if ( document.execCommand( 'copy' ) ) { avisar( boton ); return; }
+				} catch ( e ) {}
+				boton.textContent = 'Cópiala a mano';
+			}
+
+			telon.addEventListener( 'click', function ( ev ) {
+				var boton = ev.target.closest( '.swpk-copiar' );
+				if ( ! boton ) { return; }
+
+				var campo = boton.parentNode.querySelector( 'input' );
+				if ( ! campo ) { return; }
+
+				if ( navigator.clipboard && navigator.clipboard.writeText ) {
+					navigator.clipboard.writeText( campo.value ).then(
+						function () { avisar( boton ); },
+						function () { aMano( campo, boton ); }
+					);
+					return;
+				}
+
+				aMano( campo, boton );
+			} );
+
+			// Se cierra con el botón y nada más. Ni con Escape ni tocando afuera:
+			// lo que hay dentro no se vuelve a ver, y un clic de más no debería
+			// costar una llave.
+			document.getElementById( 'swpk-cerrar' ).addEventListener( 'click', function () {
+				telon.remove();
+			} );
+
+			var primero = document.getElementById( 'swpk-primero' );
+			if ( primero ) { primero.focus(); }
+		}() );
+		</script>
 	<?php endif; ?>
 
 	<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" style="margin:14px 0 22px">
@@ -140,7 +289,7 @@ $llamadas = array_slice( $llamadas, 0, 25 );
 					<td>
 						<a class="button button-small"
 							href="<?php echo esc_url( wp_nonce_url( admin_url( 'admin-post.php?action=swpk_revocar_llave&usuario=' . $u->ID ), 'swpk_revocar_llave_' . $u->ID ) ); ?>"
-							onclick="return confirm('¿Revocar esta llave? El sistema que la use dejará de poder consultar.')">
+							onclick="return confirm('¿Revocar esta llave? La cuenta se borra y el sistema que la use deja de poder consultar. Lo que ya consultó queda en el registro.')">
 							Revocar
 						</a>
 					</td>

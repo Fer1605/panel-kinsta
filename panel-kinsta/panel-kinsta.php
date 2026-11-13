@@ -32,6 +32,7 @@ define( 'SWPK_ARCHIVO', __FILE__ );
 
 require_once SWPK_RUTA . 'includes/class-tablas.php';
 require_once SWPK_RUTA . 'includes/class-perfiles.php';
+require_once SWPK_RUTA . 'includes/class-llaves.php';
 require_once SWPK_RUTA . 'includes/class-accesos.php';
 require_once SWPK_RUTA . 'includes/class-ajustes.php';
 require_once SWPK_RUTA . 'includes/class-etiquetas.php';
@@ -112,6 +113,7 @@ add_action(
 		SWPK_Exportar::init();
 		SWPK_Accesos::init();
 		SWPK_Perfiles::init();
+		SWPK_Llaves::init();
 		SWPK_Perfiles::revisar_roles();
 		if ( is_admin() ) {
 			SWPK_Admin::init();

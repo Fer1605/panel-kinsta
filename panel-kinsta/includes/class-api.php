@@ -148,11 +148,40 @@ class SWPK_Api {
 	 * aceptable es que quede escrito quién llamó, a qué y desde dónde — igual
 	 * que una entrada al panel — y que la llave se pueda revocar.
 	 */
+	/**
+	 * Anota la llamada — salvo cuando WordPress está volviendo a preguntar solo
+	 * para armar la cabecera `Allow`.
+	 *
+	 * `rest_send_allow_header()` corre enganchada a `rest_post_dispatch`, o sea
+	 * DESPUÉS de haber contestado, y vuelve a llamar al `permission_callback` de
+	 * cada manejador para decidir qué métodos anunciar. Resultado medido: una
+	 * sola petición HTTP dejaba dos filas idénticas en el registro, con un
+	 * segundo de diferencia.
+	 *
+	 * En un registro que existe para poder probar quién consultó qué, contar
+	 * doble no es un detalle de limpieza: convierte "esta llave consultó 400
+	 * veces" en una cifra que no se puede defender delante de nadie. Y no se
+	 * veía en las pruebas de adentro, porque `rest_do_request` no pasa por
+	 * `rest_post_dispatch` — solo salía por HTTP, que es por donde entran las
+	 * llaves de verdad.
+	 *
+	 * Se descarta esa segunda pasada y no las repetidas en general: de las dos
+	 * formas de equivocarse, anotar de más es ruido y anotar de menos es una
+	 * mentira, así que lo que se calla es exactamente este caso conocido.
+	 */
+	private static function anotar_llamada( string $ruta, bool $permitido ): void {
+		if ( doing_filter( 'rest_post_dispatch' ) ) {
+			return;
+		}
+
+		SWPK_Accesos::anotar_api( $ruta, $permitido );
+	}
+
 	private static function comprobar( WP_REST_Request $peticion, string $permiso ): bool|WP_Error {
 		$ruta = $peticion->get_method() . ' ' . $peticion->get_route();
 
 		if ( ! is_user_logged_in() ) {
-			SWPK_Accesos::anotar_api( $ruta, false );
+			self::anotar_llamada( $ruta, false );
 
 			return new WP_Error(
 				'swpk_sin_identidad',
@@ -162,7 +191,7 @@ class SWPK_Api {
 		}
 
 		if ( ! SWPK_Perfiles::puede( $permiso ) ) {
-			SWPK_Accesos::anotar_api( $ruta, false );
+			self::anotar_llamada( $ruta, false );
 
 			return new WP_Error(
 				'swpk_sin_permiso',
@@ -173,7 +202,7 @@ class SWPK_Api {
 			);
 		}
 
-		SWPK_Accesos::anotar_api( $ruta, true );
+		self::anotar_llamada( $ruta, true );
 
 		return true;
 	}

@@ -58,7 +58,6 @@ $movimientos = array_values( $movimientos );
 [ $en_pantalla, $pagina, $paginas ] = SWPK_Vista::paginar( $movimientos, SWPK_Vista::pagina_pedida(), 50 );
 
 $etq_evt = SWPK_Eventos::etiquetas();
-$grupos  = SWPK_Etiquetas::nombres();
 
 // Cuántos de cada tipo, para la línea de arriba y para el desplegable.
 $por_tipo = [];
@@ -148,7 +147,7 @@ arsort( $por_tipo );
 						<span class="swpk-gris">—</span>
 					<?php endif; ?>
 				</td>
-				<td class="swpk-gris"><?php echo esc_html( $s ? ( $grupos[ $s->tag ] ?? $s->tag ) : '' ); ?></td>
+				<td><?php echo $s ? SWPK_Admin::grupo_badge( (string) $s->tag ) : ''; ?></td>
 				<td<?php echo 'critico' === $e->severidad ? ' class="swpk-rojo"' : ''; ?>>
 					<?php echo esc_html( $etq_evt[ $e->tipo ] ?? $e->tipo ); ?>
 				</td>

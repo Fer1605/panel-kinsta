@@ -38,7 +38,7 @@ $plano = SWPK_Textos::para_asesora( $sitio, $hallazgos );
 	<p style="margin:0 0 16px">
 		<a href="<?php echo esc_url( 'https://' . ltrim( $sitio->dominio, 'htps:/' ) ); ?>" target="_blank" rel="noopener"
 			class="swpk-mono" style="color:#50575e"><?php echo esc_html( $sitio->dominio ); ?></a>
-		<span style="color:#50575e"> · <?php echo esc_html( SWPK_Etiquetas::nombres()[ $sitio->tag ] ); ?></span>
+		<span style="margin-left:7px"><?php echo SWPK_Admin::grupo_badge( (string) $sitio->tag ); ?></span>
 	</p>
 
 	<?php SWPK_Admin::mostrar_mensaje(); ?>

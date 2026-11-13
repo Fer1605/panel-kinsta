@@ -273,8 +273,33 @@ class SWPK_Admin {
 			.swpk-gris{color:#8c8f94}
 			.swpk-rojo{color:#b32d2e;font-weight:600}
 			.swpk-nota{max-width:900px;color:#50575e;font-size:13px;margin-top:10px}
-			.swpk-dia td{background:#f6f7f7 !important;font-weight:600;color:#1d2327;
-				border-top:1px solid #dcdcde}
+			/* Etiquetas de grupo. Mismo tamaño que las de nivel, pero con relleno
+			   suave y borde: en una tabla densa, cuatro colores plenos pelean
+			   con lo que de verdad tiene que saltar, que es lo rojo. */
+			.swpk-etq{display:inline-block;padding:2px 10px;border-radius:11px;font-size:11px;
+				font-weight:600;white-space:nowrap;border:1px solid;line-height:1.7}
+			.swpk-etq-desarrollo{background:#f0f6fc;color:#1b5e8f;border-color:#a7cdea}
+			.swpk-etq-auto_update{background:#edfaef;color:#0a6c22;border-color:#a3dcb0}
+			.swpk-etq-no_update{background:#fcf9e8;color:#7a5610;border-color:#e3cf94}
+			.swpk-etq-sin_etiqueta{background:#f0f0f1;color:#50575e;border-color:#c3c4c7}
+			.swpk-leyenda{display:flex;gap:7px;align-items:center;flex-wrap:wrap;
+				color:#50575e;font-size:12px;margin:0 0 9px}
+
+			/* El renglón del día.
+			   Antes era #f6f7f7, que es EL MISMO gris que las filas alternas de
+			   la tabla: un día no se distinguía de una fila cualquiera y los
+			   días se leían como una sola lista corrida. Ahora la banda es más
+			   oscura que cualquier fila, lleva regla gruesa arriba, y hoy va en
+			   azul para que se encuentre sin buscarlo. */
+			.swpk-dia td{background:#e4e7ea !important;color:#1d2327;
+				border-top:2px solid #9ea3a8;padding:11px 10px !important}
+			.swpk-dia:first-child td{border-top:0}
+			.swpk-dia-hoy td{background:#d7e4f2 !important;border-top-color:#2271b1}
+			.swpk-dia-fila{display:flex;justify-content:space-between;align-items:baseline;
+				gap:14px;flex-wrap:wrap}
+			.swpk-dia-f{font-size:14px;font-weight:700}
+			.swpk-dia-hoy .swpk-dia-f{color:#135e96}
+			.swpk-dia-r{font-size:12px;color:#50575e;font-weight:400}
 			.swpk-rango{display:flex;gap:14px;align-items:flex-end;flex-wrap:wrap;
 				margin:16px 0 4px;padding:14px 16px;background:#fff;border:1px solid #dcdcde;
 				border-radius:4px;max-width:900px}
@@ -321,6 +346,36 @@ class SWPK_Admin {
 			'<span class="swpk-nivel" style="background:%s">%s</span>',
 			esc_attr( $colores[ $nivel ] ?? '#50575e' ),
 			esc_html( $nombres[ $nivel ] ?? $nivel )
+		);
+	}
+
+	/**
+	 * El grupo de un sitio, como etiqueta y no como texto gris.
+	 *
+	 * El nombre a secas no dice nada. "No auto update", leído de pasada en una
+	 * columna gris, no distingue un sitio nuestro de uno del cliente — y es
+	 * justo la distinción que decide quién puede actualizarlo y quién tiene que
+	 * pedir permiso antes. La etiqueta lo dice con color para quien pasa rápido,
+	 * el `title` lo dice con palabras para quien se detiene, y la leyenda de
+	 * arriba de la tabla lo dice para quien lo ve por primera vez.
+	 */
+	public static function grupo_badge( string $tag ): string {
+		if ( '' === $tag ) {
+			return '';
+		}
+
+		$motivos = [
+			SWPK_Etiquetas::DESARROLLO => 'Sitio nuestro: lo administramos y lo actualizamos nosotros.',
+			SWPK_Etiquetas::AUTO       => 'Sitio nuestro: se actualiza solo.',
+			SWPK_Etiquetas::NO_UPDATE  => 'Sitio del cliente: no se le actualiza nada sin pedirlo.',
+			SWPK_Etiquetas::SIN        => 'Sin etiqueta en el hosting: no sabemos en qué grupo va.',
+		];
+
+		return sprintf(
+			'<span class="swpk-etq swpk-etq-%s" title="%s">%s</span>',
+			esc_attr( $tag ),
+			esc_attr( $motivos[ $tag ] ?? '' ),
+			esc_html( SWPK_Etiquetas::nombres()[ $tag ] ?? $tag )
 		);
 	}
 
@@ -616,63 +671,17 @@ class SWPK_Admin {
 		}
 		check_admin_referer( 'swpk_crear_llave' );
 
-		$nombre = sanitize_text_field( wp_unslash( (string) ( $_POST['nombre'] ?? '' ) ) );
-		if ( '' === $nombre ) {
-			self::volver_a_api( 'Ponle un nombre: sirve para saber a qué sistema revocarle el acceso.', true );
+		$llave = SWPK_Llaves::crear( wp_unslash( (string) ( $_POST['nombre'] ?? '' ) ) );
+
+		if ( is_wp_error( $llave ) ) {
+			self::volver_a_api( $llave->get_error_message(), true );
 		}
 
-		$login = 'llave-' . sanitize_user( sanitize_title( $nombre ), true );
-		$base  = $login;
-		$i     = 2;
-		while ( username_exists( $login ) ) {
-			$login = $base . '-' . $i;
-			++$i;
-		}
-
-		// Una llave no es una persona y no tiene correo, pero WordPress exige
-		// uno y único. Se le pone uno del propio panel; si el panel vive en una
-		// dirección sin punto (localhost), uno reservado que no existe para
-		// nadie, para no mandarle correo por error a un dominio ajeno.
-		$anfitrion = (string) wp_parse_url( home_url(), PHP_URL_HOST );
-		$dominio   = str_contains( $anfitrion, '.' ) ? $anfitrion : 'panel.invalid';
-
-		$id = wp_insert_user(
-			[
-				'user_login'   => $login,
-				'user_email'   => $login . '@' . $dominio,
-				'user_pass'    => wp_generate_password( 48, true, true ),
-				'display_name' => $nombre,
-				'role'         => SWPK_Perfiles::API,
-			]
-		);
-
-		if ( is_wp_error( $id ) ) {
-			self::volver_a_api( $id->get_error_message(), true );
-		}
-
-		$clave = '';
-		$error = '';
-
-		if ( wp_is_application_passwords_available() ) {
-			$creada = WP_Application_Passwords::create_new_application_password(
-				(int) $id,
-				[ 'name' => 'Panel Kinsta · ' . $nombre ]
-			);
-
-			if ( is_wp_error( $creada ) ) {
-				$error = $creada->get_error_message();
-			} else {
-				$clave = (string) $creada[0];
-			}
-		} else {
-			$error = 'WordPress las exige por HTTPS y este servidor no lo tiene';
-		}
-
-		set_transient(
-			'swpk_llave_nueva',
-			[ 'nombre' => $nombre, 'login' => $login, 'clave' => $clave, 'error' => $error ],
-			300
-		);
+		// La contraseña va en un transient y no en la dirección: lo que viaja en
+		// la URL queda escrito en el historial del navegador y en el registro del
+		// servidor, y esta se enseña una sola vez justamente para que no quede
+		// escrita en ningún lado.
+		set_transient( 'swpk_llave_nueva', $llave, SWPK_Llaves::ASOMO );
 
 		wp_safe_redirect( admin_url( 'admin.php?page=' . self::SLUG . '-api' ) );
 		exit;
@@ -686,23 +695,13 @@ class SWPK_Admin {
 		$id = isset( $_GET['usuario'] ) ? (int) $_GET['usuario'] : 0;
 		check_admin_referer( 'swpk_revocar_llave_' . $id );
 
-		$u = get_user_by( 'id', $id );
+		$nombre = SWPK_Llaves::revocar( $id );
 
-		// Solo llaves: este botón no puede servir para dejar fuera a una
-		// persona del equipo por un id cambiado a mano en la dirección.
-		if ( ! $u || ! in_array( SWPK_Perfiles::API, (array) $u->roles, true ) ) {
-			self::volver_a_api( 'Esa no es una llave de consulta.', true );
+		if ( is_wp_error( $nombre ) ) {
+			self::volver_a_api( $nombre->get_error_message(), true );
 		}
 
-		// Se borran sus contraseñas de aplicación Y se le quita el perfil: lo
-		// primero corta las que estén en uso, lo segundo evita que una llave
-		// nueva sobre esa misma cuenta vuelva a tener acceso sin decidirlo.
-		if ( class_exists( 'WP_Application_Passwords' ) ) {
-			WP_Application_Passwords::delete_all_application_passwords( $id );
-		}
-		$u->remove_role( SWPK_Perfiles::API );
-
-		self::volver_a_api( sprintf( 'Llave revocada: %s. Lo que la usara deja de poder consultar.', $u->display_name ) );
+		self::volver_a_api( sprintf( 'Llave revocada: %s. La cuenta se borró y lo que la usara deja de poder consultar.', $nombre ) );
 	}
 
 	private static function volver_a_api( string $mensaje, bool $error = false ): void {

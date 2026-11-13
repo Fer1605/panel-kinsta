@@ -132,6 +132,17 @@ class SWPK_Vista {
 	}
 
 	/** @return array{0:array,1:int,2:int} lo que toca mostrar, página actual, total de páginas */
+	/**
+	 * "1 sitio" / "12 sitios", en vez de "1 sitio(s)".
+	 *
+	 * El paréntesis le ahorra el trabajo a quien escribe y se lo pasa a quien
+	 * lee, y estas son las líneas que más se leen del panel: son las que
+	 * contestan "¿pasó algo hoy?".
+	 */
+	public static function plural( int $n, string $uno, string $varios ): string {
+		return 1 === $n ? '1 ' . $uno : number_format_i18n( $n ) . ' ' . $varios;
+	}
+
 	public static function paginar( array $todo, int $pagina_actual, int $por_pagina = self::POR_PAGINA ): array {
 		$total   = count( $todo );
 		$paginas = max( 1, (int) ceil( $total / $por_pagina ) );

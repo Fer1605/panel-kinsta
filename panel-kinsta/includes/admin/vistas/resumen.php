@@ -101,7 +101,6 @@ foreach ( $por_dia as $dia => $del_dia ) {
 
 $por_dia = array_slice( $por_dia, 0, 8, true );
 $etq_evt = SWPK_Eventos::etiquetas();
-$grupos  = SWPK_Etiquetas::nombres();
 $de_hoy  = count( $por_dia[ $hoy ] ?? [] );
 $bien_hoy = $resumen_dia[ $hoy ] ?? [ 'sitios' => 0, 'modulos' => 0 ];
 
@@ -150,16 +149,16 @@ $resumir = static function ( array $por_tipo ) use ( $etq_evt ): string {
 					echo esc_html( sprintf( 'Hoy no ha cambiado nada en los %d sitios.', (int) $estado['total'] ) );
 				} elseif ( 0 === $de_hoy ) {
 					echo esc_html( sprintf(
-						'Hoy no hay nada que mirar: solo se actualizaron solos %d sitio(s).',
-						(int) $bien_hoy['sitios']
+						'Hoy no hay nada que mirar: hubo movimiento en %s, y todo salió bien solo.',
+						SWPK_Vista::plural( (int) $bien_hoy['sitios'], 'sitio', 'sitios' )
 					) );
 				} else {
-					echo esc_html( sprintf( 'Hoy hay %d sitio(s) con algo que mirar.', $de_hoy ) );
+					echo esc_html( sprintf( 'Hoy hay %s con algo que mirar.', SWPK_Vista::plural( $de_hoy, 'sitio', 'sitios' ) ) );
 				}
 				?>
 			</strong>
 			<?php if ( $sin_leer ) : ?>
-				Y <?php echo (int) $sin_leer; ?> sitio(s) siguen con algo sin atender desde antes:
+				Y <?php echo esc_html( SWPK_Vista::plural( $sin_leer, 'sitio sigue', 'sitios siguen' ) ); ?> con algo sin atender desde antes:
 				<a href="<?php echo esc_url( admin_url( 'admin.php?page=panel-kinsta-vulnerabilidades' ) ); ?>">verlos</a>.
 			<?php else : ?>
 				Y no hay nada sin atender de antes.
@@ -176,6 +175,15 @@ $resumir = static function ( array $por_tipo ) use ( $etq_evt ): string {
 			</span>
 		<?php SWPK_Vista::cerrar_barra(); ?>
 
+		<p class="swpk-leyenda">
+			<?php echo SWPK_Admin::grupo_badge( SWPK_Etiquetas::DESARROLLO ); ?>
+			<?php echo SWPK_Admin::grupo_badge( SWPK_Etiquetas::AUTO ); ?>
+			<span>los administramos nosotros</span>
+			<span class="swpk-gris">·</span>
+			<?php echo SWPK_Admin::grupo_badge( SWPK_Etiquetas::NO_UPDATE ); ?>
+			<span>es del cliente: no se le toca nada sin pedirlo</span>
+		</p>
+
 		<table class="widefat striped swpk-tabla">
 			<thead>
 				<tr>
@@ -187,16 +195,29 @@ $resumir = static function ( array $por_tipo ) use ( $etq_evt ): string {
 			</thead>
 			<tbody>
 			<?php foreach ( $por_dia as $dia => $del_dia ) : ?>
-				<tr class="swpk-dia">
+				<?php
+				$bien      = $resumen_dia[ $dia ] ?? [ 'sitios' => 0, 'modulos' => 0 ];
+				$del_resto = [];
+
+				if ( $del_dia ) {
+					$del_resto[] = SWPK_Vista::plural( count( $del_dia ), 'sitio que mirar', 'sitios que mirar' );
+				}
+				if ( $bien['sitios'] ) {
+					$del_resto[] = sprintf( '%d sin nada que hacer', (int) $bien['sitios'] );
+				}
+				?>
+				<tr class="swpk-dia<?php echo $dia === $hoy ? ' swpk-dia-hoy' : ''; ?>">
 					<td colspan="4">
-						<?php echo esc_html( ucfirst( SWPK_Frescura::fmt( 'l j \d\e F', $dia . ' 12:00:00' ) ) ); ?>
-						<?php if ( $dia === $hoy ) : ?><span class="swpk-gris"> · hoy</span><?php endif; ?>
-						<?php if ( $del_dia ) : ?>
-							<span class="swpk-gris"> · <?php echo count( $del_dia ); ?> sitio(s) que mirar</span>
-						<?php endif; ?>
+						<span class="swpk-dia-fila">
+							<span class="swpk-dia-f">
+								<?php echo esc_html( ucfirst( SWPK_Frescura::fmt( 'l j \d\e F', $dia . ' 12:00:00' ) ) ); ?><?php if ( $dia === $hoy ) : ?> &mdash; hoy<?php endif; ?>
+							</span>
+							<span class="swpk-dia-r">
+								<?php echo esc_html( $del_resto ? implode( ' · ', $del_resto ) : 'no cambió nada' ); ?>
+							</span>
+						</span>
 					</td>
 				</tr>
-				<?php $bien = $resumen_dia[ $dia ] ?? [ 'sitios' => 0, 'modulos' => 0 ]; ?>
 				<?php if ( ! $del_dia ) : ?>
 					<tr>
 						<td colspan="4" class="swpk-gris">
@@ -225,8 +246,8 @@ $resumir = static function ( array $por_tipo ) use ( $etq_evt ): string {
 									<?php echo esc_html( $f['nombre'] ); ?>
 								<?php endif; ?>
 							</td>
-							<td class="swpk-gris">
-								<?php echo esc_html( $f['sitio'] ? ( $grupos[ $f['sitio']->tag ] ?? $f['sitio']->tag ) : '' ); ?>
+							<td>
+								<?php echo $f['sitio'] ? SWPK_Admin::grupo_badge( (string) $f['sitio']->tag ) : ''; ?>
 							</td>
 							<td<?php echo $f['grave'] ? ' class="swpk-rojo"' : ''; ?>>
 								<?php echo esc_html( $resumir( $f['por_tipo'] ) ); ?>
@@ -237,8 +258,21 @@ $resumir = static function ( array $por_tipo ) use ( $etq_evt ): string {
 				<?php if ( $bien['sitios'] && '' === $busqueda ) : ?>
 					<tr>
 						<td colspan="4" class="swpk-gris">
-							Y además, <strong><?php echo (int) $bien['sitios']; ?> sitio(s)</strong> se mantuvieron solos:
-							<?php echo (int) $bien['modulos']; ?> módulo(s) actualizados o resueltos, sin nada que hacer.
+							<?php
+							// Estos son los sitios del día en los que TODO lo que pasó fue
+							// rutinario: un módulo que se actualizó solo, una vulnerabilidad
+							// que se resolvió con esa actualización, o un sitio que volvió.
+							// El renglón dice qué pasó y quién lo hizo —nadie—, porque un
+							// contador de buenas noticias que no se entiende no es una buena
+							// noticia: es un número más que alguien va a tener que preguntar.
+							$n_sitios = (int) $bien['sitios'];
+							printf(
+								'Y además, <strong>%s</strong> %s que nadie entrara: %s que salieron bien solos (módulos actualizados, vulnerabilidades resueltas, sitios que volvieron).',
+								esc_html( SWPK_Vista::plural( $n_sitios, 'sitio', 'sitios' ) ),
+								esc_html( 1 === $n_sitios ? 'no necesitó' : 'no necesitaron' ),
+								esc_html( SWPK_Vista::plural( (int) $bien['modulos'], 'movimiento', 'movimientos' ) )
+							);
+							?>
 						</td>
 					</tr>
 				<?php endif; ?>

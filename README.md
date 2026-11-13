@@ -303,6 +303,7 @@ panel-kinsta/
     ├── class-riesgo.php          cruce de versiones instaladas contra el feed
     ├── class-eventos.php         comparación entre fotos: qué cambió
     ├── class-perfiles.php        roles, permisos y alcance por perfil
+    ├── class-llaves.php          las llaves de la API, lejos de las personas
     ├── class-accesos.php         entradas, salidas e intentos fallidos
     ├── class-monitor.php         sondeo de disponibilidad cada 5 minutos
     ├── class-receptor.php        recibe los reportes firmados de los agentes
@@ -316,6 +317,8 @@ panel-kinsta/
     │   ├── class-fuente-api.php  la API real
     │   └── class-fuente-demo.php datos de prueba
     └── admin/                    el panel
+
+conector-mcp/                 el traductor para Claude Desktop (Node, sin dependencias)
 ```
 
 El hosting está detrás de `SWPK_Fuente`, no escrito por todo el código: agregar
@@ -360,6 +363,45 @@ botón para crear una llave, el catálogo de rutas y un probador en vivo.
 La llave de Kinsta no sale del plugin: si hace falta el dato fresco, se dispara
 un proceso y el panel pregunta con la suya.
 
+### Una llave no vive con las personas
+
+Por dentro una llave es una cuenta de WordPress, y tiene que serlo: la
+autenticación básica necesita un usuario, y el recorte por perfil cuelga de que
+haya una identidad. Pero una cuenta suelta en *Usuarios* se puede editar, y ahí
+`swpk_api` deja de ser de solo lectura — basta con cambiarle la contraseña o
+subirle el rol desde un desplegable.
+
+`SWPK_Llaves` las saca de ahí y les pone cuatro barrotes:
+
+1. No salen en *Usuarios* ni en sus filtros. Su lista es *Conectarse (API)*.
+2. No se editan, no se borran y no se ascienden: tampoco un administrador.
+   `map_meta_cap` niega `edit_user`, `delete_user`, `promote_user` y sus
+   parientes cuando el destino es una llave.
+3. No entran por el formulario de WordPress (`wp_authenticate_user`), lo cual
+   **no** afecta a las contraseñas de aplicación: `wp_authenticate_application_password()`
+   no pasa por ese filtro.
+4. No se les puede pedir "recuperar contraseña".
+
+Revocar borra la cuenta, no le quita el rol. Dejarla sin rol llenaba la lista de
+cuentas `llave-algo` que nadie sabía qué eran — pasó, y por eso cambió. Lo que
+la llave consultó no se pierde: `swpk_accesos` guarda el login como texto.
+
+**Hasta dónde llega:** quien pueda instalar un plugin o entrar a la base de
+datos deshace cualquiera de los cuatro. Esto cierra el camino fácil, que es la
+pantalla de Usuarios; lo otro ya exige el servidor, y ese día la llave de la API
+es el menor de los problemas.
+
+### El conector para Claude Desktop
+
+Claude Desktop no consume una API REST: habla MCP. `conector-mcp/` es el
+traductor — un archivo de Node sin dependencias, porque esto se lo tiene que
+poder instalar alguien que no programa y `npm install` en la máquina de otro es
+donde mueren estas cosas. Expone las siete rutas de lectura como herramientas;
+las tres de proceso quedan fuera a propósito, para que una conversación no pueda
+lanzar más de 200 peticiones a Kinsta a media pregunta. Su README tiene la
+configuración y `node index.mjs --probar` comprueba la conexión antes de tocar
+nada.
+
 ## Límites de la API de Kinsta
 
 - **120 peticiones por minuto** por empresa. Por eso se usan los endpoints de
@@ -378,12 +420,13 @@ un proceso y el panel pregunta con la suya.
 En desarrollo. Funciona el inventario, el cruce de vulnerabilidades, la
 comparación diaria, los textos de aviso, la bitácora, el agente con su reporte
 firmado y su verificación en dos pasos, el monitor de caídas, los perfiles de
-acceso, el registro de entradas, los correos automáticos, la exportación y la
-API de consulta.
+acceso, el registro de entradas, los correos automáticos, la exportación, la
+API de consulta y el conector MCP.
 
 Falta el despliegue del agente en los sitios, que no es programar sino entrar a
-cada uno. Y para que la API sirva de algo desde fuera, falta que el panel viva
-en un servidor al que se pueda llegar: hoy corre en una máquina de la casa.
+cada uno. Y para que la API y el conector sirvan de algo desde fuera, falta que
+el panel viva en un servidor al que se pueda llegar: hoy corre en una máquina de
+la casa, y desde ahí no lo alcanza nadie más.
 
 ## Atribución
 
