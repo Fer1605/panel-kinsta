@@ -28,3 +28,6 @@ PRUEBAS.md
 
 # Exportaciones del documento del jefe
 *.pdf
+
+# Copias del panel empaquetadas para mandar a alguien
+*.zip
