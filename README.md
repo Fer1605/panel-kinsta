@@ -450,8 +450,11 @@ firmado y su verificación en dos pasos, el monitor de caídas, los perfiles de
 acceso, el registro de entradas, los correos automáticos, la exportación, la
 API de consulta y el conector MCP.
 
-Falta el despliegue del agente en los sitios, que no es programar sino entrar a
-cada uno. Y para que la API y el conector sirvan de algo desde fuera, falta que
+**El agente no está instalado en ningún sitio todavía** — solo corre en el
+sitio de prueba local. Ese despliegue no es programar, es entrar a cada uno, y
+es lo que convierte al panel en algo que sirve: sin agente no hay usuarios, ni
+verificación en dos pasos, ni nada de lo que el panel sabe de puertas adentro
+de un sitio. Y para que la API y el conector sirvan de algo desde fuera, falta que
 el panel viva en un servidor al que se pueda llegar: hoy corre en una máquina de
 la casa, y desde ahí no lo alcanza nadie más.
 
