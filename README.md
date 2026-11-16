@@ -9,6 +9,11 @@ Está hecho como plugin de WordPress: se instala en un WordPress propio, aparte
 de los sitios que vigila, para que siga funcionando aunque el hosting vigilado
 se caiga.
 
+> **¿Vas a tocar el código?** El manual completo —cómo está armado, por qué
+> está así, y qué reglas no se pueden romper— está en
+> **[`documentacion/`](documentacion/README.md)**. Este README cuenta qué hace
+> el panel; esa carpeta cuenta cómo cambiarlo sin romper nada.
+
 ## Qué resuelve
 
 Una agencia con muchos sitios en Kinsta puede ver cada sitio por separado en
@@ -293,11 +298,13 @@ problemas de memoria y sin pelearse con fuentes y acentos.
 panel-kinsta/
 ├── panel-kinsta.php              arranque y selección de la fuente de datos
 └── includes/
-    ├── class-tablas.php          esquema (6 tablas)
+    ├── class-tablas.php          esquema (11 tablas)
     ├── class-ajustes.php         configuración; la constante manda sobre la BD
     ├── class-etiquetas.php       traduce las etiquetas del hosting a 3 grupos
     ├── class-versiones.php       comparación de versiones tolerante
     ├── class-inventario.php      el inventario consolidado
+    ├── class-normas.php          las normas de seguridad y el cumplimiento
+    ├── class-ordenes.php         la cola de lo que el panel le pide a un agente
     ├── class-sincronizador.php   la corrida diaria
     ├── class-wordfence.php       feed de vulnerabilidades (lectura en trozos)
     ├── class-riesgo.php          cruce de versiones instaladas contra el feed
@@ -448,7 +455,8 @@ En desarrollo. Funciona el inventario, el cruce de vulnerabilidades, la
 comparación diaria, los textos de aviso, la bitácora, el agente con su reporte
 firmado y su verificación en dos pasos, el monitor de caídas, los perfiles de
 acceso, el registro de entradas, los correos automáticos, la exportación, la
-API de consulta y el conector MCP.
+API de consulta, el conector MCP, y las normas de seguridad con su tablero de
+cumplimiento, su canal de órdenes y el reseteo masivo de contraseñas.
 
 **El agente no está instalado en ningún sitio todavía** — solo corre en el
 sitio de prueba local. Ese despliegue no es programar, es entrar a cada uno, y
