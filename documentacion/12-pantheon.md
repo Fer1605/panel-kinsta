@@ -16,29 +16,99 @@ sitio donde lo quiere probar está en Pantheon.
 
 ## Lo primero, porque cambia todo el plan
 
-**Pantheon no tiene un endpoint que liste los plugins de un sitio.**
+**Pantheon sí tiene API. Lo que no tiene es la respuesta que necesitamos.**
 
-Kinsta sí: con tres llamadas de nivel empresa, el panel se trae los plugins y
-los temas de los 108 sitios, con sus versiones, si hay actualización y si la
-versión es vulnerable. Todo el diseño del panel cuelga de eso.
+Conviene decirlo en ese orden, porque lo contrario —«Pantheon no tiene
+API»— es falso y además hace que la conversación empiece por donde no es. El
+problema no es la puerta: es que detrás de la puerta no está el dato.
 
-Lo que Pantheon ofrece es **Terminus**, una herramienta de línea de comandos:
+### Qué hay, exactamente
 
-| Lo que hace | Cómo |
-|---|---|
-| Listar los sitios de la cuenta | `terminus site:list` |
-| Correr WP-CLI **dentro** de un sitio | `terminus wp <sitio>.<entorno> -- plugin list --format=json` |
-| Autenticarse | `terminus auth:login --machine-token …` |
+Pantheon tiene **dos formas** de hablar con él desde fuera:
 
-O sea: para saber qué plugins tiene un sitio, hay que **entrar al sitio y
-preguntárselo a WordPress**. No hay atajo por API.
+| | Qué es | Cómo se autentica |
+|---|---|---|
+| **La API pública** | Una API REST, nueva. Gestiona cuenta, sitios y entornos | Un *Personal Access Token*, con `Authorization: Bearer`. **No acepta los machine tokens antiguos** |
+| **Terminus** | Un programa de línea de comandos, no una API. Es lo que usaba todo el mundo antes | Un *machine token*, con `terminus auth:login --machine-token …` |
 
-Y hay un detalle de seguridad que importa más que el resto: **un machine token
-de Pantheon no se puede limitar a un proyecto.** Da acceso a todo lo que
-alcanza esa cuenta, y a diferencia de la llave de Kinsta —que al menos está
-encerrada detrás de un cliente que solo sabe hacer GET— Terminus ejecuta
-comandos. Un token guardado en el panel sería una llave con poder de escritura
-sobre toda la cuenta de Pantheon.
+Y lo que importa de verdad:
+
+> **Ninguna de las dos sabe qué plugins tiene instalado un sitio.**
+
+No es un endpoint que falte y vayan a agregar: es que **Pantheon no mira
+dentro de WordPress**. Su API administra el sitio —entornos, despliegues,
+copias, dominios— igual que administraría un sitio de Drupal o uno hecho a
+mano. Qué plugins tiene y en qué versión es asunto de WordPress, no de la
+plataforma.
+
+Kinsta sí lo sabe porque **escanea la instalación de WordPress** y guarda ese
+inventario. Por eso con tres llamadas de nivel empresa el panel se trae los
+plugins y los temas de los 108 sitios, con sus versiones y si son
+vulnerables. Todo el diseño del panel cuelga de eso, y es lo que Pantheon no
+ofrece de ninguna manera.
+
+### Entonces, ¿cómo se sabría qué hay dentro de un sitio de Pantheon?
+
+Entrando al sitio y preguntándoselo a WordPress. Terminus sabe hacerlo, y es
+la única vía:
+
+```
+terminus wp <sitio>.<entorno> -- plugin list --format=json
+```
+
+Lo que hace ese comando por debajo es **abrir una conexión al contenedor del
+sitio y correr WP-CLI ahí dentro**. Uno por uno, con su login y su conexión
+cada vez.
+
+### Y Terminus es un programa, no una dirección web
+
+Esto se explicó mal la primera vez y conviene dejarlo claro, porque cambia lo
+que cuesta.
+
+Una API se usa escribiendo una dirección: el panel manda una petición HTTPS y
+le contestan. No hace falta instalar nada.
+
+Terminus no es eso. Es **un programa que se instala**, como WP-CLI o como
+Composer, y se ejecuta desde la línea de comandos. Para que el panel lo use,
+hacen falta dos cosas que no son gratis:
+
+1. **Instalar Terminus en el servidor donde vive el panel.** Con PHP y
+   Composer, y manteniéndolo al día como cualquier otra dependencia.
+2. **Que ese servidor permita que un sitio web ejecute programas del
+   sistema** (`shell_exec` o equivalente). Muchos hostings administrados lo
+   bloquean por seguridad — **Kinsta entre ellos**, que es donde el panel va a
+   vivir.
+
+O sea que el camino de Terminus puede chocar con el hosting del propio panel
+antes incluso de llegar a Pantheon.
+
+### Lo del token, con el matiz correcto
+
+Ninguno de los dos tokens se puede limitar: **no hay alcances, ni modo de solo
+lectura, ni restricción por sitio**. La documentación de la API pública lo
+dice con todas sus letras — el token actúa como el usuario, y puede ver y
+hacer lo que esa cuenta pueda.
+
+Eso es peor que la llave de Kinsta, que tampoco tiene alcances pero al menos
+está encerrada detrás de un cliente que solo sabe hacer GET (`SWPK_Http`). Un
+token de Pantheon guardado en el panel sería una llave con poder de escritura
+sobre toda la cuenta.
+
+Dos matices más, que son operativos y no de seguridad:
+
+- El **Personal Access Token caduca a los 90 días**. Habría que renovarlo
+  cuatro veces al año o el panel se queda ciego sin avisar.
+- El **machine token de Terminus no caduca**, y se puede generar uno nuevo
+  desde cualquier cuenta con acceso. Así que lo de «si alguien se va de la
+  empresa» no es el problema: el problema es lo que el token permite hacer.
+
+### Y un aviso sobre madurez
+
+La API pública es reciente y su propia documentación tiene una página de
+**limitaciones conocidas**: algunas llamadas devuelven error 500 con token
+personal, y hay fallos de autenticación intermitentes. Tampoco hay un endpoint
+documentado para listar los sitios de una cuenta — se llega dando un rodeo por
+los *workspaces*. No es algo sobre lo que construir hoy.
 
 ---
 
@@ -46,15 +116,21 @@ sobre toda la cuenta de Pantheon.
 
 ### A · Terminus desde el servidor del panel
 
-El panel instala Terminus y lo llama con `shell_exec` por cada sitio.
+El panel instala Terminus y lo llama por cada sitio.
+
+**A favor, y es real:** es lo único que puede **descubrir sitios**. Con
+`terminus site:list` el panel sabría qué sitios existen en la cuenta aunque no
+tengan nada instalado — que es justo lo que se pierde con la opción B.
 
 **En contra, y es bastante:**
-- Hay que instalar Terminus y Composer en el servidor del panel.
+- Hay que instalar Terminus y Composer en el servidor del panel, y mantenerlos.
 - Hace falta `shell_exec` habilitado. **En Kinsta suele estar deshabilitado**,
-  que es donde vive el panel.
-- Una llamada por sitio, y cada una levanta un WP-CLI remoto: segundos, no
-  milisegundos. Con 100 sitios, la corrida pasa de minutos a horas.
-- El token no se puede limitar. Rompe el espíritu de «solo lectura».
+  que es donde el panel va a vivir.
+- Una llamada por sitio, y cada una abre una conexión y levanta un WP-CLI
+  remoto: segundos, no milisegundos. Con 100 sitios, la corrida pasa de
+  minutos a horas.
+- El token no se puede limitar y permite escribir. Rompe el espíritu de «solo
+  lectura» que el panel mantiene con Kinsta.
 
 ### B · Que lo reporte el agente ← **la que recomiendo**
 
@@ -88,11 +164,24 @@ mismo.
   el panel. Eso ya pasa hoy con los usuarios y las normas, y el panel ya lo
   detecta: un agente callado 48 horas sale marcado.
 
-### C · La API interna de Pantheon
+### C · Las dos juntas: Terminus solo para la lista, el agente para el detalle
 
-La que usa Terminus por dentro. **Descartada:** no está documentada
-públicamente, así que puede cambiar sin aviso y dejar el panel ciego sin que
-nadie se entere hasta que un cliente pregunte.
+Vale la pena nombrarla porque resuelve el único punto flojo de la B.
+
+Terminus se usaría **una vez al día y para una sola cosa**: `site:list`, para
+saber qué sitios existen en la cuenta. El inventario de cada sitio lo seguiría
+reportando el agente. Así el panel sabría que un sitio existe aunque nadie le
+haya instalado nada, y lo mostraría como «sin plugin, no sabemos nada de él» —
+que es exactamente lo que hoy hace con los sitios de Kinsta sin agente.
+
+El coste: vuelve el token sin límites, y vuelve la dependencia de poder
+ejecutar programas en el servidor del panel. Pero es **una llamada al día en
+vez de cien**, y no entra en el camino crítico: si falla, el panel sigue
+funcionando con los sitios que sí reportan.
+
+**Mi recomendación es dejarla para después.** Primero la B, que no pide
+credenciales nuevas. Si al usarlo resulta que hace falta ver los sitios sin
+agente, se agrega esto encima sin rehacer nada.
 
 ---
 
@@ -162,14 +251,13 @@ Dos cosas pequeñas que sin ellas no funciona:
   mismos, y mezclarlos sin decirlo sería volver a confundir «no lo sé» con
   «está bien».
 
-### Fase 6 · Opcional: descubrir sitios con Terminus
+### Fase 6 · Opcional, y solo si hace falta: la opción C
 
-Solo para la lista de sitios, no para el inventario. Resolvería el punto flojo
-de la B —que no descubre sitios— sin meter Terminus en la corrida diaria.
-
-Lo dejo fuera de la primera versión a propósito: trae de vuelta el token sin
-límites, y es lo único que la B evita por completo. Si hace falta, que sea una
-decisión aparte y consciente.
+Terminus una vez al día, solo para `site:list`. Es la salida C de arriba.
+Queda fuera de la primera versión a propósito — trae de vuelta el token sin
+límites y la dependencia de poder ejecutar programas en el servidor, que es lo
+único que la B evita por completo. Si al usarlo resulta que hace falta ver los
+sitios sin agente, se agrega encima sin rehacer nada.
 
 ---
 
@@ -215,9 +303,24 @@ que hace falta para que conviva con los 108 de Kinsta.
 
 ---
 
-**Fuentes consultadas sobre lo que ofrece Pantheon:**
-[Command Directory de Terminus](https://docs.pantheon.io/terminus/commands) ·
-[`site:list`](https://docs.pantheon.io/terminus/commands/site-list) ·
-[`machine-token:list`](https://docs.pantheon.io/terminus/commands/machine-token-list) ·
-[Pantheon en la documentación de Tugboat](https://docs.tugboatqa.com/starter-configs/tutorials/pantheon/), sobre que el token no se puede limitar a un proyecto ·
-[Comandos de Terminus para WordPress](https://www.knihter.com/insights/wordpress/pantheon-terminus-commands-essential-wp-cli-shortcuts-for-wordpress-developers/), sobre `terminus wp … -- plugin list`
+**Fuentes, y qué salió de cada una.** Conviene dejarlas: esto se escribió a
+partir de documentación que es reciente y cambia, así que dentro de unos meses
+habrá que volver a mirarla antes de dar nada por cierto.
+
+| Página | Qué confirma |
+|---|---|
+| [Guía de la API pública](https://docs.pantheon.io/guides/public-api) | Que existe una API REST pública (Public API v1) |
+| [Autenticación](https://docs.pantheon.io/guides/public-api/authentication) | Personal Access Token con `Bearer`; **no** acepta los machine tokens antiguos |
+| [Sitios en la API](https://docs.pantheon.io/guides/public-api/sites) | Solo `GET /sites/{siteId}` y búsqueda por nombre. **No hay listado de sitios documentado** |
+| [Limitaciones conocidas](https://docs.pantheon.io/guides/public-api/known-limitations) | Errores 500 con token personal y fallos de autenticación intermitentes |
+| [Personal Access Tokens](https://docs.pantheon.io/personal-access-tokens) | Caducan a los 90 días; se revocan desde los ajustes personales |
+| [Comandos de Terminus](https://docs.pantheon.io/terminus/commands) y [`site:list`](https://docs.pantheon.io/terminus/commands/site-list) | Que Terminus sí puede listar los sitios de la cuenta |
+| [Pantheon en la documentación de Tugboat](https://docs.tugboatqa.com/starter-configs/tutorials/pantheon/) | Que el token no se puede limitar a un proyecto |
+| [Comandos de Terminus para WordPress](https://www.knihter.com/insights/wordpress/pantheon-terminus-commands-essential-wp-cli-shortcuts-for-wordpress-developers/) | La forma `terminus wp … -- plugin list` |
+
+**Lo que NO se pudo confirmar:** la especificación OpenAPI de la API pública
+pesa 224 KB y se leyó en parte. La conclusión de que no hay inventario de
+plugins es firme para todo lo leído —guía, limitaciones y la mayor parte de la
+especificación— pero no se recorrió endpoint por endpoint. Si alguien quiere
+cerrarlo del todo, el sitio es
+[`api.pantheon.io/v1/openapi.json`](https://api.pantheon.io/v1/openapi.json).
