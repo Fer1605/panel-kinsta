@@ -163,13 +163,84 @@ foreach ( $tablero['filas'] as $f ) {
 		}
 	}
 }
+
+// ── Filtrar los problemas por gravedad y por norma ───────────────────────────
+//
+// Con diez normas encendidas esta parte son diez bloques largos, y lo que uno
+// viene a hacer casi siempre es «enséñame solo lo grave» o «enséñame solo lo
+// de la verificación en dos pasos».
+//
+// Las opciones salen de las normas que DE VERDAD están fallando, no del
+// catálogo entero: ofrecer una norma que cumple todo el mundo es ofrecer un
+// filtro que solo sabe dejar la pantalla vacía.
+$sev_posibles = [];
+$normas_malas = [];
+
+foreach ( $con_fallas as $r ) {
+	$sev = (string) $r['norma']->severidad;
+	$sev_posibles[ $sev ] = ucfirst( $sev );
+	$normas_malas[ (string) $r['norma']->clave ] = (string) $r['norma']->nombre;
+}
+
+$orden_sev = [ 'alta' => 0, 'media' => 1, 'baja' => 2 ];
+uksort( $sev_posibles, static fn( $a, $b ) => ( $orden_sev[ $a ] ?? 9 ) <=> ( $orden_sev[ $b ] ?? 9 ) );
+
+$sev_pedida   = SWPK_Vista::opcion_pedida( 'sev', $sev_posibles );
+$norma_pedida = SWPK_Vista::opcion_pedida( 'norma', $normas_malas );
+
+$con_fallas_todas = $con_fallas;
+
+if ( '' !== $sev_pedida || '' !== $norma_pedida ) {
+	$con_fallas = array_values(
+		array_filter(
+			$con_fallas,
+			static function ( $r ) use ( $sev_pedida, $norma_pedida ) {
+				if ( '' !== $sev_pedida && (string) $r['norma']->severidad !== $sev_pedida ) {
+					return false;
+				}
+				if ( '' !== $norma_pedida && (string) $r['norma']->clave !== $norma_pedida ) {
+					return false;
+				}
+				return true;
+			}
+		)
+	);
+}
 ?>
 
-<?php if ( $con_fallas ) : ?>
+<?php if ( $con_fallas_todas ) : ?>
 	<h2 style="margin-top:28px">Lo que hay que arreglar</h2>
 	<p class="swpk-mudo" style="margin:-4px 0 10px">
 		Cada bloque es un problema encontrado. Debajo, los sitios que lo tienen.
 	</p>
+
+	<?php
+	SWPK_Vista::barra_de_filtros(
+		'panel-kinsta-seguridad',
+		[
+			'sev'   => [
+				'etiqueta' => 'Gravedad',
+				'opciones' => $sev_posibles,
+				'actual'   => $sev_pedida,
+				'todas'    => 'Cualquiera',
+			],
+			'norma' => [
+				'etiqueta' => 'Qué norma',
+				'opciones' => $normas_malas,
+				'actual'   => $norma_pedida,
+				'todas'    => 'Cualquiera',
+			],
+		],
+		// Los dos filtros de esta pantalla son dos formularios distintos, así
+		// que cada uno tiene que llevarse puesto lo del otro. Si no, filtrar
+		// por gravedad borraba el sitio que se estaba buscando abajo.
+		[ 'seccion' => 'cumplimiento', 'q' => SWPK_Vista::busqueda_pedida() ]
+	);
+	?>
+
+	<?php if ( ! $con_fallas ) : ?>
+		<div class="notice notice-info inline"><p>Ningún problema coincide con ese filtro.</p></div>
+	<?php endif; ?>
 
 	<?php
 	// Qué hace el botón, dicho antes de que nadie lo pulse.
@@ -333,14 +404,68 @@ foreach ( $medibles as $f ) {
 	</p>
 
 	<?php
+	$como_posibles = [
+		'falla'  => 'Le falta algo',
+		'hueco'  => 'Con normas sin revisar',
+		'limpio' => 'Todo en orden',
+	];
+
+	$como_pedido  = SWPK_Vista::opcion_pedida( 'como', $como_posibles );
+	$busca_sitio  = SWPK_Vista::busqueda_pedida();
+	$medibles_vis = $medibles;
+
+	if ( '' !== $como_pedido || '' !== $busca_sitio ) {
+		$aguja        = strtolower( remove_accents( $busca_sitio ) );
+		$medibles_vis = array_values(
+			array_filter(
+				$medibles,
+				static function ( $f ) use ( $como_pedido, $aguja, $nombre_de ) {
+					if ( 'falla' === $como_pedido && $f['fallas'] < 1 ) {
+						return false;
+					}
+					if ( 'hueco' === $como_pedido && $f['huecos'] < 1 ) {
+						return false;
+					}
+					if ( 'limpio' === $como_pedido && ( $f['fallas'] > 0 || $f['huecos'] > 0 ) ) {
+						return false;
+					}
+					if ( '' === $aguja ) {
+						return true;
+					}
+					$pajar = strtolower( remove_accents( (string) $nombre_de( $f['sitio'] ) . ' ' . (string) $f['sitio']->dominio ) );
+					return str_contains( $pajar, $aguja );
+				}
+			)
+		);
+	}
+
+	SWPK_Vista::barra_de_filtros(
+		'panel-kinsta-seguridad',
+		[
+			'como' => [
+				'etiqueta' => 'Cómo está',
+				'opciones' => $como_posibles,
+				'actual'   => $como_pedido,
+				'todas'    => 'Como sea',
+			],
+		],
+		[ 'seccion' => 'cumplimiento', 'sev' => $sev_pedida, 'norma' => $norma_pedida ],
+		$busca_sitio
+	);
+
 	// Esto puede llegar a 108 filas. «No quiero tablas infinitas»: se pagina
 	// con el mismo mecanismo que el resto del panel, así que el número de
 	// página viaja en la dirección y se puede enlazar y compartir.
 	[ $medibles_pagina, $pag_med, $pags_med ] = SWPK_Vista::paginar(
-		$medibles,
+		$medibles_vis,
 		SWPK_Vista::pagina_pedida()
 	);
 	?>
+
+	<?php if ( ! $medibles_vis ) : ?>
+		<div class="notice notice-info inline"><p>Ningún sitio coincide con ese filtro.</p></div>
+	<?php endif; ?>
+
 	<table class="widefat striped" style="max-width:980px">
 		<thead>
 			<tr>
@@ -375,7 +500,7 @@ foreach ( $medibles as $f ) {
 		</tbody>
 	</table>
 
-	<?php SWPK_Vista::paginador( $pag_med, $pags_med, count( $medibles ), 'sitios revisables' ); ?>
+	<?php SWPK_Vista::paginador( $pag_med, $pags_med, count( $medibles_vis ), 'sitios revisables', 'sitio revisable' ); ?>
 <?php endif; ?>
 
 <?php if ( $cumplidas && $medibles ) : ?>

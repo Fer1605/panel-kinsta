@@ -157,7 +157,7 @@ $hubo_alguna_vez = SWPK_Bitacora::hay_alguno();
 
 	<p><?php SWPK_Admin::boton_exportar( 'bitacora' ); ?></p>
 
-	<?php SWPK_Vista::paginador( $pagina, $paginas, count( $registros ), 'avisos' ); ?>
+	<?php SWPK_Vista::paginador( $pagina, $paginas, count( $registros ), 'avisos', 'aviso' ); ?>
 
 	<?php if ( ! $registros ) : ?>
 		<?php /* "Nunca ha salido nada" y "no hay nada en este rango" son dos cosas
@@ -219,6 +219,6 @@ $hubo_alguna_vez = SWPK_Bitacora::hay_alguno();
 			<?php endforeach; ?>
 			</tbody>
 		</table>
-		<?php SWPK_Vista::paginador( $pagina, $paginas, count( $registros ), 'avisos' ); ?>
+		<?php SWPK_Vista::paginador( $pagina, $paginas, count( $registros ), 'avisos', 'aviso' ); ?>
 	<?php endif; ?>
 </div>

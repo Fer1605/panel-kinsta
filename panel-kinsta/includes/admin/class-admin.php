@@ -27,6 +27,8 @@ class SWPK_Admin {
 		add_action( 'admin_post_swpk_crear_acceso', [ __CLASS__, 'accion_crear_acceso' ] );
 		add_action( 'admin_post_swpk_modo_envio', [ __CLASS__, 'accion_modo_envio' ] );
 		add_action( 'admin_post_swpk_envios', [ __CLASS__, 'accion_envios' ] );
+		add_action( 'admin_post_swpk_guardar_plantilla', [ __CLASS__, 'accion_guardar_plantilla' ] );
+		add_action( 'admin_post_swpk_plantilla_fabrica', [ __CLASS__, 'accion_plantilla_fabrica' ] );
 		add_action( 'admin_post_swpk_correo_semanal', [ __CLASS__, 'accion_correo_semanal' ] );
 		add_action( 'admin_post_swpk_correo_diario', [ __CLASS__, 'accion_correo_diario' ] );
 		add_action( 'admin_post_swpk_correo_mensual', [ __CLASS__, 'accion_correo_mensual' ] );
@@ -99,7 +101,7 @@ class SWPK_Admin {
 	/** El botón de bajar a Excel, con los filtros que estén puestos. */
 	public static function boton_exportar( string $tipo ): void {
 		$filtros = [];
-		foreach ( [ 'tag', 'nivel', 'q' ] as $k ) {
+		foreach ( [ 'tag', 'nivel', 'q', 'wp', 'php' ] as $k ) {
 			if ( ! empty( $_GET[ $k ] ) ) {
 				$filtros[ $k ] = sanitize_text_field( wp_unslash( (string) $_GET[ $k ] ) );
 			}
@@ -183,6 +185,7 @@ class SWPK_Admin {
 	 *
 	 *   heredado.css  lo que ya había, movido tal cual
 	 *   panel.css     el diseño nuevo, que va encima
+	 *   filtros.js    que los desplegables de filtro se apliquen al elegir
 	 *
 	 * Solo se cargan en las pantallas del panel. Una hoja que reescribe tablas
 	 * y botones no tiene por qué andar suelta por el escritorio de alguien.
@@ -198,6 +201,7 @@ class SWPK_Admin {
 
 		wp_enqueue_style( 'swpk-heredado', $base . 'heredado.css', [], SWPK_VERSION );
 		wp_enqueue_style( 'swpk-panel', $base . 'panel.css', [ 'swpk-heredado' ], SWPK_VERSION );
+		wp_enqueue_script( 'swpk-filtros', $base . 'filtros.js', [], SWPK_VERSION, true );
 	}
 
 	public static function aviso_demo(): void {
@@ -615,6 +619,80 @@ class SWPK_Admin {
 			admin_url( 'admin.php?page=' . self::SLUG . '-correos&swpk_msg=' . ( $error ? 'error:' : 'ok:' ) . rawurlencode( $mensaje ) )
 		);
 		exit;
+	}
+
+	/** Vuelve a la plantilla que se estaba editando, no al principio. */
+	private static function volver_a_plantilla( string $cual, string $mensaje, bool $error = false ): void {
+		wp_safe_redirect(
+			add_query_arg(
+				[
+					'page'      => self::SLUG . '-correos',
+					'seccion'   => 'plantillas',
+					'plantilla' => $cual,
+					'swpk_msg'  => ( $error ? 'error:' : 'ok:' ) . $mensaje,
+				],
+				admin_url( 'admin.php' )
+			)
+		);
+		exit;
+	}
+
+	/**
+	 * Guardar la redacción de un aviso.
+	 *
+	 * El cuerpo NO pasa por sanitize_text_field: eso le comería los saltos de
+	 * línea, que es lo único que separa un párrafo del siguiente. Se guarda tal
+	 * cual y se escapa al armar el correo, que es donde importa.
+	 */
+	public static function accion_guardar_plantilla(): void {
+		if ( ! self::puede_administrar() ) {
+			wp_die( 'Sin permiso.' );
+		}
+		check_admin_referer( 'swpk_guardar_plantilla' );
+
+		$cual = isset( $_POST['plantilla'] ) ? sanitize_key( (string) $_POST['plantilla'] ) : '';
+
+		if ( ! isset( SWPK_Plantillas::catalogo()[ $cual ] ) ) {
+			self::volver_a_correos( 'Esa plantilla no existe.', true );
+		}
+
+		$asunto = isset( $_POST['asunto'] ) ? wp_unslash( (string) $_POST['asunto'] ) : '';
+		$cuerpo = isset( $_POST['cuerpo'] ) ? wp_unslash( (string) $_POST['cuerpo'] ) : '';
+
+		// Un asunto vacío deja un correo sin asunto, que es lo que más parece
+		// correo basura. Y un cuerpo vacío manda un correo en blanco a cien
+		// clientes. Las dos cosas se paran aquí.
+		if ( '' === trim( $asunto ) || '' === trim( $cuerpo ) ) {
+			self::volver_a_plantilla(
+				$cual,
+				'No se guardó: el asunto y el texto no pueden quedar vacíos. Si querés el texto original, usá «Volver a la de fábrica».',
+				true
+			);
+		}
+
+		SWPK_Plantillas::guardar( $cual, $asunto, $cuerpo );
+
+		self::volver_a_plantilla(
+			$cual,
+			'Redacción guardada. Desde el próximo envío, este aviso sale con este texto.'
+		);
+	}
+
+	public static function accion_plantilla_fabrica(): void {
+		if ( ! self::puede_administrar() ) {
+			wp_die( 'Sin permiso.' );
+		}
+
+		$cual = isset( $_GET['plantilla'] ) ? sanitize_key( (string) $_GET['plantilla'] ) : '';
+		check_admin_referer( 'swpk_plantilla_fabrica_' . $cual );
+
+		if ( ! isset( SWPK_Plantillas::catalogo()[ $cual ] ) ) {
+			self::volver_a_correos( 'Esa plantilla no existe.', true );
+		}
+
+		SWPK_Plantillas::restaurar( $cual );
+
+		self::volver_a_plantilla( $cual, 'Listo: vuelve a estar como venía de fábrica.' );
 	}
 
 	public static function accion_modo_envio(): void {

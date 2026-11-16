@@ -18,6 +18,36 @@ $conteos = SWPK_Ordenes::conteos();
 $filtro  = isset( $_GET['estado'] ) ? sanitize_key( (string) $_GET['estado'] ) : '';
 $ordenes = SWPK_Ordenes::listar( '' !== $filtro ? [ 'estado' => $filtro ] : [] );
 
+// Filtrar además por qué se pidió y por sitio.
+//
+// Va aquí y no en la consulta a propósito: `listar()` es la misma función que
+// usa el agente para recoger su cola, y meterle un filtro que solo sirve para
+// dibujar una pantalla es ensuciar la pieza que de verdad entrega trabajo. Son
+// doscientas filas como mucho; filtrarlas aquí no se nota.
+$tipos_ordenes = SWPK_Ordenes::tipos();
+$tipo_pedido   = SWPK_Vista::opcion_pedida( 'tipo', $tipos_ordenes );
+$busca_orden   = SWPK_Vista::busqueda_pedida();
+
+if ( '' !== $tipo_pedido || '' !== $busca_orden ) {
+	$aguja   = strtolower( remove_accents( $busca_orden ) );
+	$ordenes = array_values(
+		array_filter(
+			$ordenes,
+			static function ( $o ) use ( $tipo_pedido, $aguja ) {
+				if ( '' !== $tipo_pedido && (string) $o->tipo !== $tipo_pedido ) {
+					return false;
+				}
+				if ( '' === $aguja ) {
+					return true;
+				}
+				$sitio = SWPK_Inventario::obtener( (string) $o->sitio_id );
+				$pajar = strtolower( remove_accents( (string) ( $sitio->nombre_visible ?? $o->sitio_id ) ) );
+				return str_contains( $pajar, $aguja );
+			}
+		)
+	);
+}
+
 // Las órdenes se acumulan: cada arreglo que se pide deja una. Sin paginar,
 // esta pantalla crece sin tope según se use el panel.
 [ $ordenes_pagina, $pag_ord, $pags_ord ] = SWPK_Vista::paginar(
@@ -108,12 +138,32 @@ $con_algo = array_filter(
 	</p>
 <?php endif; ?>
 
+<?php
+SWPK_Vista::barra_de_filtros(
+	'panel-kinsta-seguridad',
+	[
+		'tipo' => [
+			'etiqueta' => 'Qué le pedimos',
+			'opciones' => $tipos_ordenes,
+			'actual'   => $tipo_pedido,
+			'todas'    => 'Cualquier cosa',
+		],
+	],
+	[ 'seccion' => 'ordenes', 'estado' => $filtro ],
+	$busca_orden
+);
+?>
+
 <?php if ( ! $ordenes ) : ?>
 	<p style="color:#50575e;max-width:860px">
 		<?php
-		echo '' !== $filtro
-			? 'Nada en ese estado ahora mismo.'
-			: 'Todavía no le hemos pedido nada a ningún sitio. Cuando le des a «Arreglarlo» en la pestaña anterior, el encargo aparece aquí y se puede seguir hasta que el sitio confirme que lo hizo.';
+		if ( '' !== $tipo_pedido || '' !== $busca_orden ) {
+			echo 'Ningún arreglo coincide con ese filtro.';
+		} elseif ( '' !== $filtro ) {
+			echo 'Nada en ese estado ahora mismo.';
+		} else {
+			echo 'Todavía no le hemos pedido nada a ningún sitio. Cuando le des a «Arreglarlo» en la pestaña anterior, el encargo aparece aquí y se puede seguir hasta que el sitio confirme que lo hizo.';
+		}
 		?>
 	</p>
 <?php else : ?>
@@ -165,7 +215,7 @@ $con_algo = array_filter(
 		</tbody>
 	</table>
 
-	<?php SWPK_Vista::paginador( $pag_ord, $pags_ord, count( $ordenes ), 'arreglos pedidos' ); ?>
+	<?php SWPK_Vista::paginador( $pag_ord, $pags_ord, count( $ordenes ), 'arreglos pedidos', 'arreglo pedido' ); ?>
 <?php endif; ?>
 
 <hr style="margin:34px 0">

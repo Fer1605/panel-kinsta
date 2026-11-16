@@ -221,7 +221,7 @@ class SWPK_Correos {
 			$r = self::despachar(
 				SWPK_Bitacora::ASESORA,
 				array_merge( [ $persona->user_email ], self::copia_ventas() ),
-				sprintf( '%d de tus sitios necesitan atención esta semana', count( $con_algo ) ),
+				SWPK_Plantillas::asunto( 'semanal', [ '{{cuantos}}' => (string) count( $con_algo ) ] ),
 				$cuerpo
 			);
 
@@ -282,7 +282,7 @@ class SWPK_Correos {
 		$r = self::despachar(
 			SWPK_Bitacora::SOPORTE,
 			self::destinatarios_soporte(),
-			sprintf( 'Resumen del día: %d cambios en la cartera', count( $eventos ) ),
+			SWPK_Plantillas::asunto( 'diario', [ '{{cuantos}}' => (string) count( $eventos ) ] ),
 			$cuerpo
 		);
 
@@ -320,7 +320,13 @@ class SWPK_Correos {
 			$r = self::despachar(
 				SWPK_Bitacora::CLIENTE,
 				$destinatarios,
-				sprintf( 'Reporte de mantenimiento de %s', $sitio->nombre_visible ),
+				SWPK_Plantillas::asunto(
+					'mensual',
+					[
+						'{{sitio}}' => (string) $sitio->nombre_visible,
+						'{{mes}}'   => SWPK_Frescura::fmt( 'F \d\e Y', $desde ),
+					]
+				),
 				$cuerpo,
 				(string) $sitio->sitio_id
 			);

@@ -348,8 +348,14 @@ body[class*="panel-kinsta"] .swpk-dia-hoy td {
 
 body[class*="panel-kinsta"] .swpk-dia-hoy .swpk-dia-f { color: #14559e; }
 
-/* Enlaces: el azul de la marca, no el de WordPress. */
-body[class*="panel-kinsta"] .wrap a:not(.button):not(.nav-tab) { color: var(--swpk-marca); }
+/* Enlaces: el azul de la marca, no el de WordPress.
+
+   La pastilla de filtro activa queda fuera: es un enlace con el fondo azul
+   pleno, y pintarle el texto de azul lo dejaba invisible — la pastilla «Todos»
+   se veía como una mancha azul vacía. */
+body[class*="panel-kinsta"] .wrap a:not(.button):not(.nav-tab):not(.swpk-filtro-activo) {
+	color: var(--swpk-marca);
+}
 
 /* Las pestañas de Seguridad y Bitácora. */
 body[class*="panel-kinsta"] .wrap .nav-tab-wrapper {
@@ -389,3 +395,119 @@ body[class*="panel-kinsta"] .wrap .form-table th {
 body[class*="panel-kinsta"] .wrap .form-table td { padding: 12px 10px; }
 
 body[class*="panel-kinsta"] .wrap .description { color: var(--swpk-apagado); font-size: 12.5px; }
+
+/* ──────────────────────────────────────────────────────────────────────────
+   La barra de filtros.
+
+   «Todas las tablas deberían de poderse filtrar», dijo el jefe. Es una sola
+   barra para todas las pantallas, así que una vez que se entiende en Sitios ya
+   se entiende en Accesos y en Caídas: mismo sitio, mismo aspecto, misma forma
+   de quitarla.
+
+   Cada filtro lleva su nombre encima en letra pequeña. Un desplegable que dice
+   solo «Todas» no deja saber todas qué — hay que abrirlo para averiguarlo, y
+   eso es justo el trabajo que un filtro tendría que ahorrar.
+   ────────────────────────────────────────────────────────────────────────── */
+body[class*="panel-kinsta"] .wrap .swpk-filtra,
+body[class*="panel-kinsta"] .wrap .swpk-rango {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: flex-end;
+	gap: 10px 14px;
+	margin: 0 0 14px;
+	padding: 14px 16px;
+	background: var(--swpk-tarjeta);
+	border: 1px solid var(--swpk-borde);
+	border-radius: var(--swpk-radio);
+	box-shadow: var(--swpk-sombra);
+}
+
+body[class*="panel-kinsta"] .wrap .swpk-campo {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+	min-width: 150px;
+}
+
+body[class*="panel-kinsta"] .wrap .swpk-campo-ancho { flex: 1 1 220px; }
+
+body[class*="panel-kinsta"] .wrap .swpk-campo > span {
+	font-size: 11px;
+	font-weight: 600;
+	letter-spacing: .04em;
+	text-transform: uppercase;
+	color: var(--swpk-tenue);
+}
+
+body[class*="panel-kinsta"] .wrap .swpk-campo select,
+body[class*="panel-kinsta"] .wrap .swpk-campo input[type="search"] {
+	width: 100%;
+	min-height: 34px;
+	border: 1px solid var(--swpk-borde);
+	border-radius: 7px;
+	box-shadow: none;
+	font-size: 13px;
+	color: var(--swpk-texto);
+}
+
+body[class*="panel-kinsta"] .wrap .swpk-campo select:focus,
+body[class*="panel-kinsta"] .wrap .swpk-campo input[type="search"]:focus {
+	border-color: var(--swpk-marca);
+	box-shadow: 0 0 0 3px var(--swpk-marca-suave);
+	outline: none;
+}
+
+body[class*="panel-kinsta"] .wrap .swpk-filtra .button { min-height: 34px; }
+
+body[class*="panel-kinsta"] .wrap .swpk-filtra-limpiar {
+	font-size: 12.5px;
+	color: var(--swpk-apagado);
+	text-decoration: underline;
+	padding-bottom: 8px;
+}
+
+body[class*="panel-kinsta"] .wrap .swpk-filtra-limpiar:hover { color: var(--swpk-critico); }
+
+/* En pantalla angosta los filtros se apilan en vez de salirse de la caja. */
+@media (max-width: 782px) {
+	body[class*="panel-kinsta"] .wrap .swpk-campo { min-width: 100%; }
+}
+
+/* La barra de fechas de la Bitácora es más vieja que la barra de filtros y
+   tiene su marcado propio: las etiquetas van dentro del label, con un <br>. Se
+   le da el mismo aspecto para que las dos pantallas se vean de la misma
+   familia, sin tocar el marcado ni lo que hace. */
+body[class*="panel-kinsta"] .wrap .swpk-rango label {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+	font-size: 11px;
+	font-weight: 600;
+	letter-spacing: .04em;
+	text-transform: uppercase;
+	color: var(--swpk-tenue);
+}
+
+body[class*="panel-kinsta"] .wrap .swpk-rango label br { display: none; }
+
+body[class*="panel-kinsta"] .wrap .swpk-rango input,
+body[class*="panel-kinsta"] .wrap .swpk-rango select {
+	min-height: 34px;
+	border: 1px solid var(--swpk-borde);
+	border-radius: 7px;
+	box-shadow: none;
+	font-size: 13px;
+	font-weight: 400;
+	letter-spacing: 0;
+	text-transform: none;
+	color: var(--swpk-texto);
+}
+
+body[class*="panel-kinsta"] .wrap .swpk-rango input:focus,
+body[class*="panel-kinsta"] .wrap .swpk-rango select:focus {
+	border-color: var(--swpk-marca);
+	box-shadow: 0 0 0 3px var(--swpk-marca-suave);
+	outline: none;
+}
+
+body[class*="panel-kinsta"] .wrap .swpk-rango .button { min-height: 34px; }

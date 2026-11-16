@@ -43,7 +43,7 @@ class SWPK_Vista {
 				$det = $detalles[ $tag ] ?? null;
 				?>
 				<a class="swpk-grupo <?php echo $es ? 'swpk-grupo-activo' : ''; ?>"
-					href="<?php echo esc_url( $es ? remove_query_arg( [ 'tag', 'nivel', 'p', 'q' ], $base ) : add_query_arg( 'tag', $tag, $base ) ); ?>">
+					href="<?php echo esc_url( $es ? remove_query_arg( [ 'tag', 'nivel', 'p', 'q', 'wp', 'php' ], $base ) : add_query_arg( 'tag', $tag, $base ) ); ?>">
 
 					<?php if ( $det ) : ?>
 						<span class="swpk-grupo-n" style="color:<?php echo $det['n'] ? '#b32d2e' : '#008a20'; ?>">
@@ -151,18 +151,22 @@ class SWPK_Vista {
 		return [ array_slice( $todo, ( $pagina - 1 ) * $por_pagina, $por_pagina ), $pagina, $paginas ];
 	}
 
-	public static function paginador( int $pagina, int $paginas, int $total, string $que = 'sitios' ): void {
+	/**
+	 * El pie con la cuenta y, si hace falta, el paso de página.
+	 *
+	 * Lleva el singular aparte porque ahora se filtra de verdad: filtrar hasta
+	 * dejar un solo sitio es lo normal, y el pie decía «1 sitios».
+	 */
+	public static function paginador( int $pagina, int $paginas, int $total, string $que = 'sitios', string $uno = 'sitio' ): void {
+		$cuenta = self::plural( $total, $uno, $que );
+
 		if ( $paginas < 2 ) {
-			printf(
-				'<p class="swpk-cuenta">%d %s</p>',
-				(int) $total,
-				esc_html( $que )
-			);
+			printf( '<p class="swpk-cuenta">%s</p>', esc_html( $cuenta ) );
 			return;
 		}
 		?>
 		<div class="swpk-paginador">
-			<span class="swpk-cuenta"><?php echo (int) $total; ?> <?php echo esc_html( $que ); ?></span>
+			<span class="swpk-cuenta"><?php echo esc_html( $cuenta ); ?></span>
 			<span>
 				<?php if ( $pagina > 1 ) : ?>
 					<a class="button" href="<?php echo esc_url( add_query_arg( 'p', $pagina - 1 ) ); ?>">‹ Anterior</a>
@@ -228,7 +232,7 @@ class SWPK_Vista {
 	 *
 	 * @var array<int,string>
 	 */
-	private const ESTADO = [ 'tag', 'nivel', 'p', 'q', 'seccion', 'desde', 'hasta', 'tipo' ];
+	private const ESTADO = [ 'tag', 'nivel', 'p', 'q', 'wp', 'php', 'seccion', 'desde', 'hasta', 'tipo' ];
 
 	/** La dirección de la lista de donde se vino, tal como la dejó la persona. */
 	public static function url_de_regreso(): array {
@@ -308,6 +312,122 @@ class SWPK_Vista {
 		}
 	}
 
+	/**
+	 * Una barra de filtros: unos cuantos desplegables y, si hace falta, un
+	 * buscador, todo en un solo formulario.
+	 *
+	 * ─── Por qué en el servidor y no en el navegador ────────────────────────
+	 *
+	 * El demo que vio el jefe filtraba con JavaScript, sobre las filas ya
+	 * dibujadas. Aquí no sirve: estas pantallas ya paginan en el servidor, así
+	 * que en la página solo hay veinte filas de las ciento ocho. Un filtro de
+	 * navegador habría filtrado esas veinte y habría dicho «ningún resultado»
+	 * cuando lo buscado estaba en la página cuatro.
+	 *
+	 * Filtrando aquí, el filtro se aplica a todo y la paginación se recalcula
+	 * sobre lo filtrado. De paso el filtro viaja en la dirección: se puede
+	 * enlazar, guardar en favoritos y mandar por chat, y funciona igual aunque
+	 * el navegador tenga el JavaScript apagado.
+	 *
+	 * El `p` de la página NO se arrastra a propósito: cambiar un filtro vuelve
+	 * a la página uno. Quedarse en la siete de una lista que ahora tiene dos
+	 * deja la tabla en blanco sin explicar por qué.
+	 *
+	 * @param string                                                                                         $pagina    Slug de la pantalla.
+	 * @param array<string,array{etiqueta:string,opciones:array<string,string>,actual:string,todas?:string}>  $campos
+	 * @param array<string,string>                                                                           $conservar Lo que viaja oculto.
+	 * @param string|null                                                                                    $busqueda  null = sin buscador.
+	 */
+	public static function barra_de_filtros( string $pagina, array $campos, array $conservar = [], ?string $busqueda = null, string $marcador = 'Buscar un sitio…' ): void {
+		$hay_algo = ( null !== $busqueda && '' !== $busqueda );
+		foreach ( $campos as $c ) {
+			if ( '' !== ( $c['actual'] ?? '' ) ) {
+				$hay_algo = true;
+			}
+		}
+		?>
+		<form method="get" class="swpk-filtra">
+			<input type="hidden" name="page" value="<?php echo esc_attr( $pagina ); ?>">
+			<?php foreach ( $conservar as $k => $v ) : ?>
+				<?php if ( '' !== (string) $v ) : ?>
+					<input type="hidden" name="<?php echo esc_attr( $k ); ?>" value="<?php echo esc_attr( (string) $v ); ?>">
+				<?php endif; ?>
+			<?php endforeach; ?>
+
+			<?php foreach ( $campos as $clave => $campo ) : ?>
+				<label class="swpk-campo">
+					<span><?php echo esc_html( $campo['etiqueta'] ); ?></span>
+					<select name="<?php echo esc_attr( $clave ); ?>">
+						<option value=""><?php echo esc_html( $campo['todas'] ?? 'Todas' ); ?></option>
+						<?php foreach ( $campo['opciones'] as $valor => $texto ) : ?>
+							<option value="<?php echo esc_attr( (string) $valor ); ?>" <?php selected( (string) $valor, $campo['actual'] ?? '' ); ?>>
+								<?php echo esc_html( $texto ); ?>
+							</option>
+						<?php endforeach; ?>
+					</select>
+				</label>
+			<?php endforeach; ?>
+
+			<?php if ( null !== $busqueda ) : ?>
+				<label class="swpk-campo swpk-campo-ancho">
+					<span>Buscar</span>
+					<input type="search" name="q" value="<?php echo esc_attr( $busqueda ); ?>"
+						placeholder="<?php echo esc_attr( $marcador ); ?>">
+				</label>
+			<?php endif; ?>
+
+			<button class="button swpk-filtra-ir">Filtrar</button>
+
+			<?php if ( $hay_algo ) : ?>
+				<a class="swpk-filtra-limpiar"
+					href="<?php echo esc_url( remove_query_arg( array_merge( array_keys( $campos ), [ 'q', 'p' ] ) ) ); ?>">
+					quitar los filtros
+				</a>
+			<?php endif; ?>
+		</form>
+		<?php
+	}
+
+	/**
+	 * Lee un filtro de la dirección y lo valida contra lo que de verdad existe.
+	 *
+	 * Validar contra los valores presentes, y no contra una lista escrita a
+	 * mano, evita dos cosas: que alguien invente un `?php=9.9` en la dirección
+	 * y le salga una tabla vacía sin explicación, y que la lista de opciones se
+	 * quede vieja el día que entre una versión nueva.
+	 *
+	 * @param array<string,string> $validas
+	 */
+	public static function opcion_pedida( string $clave, array $validas ): string {
+		$v = isset( $_GET[ $clave ] ) ? sanitize_text_field( wp_unslash( (string) $_GET[ $clave ] ) ) : '';
+		return isset( $validas[ $v ] ) ? $v : '';
+	}
+
+	/**
+	 * Los valores distintos que hay en una lista, para armar un desplegable.
+	 *
+	 * @param array<int,mixed>       $filas
+	 * @param callable(mixed):string $saca
+	 * @return array<string,string>
+	 */
+	public static function valores_unicos( array $filas, callable $saca, bool $como_version = false ): array {
+		$vistos = [];
+		foreach ( $filas as $fila ) {
+			$v = trim( (string) $saca( $fila ) );
+			if ( '' !== $v ) {
+				$vistos[ $v ] = $v;
+			}
+		}
+
+		if ( $como_version ) {
+			uksort( $vistos, static fn( $a, $b ) => version_compare( (string) $b, (string) $a ) );
+		} else {
+			ksort( $vistos, SORT_NATURAL | SORT_FLAG_CASE );
+		}
+
+		return $vistos;
+	}
+
 	public static function pagina_pedida(): int {
 		return isset( $_GET['p'] ) ? max( 1, (int) $_GET['p'] ) : 1;
 	}
@@ -327,20 +447,32 @@ class SWPK_Vista {
 	}
 
 	/**
-	 * Filtra una lista de sitios por grupo, nivel y búsqueda.
+	 * Filtra una lista de sitios por grupo, nivel, búsqueda y versiones.
+	 *
+	 * Las versiones de WordPress y de PHP las pidió el jefe: «filtrar por
+	 * versión de WordPress y por versión de PHP». Van aquí dentro, y no como un
+	 * filtro aparte en la pantalla, para que el Excel salga igual que lo que se
+	 * está viendo — el botón de bajar a Excel recorre esta misma función. Un
+	 * Excel con más filas que la pantalla de la que salió no se puede enseñar.
 	 *
 	 * @param array<int,object> $sitios
 	 * @return array<int,object>
 	 */
-	public static function filtrar( array $sitios, string $tag, string $nivel, string $busqueda ): array {
+	public static function filtrar( array $sitios, string $tag, string $nivel, string $busqueda, string $wp = '', string $php = '' ): array {
 		return array_values(
 			array_filter(
 				$sitios,
-				static function ( $s ) use ( $tag, $nivel, $busqueda ) {
+				static function ( $s ) use ( $tag, $nivel, $busqueda, $wp, $php ) {
 					if ( '' !== $tag && $s->tag !== $tag ) {
 						return false;
 					}
 					if ( '' !== $nivel && SWPK_Riesgo::nivel_del_sitio( $s->sitio_id ) !== $nivel ) {
+						return false;
+					}
+					if ( '' !== $wp && (string) $s->version_wp !== $wp ) {
+						return false;
+					}
+					if ( '' !== $php && (string) $s->version_php !== $php ) {
 						return false;
 					}
 					if ( '' !== $busqueda ) {
@@ -354,6 +486,37 @@ class SWPK_Vista {
 				}
 			)
 		);
+	}
+
+	/**
+	 * Las versiones de WordPress y de PHP que de verdad hay, ya listas para
+	 * armar los dos desplegables, con lo pedido ya leído y validado.
+	 *
+	 * @param array<int,object> $sitios Sobre los que se arman las opciones.
+	 * @return array{campos:array<string,array<string,mixed>>,wp:string,php:string}
+	 */
+	public static function filtros_de_version( array $sitios ): array {
+		$wps  = self::valores_unicos( $sitios, static fn( $s ) => (string) $s->version_wp, true );
+		$phps = self::valores_unicos( $sitios, static fn( $s ) => (string) $s->version_php, true );
+
+		return [
+			'campos' => [
+				'wp'  => [
+					'etiqueta' => 'WordPress',
+					'opciones' => $wps,
+					'actual'   => self::opcion_pedida( 'wp', $wps ),
+					'todas'    => 'Cualquiera',
+				],
+				'php' => [
+					'etiqueta' => 'PHP',
+					'opciones' => $phps,
+					'actual'   => self::opcion_pedida( 'php', $phps ),
+					'todas'    => 'Cualquiera',
+				],
+			],
+			'wp'     => self::opcion_pedida( 'wp', $wps ),
+			'php'    => self::opcion_pedida( 'php', $phps ),
+		];
 	}
 
 	/** @param array<int,object> $sitios */

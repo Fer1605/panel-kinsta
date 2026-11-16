@@ -15,9 +15,26 @@ $busqueda = SWPK_Vista::busqueda_pedida();
 
 $por_tag   = SWPK_Vista::conteo_por_tag( $todos );
 $del_grupo = SWPK_Vista::filtrar( $todos, $tag, '', '' );
-$por_nivel = SWPK_Vista::conteo_por_nivel( $del_grupo );
 
-$filtrados = SWPK_Vista::filtrar( $todos, $tag, $nivel, $busqueda );
+// Las versiones que ofrece el desplegable salen del grupo elegido, no de los
+// 108: en «los administra el cliente» no tiene sentido ofrecer una versión de
+// PHP que solo existe en los nuestros, porque elegirla deja la tabla vacía.
+//
+// Y salen del grupo SIN filtrar por versión, a propósito: si se armaran sobre
+// lo ya filtrado, al elegir PHP 8.2 el desplegable se quedaría con 8.2 como
+// única opción y no habría forma de cambiar de idea sin quitar el filtro.
+$versiones = SWPK_Vista::filtros_de_version( $del_grupo );
+
+// Las cifras de las pastillas de riesgo sí cuentan sobre lo filtrado por
+// versión. Si no, con PHP 8.2 puesto la tabla enseñaba 11 sitios y las
+// pastillas sumaban 13: al pulsar «Crítico» salían menos de los que la
+// pastilla prometía, y un número que no cuadra con lo que pasa al pulsarlo es
+// peor que no poner número.
+$por_nivel = SWPK_Vista::conteo_por_nivel(
+	SWPK_Vista::filtrar( $todos, $tag, '', '', $versiones['wp'], $versiones['php'] )
+);
+
+$filtrados = SWPK_Vista::filtrar( $todos, $tag, $nivel, $busqueda, $versiones['wp'], $versiones['php'] );
 [ $pagina_de_sitios, $pagina, $paginas ] = SWPK_Vista::paginar( $filtrados, SWPK_Vista::pagina_pedida() );
 
 // A dónde vuelve el botón de analizar: a esta misma página, con sus filtros.
@@ -30,6 +47,8 @@ $volver = add_query_arg(
 			'tag'   => $tag,
 			'nivel' => $nivel,
 			'q'     => $busqueda,
+			'wp'    => $versiones['wp'],
+			'php'   => $versiones['php'],
 			'p'     => $pagina > 1 ? $pagina : '',
 		]
 	),
@@ -75,7 +94,6 @@ $volver = add_query_arg(
 	<?php SWPK_Vista::abrir_barra(); ?>
 		<?php SWPK_Vista::filtro_de_riesgo( $nivel, $por_nivel ); ?>
 		<span>
-			<?php SWPK_Vista::buscador( 'panel-kinsta-sitios', $busqueda, [ 'tag' => $tag, 'nivel' => $nivel ] ); ?>
 			<?php SWPK_Admin::boton_exportar( 'sitios' ); ?>
 			<?php if ( $asignar ) : ?>
 				<a class="button" href="<?php echo esc_url( wp_nonce_url( admin_url( 'admin-post.php?action=swpk_correr' ), 'swpk_correr' ) ); ?>"
@@ -85,6 +103,18 @@ $volver = add_query_arg(
 			<?php endif; ?>
 		</span>
 	<?php SWPK_Vista::cerrar_barra(); ?>
+
+	<?php
+	// El buscador se mudó aquí dentro: antes era un formulario aparte, y con
+	// dos formularios en pantalla buscar borraba la versión elegida y elegir
+	// una versión borraba lo buscado. Ahora los tres viajan juntos.
+	SWPK_Vista::barra_de_filtros(
+		'panel-kinsta-sitios',
+		$versiones['campos'],
+		[ 'tag' => $tag, 'nivel' => $nivel ],
+		$busqueda
+	);
+	?>
 	<?php SWPK_Vista::paginador( $pagina, $paginas, count( $filtrados ) ); ?>
 
 	<?php if ( ! $pagina_de_sitios ) : ?>

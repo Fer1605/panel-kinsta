@@ -2,11 +2,6 @@
 /** Accesos al panel: entradas, salidas e intentos fallidos. */
 defined( 'ABSPATH' ) || exit;
 
-$filtro    = isset( $_GET['accion'] ) ? sanitize_key( (string) $_GET['accion'] ) : '';
-$registros = SWPK_Accesos::listar( 500, $filtro );
-[ $en_pantalla, $pagina, $paginas ] = SWPK_Vista::paginar( $registros, SWPK_Vista::pagina_pedida(), 25 );
-$fallidos  = SWPK_Accesos::fallidos_recientes( 24 );
-
 $etiquetas = [
 	SWPK_Accesos::ENTRADA => [ 'Entró', '#008a20' ],
 	SWPK_Accesos::SALIDA  => [ 'Salió', '#50575e' ],
@@ -15,6 +10,34 @@ $etiquetas = [
 	SWPK_Accesos::API     => [ 'Consulta por API', '#2271b1' ],
 	SWPK_Accesos::API_NEGADO => [ 'API rechazada', '#d63638' ],
 ];
+
+// Lo que ofrece el desplegable es el nombre de cada cosa, no su clave interna.
+$acciones  = array_map( static fn( $e ) => $e[0], $etiquetas );
+$filtro    = SWPK_Vista::opcion_pedida( 'accion', $acciones );
+$registros = SWPK_Accesos::listar( 500, $filtro );
+
+// Buscar por usuario o por dirección.
+//
+// Es el filtro que de verdad se usa aquí: cuando saltan cuarenta intentos
+// fallidos, lo primero que uno quiere es ver si vienen todos de la misma
+// dirección. La consulta ya trae como mucho 500 filas, así que se filtra aquí.
+$busca_acceso = SWPK_Vista::busqueda_pedida();
+
+if ( '' !== $busca_acceso ) {
+	$aguja     = strtolower( remove_accents( $busca_acceso ) );
+	$registros = array_values(
+		array_filter(
+			$registros,
+			static function ( $r ) use ( $aguja ) {
+				$pajar = strtolower( remove_accents( (string) $r->login . ' ' . (string) $r->ip ) );
+				return str_contains( $pajar, $aguja );
+			}
+		)
+	);
+}
+
+[ $en_pantalla, $pagina, $paginas ] = SWPK_Vista::paginar( $registros, SWPK_Vista::pagina_pedida(), 25 );
+$fallidos  = SWPK_Accesos::fallidos_recientes( 24 );
 ?>
 <div class="wrap">
 	<h1>Accesos al panel</h1>
@@ -47,23 +70,35 @@ $etiquetas = [
 		</div>
 	</div>
 
-	<p>
-		<?php
-		$base = admin_url( 'admin.php?page=panel-kinsta-accesos' );
-		foreach ( [ '' => 'Todo' ] + array_map( static fn( $e ) => $e[0], $etiquetas ) as $clave => $texto ) :
-			?>
-			<a class="button <?php echo $filtro === $clave ? 'button-primary' : ''; ?>"
-				href="<?php echo esc_url( '' === $clave ? $base : add_query_arg( 'accion', $clave, $base ) ); ?>">
-				<?php echo esc_html( $texto ); ?>
-			</a>
-		<?php endforeach; ?>
-	</p>
+	<?php
+	// Antes esto eran siete botones en fila, uno por cada cosa que puede pasar.
+	// Ocupaban dos renglones, no se veía cuál estaba puesto y no había forma de
+	// buscar una dirección. Ahora es la misma barra que el resto del panel.
+	SWPK_Vista::barra_de_filtros(
+		'panel-kinsta-accesos',
+		[
+			'accion' => [
+				'etiqueta' => 'Qué pasó',
+				'opciones' => $acciones,
+				'actual'   => $filtro,
+				'todas'    => 'Todo',
+			],
+		],
+		[],
+		$busca_acceso,
+		'usuario o dirección IP…'
+	);
+	?>
 
-	<?php SWPK_Vista::paginador( $pagina, $paginas, count( $registros ), 'registros' ); ?>
+	<?php SWPK_Vista::paginador( $pagina, $paginas, count( $registros ), 'registros', 'registro' ); ?>
 
 	<?php if ( ! $registros ) : ?>
 		<div class="notice notice-info"><p>
-			Todavía no hay registros. Se van a llenar solos en cuanto alguien entre o salga del panel.
+			<?php
+			echo ( '' !== $filtro || '' !== $busca_acceso )
+				? 'Ningún registro coincide con ese filtro.'
+				: 'Todavía no hay registros. Se van a llenar solos en cuanto alguien entre o salga del panel.';
+			?>
 		</p></div>
 	<?php else : ?>
 		<table class="widefat striped swpk-tabla">

@@ -3,16 +3,62 @@
 defined( 'ABSPATH' ) || exit;
 
 $estados = SWPK_Monitor::estados();
-[ $en_pantalla, $pagina, $paginas ] = SWPK_Vista::paginar( $estados, SWPK_Vista::pagina_pedida(), 25 );
 $ultimo  = SWPK_Monitor::ultimo_sondeo();
 $al_dia  = SWPK_Monitor::esta_al_dia();
 
+// Las cuatro cifras de arriba cuentan SIEMPRE los 108, con filtro o sin él.
+// Son el estado de la cartera, no el de la tabla: si al filtrar «sin
+// responder» la tarjeta de «sin responder» se recalculara sobre lo filtrado,
+// diría el total de lo filtrado y dejaría de ser una alarma.
 $abajo = $raro = $lentos = 0;
 foreach ( $estados as $e ) {
 	if ( 'abajo' === $e->estado ) { ++$abajo; }
 	if ( 'raro' === $e->estado ) { ++$raro; }
 	if ( 'arriba' === $e->estado && $e->ms > 5000 ) { ++$lentos; }
 }
+
+// «Lento» no es un estado guardado: es responder bien pero tardando más de
+// cinco segundos. Se filtra igual porque es justo lo que uno quiere mirar
+// cuando un cliente dice que su sitio va pesado.
+$estados_posibles = [
+	'abajo'  => 'Sin responder',
+	'raro'   => 'Respuesta rara (4xx)',
+	'lento'  => 'Responde, pero lento',
+	'arriba' => 'Responde bien',
+];
+
+$estado_pedido = SWPK_Vista::opcion_pedida( 'estado', $estados_posibles );
+$busca_caida   = SWPK_Vista::busqueda_pedida();
+
+$filtrados = $estados;
+
+if ( '' !== $estado_pedido || '' !== $busca_caida ) {
+	$aguja     = strtolower( remove_accents( $busca_caida ) );
+	$filtrados = array_values(
+		array_filter(
+			$estados,
+			static function ( $e ) use ( $estado_pedido, $aguja ) {
+				if ( 'lento' === $estado_pedido ) {
+					if ( 'arriba' !== $e->estado || $e->ms <= 5000 ) {
+						return false;
+					}
+				} elseif ( '' !== $estado_pedido && (string) $e->estado !== $estado_pedido ) {
+					return false;
+				}
+
+				if ( '' === $aguja ) {
+					return true;
+				}
+
+				$sitio = SWPK_Inventario::obtener( (string) $e->sitio_id );
+				$pajar = strtolower( remove_accents( (string) ( $sitio->nombre_visible ?? '' ) . ' ' . (string) $e->url ) );
+				return str_contains( $pajar, $aguja );
+			}
+		)
+	);
+}
+
+[ $en_pantalla, $pagina, $paginas ] = SWPK_Vista::paginar( $filtrados, SWPK_Vista::pagina_pedida(), 25 );
 
 $historial = array_filter(
 	SWPK_Eventos::recientes( 40 ),
@@ -91,7 +137,24 @@ $historial = array_filter(
 		</div>
 
 		<h2>Estado ahora</h2>
-		<?php SWPK_Vista::paginador( $pagina, $paginas, count( $estados ) ); ?>
+
+		<?php
+		SWPK_Vista::barra_de_filtros(
+			'panel-kinsta-caidas',
+			[
+				'estado' => [
+					'etiqueta' => 'Cómo responde',
+					'opciones' => $estados_posibles,
+					'actual'   => $estado_pedido,
+					'todas'    => 'Como sea',
+				],
+			],
+			[],
+			$busca_caida
+		);
+		?>
+
+		<?php SWPK_Vista::paginador( $pagina, $paginas, count( $filtrados ) ); ?>
 		<table class="widefat striped swpk-tabla">
 			<thead>
 				<tr>
@@ -139,7 +202,11 @@ $historial = array_filter(
 			<?php endforeach; ?>
 			</tbody>
 		</table>
-		<?php SWPK_Vista::paginador( $pagina, $paginas, count( $estados ) ); ?>
+		<?php SWPK_Vista::paginador( $pagina, $paginas, count( $filtrados ) ); ?>
+
+		<?php if ( ! $en_pantalla ) : ?>
+			<div class="notice notice-info inline"><p>Ningún sitio coincide con ese filtro.</p></div>
+		<?php endif; ?>
 	<?php else : ?>
 		<div class="notice notice-info"><p>
 			Todavía no hay sitios vigilados. El monitor usa los dominios del inventario: primero hay

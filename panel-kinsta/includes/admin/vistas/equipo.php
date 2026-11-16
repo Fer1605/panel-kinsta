@@ -6,6 +6,35 @@ $equipo  = SWPK_Perfiles::del_equipo();
 $roles   = SWPK_Perfiles::roles();
 $descrip = SWPK_Perfiles::descripciones();
 $recien  = get_transient( 'swpk_acceso_nuevo' );
+
+// Filtrar por perfil y por nombre.
+//
+// Hoy el equipo cabe en una pantalla y el filtro parece de más, pero esta es
+// la lista que se mira cuando hay que quitarle el acceso a alguien que se fue,
+// y entonces se busca a esa persona por su nombre. Si el equipo crece, ya está.
+$perfil_pedido = SWPK_Vista::opcion_pedida( 'perfil', $roles );
+$busca_persona = SWPK_Vista::busqueda_pedida();
+
+if ( '' !== $perfil_pedido || '' !== $busca_persona ) {
+	$aguja  = strtolower( remove_accents( $busca_persona ) );
+	$equipo = array_values(
+		array_filter(
+			$equipo,
+			static function ( $u ) use ( $perfil_pedido, $aguja ) {
+				if ( '' !== $perfil_pedido && ! in_array( $perfil_pedido, (array) $u->roles, true ) ) {
+					return false;
+				}
+				if ( '' === $aguja ) {
+					return true;
+				}
+				$pajar = strtolower( remove_accents( $u->display_name . ' ' . $u->user_email ) );
+				return str_contains( $pajar, $aguja );
+			}
+		)
+	);
+}
+
+$hay_filtro_equipo = ( '' !== $perfil_pedido || '' !== $busca_persona );
 ?>
 <div class="wrap">
 	<h1>Equipo</h1>
@@ -86,9 +115,31 @@ $recien  = get_transient( 'swpk_acceso_nuevo' );
 	</div>
 
 	<h2>Quién tiene acceso hoy</h2>
+
+	<?php
+	SWPK_Vista::barra_de_filtros(
+		'panel-kinsta-equipo',
+		[
+			'perfil' => [
+				'etiqueta' => 'Perfil',
+				'opciones' => $roles,
+				'actual'   => $perfil_pedido,
+				'todas'    => 'Cualquiera',
+			],
+		],
+		[],
+		$busca_persona,
+		'nombre o correo…'
+	);
+	?>
+
 	<?php if ( ! $equipo ) : ?>
 		<div class="notice notice-info inline"><p>
-			Todavía nadie, aparte de los administradores de este WordPress.
+			<?php
+			echo $hay_filtro_equipo
+				? 'Nadie del equipo coincide con ese filtro.'
+				: 'Todavía nadie, aparte de los administradores de este WordPress.';
+			?>
 		</p></div>
 	<?php else : ?>
 		<table class="widefat striped swpk-tabla">

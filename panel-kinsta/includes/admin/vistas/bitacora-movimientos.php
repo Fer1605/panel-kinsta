@@ -113,7 +113,7 @@ arsort( $por_tipo );
 	<?php endif; ?>
 </p>
 
-<?php SWPK_Vista::paginador( $pagina, $paginas, count( $movimientos ), 'movimientos' ); ?>
+<?php SWPK_Vista::paginador( $pagina, $paginas, count( $movimientos ), 'movimientos', 'movimiento' ); ?>
 
 <?php if ( ! $en_pantalla ) : ?>
 	<div class="notice notice-info inline"><p>
@@ -157,7 +157,7 @@ arsort( $por_tipo );
 		</tbody>
 	</table>
 
-	<?php SWPK_Vista::paginador( $pagina, $paginas, count( $movimientos ), 'movimientos' ); ?>
+	<?php SWPK_Vista::paginador( $pagina, $paginas, count( $movimientos ), 'movimientos', 'movimiento' ); ?>
 <?php endif; ?>
 
 <p class="swpk-nota">

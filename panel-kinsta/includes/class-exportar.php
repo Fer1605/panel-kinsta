@@ -92,11 +92,15 @@ class SWPK_Exportar {
 
 	/** Los sitios que el usuario puede ver, con los filtros de la pantalla. */
 	private static function sitios_filtrados(): array {
+		$versiones = SWPK_Vista::filtros_de_version( SWPK_Perfiles::sitios_visibles() );
+
 		return SWPK_Vista::filtrar(
 			SWPK_Perfiles::sitios_visibles(),
 			SWPK_Vista::tag_pedido(),
 			SWPK_Vista::nivel_pedido(),
-			SWPK_Vista::busqueda_pedida()
+			SWPK_Vista::busqueda_pedida(),
+			$versiones['wp'],
+			$versiones['php']
 		);
 	}
 

@@ -121,7 +121,7 @@ $por_nivel[ SWPK_Riesgo::SIN_DATOS ] = 0;
 		</span>
 	<?php SWPK_Vista::cerrar_barra(); ?>
 
-	<?php SWPK_Vista::paginador( $pagina, $paginas, count( $con_algo ), 'sitios con pendientes' ); ?>
+	<?php SWPK_Vista::paginador( $pagina, $paginas, count( $con_algo ), 'sitios con pendientes', 'sitio con pendientes' ); ?>
 
 	<?php if ( ! $en_pantalla ) : ?>
 		<div class="notice notice-success inline"><p>
@@ -176,7 +176,7 @@ $por_nivel[ SWPK_Riesgo::SIN_DATOS ] = 0;
 	<?php endforeach; ?>
 
 	<?php if ( $en_pantalla ) : ?>
-		<?php SWPK_Vista::paginador( $pagina, $paginas, count( $con_algo ), 'sitios con pendientes' ); ?>
+		<?php SWPK_Vista::paginador( $pagina, $paginas, count( $con_algo ), 'sitios con pendientes', 'sitio con pendientes' ); ?>
 	<?php endif; ?>
 
 	<p class="swpk-atribucion"><?php echo wp_kses_post( SWPK_Wordfence::atribucion() ); ?></p>

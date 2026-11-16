@@ -21,6 +21,196 @@ class SWPK_Plantillas {
 	private const ROJO  = '#b32d2e';
 	private const GRIS  = '#646970';
 
+	/** Donde se guarda lo que se edite. Lo que no esté aquí, sale de fábrica. */
+	public const OPCION = 'swpk_plantillas';
+
+	/**
+	 * Las plantillas editables.
+	 *
+	 * ─── Qué se puede cambiar y qué no ──────────────────────────────────────
+	 *
+	 * Se edita lo que es prosa: el asunto y el texto que acompaña. NO se edita
+	 * el bloque de datos — la lista de sitios con sus pendientes, la tabla de
+	 * lo que cambió — porque eso lo arma el panel con la información de cada
+	 * día, y un campo de texto no puede producirlo.
+	 *
+	 * Ese bloque entra por una marca: donde se escriba `{{sitios}}`, ahí va. Se
+	 * puede mover de sitio, poner texto antes o después, o quitarlo. Lo que no
+	 * se puede es escribirlo a mano, y está bien que así sea.
+	 *
+	 * Son tres porque tres son los correos que el panel manda hoy. El ejemplo
+	 * que vio el jefe enseñaba cinco —también uno del código de verificación en
+	 * dos pasos y otro de sitio caído—, pero esos dos correos no existen: el
+	 * panel no los envía. Poner su plantilla aquí sería dejar dos cajas de
+	 * texto que no cambian nada.
+	 *
+	 * @return array<string,array<string,mixed>>
+	 */
+	public static function catalogo(): array {
+		return [
+			'semanal' => [
+				'nombre' => 'Semanal a las asesoras',
+				'quien'  => 'A cada asesora, cada lunes: sus sitios con algo pendiente.',
+				'titulo' => 'Tus sitios esta semana',
+				'asunto' => '{{cuantos}} de tus sitios necesitan atención esta semana',
+				'cuerpo' => "Hola {{asesora}},\n\n"
+					. "De los sitios que atendés, {{cuantos}} tienen algo pendiente esta semana{{criticos}}.\n\n"
+					. "{{sitios}}\n\n"
+					. 'Si querés que nos encarguemos nosotros de las actualizaciones, avisanos y lo coordinamos.',
+				'marcas' => [
+					'{{asesora}}'  => 'El nombre de la asesora',
+					'{{cuantos}}'  => 'Cuántos de sus sitios tienen algo pendiente',
+					'{{criticos}}' => 'La coletilla «, y N en estado alto o crítico». Si no hay ninguno, se queda en blanco sola.',
+					'{{sitios}}'   => 'EL BLOQUE: un recuadro por sitio, con el texto listo para copiarle al cliente.',
+				],
+			],
+			'diario'  => [
+				'nombre' => 'Diario a soporte',
+				'quien'  => 'A la dirección de soporte, todos los días: lo que cambió en 24 horas.',
+				'titulo' => 'Resumen del día',
+				'asunto' => 'Resumen del día: {{cuantos}} cambios en la cartera',
+				'cuerpo' => "Esto cambió en las últimas 24 horas ({{cuantos}} en total):\n\n"
+					. '{{cambios}}',
+				'marcas' => [
+					'{{cuantos}}' => 'Cuántos cambios hubo',
+					'{{cambios}}' => 'EL BLOQUE: la tabla de qué cambió, en qué sitio y cuándo.',
+				],
+			],
+			'mensual' => [
+				'nombre' => 'Mensual a los clientes',
+				'quien'  => 'A los administradores de cada sitio nuestro, el día 1. Sin una palabra técnica.',
+				'titulo' => 'Reporte de mantenimiento',
+				'asunto' => 'Reporte de mantenimiento de {{sitio}}',
+				'cuerpo' => "Hola,\n\n"
+					. "Le escribimos con el reporte de mantenimiento de {{sitio}} correspondiente a {{mes}}.\n\n"
+					. "{{veces}}\n\n"
+					. "{{actualizado}}\n\n"
+					. "Las actualizaciones corrigen fallas de seguridad que se descubren y se publican "
+					. "continuamente. Mantenerlas al día es lo que evita que alguien las aproveche: es la "
+					. "diferencia entre un sitio que se mantiene y uno que un día amanece con problemas.\n\n"
+					. 'No hay nada que usted tenga que hacer. Le avisamos para que sepa que su sitio está siendo atendido.',
+				'marcas' => [
+					'{{sitio}}'       => 'El nombre del sitio',
+					'{{mes}}'         => 'El mes del que habla el reporte',
+					'{{veces}}'       => 'EL BLOQUE: el recuadro azul con «su sitio se actualizó N veces».',
+					'{{actualizado}}' => 'EL BLOQUE: la lista de qué se mantuvo al día. Si no hubo nada, se queda en blanco.',
+				],
+			],
+		];
+	}
+
+	/** Lo guardado, o lo de fábrica si nadie lo ha tocado. */
+	public static function obtener( string $clave ): array {
+		$de_fabrica = self::catalogo()[ $clave ] ?? null;
+
+		if ( ! $de_fabrica ) {
+			return [ 'asunto' => '', 'cuerpo' => '' ];
+		}
+
+		$guardadas = get_option( self::OPCION, [] );
+		$mia       = is_array( $guardadas ) ? ( $guardadas[ $clave ] ?? [] ) : [];
+
+		return [
+			'asunto' => '' !== trim( (string) ( $mia['asunto'] ?? '' ) ) ? (string) $mia['asunto'] : (string) $de_fabrica['asunto'],
+			'cuerpo' => '' !== trim( (string) ( $mia['cuerpo'] ?? '' ) ) ? (string) $mia['cuerpo'] : (string) $de_fabrica['cuerpo'],
+		];
+	}
+
+	/** ¿Esta plantilla está tocada, o es la de fábrica? */
+	public static function esta_tocada( string $clave ): bool {
+		$guardadas = get_option( self::OPCION, [] );
+		return is_array( $guardadas ) && ! empty( $guardadas[ $clave ] );
+	}
+
+	public static function guardar( string $clave, string $asunto, string $cuerpo ): void {
+		if ( ! isset( self::catalogo()[ $clave ] ) ) {
+			return;
+		}
+
+		$guardadas = get_option( self::OPCION, [] );
+		$guardadas = is_array( $guardadas ) ? $guardadas : [];
+
+		$guardadas[ $clave ] = [
+			'asunto' => sanitize_text_field( $asunto ),
+			// El cuerpo NO pasa por sanitize_text_field: eso le comería los
+			// saltos de línea, que es justo lo que separa los párrafos.
+			'cuerpo' => wp_check_invalid_utf8( $cuerpo ),
+		];
+
+		update_option( self::OPCION, $guardadas, false );
+	}
+
+	public static function restaurar( string $clave ): void {
+		$guardadas = get_option( self::OPCION, [] );
+
+		if ( is_array( $guardadas ) && isset( $guardadas[ $clave ] ) ) {
+			unset( $guardadas[ $clave ] );
+			update_option( self::OPCION, $guardadas, false );
+		}
+	}
+
+	/**
+	 * El asunto, con sus marcas sustituidas. Texto plano.
+	 *
+	 * @param array<string,string> $valores
+	 */
+	public static function asunto( string $clave, array $valores ): string {
+		$asunto = self::obtener( $clave )['asunto'];
+
+		return trim( str_replace( array_keys( $valores ), array_values( $valores ), $asunto ) );
+	}
+
+	/**
+	 * El cuerpo de la plantilla, convertido a HTML de correo.
+	 *
+	 * Se escribe en texto normal, con una línea en blanco entre párrafos. Cada
+	 * párrafo sale envuelto en <p>; un párrafo que sea SOLO una marca de bloque
+	 * se reemplaza por el bloque entero, sin envolverlo.
+	 *
+	 * Lo escrito se escapa antes de sustituir nada: quien edita una plantilla
+	 * tiene permiso de administrar el panel, pero esto acaba en el buzón de un
+	 * cliente y una etiqueta suelta ahí no la quiere nadie. Los bloques entran
+	 * después, y esos los arma el panel.
+	 *
+	 * @param array<string,string> $enlinea Marcas de texto: ya escapadas.
+	 * @param array<string,string> $bloques Marcas de bloque: HTML que arma el panel.
+	 */
+	public static function cuerpo( string $clave, array $enlinea = [], array $bloques = [] ): string {
+		$plantilla = self::obtener( $clave )['cuerpo'];
+		$parrafos  = preg_split( '/\R\s*\R/u', trim( $plantilla ) ) ?: [];
+		$html      = '';
+
+		foreach ( $parrafos as $parrafo ) {
+			$parrafo = trim( (string) $parrafo );
+
+			if ( '' === $parrafo ) {
+				continue;
+			}
+
+			// ¿Es un párrafo que no dice más que «pon el bloque aquí»?
+			if ( array_key_exists( $parrafo, $bloques ) ) {
+				$html .= $bloques[ $parrafo ];
+				continue;
+			}
+
+			$linea = esc_html( $parrafo );
+
+			foreach ( $enlinea as $marca => $valor ) {
+				$linea = str_replace( $marca, $valor, $linea );
+			}
+
+			// Una marca de bloque metida a media frase no puede salir en bruto:
+			// ahí no cabe una tabla. Se quita, y el párrafo sigue leyéndose.
+			foreach ( array_keys( $bloques ) as $marca ) {
+				$linea = str_replace( $marca, '', $linea );
+			}
+
+			$html .= '<p>' . nl2br( $linea ) . '</p>';
+		}
+
+		return $html;
+	}
+
 	/** El marco común: cabecera, contenido y pie. */
 	public static function envolver( string $titulo, string $contenido, bool $con_atribucion = false ): string {
 		$pie = $con_atribucion
@@ -90,12 +280,7 @@ class SWPK_Plantillas {
 			)
 		);
 
-		$c  = sprintf( '<p>Hola %s,</p>', esc_html( $persona->display_name ) );
-		$c .= sprintf(
-			'<p>De los sitios que atendés, <strong>%d</strong> tienen algo pendiente esta semana%s.</p>',
-			count( $sitios ),
-			$criticos ? sprintf( ', y <strong style="color:%s">%d en estado alto o crítico</strong>', self::ROJO, $criticos ) : ''
-		);
+		$bloque = '';
 
 		foreach ( $sitios as $sitio ) {
 			$hallazgos = SWPK_Riesgo::hallazgos( (string) $sitio->sitio_id );
@@ -105,7 +290,7 @@ class SWPK_Plantillas {
 
 			$vulns = count( array_filter( $hallazgos, static fn( $h ) => 'actualizacion_pendiente' !== $h['motivo'] ) );
 
-			$c .= sprintf(
+			$bloque .= sprintf(
 				'<div style="border:1px solid #dcdcde;border-left:4px solid %s;border-radius:6px;padding:16px 18px;margin:18px 0">'
 				. '<p style="margin:0 0 4px;font-size:15px;font-weight:600">%s</p>'
 				. '<p style="margin:0 0 12px;color:%s;font-size:13px">%s · %d con vulnerabilidad · %d por actualizar</p>'
@@ -123,12 +308,21 @@ class SWPK_Plantillas {
 			);
 		}
 
-		$c .= sprintf(
-			'<p style="color:%s">Si querés que nos encarguemos nosotros de las actualizaciones, avisanos y lo coordinamos.</p>',
-			self::GRIS
+		return self::envolver(
+			self::catalogo()['semanal']['titulo'],
+			self::cuerpo(
+				'semanal',
+				[
+					'{{asesora}}'  => esc_html( $persona->display_name ),
+					'{{cuantos}}'  => '<strong>' . count( $sitios ) . '</strong>',
+					'{{criticos}}' => $criticos
+						? sprintf( ', y <strong style="color:%s">%d en estado alto o crítico</strong>', self::ROJO, $criticos )
+						: '',
+				],
+				[ '{{sitios}}' => $bloque ]
+			),
+			true
 		);
-
-		return self::envolver( 'Tus sitios esta semana', $c, true );
 	}
 
 	/** Resumen diario a soporte: lo que cambió, sin adornos. */
@@ -177,14 +371,24 @@ class SWPK_Plantillas {
 			);
 		}
 
-		$c .= sprintf( '<p>Esto cambió en las últimas 24 horas (%d en total):</p>', count( $eventos ) );
-		$c .= '<table style="width:100%;border-collapse:collapse">' . $filas . '</table>';
+		$tabla = '<table style="width:100%;border-collapse:collapse">' . $filas . '</table>';
 
 		if ( count( $eventos ) > 60 ) {
-			$c .= sprintf( '<p style="color:%s">Y %d más, en el panel.</p>', self::GRIS, count( $eventos ) - 60 );
+			$tabla .= sprintf( '<p style="color:%s">Y %d más, en el panel.</p>', self::GRIS, count( $eventos ) - 60 );
 		}
 
-		return self::envolver( 'Resumen del día', $c );
+		// El aviso de «este resumen no es de hoy» va antes de la plantilla y
+		// fuera de ella: no es prosa que se pueda reescribir ni quitar desde el
+		// panel. Es la advertencia que impide leer «cero cambios» como «todo
+		// tranquilo» cuando en realidad el panel no pudo mirar.
+		return self::envolver(
+			self::catalogo()['diario']['titulo'],
+			$c . self::cuerpo(
+				'diario',
+				[ '{{cuantos}}' => '<strong>' . count( $eventos ) . '</strong>' ],
+				[ '{{cambios}}' => $tabla ]
+			)
+		);
 	}
 
 	/**
@@ -217,15 +421,16 @@ class SWPK_Plantillas {
 			$lista .= '<li style="margin-bottom:4px">' . esc_html( SWPK_Textos::limpiar_titulo( $nombre ) ) . '</li>';
 		}
 
-		$mes = SWPK_Frescura::fmt( 'F \d\e Y', strtotime( $desde ) );
+		// El mes, con la fecha tal cual y SIN pasarla por strtotime().
+		//
+		// `$desde` es «2026-10-01 00:00:00» en el reloj de Guatemala. strtotime()
+		// lo leía como UTC —WordPress le fija UTC a PHP— y al escribirlo de
+		// vuelta en hora local le quitaba seis horas: el reporte de octubre
+		// salía titulado «septiembre». Un reporte mensual con el mes equivocado
+		// no hay forma de defenderlo delante del cliente.
+		$mes = SWPK_Frescura::fmt( 'F \d\e Y', $desde );
 
-		$c  = '<p>Hola,</p>';
-		$c .= sprintf(
-			'<p>Le escribimos con el reporte de mantenimiento de <strong>%s</strong> correspondiente a %s.</p>',
-			esc_html( $sitio->nombre_visible ),
-			esc_html( $mes )
-		);
-		$c .= sprintf(
+		$recuadro = sprintf(
 			'<p style="background:#f0f6fc;border-left:4px solid %s;padding:14px 16px;margin:18px 0">'
 			. 'Durante el mes su sitio se actualizó <strong>%d %s</strong>.</p>',
 			self::AZUL,
@@ -233,21 +438,24 @@ class SWPK_Plantillas {
 			1 === $veces ? 'vez' : 'veces'
 		);
 
-		if ( $lista ) {
-			$c .= '<p>Estos son los componentes que se mantuvieron al día:</p>';
-			$c .= '<ul style="margin:0 0 18px;padding-left:20px">' . $lista . '</ul>';
-		}
+		$al_dia = $lista
+			? '<p>Estos son los componentes que se mantuvieron al día:</p>'
+				. '<ul style="margin:0 0 18px;padding-left:20px">' . $lista . '</ul>'
+			: '';
 
-		$c .= '<p>Las actualizaciones corrigen fallas de seguridad que se descubren y se publican '
-			. 'continuamente. Mantenerlas al día es lo que evita que alguien las aproveche: es la '
-			. 'diferencia entre un sitio que se mantiene y uno que un día amanece con problemas.</p>';
-
-		$c .= sprintf(
-			'<p style="color:%s">No hay nada que usted tenga que hacer. Le avisamos para que sepa que '
-			. 'su sitio está siendo atendido.</p>',
-			self::GRIS
+		return self::envolver(
+			self::catalogo()['mensual']['titulo'],
+			self::cuerpo(
+				'mensual',
+				[
+					'{{sitio}}' => '<strong>' . esc_html( $sitio->nombre_visible ) . '</strong>',
+					'{{mes}}'   => esc_html( $mes ),
+				],
+				[
+					'{{veces}}'       => $recuadro,
+					'{{actualizado}}' => $al_dia,
+				]
+			)
 		);
-
-		return self::envolver( 'Reporte de mantenimiento', $c );
 	}
 }
