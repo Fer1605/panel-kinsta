@@ -48,18 +48,23 @@ define( 'SWA_ARCHIVO', __FILE__ );
 require_once SWA_RUTA . 'includes/class-ajustes.php';
 require_once SWA_RUTA . 'includes/class-firma.php';
 require_once SWA_RUTA . 'includes/class-correo.php';
+require_once SWA_RUTA . 'includes/class-normas.php';
+require_once SWA_RUTA . 'includes/class-ordenes.php';
 require_once SWA_RUTA . 'includes/class-reporte.php';
 require_once SWA_RUTA . 'includes/class-vigilante.php';
 require_once SWA_RUTA . 'includes/class-dos-factores.php';
 require_once SWA_RUTA . 'includes/class-admin.php';
 
 register_activation_hook( __FILE__, [ 'SWA_Reporte', 'programar' ] );
+register_activation_hook( __FILE__, [ 'SWA_Ordenes', 'programar' ] );
 register_deactivation_hook( __FILE__, [ 'SWA_Reporte', 'desprogramar' ] );
+register_deactivation_hook( __FILE__, [ 'SWA_Ordenes', 'desprogramar' ] );
 
 add_action(
 	'plugins_loaded',
 	static function (): void {
 		SWA_Reporte::init();
+		SWA_Ordenes::init();
 		SWA_Vigilante::init();
 		SWA_Dos_Factores::init();
 		if ( is_admin() ) {

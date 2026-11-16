@@ -33,6 +33,12 @@ class SWPK_Admin {
 		add_action( 'admin_post_swpk_quitar_acceso', [ __CLASS__, 'accion_quitar_acceso' ] );
 		add_action( 'admin_post_swpk_crear_llave', [ __CLASS__, 'accion_crear_llave' ] );
 		add_action( 'admin_post_swpk_revocar_llave', [ __CLASS__, 'accion_revocar_llave' ] );
+		add_action( 'admin_post_swpk_guardar_norma', [ __CLASS__, 'accion_guardar_norma' ] );
+		add_action( 'admin_post_swpk_encender_norma', [ __CLASS__, 'accion_encender_norma' ] );
+		add_action( 'admin_post_swpk_borrar_norma', [ __CLASS__, 'accion_borrar_norma' ] );
+		add_action( 'admin_post_swpk_marcar_norma', [ __CLASS__, 'accion_marcar_norma' ] );
+		add_action( 'admin_post_swpk_arreglar', [ __CLASS__, 'accion_arreglar' ] );
+		add_action( 'admin_post_swpk_reseteo_masivo', [ __CLASS__, 'accion_reseteo_masivo' ] );
 		add_action( 'admin_head', [ __CLASS__, 'estilos' ] );
 		add_filter( 'parent_file', [ __CLASS__, 'menu_abierto' ] );
 		add_filter( 'submenu_file', [ __CLASS__, 'submenu_marcado' ] );
@@ -76,6 +82,7 @@ class SWPK_Admin {
 		add_submenu_page( self::SLUG, 'Resumen', 'Resumen', $ver, self::SLUG, [ __CLASS__, 'pantalla_resumen' ] );
 		add_submenu_page( self::SLUG, 'Sitios', 'Sitios', $ver, self::SLUG . '-sitios', [ __CLASS__, 'pantalla_sitios' ] );
 		add_submenu_page( self::SLUG, 'Vulnerabilidades', 'Vulnerabilidades', $ver, self::SLUG . '-vulnerabilidades', [ __CLASS__, 'pantalla_vulnerabilidades' ] );
+		add_submenu_page( self::SLUG, 'Seguridad', 'Seguridad', $ver, self::SLUG . '-seguridad', [ __CLASS__, 'pantalla_seguridad' ] );
 		add_submenu_page( self::SLUG, 'Caídas', 'Caídas', $tecnico, self::SLUG . '-caidas', [ __CLASS__, 'pantalla_caidas' ] );
 
 		// La ficha de un sitio no va en el menú: se llega desde las listas.
@@ -134,7 +141,7 @@ class SWPK_Admin {
 
 		$de = isset( $_GET['de'] ) ? sanitize_key( (string) $_GET['de'] ) : '';
 
-		return in_array( $de, [ self::SLUG . '-sitios', self::SLUG . '-vulnerabilidades' ], true )
+		return in_array( $de, [ self::SLUG . '-sitios', self::SLUG . '-vulnerabilidades', self::SLUG . '-seguridad' ], true )
 			? $de
 			: self::SLUG . '-sitios';
 	}
@@ -180,6 +187,46 @@ class SWPK_Admin {
 			.swpk-tarjeta .swpk-r{color:#50575e;font-size:13px;margin-top:4px}
 			.swpk-nivel{display:inline-block;padding:2px 9px;border-radius:11px;color:#fff;font-size:11px;font-weight:600;white-space:nowrap}
 			.swpk-aviso-demo{border-left:4px solid #dba617;background:#fcf9e8;padding:12px 14px;margin:16px 0}
+			/* ── Seguridad ────────────────────────────────────────────────── */
+			.swpk-pelota{display:inline-block;min-width:18px;padding:0 5px;border-radius:9px;background:#2271b1;color:#fff;font-size:11px;line-height:18px;text-align:center;font-weight:600}
+			.swpk-veredicto{font-size:15px;line-height:1.5;padding:14px 16px;border-radius:6px;margin:18px 0;border:1px solid}
+			.swpk-veredicto-mal{background:#fcf0f1;border-color:#e6b3b6}
+			.swpk-veredicto-bien{background:#edfaef;border-color:#a3dcb0}
+			.swpk-veredicto-mas{display:block;margin-top:4px;color:#50575e;font-size:13px}
+			.swpk-norma-bloque{background:#fff;border:1px solid #c3c4c7;border-radius:6px;padding:14px 16px;margin-bottom:16px}
+			.swpk-norma-cabeza{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+			.swpk-norma-cabeza h3{margin:0;font-size:15px}
+			.swpk-norma-cuenta{margin-left:auto;color:#50575e;font-size:13px;white-space:nowrap}
+			.swpk-norma-porque{color:#3c434a;max-width:860px;margin:8px 0 12px}
+			.swpk-norma-tabla{border:1px solid #dcdcde}
+			.swpk-norma-pie{margin:12px 0 0;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+			/* La gravedad se dice con color Y con palabra: el color solo no
+			   sirve a quien no distingue rojo de verde, y esto se imprime. */
+			.swpk-sev-alta{background:#fcf0f1;color:#8a1f24;border-color:#e6b3b6}
+			.swpk-sev-media{background:#fcf9e8;color:#7a5610;border-color:#e3cf94}
+			.swpk-sev-baja{background:#f0f0f1;color:#50575e;border-color:#c3c4c7}
+			.swpk-mudo{color:#787c82;font-size:12px}
+			.swpk-bien-lista{margin:8px 0 0;max-width:900px}
+			.swpk-bien-lista li{margin-bottom:5px;color:#3c434a}
+			.swpk-cuadricula{margin-top:28px;background:#fff;border:1px solid #c3c4c7;border-radius:6px;padding:12px 16px}
+			.swpk-cuadricula summary{cursor:pointer;font-weight:600}
+			.swpk-cuadricula-scroll{overflow-x:auto;max-width:100%}
+			.swpk-matriz{min-width:900px}
+			.swpk-matriz-sitio{min-width:200px;position:sticky;left:0;background:#fff}
+			/* Los títulos de columna girados: diez normas en horizontal harían
+			   una tabla de tres metros. */
+			.swpk-matriz-col{height:150px;width:40px;padding:0 !important;vertical-align:bottom}
+			.swpk-matriz-col span{display:block;width:150px;transform-origin:bottom left;transform:translateX(26px) rotate(-60deg);font-size:11px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+			.swpk-celda{text-align:center;font-weight:600;font-size:12px;cursor:help}
+			.swpk-celda-cumple{background:#edfaef;color:#0a6c22}
+			.swpk-celda-falla{background:#fcf0f1;color:#8a1f24}
+			.swpk-celda-sin_dato{background:#f6f7f7;color:#787c82}
+			.swpk-celda-no_aplica{background:#fff;color:#c3c4c7}
+			.swpk-orden-pendiente{background:#fcf9e8;color:#7a5610;border-color:#e3cf94}
+			.swpk-orden-entregada{background:#f0f6fc;color:#1b5e8f;border-color:#a7cdea}
+			.swpk-orden-hecha{background:#edfaef;color:#0a6c22;border-color:#a3dcb0}
+			.swpk-orden-fallo,.swpk-orden-vencida{background:#fcf0f1;color:#8a1f24;border-color:#e6b3b6}
+			.swpk-orden-cancelada{background:#f0f0f1;color:#50575e;border-color:#c3c4c7}
 			.swpk-atribucion{color:#646970;font-size:12px;margin-top:18px;padding-top:12px;border-top:1px solid #dcdcde}
 			.swpk-tabla td,.swpk-tabla th{vertical-align:middle}
 			.swpk-mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px}
@@ -460,6 +507,13 @@ class SWPK_Admin {
 			wp_die( 'Sin permiso.' );
 		}
 		require SWPK_RUTA . 'includes/admin/vistas/bitacora.php';
+	}
+
+	public static function pantalla_seguridad(): void {
+		if ( ! self::puede_ver() ) {
+			wp_die( 'Sin permiso.' );
+		}
+		require SWPK_RUTA . 'includes/admin/vistas/seguridad.php';
 	}
 
 	public static function pantalla_ajustes(): void {
@@ -855,6 +909,292 @@ class SWPK_Admin {
 		SWPK_Ajustes::guardar( $nuevos );
 
 		wp_safe_redirect( admin_url( 'admin.php?page=' . self::SLUG . '-ajustes&swpk_msg=ok:' . rawurlencode( 'Ajustes guardados.' ) ) );
+		exit;
+	}
+
+	// ── Seguridad: normas y órdenes ─────────────────────────────────────────
+
+	/** A dónde volver después de una acción de Seguridad. */
+	private static function url_seguridad( string $seccion, string $mensaje = '' ): string {
+		$args = [ 'page' => self::SLUG . '-seguridad', 'seccion' => $seccion ];
+
+		if ( '' !== $mensaje ) {
+			$args['swpk_msg'] = $mensaje;
+		}
+
+		return add_query_arg( $args, admin_url( 'admin.php' ) );
+	}
+
+	public static function url_encender_norma( string $clave, bool $encender ): string {
+		return wp_nonce_url(
+			add_query_arg(
+				[ 'action' => 'swpk_encender_norma', 'norma' => $clave, 'encender' => $encender ? '1' : '0' ],
+				admin_url( 'admin-post.php' )
+			),
+			'swpk_norma_' . $clave
+		);
+	}
+
+	public static function url_borrar_norma( string $clave ): string {
+		return wp_nonce_url(
+			add_query_arg(
+				[ 'action' => 'swpk_borrar_norma', 'norma' => $clave ],
+				admin_url( 'admin-post.php' )
+			),
+			'swpk_norma_' . $clave
+		);
+	}
+
+	/**
+	 * La dirección de «arreglar».
+	 *
+	 * Con `$sitio_id` vacío quiere decir «en todos los que fallan». Es el mismo
+	 * verbo y el mismo permiso: la diferencia la pone el alcance, y la pantalla
+	 * de confirmación dice en cuántos sitios va a pasar antes de pulsar.
+	 */
+	public static function url_arreglar( string $norma, string $sitio_id = '' ): string {
+		$args = [ 'action' => 'swpk_arreglar', 'norma' => $norma ];
+
+		if ( '' !== $sitio_id ) {
+			$args['sitio'] = $sitio_id;
+		}
+
+		return wp_nonce_url(
+			add_query_arg( $args, admin_url( 'admin-post.php' ) ),
+			'swpk_arreglar_' . $norma
+		);
+	}
+
+	public static function url_marcar_norma( string $norma, string $sitio_id, string $estado ): string {
+		return wp_nonce_url(
+			add_query_arg(
+				[ 'action' => 'swpk_marcar_norma', 'norma' => $norma, 'sitio' => $sitio_id, 'estado' => $estado ],
+				admin_url( 'admin-post.php' )
+			),
+			'swpk_marcar_' . $norma . '_' . $sitio_id
+		);
+	}
+
+	public static function accion_guardar_norma(): void {
+		if ( ! self::puede_administrar() ) {
+			wp_die( 'Sin permiso.' );
+		}
+		check_admin_referer( 'swpk_guardar_norma' );
+
+		$datos = [
+			'clave'     => isset( $_POST['clave'] ) ? sanitize_key( wp_unslash( (string) $_POST['clave'] ) ) : '',
+			'nombre'    => isset( $_POST['nombre'] ) ? sanitize_text_field( wp_unslash( (string) $_POST['nombre'] ) ) : '',
+			'porque'    => isset( $_POST['porque'] ) ? sanitize_textarea_field( wp_unslash( (string) $_POST['porque'] ) ) : '',
+			'severidad' => isset( $_POST['severidad'] ) ? sanitize_key( wp_unslash( (string) $_POST['severidad'] ) ) : 'media',
+			'aplica_a'  => isset( $_POST['aplica_a'] ) ? implode( ',', array_map( 'sanitize_key', (array) wp_unslash( $_POST['aplica_a'] ) ) ) : '',
+			'activa'    => isset( $_POST['activa'] ) ? 1 : 0,
+		];
+
+		$r = SWPK_Normas::guardar( $datos );
+
+		$mensaje = is_wp_error( $r )
+			? 'error:' . rawurlencode( $r->get_error_message() )
+			: 'ok:' . rawurlencode( '' !== $datos['clave'] ? 'Norma guardada.' : 'Norma agregada. Aparecerá en el tablero como «sin medir» hasta que alguien la marque sitio por sitio.' );
+
+		wp_safe_redirect( self::url_seguridad( 'normas', $mensaje ) );
+		exit;
+	}
+
+	public static function accion_encender_norma(): void {
+		if ( ! self::puede_administrar() ) {
+			wp_die( 'Sin permiso.' );
+		}
+
+		$clave = isset( $_GET['norma'] ) ? sanitize_key( (string) $_GET['norma'] ) : '';
+		check_admin_referer( 'swpk_norma_' . $clave );
+
+		$encender = ! empty( $_GET['encender'] );
+		SWPK_Normas::encender( $clave, $encender );
+		SWPK_Estado::olvidar();
+
+		wp_safe_redirect(
+			self::url_seguridad(
+				'normas',
+				'ok:' . rawurlencode( $encender ? 'Norma encendida. Se empieza a medir en el siguiente reporte de cada sitio.' : 'Norma apagada. Deja de medirse y sale del tablero.' )
+			)
+		);
+		exit;
+	}
+
+	public static function accion_borrar_norma(): void {
+		if ( ! self::puede_administrar() ) {
+			wp_die( 'Sin permiso.' );
+		}
+
+		$clave = isset( $_GET['norma'] ) ? sanitize_key( (string) $_GET['norma'] ) : '';
+		check_admin_referer( 'swpk_norma_' . $clave );
+
+		$r = SWPK_Normas::borrar( $clave );
+		SWPK_Estado::olvidar();
+
+		$mensaje = is_wp_error( $r )
+			? 'error:' . rawurlencode( $r->get_error_message() )
+			: 'ok:' . rawurlencode( 'Norma borrada, con todo lo que se había medido de ella.' );
+
+		wp_safe_redirect( self::url_seguridad( 'normas', $mensaje ) );
+		exit;
+	}
+
+	/** Marcar a mano una norma declarativa en un sitio. */
+	public static function accion_marcar_norma(): void {
+		if ( ! self::puede_administrar() ) {
+			wp_die( 'Sin permiso.' );
+		}
+
+		$norma    = isset( $_GET['norma'] ) ? sanitize_key( (string) $_GET['norma'] ) : '';
+		$sitio_id = isset( $_GET['sitio'] ) ? sanitize_text_field( wp_unslash( (string) $_GET['sitio'] ) ) : '';
+		check_admin_referer( 'swpk_marcar_' . $norma . '_' . $sitio_id );
+
+		$estado = isset( $_GET['estado'] ) ? sanitize_key( (string) $_GET['estado'] ) : '';
+		$r      = SWPK_Normas::marcar( $sitio_id, $norma, $estado );
+		SWPK_Estado::olvidar();
+
+		$mensaje = is_wp_error( $r )
+			? 'error:' . rawurlencode( $r->get_error_message() )
+			: 'ok:' . rawurlencode( 'Anotado, con tu nombre y la fecha.' );
+
+		wp_safe_redirect(
+			add_query_arg(
+				[ 'page' => self::SLUG . '-sitio', 'sitio' => $sitio_id, 'de' => self::SLUG . '-seguridad', 'swpk_msg' => $mensaje ],
+				admin_url( 'admin.php' )
+			)
+		);
+		exit;
+	}
+
+	/**
+	 * Pide el arreglo de una norma: en un sitio, o en todos los que la fallan.
+	 *
+	 * No arregla nada aquí: encola. Y cuenta con precisión qué se encoló y qué
+	 * no, porque «listo» sería mentira cuando tres de los catorce sitios son
+	 * del cliente y uno no tiene agente.
+	 */
+	public static function accion_arreglar(): void {
+		if ( ! self::puede_administrar() ) {
+			wp_die( 'Sin permiso.' );
+		}
+
+		$norma = isset( $_GET['norma'] ) ? sanitize_key( (string) $_GET['norma'] ) : '';
+		check_admin_referer( 'swpk_arreglar_' . $norma );
+
+		$tipo = SWPK_Ordenes::orden_de_la_norma( $norma );
+
+		if ( '' === $tipo ) {
+			wp_safe_redirect(
+				self::url_seguridad(
+					'cumplimiento',
+					'error:' . rawurlencode( 'Esa norma no se puede arreglar desde el panel: hay que hacerlo a mano.' )
+				)
+			);
+			exit;
+		}
+
+		$uno = isset( $_GET['sitio'] ) ? sanitize_text_field( wp_unslash( (string) $_GET['sitio'] ) ) : '';
+
+		if ( '' !== $uno ) {
+			$objetivos = [ $uno ];
+		} else {
+			// Todos los que hoy la fallan. Se recalcula aquí en vez de confiar
+			// en lo que la pantalla tenía: entre que se cargó y se pulsó pudo
+			// llegar un reporte y cambiar quién la cumple.
+			$objetivos = [];
+
+			foreach ( SWPK_Perfiles::sitios_visibles() as $s ) {
+				$del = SWPK_Normas::del_sitio( (string) $s->sitio_id );
+
+				if ( isset( $del[ $norma ] ) && SWPK_Normas::FALLA === (string) $del[ $norma ]->estado ) {
+					$objetivos[] = (string) $s->sitio_id;
+				}
+			}
+		}
+
+		$encoladas = 0;
+		$rechazos  = [];
+
+		foreach ( $objetivos as $sitio_id ) {
+			$r = SWPK_Ordenes::encolar( $tipo, $sitio_id, [], $norma );
+
+			if ( is_wp_error( $r ) ) {
+				$rechazos[] = $r->get_error_message();
+				continue;
+			}
+
+			++$encoladas;
+		}
+
+		if ( 0 === $encoladas ) {
+			wp_safe_redirect(
+				self::url_seguridad(
+					'cumplimiento',
+					'error:' . rawurlencode( 'No se pudo pedir en ningún sitio. ' . implode( ' ', array_slice( $rechazos, 0, 2 ) ) )
+				)
+			);
+			exit;
+		}
+
+		$texto = sprintf(
+			'Pedido en %s. No es inmediato: cada sitio lo aplica cuando pregunte al panel, lo que puede tardar desde minutos hasta horas según su tráfico.',
+			SWPK_Vista::plural( $encoladas, 'sitio', 'sitios' )
+		);
+
+		if ( $rechazos ) {
+			$texto .= sprintf( ' %s quedaron fuera: %s', count( $rechazos ), $rechazos[0] );
+		}
+
+		wp_safe_redirect( self::url_seguridad( 'ordenes', 'ok:' . rawurlencode( $texto ) ) );
+		exit;
+	}
+
+	public static function accion_reseteo_masivo(): void {
+		if ( ! self::puede_administrar() ) {
+			wp_die( 'Sin permiso.' );
+		}
+		check_admin_referer( 'swpk_reseteo_masivo' );
+
+		$login  = isset( $_POST['login'] ) ? sanitize_user( wp_unslash( (string) $_POST['login'] ), true ) : '';
+		$grupos = isset( $_POST['grupos'] ) ? array_map( 'sanitize_key', (array) wp_unslash( $_POST['grupos'] ) ) : [];
+
+		// La contraseña NO se sanitiza con sanitize_text_field: eso le quitaría
+		// caracteres y dejaría puesta en los sitios una contraseña distinta de
+		// la que se escribió aquí. Se usa tal cual llegó, que es lo que hace
+		// WordPress con cualquier contraseña.
+		$clave = isset( $_POST['clave'] ) ? (string) wp_unslash( $_POST['clave'] ) : '';
+
+		if ( ! $grupos ) {
+			wp_safe_redirect( self::url_seguridad( 'ordenes', 'error:' . rawurlencode( 'No se eligió ningún grupo de sitios.' ) ) );
+			exit;
+		}
+
+		$objetivos = [];
+
+		foreach ( SWPK_Perfiles::sitios_visibles() as $s ) {
+			if ( in_array( (string) $s->tag, $grupos, true ) ) {
+				$objetivos[] = (string) $s->sitio_id;
+			}
+		}
+
+		$r = SWPK_Ordenes::reseteo_masivo( $objetivos, $login, $clave );
+
+		if ( is_wp_error( $r ) ) {
+			wp_safe_redirect( self::url_seguridad( 'ordenes', 'error:' . rawurlencode( $r->get_error_message() ) ) );
+			exit;
+		}
+
+		$texto = sprintf(
+			'Pedido en %s. La contraseña vive dos horas en memoria del panel y después se borra: los sitios que no pregunten en ese rato quedan sin cambiar y van a decirlo aquí.',
+			SWPK_Vista::plural( (int) $r['encoladas'], 'sitio', 'sitios' )
+		);
+
+		if ( ! empty( $r['rechazos'] ) ) {
+			$texto .= sprintf( ' %d quedaron fuera.', count( $r['rechazos'] ) );
+		}
+
+		wp_safe_redirect( self::url_seguridad( 'ordenes', 'ok:' . rawurlencode( $texto ) ) );
 		exit;
 	}
 

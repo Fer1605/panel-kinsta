@@ -89,7 +89,21 @@ class SWA_Reporte {
 	 *
 	 * @return array<string,mixed>
 	 */
-	public static function armar(): array {
+	public static function armar( bool $liviano = false ): array {
+		// El reporte liviano es el de «¿hay algo que hacer?», cada cinco
+		// minutos. No lleva usuarios ni normas: con 94 sitios eso serían
+		// 27.000 reportes completos al día para preguntar algo que casi
+		// siempre se contesta con «nada». El panel está hecho para no escribir
+		// nada por ausencia, así que un liviano no borra ni apaga nada.
+		if ( $liviano ) {
+			return [
+				'agente'  => SWA_VERSION,
+				'sitio'   => home_url(),
+				'liviano' => true,
+				'generado' => gmdate( 'c' ),
+			];
+		}
+
 		$usuarios        = self::usuarios_vigilados();
 		$roles_vigilados = self::roles_vigilados();
 
@@ -118,6 +132,14 @@ class SWA_Reporte {
 				'probado'      => (string) ( $correo['probado'] ?? '' ),
 			],
 			'xmlrpc_abierto' => (bool) apply_filters( 'xmlrpc_enabled', true ),
+			// Lo del audio de normas de seguridad. Son cosas que solo se saben
+			// estando dentro del sitio: el panel no las puede ver desde fuera.
+			'normas'        => SWA_Normas::medir(),
+			// Quién cerró el editor importa tanto como que esté cerrado: si lo
+			// cerró el agente, se abre de nuevo al desactivar el plugin.
+			'editor_codigo_por' => ( defined( 'DISALLOW_FILE_MODS' ) && DISALLOW_FILE_MODS ) || ( defined( 'DISALLOW_FILE_EDIT' ) && DISALLOW_FILE_EDIT && ! SWA_Ajustes::obtener( 'cerrar_editor' ) )
+				? 'wp-config'
+				: ( SWA_Ajustes::obtener( 'cerrar_editor' ) ? 'agente' : '' ),
 		];
 	}
 
@@ -168,14 +190,31 @@ class SWA_Reporte {
 		return true;
 	}
 
-	public static function enviar(): true|WP_Error {
+	/**
+	 * Manda el reporte y ejecuta lo que el panel haya dejado pendiente.
+	 *
+	 * @param bool                           $liviano    Sin usuarios ni normas: solo preguntar.
+	 * @param array<int,array<string,mixed>> $resultados Lo que quedó por contarle al panel.
+	 */
+	public static function enviar( bool $liviano = false, array $resultados = [] ): true|WP_Error {
 		$a = SWA_Ajustes::todos();
 
 		if ( ! SWA_Ajustes::registrado() ) {
 			return new WP_Error( 'swa_sin_registro', 'Este sitio todavía no está registrado en el panel.' );
 		}
 
-		$cuerpo = wp_json_encode( self::armar() );
+		$datos = self::armar( $liviano );
+
+		// Los resultados de órdenes anteriores viajan en el mismo viaje. Si no
+		// se los pasaron, se recogen de la cola: así un reporte diario también
+		// arrastra lo que un intento anterior no logró contar.
+		$pendientes = $resultados ?: SWA_Ordenes::pendientes_de_contar();
+
+		if ( $pendientes ) {
+			$datos['ordenes_hechas'] = $pendientes;
+		}
+
+		$cuerpo = wp_json_encode( $datos );
 		$marca  = time();
 		$firma  = SWA_Firma::firmar( (string) $cuerpo, $marca, $a['secreto'] );
 
@@ -208,10 +247,29 @@ class SWA_Reporte {
 		update_option( 'swa_ultimo_reporte', current_time( 'mysql' ), false );
 		delete_option( 'swa_ultimo_error' );
 
+		// El panel confirmó, así que lo que ya se le contó se puede olvidar.
+		if ( $pendientes ) {
+			SWA_Ordenes::olvidar_contados( $pendientes );
+		}
+
+		// Y lo último: ejecutar lo que el panel dejó pendiente. Va aquí, al
+		// final, porque solo se obedece a una respuesta que llegó por esta
+		// ruta — que es la única que va firmada con el secreto de este sitio.
+		$respuesta = json_decode( (string) wp_remote_retrieve_body( $r ), true );
+
+		if ( is_array( $respuesta ) && ! empty( $respuesta['ordenes'] ) && is_array( $respuesta['ordenes'] ) ) {
+			SWA_Ordenes::ejecutar( $respuesta['ordenes'] );
+		}
+
 		// El panel ya conoce esta lista. Sirve igual si el envío salió del
 		// reporte diario o del aviso instantáneo: después de cualquiera de los
 		// dos, lo que hay aquí y lo que hay allá coinciden.
-		SWA_Vigilante::recordar_huella();
+		// La huella solo se renueva cuando de verdad se mandó la lista. Un
+		// liviano no la lleva, así que decir «el panel ya la conoce» taparía
+		// un alta de administrador hasta el día siguiente.
+		if ( ! $liviano ) {
+			SWA_Vigilante::recordar_huella();
+		}
 
 		return true;
 	}

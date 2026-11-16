@@ -55,6 +55,9 @@ class SWPK_Api {
 			'/estado'           => 'estado',
 			'/sitios'           => 'sitios',
 			'/vulnerabilidades' => 'vulnerabilidades',
+			'/normas'           => 'normas',
+			'/cumplimiento'     => 'cumplimiento',
+			'/ordenes'          => 'ordenes',
 			'/usuarios'         => 'usuarios',
 			'/eventos'          => 'eventos',
 			'/bitacora'         => 'bitacora',
@@ -338,6 +341,169 @@ class SWPK_Api {
 				'eventos'    => SWPK_Eventos::recientes( 100, $sitio_id ),
 				'bitacora'   => SWPK_Bitacora::listar( 100, $sitio_id ),
 				'disponible' => self::monitor_de( $sitio_id ),
+			]
+		);
+	}
+
+	/**
+	 * La lista de normas de seguridad, tal como está configurada.
+	 *
+	 * Sirve para dos cosas desde fuera: saber contra qué se está midiendo, y
+	 * poder explicarle a alguien por qué una norma importa sin tener que entrar
+	 * al panel — el «porque» viaja con cada una.
+	 */
+	public static function normas( WP_REST_Request $peticion ): WP_REST_Response {
+		$todas = ! empty( $peticion->get_param( 'incluir_apagadas' ) );
+		$lista = [];
+
+		foreach ( $todas ? SWPK_Normas::todas() : SWPK_Normas::activas() as $n ) {
+			$lista[] = [
+				'clave'       => (string) $n->clave,
+				'nombre'      => (string) $n->nombre,
+				'porque'      => (string) $n->porque,
+				'severidad'   => (string) $n->severidad,
+				'activa'      => (int) $n->activa === 1,
+				'aplica_a'    => '' === trim( (string) $n->aplica_a )
+					? array_keys( SWPK_Etiquetas::nombres() )
+					: array_map( 'trim', explode( ',', (string) $n->aplica_a ) ),
+				// Quién la mide cambia lo que vale el dato: lo que mide el
+				// agente es una medición, lo que se marca a mano es el
+				// testimonio de una persona con fecha. No es lo mismo.
+				'se_mide'     => 'declarativa' === (string) $n->comprobador ? 'a_mano' : 'el_agente',
+				'arreglable'  => (int) $n->arreglable === 1,
+			];
+		}
+
+		return self::responder( [ 'normas' => $lista, 'cuantos' => count( $lista ) ] );
+	}
+
+	/**
+	 * El cumplimiento: quién cumple qué, y desde cuándo se sabe.
+	 *
+	 * Cada fila lleva su propia fecha de medición y no la de la corrida del
+	 * panel, por la misma razón que la llevan las vulnerabilidades: estos datos
+	 * los trae cada sitio en su reporte, y los sitios no reportan todos a la
+	 * misma hora. Una respuesta con una sola fecha arriba estaría fechando
+	 * datos de ayer como si fueran de hoy.
+	 */
+	public static function cumplimiento( WP_REST_Request $peticion ): WP_REST_Response {
+		$solo_sitio = sanitize_text_field( (string) $peticion->get_param( 'sitio' ) );
+		$solo_norma = sanitize_key( (string) $peticion->get_param( 'norma' ) );
+		$solo_est   = sanitize_key( (string) $peticion->get_param( 'estado' ) );
+
+		$sitios  = SWPK_Perfiles::sitios_visibles();
+		$tablero = SWPK_Normas::tablero( $sitios );
+
+		$filas = [];
+
+		foreach ( $tablero['filas'] as $f ) {
+			$sitio_id = (string) $f['sitio']->sitio_id;
+
+			if ( '' !== $solo_sitio && $sitio_id !== $solo_sitio ) {
+				continue;
+			}
+
+			foreach ( $f['celdas'] as $clave => $celda ) {
+				if ( '' !== $solo_norma && $clave !== $solo_norma ) {
+					continue;
+				}
+
+				if ( '' !== $solo_est && (string) $celda['estado'] !== $solo_est ) {
+					continue;
+				}
+
+				$filas[] = [
+					'sitio_id'  => $sitio_id,
+					'nombre'    => (string) $f['sitio']->nombre_visible,
+					'grupo'     => (string) $f['sitio']->tag,
+					'norma'     => (string) $clave,
+					'estado'    => (string) $celda['estado'],
+					'detalle'   => (string) $celda['detalle'],
+					'medido_en' => (string) ( $celda['medido_en'] ?? '' ),
+					'a_mano'    => ! empty( $celda['revisado_por'] ),
+				];
+			}
+		}
+
+		[ $pagina, $por_pagina ] = self::paginacion( $peticion );
+
+		return self::responder(
+			[
+				'veredicto' => [
+					'sitios'         => (int) $tablero['total'],
+					'al_dia'         => (int) $tablero['al_dia'],
+					'con_fallas'     => (int) $tablero['fallando'],
+					'sin_medir'      => (int) $tablero['sin_dato'],
+					'normas_activas' => count( $tablero['normas'] ),
+				],
+				'filas'     => array_slice( $filas, ( $pagina - 1 ) * $por_pagina, $por_pagina ),
+				'cuantos'   => count( $filas ),
+				'pagina'    => $pagina,
+				'paginas'   => max( 1, (int) ceil( count( $filas ) / $por_pagina ) ),
+			]
+		);
+	}
+
+	/**
+	 * Las órdenes: qué se le pidió a qué sitio y cómo acabó.
+	 *
+	 * Es lectura, y la API no las puede crear. No es un olvido: una orden
+	 * cambia cosas en el sitio de un cliente, y eso se pide desde la pantalla
+	 * que dice en cuántos sitios va a pasar y pide confirmación. Abrirlo a la
+	 * API sería dejar que un script cambie 94 sitios sin que nadie lo vea.
+	 */
+	public static function ordenes( WP_REST_Request $peticion ): WP_REST_Response {
+		$filtros = [];
+
+		foreach ( [ 'estado', 'sitio_id', 'lote' ] as $k ) {
+			$v = sanitize_text_field( (string) $peticion->get_param( $k ) );
+
+			if ( '' !== $v ) {
+				$filtros[ $k ] = $v;
+			}
+		}
+
+		$visibles = [];
+
+		foreach ( SWPK_Perfiles::sitios_visibles() as $s ) {
+			$visibles[ (string) $s->sitio_id ] = (string) $s->nombre_visible;
+		}
+
+		$lista = [];
+
+		foreach ( SWPK_Ordenes::listar( $filtros ) as $o ) {
+			$sitio_id = (string) $o->sitio_id;
+
+			// El recorte por perfil también aquí: una llave de ventas no tiene
+			// por qué ver qué se le pidió a un sitio que no es suyo.
+			if ( ! array_key_exists( $sitio_id, $visibles ) ) {
+				continue;
+			}
+
+			$lista[] = [
+				'id'           => (int) $o->id,
+				'sitio_id'     => $sitio_id,
+				'nombre'       => $visibles[ $sitio_id ],
+				'tipo'         => (string) $o->tipo,
+				'que_es'       => SWPK_Ordenes::tipos()[ (string) $o->tipo ] ?? (string) $o->tipo,
+				'norma'        => (string) $o->norma,
+				'estado'       => (string) $o->estado,
+				'como_va'      => SWPK_Ordenes::etiqueta( (string) $o->estado ),
+				'resultado'    => (string) $o->resultado,
+				'pedida_en'    => (string) $o->pedida_en,
+				'resuelta_en'  => (string) ( $o->resuelta_en ?? '' ),
+			];
+		}
+
+		[ $pagina, $por_pagina ] = self::paginacion( $peticion );
+
+		return self::responder(
+			[
+				'ordenes' => array_slice( $lista, ( $pagina - 1 ) * $por_pagina, $por_pagina ),
+				'cuantos' => count( $lista ),
+				'conteos' => SWPK_Ordenes::conteos(),
+				'pagina'  => $pagina,
+				'paginas' => max( 1, (int) ceil( count( $lista ) / $por_pagina ) ),
 			]
 		);
 	}

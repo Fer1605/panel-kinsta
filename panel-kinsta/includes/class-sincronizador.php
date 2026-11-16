@@ -107,6 +107,11 @@ class SWPK_Sincronizador {
 			);
 		}
 
+		// Las órdenes que un sitio se llevó y nunca contestó se cierran aquí.
+		// Si se quedaran en «entregada» para siempre, el panel mostraría como
+		// «en camino» algo que ya no va a llegar nunca.
+		$resumen['ordenes_caducadas'] = SWPK_Ordenes::caducar();
+
 		$resumen['fin'] = current_time( 'mysql' );
 
 		update_option( 'swpk_ultima_corrida', $resumen, false );

@@ -219,6 +219,114 @@ $plano = SWPK_Textos::para_asesora( $sitio, $hallazgos );
 		</p></div>
 	<?php endif; ?>
 
+	<?php
+	// ── Las normas de seguridad de este sitio ───────────────────────────────
+	//
+	// Va en la ficha y no solo en el tablero porque es aquí donde se marcan a
+	// mano las declarativas: el honeypot de ESTE sitio lo revisa alguien que
+	// está mirando ESTE sitio, no una casilla en una pantalla de 107 filas.
+	$normas_activas = SWPK_Normas::activas();
+	$cumple_sitio   = SWPK_Normas::del_sitio( $sitio_id );
+	?>
+
+	<?php if ( $normas_activas ) : ?>
+		<h2>Las normas de seguridad</h2>
+
+		<?php
+		$agente_sitio = SWPK_Ordenes::agente_de( $sitio_id );
+		$es_cliente   = SWPK_Etiquetas::NO_UPDATE === (string) $sitio->tag;
+		?>
+
+		<?php if ( ! $agente_sitio ) : ?>
+			<div class="notice notice-warning inline">
+				<p>
+					<strong>Este sitio no tiene el agente instalado</strong>, así que casi ninguna de estas normas
+					se puede comprobar: son cosas que solo se ven desde dentro del sitio. Lo que sigue dice «sin
+					medir», que no es lo mismo que «está bien».
+				</p>
+			</div>
+		<?php endif; ?>
+
+		<table class="widefat striped" style="max-width:1000px">
+			<thead>
+				<tr>
+					<th style="width:34%">Norma</th>
+					<th style="width:110px">Cómo está</th>
+					<th>Detalle</th>
+					<th style="width:160px"></th>
+				</tr>
+			</thead>
+			<tbody>
+			<?php foreach ( $normas_activas as $n ) : ?>
+				<?php
+				$clave = (string) $n->clave;
+
+				if ( ! SWPK_Normas::aplica( $n, (string) $sitio->tag ) ) {
+					continue;
+				}
+
+				$fila   = $cumple_sitio[ $clave ] ?? null;
+				$estado = $fila ? (string) $fila->estado : SWPK_Normas::SIN_DATO;
+				$orden  = SWPK_Ordenes::orden_de_la_norma( $clave );
+				?>
+				<tr>
+					<td>
+						<strong><?php echo esc_html( (string) $n->nombre ); ?></strong>
+						<span class="swpk-etq swpk-sev-<?php echo esc_attr( (string) $n->severidad ); ?>"><?php
+							echo esc_html( ucfirst( (string) $n->severidad ) );
+						?></span>
+					</td>
+					<td>
+						<span class="swpk-etq swpk-celda-<?php echo esc_attr( $estado ); ?>"><?php
+							echo esc_html( SWPK_Normas::etiqueta( $estado ) );
+						?></span>
+					</td>
+					<td>
+						<?php echo esc_html( $fila ? (string) $fila->detalle : 'Todavía no se ha medido.' ); ?>
+						<?php if ( $fila && $fila->medido_en ) : ?>
+							<br><span class="swpk-mudo">
+								<?php
+								if ( (int) $fila->revisado_por > 0 ) {
+									$quien = get_userdata( (int) $fila->revisado_por );
+									printf(
+										'Marcado por %s el %s',
+										esc_html( $quien ? $quien->display_name : 'alguien' ),
+										esc_html( SWPK_Frescura::fmt( 'j/n/Y H:i', (string) $fila->medido_en ) )
+									);
+								} else {
+									printf(
+										'Medido el %s',
+										esc_html( SWPK_Frescura::fmt( 'j/n/Y H:i', (string) $fila->medido_en ) )
+									);
+								}
+								?>
+							</span>
+						<?php endif; ?>
+					</td>
+					<td style="text-align:right">
+						<?php if ( ! SWPK_Perfiles::puede( SWPK_Perfiles::ADMINISTRAR ) ) : ?>
+							&mdash;
+						<?php elseif ( 'declarativa' === (string) $n->comprobador ) : ?>
+							<a class="button button-small" href="<?php
+								echo esc_url( SWPK_Admin::url_marcar_norma( $clave, $sitio_id, SWPK_Normas::CUMPLE ) );
+							?>">Cumple</a>
+							<a class="button button-small" href="<?php
+								echo esc_url( SWPK_Admin::url_marcar_norma( $clave, $sitio_id, SWPK_Normas::FALLA ) );
+							?>">No</a>
+						<?php elseif ( SWPK_Normas::FALLA === $estado && '' !== $orden && (int) $n->arreglable === 1 && ! $es_cliente ) : ?>
+							<a class="button button-small" href="<?php
+								echo esc_url( SWPK_Admin::url_arreglar( $clave, $sitio_id ) );
+							?>">Arreglar</a>
+						<?php elseif ( SWPK_Normas::FALLA === $estado && $es_cliente ) : ?>
+							<span class="swpk-mudo" title="Sitio del cliente: se mide, no se cambia.">Es del cliente</span>
+						<?php endif; ?>
+					</td>
+				</tr>
+			<?php endforeach; ?>
+			</tbody>
+		</table>
+	<?php endif; ?>
+
 	<?php SWPK_Vista::volver( $regreso['url'], $regreso['texto'] ); ?>
 
 	<p class="swpk-atribucion"><?php echo wp_kses_post( SWPK_Wordfence::atribucion() ); ?></p>

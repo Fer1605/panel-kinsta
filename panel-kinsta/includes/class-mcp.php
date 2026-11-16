@@ -234,8 +234,9 @@ class SWPK_Mcp {
 	}
 
 	// ─────────────────────────────────────────────────────────────────────────
-	// Las herramientas: las mismas siete rutas de lectura, con los mismos
-	// nombres de parámetro. Las tres que disparan procesos no se entregan.
+	// Las herramientas: las mismas rutas de lectura de la API, con los mismos
+	// nombres de parámetro. Las tres que disparan procesos no se entregan, y
+	// tampoco se entrega ninguna que cambie algo en un sitio de cliente.
 	// ─────────────────────────────────────────────────────────────────────────
 
 	private static function herramientas(): array {
@@ -286,6 +287,60 @@ class SWPK_Mcp {
 					'properties' => [
 						'nivel'      => [ 'type' => 'string', 'enum' => $niveles ],
 						'sitio'      => [ 'type' => 'string', 'description' => 'Un sitio_id.' ],
+						'pagina'     => [ 'type' => 'integer' ],
+						'por_pagina' => [ 'type' => 'integer' ],
+					],
+				],
+			],
+			'panel_normas' => [
+				'_ruta'       => '/normas',
+				'description' => 'La lista de normas de seguridad contra las que el panel mide los sitios, con el '
+					. 'porqué de cada una en palabras, qué tan grave es, a qué grupos aplica, y si la mide el '
+					. 'agente o la marca una persona a mano. Empieza por aquí antes de panel_cumplimiento: sin '
+					. 'saber qué mide cada norma, los veredictos no se pueden interpretar.',
+				'inputSchema' => [
+					'type'       => 'object',
+					'properties' => [
+						'incluir_apagadas' => [
+							'type'        => 'boolean',
+							'description' => 'true para ver también las normas que están apagadas y no se miden.',
+						],
+					],
+				],
+			],
+			'panel_cumplimiento' => [
+				'_ruta'       => '/cumplimiento',
+				'description' => 'Qué sitio cumple qué norma de seguridad, una fila por cruce, con el detalle y la '
+					. 'fecha en que se midió. Para "¿qué sitios no tienen doble autenticación?" o "¿cuántos '
+					. 'cumplen todo?". Ojo con estado=sin_dato: quiere decir que el panel NO lo sabe, casi '
+					. 'siempre porque ese sitio no tiene el agente instalado. No es lo mismo que cumplir.',
+				'inputSchema' => [
+					'type'       => 'object',
+					'properties' => [
+						'sitio'      => [ 'type' => 'string', 'description' => 'Un sitio_id.' ],
+						'norma'      => [ 'type' => 'string', 'description' => 'La clave de una norma, de panel_normas.' ],
+						'estado'     => [
+							'type' => 'string',
+							'enum' => [ 'cumple', 'falla', 'sin_dato', 'no_aplica' ],
+						],
+						'pagina'     => [ 'type' => 'integer' ],
+						'por_pagina' => [ 'type' => 'integer' ],
+					],
+				],
+			],
+			'panel_ordenes' => [
+				'_ruta'       => '/ordenes',
+				'description' => 'Qué se le pidió a cada sitio para cumplir una norma, quién lo pidió, cómo va y en '
+					. 'qué acabó. Es solo lectura: desde aquí no se pueden pedir cambios en ningún sitio, eso se '
+					. 'hace desde el panel con confirmación.',
+				'inputSchema' => [
+					'type'       => 'object',
+					'properties' => [
+						'estado'     => [
+							'type' => 'string',
+							'enum' => [ 'pendiente', 'entregada', 'hecha', 'fallo', 'vencida' ],
+						],
+						'sitio_id'   => [ 'type' => 'string' ],
 						'pagina'     => [ 'type' => 'integer' ],
 						'por_pagina' => [ 'type' => 'integer' ],
 					],

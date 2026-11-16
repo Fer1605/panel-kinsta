@@ -17,6 +17,7 @@ class SWA_Ajustes {
 			'2fa_roles'        => [ 'administrator', 'editor' ],
 			'2fa_gracia_hasta' => 0,
 			'cerrar_xmlrpc'    => 0,
+			'cerrar_editor'    => 0,   // lo enciende una orden del panel, no una persona
 		];
 	}
 

@@ -50,6 +50,8 @@ require_once SWPK_RUTA . 'includes/class-bitacora.php';
 require_once SWPK_RUTA . 'includes/class-plantillas.php';
 require_once SWPK_RUTA . 'includes/class-correos.php';
 require_once SWPK_RUTA . 'includes/class-usuarios.php';
+require_once SWPK_RUTA . 'includes/class-normas.php';
+require_once SWPK_RUTA . 'includes/class-ordenes.php';
 require_once SWPK_RUTA . 'includes/class-receptor.php';
 require_once SWPK_RUTA . 'includes/class-api.php';
 require_once SWPK_RUTA . 'includes/class-mcp.php';
@@ -94,6 +96,7 @@ function swpk_fuente(): SWPK_Fuente {
 }
 
 register_activation_hook( __FILE__, [ 'SWPK_Tablas', 'crear' ] );
+register_activation_hook( __FILE__, [ 'SWPK_Normas', 'sembrar' ] );
 register_activation_hook( __FILE__, [ 'SWPK_Perfiles', 'crear_roles' ] );
 register_activation_hook( __FILE__, [ 'SWPK_Sincronizador', 'programar' ] );
 register_activation_hook( __FILE__, [ 'SWPK_Monitor', 'programar' ] );
@@ -116,6 +119,7 @@ add_action(
 		SWPK_Accesos::init();
 		SWPK_Perfiles::init();
 		SWPK_Llaves::init();
+		SWPK_Normas::init();
 		SWPK_Perfiles::revisar_roles();
 		if ( is_admin() ) {
 			SWPK_Admin::init();

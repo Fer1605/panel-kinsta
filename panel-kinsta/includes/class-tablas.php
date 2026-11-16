@@ -15,13 +15,25 @@
  *  - bitacora          qué se notificó, a quién y cuándo (02:58). El corazón
  *                      del proyecto: es la evidencia.
  *  - accesos           entradas, salidas e intentos fallidos al panel (08:17)
+ *
+ * Y tres que salieron del audio de normas de seguridad (13/11/2026):
+ *
+ *  - normas            la lista de reglas de seguridad, editable. "que ya
+ *                      podamos agregar más, podamos quitar"
+ *  - cumplimiento      el cruce sitio × norma con su veredicto. Es una tabla
+ *                      aparte y no un cálculo al vuelo porque el dato no está
+ *                      en el panel: lo trae el agente una vez al día, así que
+ *                      hay que guardarlo con la fecha en que se midió.
+ *  - ordenes           la cola de lo que el panel le pide al agente. Existe
+ *                      para que el sitio siga sin abrir ninguna puerta: el
+ *                      agente pregunta si le dejaron algo, nadie lo llama.
  */
 
 defined( 'ABSPATH' ) || exit;
 
 class SWPK_Tablas {
 
-	public const VERSION = 9;
+	public const VERSION = 10;
 
 	public static function tabla( string $nombre ): string {
 		global $wpdb;
@@ -231,6 +243,70 @@ class SWPK_Tablas {
 				PRIMARY KEY (id),
 				KEY usuario (usuario_id),
 				KEY fecha (ocurrio_en)
+			) {$collate};"
+		);
+
+		// ── Lo del audio de normas de seguridad ─────────────────────────────
+
+		$nor = self::tabla( 'normas' );
+		$cum = self::tabla( 'cumplimiento' );
+		$ord = self::tabla( 'ordenes' );
+
+		dbDelta(
+			"CREATE TABLE {$nor} (
+				id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+				clave VARCHAR(64) NOT NULL,
+				nombre VARCHAR(191) NOT NULL DEFAULT '',
+				porque TEXT NULL,
+				comprobador VARCHAR(64) NOT NULL DEFAULT '',
+				aplica_a VARCHAR(191) NOT NULL DEFAULT '',
+				severidad VARCHAR(16) NOT NULL DEFAULT 'media',
+				arreglable TINYINT(1) NOT NULL DEFAULT 0,
+				activa TINYINT(1) NOT NULL DEFAULT 1,
+				de_fabrica TINYINT(1) NOT NULL DEFAULT 0,
+				orden SMALLINT UNSIGNED NOT NULL DEFAULT 50,
+				creada_en DATETIME NULL,
+				PRIMARY KEY (id),
+				UNIQUE KEY clave (clave),
+				KEY activa (activa)
+			) {$collate};"
+		);
+
+		dbDelta(
+			"CREATE TABLE {$cum} (
+				id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+				sitio_id VARCHAR(64) NOT NULL,
+				norma VARCHAR(64) NOT NULL,
+				estado VARCHAR(16) NOT NULL DEFAULT 'sin_dato',
+				detalle TEXT NULL,
+				medido_en DATETIME NULL,
+				revisado_por BIGINT UNSIGNED NOT NULL DEFAULT 0,
+				revisado_en DATETIME NULL,
+				PRIMARY KEY (id),
+				UNIQUE KEY sitio_norma (sitio_id, norma),
+				KEY norma_estado (norma, estado)
+			) {$collate};"
+		);
+
+		dbDelta(
+			"CREATE TABLE {$ord} (
+				id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+				sitio_id VARCHAR(64) NOT NULL DEFAULT '',
+				sitio_url VARCHAR(191) NOT NULL DEFAULT '',
+				tipo VARCHAR(48) NOT NULL,
+				norma VARCHAR(64) NOT NULL DEFAULT '',
+				carga LONGTEXT NULL,
+				estado VARCHAR(16) NOT NULL DEFAULT 'pendiente',
+				resultado TEXT NULL,
+				lote VARCHAR(32) NOT NULL DEFAULT '',
+				pedida_por BIGINT UNSIGNED NOT NULL DEFAULT 0,
+				pedida_en DATETIME NOT NULL,
+				entregada_en DATETIME NULL,
+				resuelta_en DATETIME NULL,
+				PRIMARY KEY (id),
+				KEY sitio_estado (sitio_url, estado),
+				KEY estado (estado),
+				KEY lote (lote)
 			) {$collate};"
 		);
 

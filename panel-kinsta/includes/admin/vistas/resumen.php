@@ -187,6 +187,46 @@ $fila = static function ( array $f, bool $solo ) use ( $resumir ): void {
 	<?php SWPK_Admin::aviso_demo(); ?>
 	<?php if ( SWPK_Perfiles::puede( SWPK_Perfiles::ADMINISTRAR ) ) { SWPK_Admin::barra_acciones(); } ?>
 
+	<?php
+	// ── Las normas de seguridad, en una línea ───────────────────────────────
+	//
+	// Un sitio con el editor de código abierto está mal aunque tenga todos sus
+	// plugins al día, y el Resumen no lo sabría: su riesgo se calcula con
+	// vulnerabilidades y actualizaciones. Así que la cuenta de normas
+	// incumplidas se dice aquí, con el enlace puesto, en vez de esperar a que
+	// alguien se acuerde de abrir otra pestaña.
+	//
+	// Una línea y no un bloque: lo que manda el Resumen son las
+	// vulnerabilidades, que es lo que se aprovecha desde internet sin tener
+	// cuenta en el sitio.
+	$normas_fallando = 0;
+	$sitios_fallando = 0;
+
+	foreach ( SWPK_Normas::cumplimiento() as $sitio_id => $suyas ) {
+		$cuantas = 0;
+
+		foreach ( $suyas as $c ) {
+			if ( SWPK_Normas::FALLA === (string) $c->estado ) {
+				++$cuantas;
+			}
+		}
+
+		if ( $cuantas > 0 ) {
+			++$sitios_fallando;
+			$normas_fallando += $cuantas;
+		}
+	}
+	?>
+
+	<?php if ( $normas_fallando > 0 ) : ?>
+		<p class="swpk-linea">
+			<strong><?php echo esc_html( SWPK_Vista::plural( $sitios_fallando, 'sitio incumple', 'sitios incumplen' ) ); ?></strong>
+			alguna norma de seguridad
+			(<?php echo esc_html( SWPK_Vista::plural( $normas_fallando, 'incumplimiento', 'incumplimientos' ) ); ?> en total).
+			<a href="<?php echo esc_url( admin_url( 'admin.php?page=panel-kinsta-seguridad' ) ); ?>">Ver cuáles &rarr;</a>
+		</p>
+	<?php endif; ?>
+
 	<?php if ( ! $estado['total'] ) : ?>
 
 		<div class="notice notice-info"><p>

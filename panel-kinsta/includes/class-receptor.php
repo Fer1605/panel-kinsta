@@ -8,6 +8,12 @@
  *                                      sitio su propio token y su secreto.
  *   POST /wp-json/swpk/v1/reporte   — todos los días, firmado con ese secreto.
  *
+ * La respuesta del reporte es, además, por donde bajan las órdenes. No hay una
+ * tercera ruta para eso a propósito: una ruta más sería una puerta más que
+ * proteger, y el reporte ya va firmado, ya está autenticado y ya pasa por aquí.
+ * El agente pregunta cada cinco minutos con un reporte liviano; la respuesta le
+ * dice lo que tiene pendiente. Ver SWPK_Ordenes.
+ *
  * Por qué un secreto por sitio y no uno compartido: con uno compartido, un
  * sitio comprometido podría inventar reportes a nombre de cualquier otro —
  * decir, por ejemplo, que el sitio de otro cliente no tiene administradores
@@ -147,23 +153,112 @@ class SWPK_Receptor {
 			return new WP_Error( 'swpk_json', 'El cuerpo no es JSON válido.', [ 'status' => 400 ] );
 		}
 
-		$wpdb->update(
-			$tabla,
-			[
-				'ultimo_reporte'      => current_time( 'mysql' ),
-				'version'             => sanitize_text_field( (string) ( $datos['agente'] ?? '' ) ),
-				'puede_enviar_correo' => ! empty( $datos['correo']['puede_enviar'] ) ? 1 : 0,
-				'error_correo'        => sanitize_text_field( (string) ( $datos['correo']['error'] ?? '' ) ),
-				'dos_pasos'           => ! empty( $datos['dos_pasos']['activo'] ) ? 1 : 0,
-				'xmlrpc_abierto'      => ! empty( $datos['xmlrpc_abierto'] ) ? 1 : 0,
-			],
-			[ 'id' => (int) $agente->id ]
+		// ── Liviano o completo ──────────────────────────────────────────────
+		//
+		// El agente pregunta por órdenes cada cinco minutos, y ese reporte no
+		// trae usuarios ni normas: sería mandar la lista entera 288 veces al
+		// día para preguntar si hay algo que hacer.
+		//
+		// Por eso NADA de lo que sigue se escribe por ausencia. Si el reporte
+		// no trae un dato, el dato no se toca. Escribirlo como `0` cuando no
+		// vino sería peor que no tenerlo: un reporte liviano apagaría en el
+		// panel la verificación en dos pasos de un sitio que la tiene puesta, y
+		// `procesar()` con la lista vacía daría de baja a TODOS los usuarios
+		// del sitio y anotaría un evento por cada uno. Eso no es un detalle de
+		// estilo, es la diferencia entre un panel y una alarma que miente.
+
+		$liviano = ! empty( $datos['liviano'] );
+
+		$campos = [ 'ultimo_reporte' => current_time( 'mysql' ) ];
+
+		if ( isset( $datos['agente'] ) ) {
+			$campos['version'] = sanitize_text_field( (string) $datos['agente'] );
+		}
+
+		if ( isset( $datos['correo'] ) && is_array( $datos['correo'] ) ) {
+			$campos['puede_enviar_correo'] = ! empty( $datos['correo']['puede_enviar'] ) ? 1 : 0;
+			$campos['error_correo']        = sanitize_text_field( (string) ( $datos['correo']['error'] ?? '' ) );
+		}
+
+		if ( isset( $datos['dos_pasos'] ) && is_array( $datos['dos_pasos'] ) ) {
+			$campos['dos_pasos'] = ! empty( $datos['dos_pasos']['activo'] ) ? 1 : 0;
+		}
+
+		if ( isset( $datos['xmlrpc_abierto'] ) ) {
+			$campos['xmlrpc_abierto'] = $datos['xmlrpc_abierto'] ? 1 : 0;
+		}
+
+		$wpdb->update( $tabla, $campos, [ 'id' => (int) $agente->id ] );
+
+		$cambios = isset( $datos['usuarios'] ) && is_array( $datos['usuarios'] )
+			? SWPK_Usuarios::procesar( (string) $agente->sitio_url, $datos['usuarios'] )
+			: 0;
+
+		// El sitio_id se resolvió al registrar. Si por lo que sea está vacío
+		// —un sitio que se registró antes de que esa columna existiera— se
+		// vuelve a resolver aquí en vez de dejar el cumplimiento sin dueño.
+		$sitio_id = (string) $agente->sitio_id;
+
+		if ( '' === $sitio_id ) {
+			$sitio_id = SWPK_Usuarios::sitio_id( (string) $agente->sitio_url );
+
+			if ( '' !== $sitio_id ) {
+				$wpdb->update( $tabla, [ 'sitio_id' => $sitio_id ], [ 'id' => (int) $agente->id ] );
+			}
+		}
+
+		// Las normas se miden con el reporte en la mano, no después: lo que
+		// hace falta para medirlas es justo lo que acaba de llegar.
+		$normas = ( ! $liviano && '' !== $sitio_id ) ? SWPK_Normas::medir( $sitio_id, $datos ) : [];
+
+		// Un agente que no se puede emparejar con ningún sitio del inventario
+		// es un agujero silencioso: reporta todos los días, el panel recibe
+		// todo, y el cumplimiento se mide contra nadie — así que ese sitio
+		// aparece «sin medir» para siempre sin que nada explique por qué.
+		//
+		// Pasa cuando el dominio con el que el plugin se presenta no coincide
+		// con ninguno del hosting: un sitio en una dirección temporal, uno que
+		// todavía no está en el inventario, o uno que vive en otro proveedor.
+		// Se anota como evento para que se vea, y una sola vez al día para que
+		// no llene la bitácora.
+		if ( ! $liviano && '' === $sitio_id ) {
+			SWPK_Eventos::registrar(
+				'agente_sin_sitio',
+				'',
+				sprintf(
+					'%s tiene el agente reportando, pero su dirección no coincide con ningún sitio del inventario, así que sus normas de seguridad no se pueden medir.',
+					(string) $agente->sitio_url
+				),
+				'aviso',
+				'sin-sitio-' . md5( (string) $agente->sitio_url )
+			);
+		}
+
+		// Y el cumplimiento que cambió puede volver urgente un sitio que el
+		// Resumen tenía por tranquilo, así que el recorrido en caché se olvida.
+		if ( $normas ) {
+			SWPK_Estado::olvidar();
+		}
+
+		// Lo que el agente contesta de órdenes anteriores, antes de darle más:
+		// así una orden que falló no se queda contada como pendiente.
+		$cerradas = SWPK_Ordenes::recibir_resultados(
+			(string) $agente->sitio_url,
+			(array) ( $datos['ordenes_hechas'] ?? [] )
 		);
 
-		$cambios = SWPK_Usuarios::procesar( (string) $agente->sitio_url, (array) ( $datos['usuarios'] ?? [] ) );
-
 		return new WP_REST_Response(
-			[ 'ok' => true, 'usuarios' => count( (array) ( $datos['usuarios'] ?? [] ) ), 'cambios' => $cambios ],
+			[
+				'ok'       => true,
+				'usuarios' => count( (array) ( $datos['usuarios'] ?? [] ) ),
+				'cambios'  => $cambios,
+				'normas'   => count( $normas ),
+				'cerradas' => $cerradas,
+				// Lo último del cuerpo y lo único que el agente tiene que
+				// obedecer. Va firmado por venir de esta ruta, que ya validó
+				// token, marca de tiempo y firma antes de llegar aquí.
+				'ordenes'  => SWPK_Ordenes::entregar( (string) $agente->sitio_url ),
+			],
 			200
 		);
 	}
