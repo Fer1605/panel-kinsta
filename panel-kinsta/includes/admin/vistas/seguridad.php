@@ -10,9 +10,12 @@
  * había que entrar a cada una para saber qué era. Ahora el nombre contesta de
  * antemano qué se va a encontrar.
  *
- * Abre en la primera a propósito: es la que contesta «¿qué hay que arreglar?»,
- * que es la pregunta con la que uno entra. La lista de normas se abre cuando
- * hay que cambiar una regla, que es cada varios meses.
+ * El orden sigue el trabajo, no la lógica del programa: primero qué falta,
+ * después qué se pidió arreglar, y al final la lista de reglas. Las reglas
+ * estaban en medio y rompían el hilo — la pestaña de arreglos decía «cuando en
+ * la pestaña anterior le das a Arreglarlo» y la anterior era la de reglas,
+ * donde no hay nada que arreglar. La lista se abre cuando hay que cambiar una
+ * norma, que es cada varios meses; no es por donde se entra.
  */
 
 defined( 'ABSPATH' ) || exit;
@@ -42,14 +45,14 @@ $en_camino       = $conteos_ordenes[ SWPK_Ordenes::PENDIENTE ] + $conteos_ordene
 	<h2 class="nav-tab-wrapper">
 		<a class="nav-tab <?php echo 'cumplimiento' === $seccion ? 'nav-tab-active' : ''; ?>"
 			href="<?php echo esc_url( $url_sec( 'cumplimiento' ) ); ?>">Qué le falta a cada sitio</a>
-		<a class="nav-tab <?php echo 'normas' === $seccion ? 'nav-tab-active' : ''; ?>"
-			href="<?php echo esc_url( $url_sec( 'normas' ) ); ?>">Qué revisamos</a>
 		<a class="nav-tab <?php echo 'ordenes' === $seccion ? 'nav-tab-active' : ''; ?>"
 			href="<?php echo esc_url( $url_sec( 'ordenes' ) ); ?>">Los arreglos que pedimos<?php
 			if ( $en_camino > 0 ) {
 				printf( ' <span class="swpk-pelota">%d</span>', (int) $en_camino );
 			}
 		?></a>
+		<a class="nav-tab <?php echo 'normas' === $seccion ? 'nav-tab-active' : ''; ?>"
+			href="<?php echo esc_url( $url_sec( 'normas' ) ); ?>">Qué revisamos</a>
 	</h2>
 
 	<?php require SWPK_RUTA . 'includes/admin/vistas/seguridad-' . $seccion . '.php'; ?>

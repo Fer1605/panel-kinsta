@@ -63,21 +63,16 @@ $url_estado = static fn( string $e ) => add_query_arg(
 ?>
 
 <p class="swpk-intro">
-	Cuando en la pestaña anterior le das a <strong>«Arreglarlo»</strong>, el arreglo no pasa en ese momento:
-	el panel lo apunta aquí y el sitio lo recoge la próxima vez que se comunica. <strong>Esta pantalla es la
-	lista de lo que pediste y en qué va cada cosa.</strong>
+	Cada vez que le das a <strong>«Arreglarlo»</strong> en <em>Qué le falta a cada sitio</em>, el encargo
+	aparece aquí. <strong>Esta pantalla es la lista de lo que pediste y en qué va cada cosa</strong>, hasta
+	que el sitio confirma que lo hizo.
 </p>
 
-<div class="notice notice-info inline">
+<div class="swpk-comoasi">
 	<p>
-		<strong>Por qué no es inmediato.</strong> El panel nunca llama a los sitios de los clientes — son
-		ellos los que llaman al panel, cada cinco minutos, y de paso preguntan si les dejamos algo. Así
-		ningún sitio de cliente tiene que dejar una puerta abierta a internet, que es la promesa de fondo de
-		todo este proyecto.
-	</p>
-	<p>
-		El precio es la espera: un sitio con visitas contesta en minutos, uno que nadie visita de noche
-		contesta por la mañana. <strong>No se puede prometer que un cambio en 94 sitios pase al instante.</strong>
+		<strong>Un arreglo tarda entre unos minutos y unas horas.</strong> El plugin de cada sitio se
+		comunica con el panel cada cinco minutos y en ese momento recoge lo que haya pendiente; en un sitio
+		con poco tráfico eso puede tardar más. Por eso aquí se ve el estado y no un «listo» de inmediato.
 	</p>
 </div>
 
@@ -176,11 +171,11 @@ $con_algo = array_filter(
 
 <div class="notice notice-warning inline" style="max-width:880px">
 	<p>
-		<strong>La contraseña no se guarda en el panel.</strong> Se queda en memoria dos horas, el tiempo que
-		tardan los sitios en preguntar, y se le entrega a cada uno en el momento. Después se borra y no queda
-		en ninguna tabla. Es menos cómodo que guardarla —si un sitio no preguntó en dos horas hay que volver a
-		pedirlo— y es la diferencia entre un panel y un llavero con todas las contraseñas de todos los
-		clientes adentro, que es justo el problema que esto viene a resolver.
+		<strong>La contraseña no se guarda en el panel.</strong> Vive dos horas, el rato que tardan los
+		sitios en recogerla, y después se borra. No queda escrita en ninguna parte, así que aquí no se puede
+		volver a consultar: cópiala a tu gestor de contraseñas antes de darle.
+		<strong>Un sitio que no la recoja en esas dos horas queda sin cambiar</strong>, y hay que volver a
+		pedirlo.
 	</p>
 	<p>
 		Y solo toca <strong>al usuario administrador que se indique</strong>. Los usuarios del cliente no se
@@ -246,8 +241,8 @@ $con_algo = array_filter(
 					</label>
 				<?php endforeach; ?>
 				<p class="description">
-					Solo aparecen los sitios nuestros que tienen el agente instalado. Los del cliente no están en
-					la lista a propósito: no se les cambia nada sin que lo pidan.
+					Solo salen los sitios nuestros que tienen el plugin instalado. Los que administra el cliente
+					no están en la lista: a esos no se les cambia nada sin que lo pidan.
 					<?php if ( $sin_agente > 0 ) : ?>
 						<br><?php echo esc_html( SWPK_Vista::plural( $sin_agente, 'sitio nuestro queda', 'sitios nuestros quedan' ) ); ?>
 						fuera por no tener agente.
@@ -262,9 +257,8 @@ $con_algo = array_filter(
 				<input type="text" id="swpk-reseteo-clave" name="clave" class="regular-text" required
 					minlength="12" autocomplete="off" spellcheck="false">
 				<p class="description">
-					Mínimo 12 caracteres. Se muestra en claro a propósito: es una contraseña que hay que copiar a
-					un gestor y que se va a poner en varios sitios de golpe, así que escribirla a ciegas y
-					equivocarse sería peor.
+					Mínimo 12 caracteres. Se ve mientras la escribes, porque hay que copiarla a un gestor antes
+					de darle — después ya no se puede consultar.
 				</p>
 			</td>
 		</tr>

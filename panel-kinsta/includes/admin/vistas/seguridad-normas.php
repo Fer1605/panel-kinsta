@@ -44,7 +44,7 @@ $norma  = '' !== $editar ? SWPK_Normas::una( $editar ) : null;
 		<tr>
 			<th style="width:34%">Norma</th>
 			<th style="width:90px">Gravedad</th>
-			<th style="width:150px">Cómo se comprueba</th>
+			<th style="width:170px">¿Quién la revisa?</th>
 			<th>Aplica a</th>
 			<th style="width:150px"></th>
 		</tr>
@@ -76,9 +76,11 @@ $norma  = '' !== $editar ? SWPK_Normas::una( $editar ) : null;
 			</td>
 			<td>
 				<?php if ( $declarativa ) : ?>
-					<span title="Alguien la marca a mano, sitio por sitio. Queda con su nombre y su fecha.">A mano</span>
+					<strong>Una persona</strong>
+					<br><span class="swpk-mudo">entrando a la ficha del sitio y marcándola</span>
 				<?php else : ?>
-					<span title="La mide el agente instalado en el sitio y la manda en su reporte.">El agente</span>
+					<strong>El plugin, solo</strong>
+					<br><span class="swpk-mudo">la mira en el sitio y la reporta cada día</span>
 				<?php endif; ?>
 				<?php if ( (int) $n->arreglable === 1 ) : ?>
 					<br><span class="swpk-mudo">y se puede arreglar</span>
@@ -230,12 +232,22 @@ $norma  = '' !== $editar ? SWPK_Normas::una( $editar ) : null;
 	</table>
 
 	<?php if ( ! $norma ) : ?>
-		<div class="notice notice-warning inline" style="margin:0 0 14px">
+		<div class="swpk-comoasi" style="margin:0 0 14px">
 			<p>
-				Una norma nueva <strong>no se comprueba sola</strong>: nadie puede programar un comprobador desde
-				este formulario. Va a aparecer en el tablero como «sin medir» hasta que alguien la marque, sitio
-				por sitio, desde la ficha de cada sitio. Queda con su nombre y su fecha, que es lo que vale en una
-				auditoría — pero no es una medición, y el panel no va a decir que lo sea.
+				<strong>¿Y cómo se revisa una norma que escribo yo?</strong> La revisa una persona, no el
+				programa. Eso es lo que hay que saber antes de escribirla.
+			</p>
+			<p>
+				Las diez que trae el panel las mira el plugin del sitio porque alguien programó <em>cómo</em>
+				mirarlas: dónde está el dato, qué cuenta como cumplir. Una norma escrita aquí no trae eso, y no
+				hay forma de que el panel lo adivine a partir de una frase. Así que va a salir siempre como
+				<strong>«sin revisar»</strong> hasta que alguien entre a la ficha de un sitio y la marque.
+			</p>
+			<p>
+				Sirve igual, y bastante: queda con el nombre de quien la revisó y la fecha, que es exactamente
+				lo que vale cuando hay que demostrar algo. Es una lista de verificación con rastro — pero no es
+				una medición automática, y el panel no va a fingir que lo sea. Si quieres que una norma nueva se
+				revise sola, eso es programarla.
 			</p>
 		</div>
 	<?php endif; ?>

@@ -88,13 +88,21 @@ mirar no entran en el tope: esos salen todos.
 Son tres caras de lo mismo —la regla, quién la cumple, y qué se hizo— así que
 van juntas y no ocupan tres líneas del menú.
 
-- **Cómo estamos** (`seguridad-cumplimiento.php`) — el tablero. Abre **por
-  norma**, con los sitios nombrados debajo de cada una, no con una cuadrícula
-  de palomitas. La cuadrícula completa está al final, plegada, para una
-  auditoría o una captura.
-- **Las normas** (`seguridad-normas.php`) — agregar, cambiar, apagar, borrar.
-- **Qué se pidió** (`seguridad-ordenes.php`) — la cola de órdenes y el reseteo
-  masivo de contraseñas.
+- **Qué le falta a cada sitio** (`seguridad-cumplimiento.php`) — abre **por
+  norma**, con los sitios nombrados debajo de cada una.
+- **Los arreglos que pedimos** (`seguridad-ordenes.php`) — en qué va cada
+  encargo, y el cambio masivo de contraseñas.
+- **Qué revisamos** (`seguridad-normas.php`) — la lista de normas: agregar,
+  cambiar, apagar, borrar.
+
+El orden sigue el trabajo, no la lógica del programa. Las reglas iban en medio
+y rompían el hilo: la pestaña de arreglos decía «cuando en la pestaña anterior
+le das a Arreglarlo» y la anterior era la de reglas, donde no hay nada que
+arreglar.
+
+Los nombres son preguntas, no categorías. «Cómo estamos», «Las normas» y «Qué
+se pidió» describían bien el contenido y no decían nada: había que entrar a
+cada una para saber qué era.
 
 El detalle completo, en [06 · Normas de seguridad](06-normas-de-seguridad.md).
 

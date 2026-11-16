@@ -204,6 +204,14 @@ class SWPK_Admin {
 			   enseñar nada. Sin esto hay que deducirlo del contenido, y lo que
 			   se deduce mal no se vuelve a mirar. */
 			.swpk-intro{max-width:880px;font-size:14px;line-height:1.6;margin:16px 0 12px;color:#1d2327}
+			/* «¿Cómo así?»: la caja que contesta la pregunta que la pantalla
+			   provoca. Azul y no amarilla: no es una advertencia, es una
+			   explicación — y una advertencia que no advierte de nada enseña a
+			   ignorar las que sí. */
+			.swpk-comoasi{background:#f0f6fc;border:1px solid #a7cdea;border-left:4px solid #2271b1;
+				border-radius:5px;padding:13px 17px;margin:12px 0 16px;max-width:900px}
+			.swpk-comoasi p{margin:0 0 9px}
+			.swpk-comoasi p:last-child{margin-bottom:0}
 			.swpk-veredicto-ciego{background:#f6f7f7;border-color:#c3c4c7}
 			.swpk-filtros-estado{color:#50575e;margin:10px 0 14px}
 			.swpk-filtros-estado a{text-decoration:none}

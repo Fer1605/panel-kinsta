@@ -167,9 +167,32 @@ foreach ( $tablero['filas'] as $f ) {
 
 <?php if ( $con_fallas ) : ?>
 	<h2 style="margin-top:28px">Lo que hay que arreglar</h2>
-	<p class="swpk-mudo" style="margin:-4px 0 14px">
+	<p class="swpk-mudo" style="margin:-4px 0 10px">
 		Cada bloque es un problema encontrado. Debajo, los sitios que lo tienen.
 	</p>
+
+	<?php
+	// Qué hace el botón, dicho antes de que nadie lo pulse.
+	//
+	// «Arreglar» en un panel puede querer decir cuatro cosas, de «lo anoto
+	// para que alguien lo haga» a «lo acabo de cambiar». Si no se dice cuál,
+	// se pulsa a ciegas — y esto cambia configuración en el sitio de un
+	// cliente, que es justo donde nadie debería pulsar a ciegas.
+	?>
+	<div class="swpk-comoasi">
+		<p>
+			<strong>¿Qué hace el botón «Arreglarlo»?</strong>
+			Cambia la configuración en el sitio, de verdad, sin que nadie tenga que entrar a hacerlo. El plugin
+			que está instalado en ese sitio es el que ejecuta el cambio: apaga el editor de código, cierra
+			XML-RPC, enciende la verificación en dos pasos. Queda anotado quién lo pidió y cuándo, y se puede
+			seguir en <strong>Los arreglos que pedimos</strong>.
+		</p>
+		<p>
+			No pasa en el mismo segundo: tarda entre unos minutos y unas horas, según el tráfico del sitio.
+			Y lo que el plugin no sabe hacer sale marcado como <strong>«Hay que hacerlo a mano»</strong> —
+			ahí el panel solo avisa, el cambio lo hace una persona entrando al sitio.
+		</p>
+	</div>
 
 	<?php foreach ( $con_fallas as $r ) : ?>
 		<?php
@@ -191,10 +214,6 @@ foreach ( $tablero['filas'] as $f ) {
 			</div>
 
 			<p class="swpk-norma-porque"><?php echo esc_html( (string) $n->porque ); ?></p>
-
-			<p class="swpk-norma-regla">
-				La norma dice: <em><?php echo esc_html( (string) $n->nombre ); ?></em>
-			</p>
 
 			<table class="widefat striped swpk-norma-tabla">
 				<tbody>

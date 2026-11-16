@@ -77,6 +77,18 @@ Y nada de frases que no dicen nada. Hubo una versión del Resumen que decía
 *«Eso se oye horrible. ¿Qué significa eso?»* Tenía razón: eran etiquetas
 internas asomándose a la pantalla.
 
+**Y las pantallas no explican nuestras decisiones.** Hubo párrafos que decían
+«así ningún sitio de cliente tiene que dejar una puerta abierta a internet,
+que es la promesa de fondo de todo este proyecto». Es cierto y está bien
+razonado, y no le toca a quien usa el panel. A esa persona le toca saber que
+un arreglo tarda entre minutos y horas. El porqué va en `documentacion/` y en
+los comentarios del código; en pantalla van los hechos del producto.
+
+**Una explicación no es una advertencia.** Si la pantalla provoca una pregunta
+—«¿y esto qué hace?»— se contesta en una caja azul (`.swpk-comoasi`), no en
+una amarilla. Una advertencia que no advierte de nada enseña a ignorar las que
+sí.
+
 ### El tamaño de los archivos
 
 Una clase, una responsabilidad. Si un archivo pasa de unas 400 líneas, casi

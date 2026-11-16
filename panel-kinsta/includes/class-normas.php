@@ -58,7 +58,7 @@ class SWPK_Normas {
 	public const OPCION_SEMBRADO = 'swpk_normas_sembradas';
 
 	/** Cada vez que cambie el catálogo de fábrica, este número sube. */
-	public const VERSION_CATALOGO = 2;
+	public const VERSION_CATALOGO = 3;
 
 	public static function init(): void {
 		add_action( 'plugins_loaded', [ __CLASS__, 'sembrar' ], 20 );
@@ -97,8 +97,9 @@ class SWPK_Normas {
 			'dos_pasos_activa' => [
 				'nombre'      => 'La verificación en dos pasos está activa en el sitio',
 				'problema'    => 'La verificación en dos pasos está apagada',
-				'porque'      => 'Sin ella, una contraseña filtrada es la entrada completa. Es la única norma '
-					. 'de esta lista que sigue protegiendo el sitio después de que la contraseña ya se perdió.',
+				'porque'      => 'Es pedir un código al correo además de la contraseña. Sin eso, a quien se le '
+					. 'filtre la contraseña entra y ya — no hay un segundo candado. Es lo único de esta lista '
+					. 'que sigue protegiendo el sitio cuando la contraseña ya se perdió.',
 				'comprobador' => 'dos_pasos_activa',
 				'severidad'   => 'alta',
 				'arreglable'  => 1,
@@ -107,8 +108,9 @@ class SWPK_Normas {
 			'admins_dos_pasos' => [
 				'nombre'      => 'Ningún administrador sin verificación en dos pasos',
 				'problema'    => 'Hay administradores sin verificación en dos pasos',
-				'porque'      => 'Que esté activa en el sitio no sirve si hay administradores que nunca la '
-					. 'configuraron: esos siguen entrando con contraseña a secas, y son los que tienen control total.',
+				'porque'      => 'Encenderla en el sitio no basta: cada administrador tiene que configurarla una '
+					. 'vez. El que no lo haya hecho sigue entrando solo con su contraseña, y los administradores '
+					. 'son los que pueden cambiarlo todo.',
 				'comprobador' => 'admins_dos_pasos',
 				'severidad'   => 'alta',
 				'arreglable'  => 1,
@@ -117,9 +119,10 @@ class SWPK_Normas {
 			'editor_codigo' => [
 				'nombre'      => 'No se puede escribir código desde el escritorio',
 				'problema'    => 'Se puede escribir código desde el escritorio',
-				'porque'      => 'Con el editor de temas y plugins abierto, cualquiera que entre como '
-					. 'administrador puede dejar código suyo corriendo en el sitio sin tocar el servidor. '
-					. 'Es el paso que convierte una cuenta robada en un sitio robado.',
+				'porque'      => 'WordPress trae un editor que deja cambiar el código del sitio desde el '
+					. 'escritorio, sin entrar al servidor. Si alguien se roba una cuenta de administrador y eso '
+					. 'está abierto, puede dejar su propio código corriendo ahí mismo. Es el paso que convierte '
+					. 'una cuenta robada en un sitio robado.',
 				'comprobador' => 'editor_codigo',
 				'severidad'   => 'alta',
 				'arreglable'  => 1,
@@ -128,8 +131,9 @@ class SWPK_Normas {
 			'php_en_uploads' => [
 				'nombre'      => 'En la carpeta de subidas no se ejecuta PHP',
 				'problema'    => 'En la carpeta de subidas SÍ se ejecuta PHP',
-				'porque'      => 'Si se ejecuta, un archivo subido por un formulario deja de ser un archivo y '
-					. 'pasa a ser un programa. Es la vía clásica de entrada por un formulario mal protegido.',
+				'porque'      => 'Ahí es donde caen los archivos que sube la gente por un formulario. Si el '
+					. 'servidor los ejecuta en vez de solo guardarlos, alguien puede subir un programa disfrazado '
+					. 'de archivo y hacerlo correr. Es la entrada clásica por un formulario mal protegido.',
 				'comprobador' => 'php_en_uploads',
 				'severidad'   => 'alta',
 				'arreglable'  => 0,
@@ -138,8 +142,9 @@ class SWPK_Normas {
 			'xmlrpc_cerrado' => [
 				'nombre'      => 'XML-RPC está cerrado',
 				'problema'    => 'XML-RPC está abierto',
-				'porque'      => 'Es una puerta vieja de WordPress que casi ningún sitio usa y que permite '
-					. 'probar cientos de contraseñas en una sola petición, sin que el sitio lo note como cientos de intentos.',
+				'porque'      => 'Es una puerta vieja de WordPress que casi ningún sitio usa hoy. Por ahí se '
+					. 'pueden probar cientos de contraseñas de un solo golpe, y el sitio lo ve como un intento, '
+					. 'no como cientos — así que ni se entera de que lo están atacando.',
 				'comprobador' => 'xmlrpc_cerrado',
 				'severidad'   => 'media',
 				'arreglable'  => 1,
@@ -158,8 +163,10 @@ class SWPK_Normas {
 			'sin_usuario_admin' => [
 				'nombre'      => 'No existe un usuario llamado «admin»',
 				'problema'    => 'Existe un usuario llamado «admin»',
-				'porque'      => 'Es el primer nombre que prueba cualquier ataque automático. Con el nombre '
-					. 'acertado, solo les falta la contraseña.',
+				'porque'      => 'Para entrar a WordPress hacen falta dos datos: el nombre de usuario y la '
+					. 'contraseña. Un ataque automático tiene que adivinar los dos — pero «admin» es el primer '
+					. 'nombre que prueba siempre. Si ese usuario existe, ya no adivina nada: solo le queda la '
+					. 'contraseña. Es media cerradura regalada.',
 				'comprobador' => 'sin_usuario_admin',
 				'severidad'   => 'media',
 				'arreglable'  => 0,

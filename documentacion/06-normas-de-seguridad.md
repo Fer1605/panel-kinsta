@@ -107,6 +107,26 @@ Ahora la lista de normas usa `nombre` y la lista de fallos usa `problema`. Una
 norma escrita a mano sin `problema` cae en «No se cumple: {nombre}», que al
 menos no se contradice. `SWPK_Normas::problema()` lo resuelve.
 
+**Y la regla no se repite debajo del problema.** El primer arreglo ponía las
+dos —«Existe un usuario llamado admin» como título y «La norma dice: No existe
+un usuario llamado admin» debajo— y seguía sin entenderse. Dos frases opuestas
+pegadas obligan a quien lee a decidir cuál es cuál, que es exactamente el
+trabajo que no debería tener que hacer. La regla vive en «Qué revisamos», que
+es donde se va a buscarla.
+
+### El `porque` es parte del producto, no un adorno
+
+El texto que explica por qué importa una norma se leyó en voz alta y no se
+entendió. «Es el primer nombre que prueba cualquier ataque automático. Con el
+nombre acertado, solo les falta la contraseña» es correcto y es ilegible para
+quien no sabe ya la respuesta.
+
+El criterio para reescribirlos: **explicar el mecanismo, no resumirlo.** La
+versión que sí se entiende dice que para entrar hacen falta dos datos, que el
+ataque tiene que adivinar los dos, y que «admin» le regala uno. Son tres
+frases en vez de una, y es la diferencia entre que alguien lo entienda y que
+asienta sin entenderlo.
+
 ## Los cuatro veredictos
 
 | Estado | Qué quiere decir |
@@ -187,6 +207,21 @@ cuenta. Hoy es una fila; cuando el plugin esté instalado será la pantalla úti
 Si alguna vez hace falta la matriz para una auditoría, que vuelva — pero
 mostrando solo los sitios medidos, no 107 columnas de interrogaciones.
 
+## Qué hace «Arreglarlo», dicho en la pantalla
+
+La pregunta que salió al probarlo fue literal: *«si yo le doy a arreglar,
+¿cómo se arregla? ¿el panel envía y se modifica algo, o es solo lo que
+hacemos a mano?»*.
+
+Es la pregunta justa, y la pantalla no la contestaba. «Arreglar» en un panel
+puede querer decir cuatro cosas distintas, de «lo anoto para que alguien lo
+haga» a «lo acabo de cambiar». Si no se dice cuál, se pulsa a ciegas — y esto
+cambia configuración en el sitio de un cliente.
+
+Ahora lo dice antes del primer botón: el plugin del sitio ejecuta el cambio de
+verdad, sin que nadie entre; tarda entre minutos y horas; y lo que el plugin
+no sabe hacer sale marcado como «Hay que hacerlo a mano».
+
 ## El canal de órdenes
 
 ### Por qué una cola y no una llamada
@@ -229,6 +264,17 @@ Las etiquetas de pantalla son de dos palabras a propósito. Las primeras
 el mecanismo y no las entendía nadie: hablan de cómo viaja una orden por
 dentro, cuando lo que hace falta saber es en qué va el encargo. La explicación
 larga vive en `SWPK_Ordenes::explicacion()` y sale debajo de la etiqueta.
+
+### Y una regla de estilo que salió de aquí
+
+Las pantallas **no explican nuestras decisiones**. Había párrafos que decían
+«así ningún sitio de cliente tiene que dejar una puerta abierta a internet,
+que es la promesa de fondo de todo este proyecto». Eso es cierto, está bien
+razonado, y no le toca a quien usa el panel: a esa persona le toca saber que
+un arreglo tarda entre minutos y horas.
+
+El porqué de las decisiones va en esta carpeta y en los comentarios del
+código. En pantalla van los hechos del producto.
 
 Una orden entregada que nunca se resuelve se cierra como `fallo` a las 24
 horas, en la corrida diaria. Dejarla en `entregada` para siempre haría que el
