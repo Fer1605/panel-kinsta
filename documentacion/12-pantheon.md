@@ -74,13 +74,39 @@ hacen falta dos cosas que no son gratis:
 
 1. **Instalar Terminus en el servidor donde vive el panel.** Con PHP y
    Composer, y manteniéndolo al día como cualquier otra dependencia.
-2. **Que ese servidor permita que un sitio web ejecute programas del
-   sistema** (`shell_exec` o equivalente). Muchos hostings administrados lo
-   bloquean por seguridad — **Kinsta entre ellos**, que es donde el panel va a
-   vivir.
+2. **Poder ejecutarlo desde donde el panel lo necesite.**
 
-O sea que el camino de Terminus puede chocar con el hosting del propio panel
-antes incluso de llegar a Pantheon.
+### Y sobre si Kinsta lo permite: no lo sabemos
+
+Este documento decía, en tres sitios distintos, que «Kinsta no lo permite».
+**Eso se escribió sin comprobarlo** y es una impresión general, no un hecho.
+Al ir a buscarlo en la documentación de Kinsta, lo que hay es esto:
+
+| Lo que sí está documentado | Dónde |
+|---|---|
+| Cada sitio corre en su propio contenedor **con su propio crontab**, y se pueden añadir *cron jobs de servidor de verdad* | [Cron jobs](https://kinsta.com/docs/wordpress-hosting/site-management/cron-jobs/) |
+| Hay acceso **SSH**, y se nombra a **Composer** y **WP-CLI** como herramientas usables | [Connect to SSH](https://kinsta.com/docs/wordpress-hosting/connect-to-ssh/) |
+| La única función de PHP que aparece nombrada como deshabilitada es **`proc_open`** | [Banned & incompatible plugins](https://kinsta.com/docs/wordpress-hosting/wordpress-plugins-themes/wordpress-banned-incompatible-plugins/) |
+
+Y esto **no** está documentado: si `shell_exec`, `exec` o `system` están
+bloqueadas; si se puede instalar una herramienta de línea de comandos de un
+tercero en el contenedor; y si hay restricción de salida SSH hacia otros
+servidores.
+
+Así que la lectura honesta cambia bastante:
+
+- **Lo que casi seguro NO se puede** es que el panel llame a Terminus en
+  mitad de una petición web, desde PHP. Aunque la función estuviera
+  habilitada, cada llamada tarda segundos y una petición web no es el lugar.
+- **Lo que probablemente SÍ se puede** es un *cron job* diario en el
+  contenedor que ejecute Terminus y deje el resultado donde el panel lo lea.
+  Kinsta documenta que eso existe y que el intervalo mínimo es de cinco
+  minutos.
+
+**Para cerrarlo hay que preguntarle a soporte de Kinsta** tres cosas: la lista
+de funciones deshabilitadas, si admiten instalar una CLI de terceros en el
+contenedor, y si hay restricción de tráfico saliente. Mientras tanto, esto es
+una incógnita y no una imposibilidad.
 
 ### Lo del token, con el matiz correcto
 
@@ -124,8 +150,10 @@ tengan nada instalado — que es justo lo que se pierde con la opción B.
 
 **En contra, y es bastante:**
 - Hay que instalar Terminus y Composer en el servidor del panel, y mantenerlos.
-- Hace falta `shell_exec` habilitado. **En Kinsta suele estar deshabilitado**,
-  que es donde el panel va a vivir.
+- Hay que poder ejecutarlo desde ahí. En Kinsta **no está documentado** si se
+  puede; lo que sí está documentado es que hay cron de contenedor, así que la
+  vía realista sería un cron diario y no una llamada desde PHP. Hay que
+  preguntárselo a soporte.
 - Una llamada por sitio, y cada una abre una conexión y levanta un WP-CLI
   remoto: segundos, no milisegundos. Con 100 sitios, la corrida pasa de
   minutos a horas.
@@ -174,14 +202,48 @@ reportando el agente. Así el panel sabría que un sitio existe aunque nadie le
 haya instalado nada, y lo mostraría como «sin plugin, no sabemos nada de él» —
 que es exactamente lo que hoy hace con los sitios de Kinsta sin agente.
 
-El coste: vuelve el token sin límites, y vuelve la dependencia de poder
-ejecutar programas en el servidor del panel. Pero es **una llamada al día en
-vez de cien**, y no entra en el camino crítico: si falla, el panel sigue
-funcionando con los sitios que sí reportan.
+**Pero hay que ser claros con lo que esta opción NO ahorra**, porque la
+primera versión de este documento la vendía como un añadido ligero y no lo es.
+Fer lo vio enseguida: *«si Terminus igual lo tengo que instalar en un
+servidor, tampoco es como que sea una alternativa»*. Tiene razón.
 
-**Mi recomendación es dejarla para después.** Primero la B, que no pide
-credenciales nuevas. Si al usarlo resulta que hace falta ver los sitios sin
-agente, se agrega esto encima sin rehacer nada.
+Lo que baja es el **coste de funcionamiento**, no el de montaje:
+
+| | Opción A | Opción C |
+|---|---|---|
+| Instalar Terminus y mantenerlo | Sí | **Sí, igual** |
+| Depender de poder ejecutarlo en el servidor | Sí | **Sí, igual** |
+| Token sin límites, con permiso de escritura | Sí | **Sí, igual** |
+| Llamadas al día | ~100 | 1 |
+| Si falla, ¿se cae el panel? | Sí, se queda sin inventario | No, solo no descubre sitios nuevos |
+
+O sea: **el obstáculo de entrada es el mismo**. Si Terminus no se puede
+ejecutar donde viva el panel, la C tampoco existe. Lo único que la C evita es
+la lentitud y el riesgo de que todo el inventario dependa de ello.
+
+**Mi recomendación sigue siendo dejarla para después**, pero no porque sea
+barata de agregar: porque hasta que no esté decidido dónde vive el panel, no
+se puede saber si es posible siquiera.
+
+---
+
+## La decisión que está debajo de todo esto
+
+Y aquí está lo que de verdad hay que resolver antes que nada, y no es una
+pregunta sobre Pantheon:
+
+> **¿Dónde va a vivir el panel?**
+
+- Si vive en **un servidor nuestro** —un VPS, una máquina que controlemos—
+  instalar Terminus y correrlo por cron es trivial, y las opciones A y C se
+  abren solas.
+- Si vive en **Kinsta**, está la incógnita de arriba y hay que preguntar.
+- Si vive donde vive hoy —**la máquina de la casa**— no hay nada que decidir,
+  porque de todas formas no se puede llegar a él desde fuera.
+
+La opción B es la única que funciona igual en los tres casos. Esa es su virtud
+real, más que ninguna otra: **no depende de una decisión que todavía no está
+tomada.**
 
 ---
 
