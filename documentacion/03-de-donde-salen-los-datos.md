@@ -83,7 +83,16 @@ El feed de Wordfence Intelligence aporta exactamente eso, y es lo que permite
 que el panel entregue una frase que una asesora puede mandar en vez de una
 tabla de CVE.
 
-- **Se descarga una vez al día.** El límite está escrito en el código.
+- **Se descarga una vez al día.** El límite está escrito en el código. Pedirlo
+  dos veces seguidas devuelve un 429 y el panel se echa atrás solo, duplicando
+  la espera; insistir puede hacer que suspendan la llave.
+- **Se guardan tres fechas, no una**, y es lo que permite no mentir:
+  `comprobado` (la última vez que preguntamos y contestó), `ultimo_cambio` (la
+  última vez que lo que contestó era distinto) y `mas_nueva` (la vulnerabilidad
+  más reciente de la lista). Con una sola fecha, «Wordfence no ha publicado
+  nada en tres días» —una buena noticia— se veía igual que «llevamos tres días
+  sin comprobar», que es un fallo. `SWPK_Wordfence::como_va()` las distingue en
+  una frase.
 - Se filtra a los slugs que de verdad tenemos instalados: el feed completo es
   enorme y el 99% no nos aplica.
 - `SWPK_Wordfence::atribucion()` pinta el crédito. **No lo quites**: el feed se

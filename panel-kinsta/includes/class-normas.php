@@ -58,7 +58,7 @@ class SWPK_Normas {
 	public const OPCION_SEMBRADO = 'swpk_normas_sembradas';
 
 	/** Cada vez que cambie el catálogo de fábrica, este número sube. */
-	public const VERSION_CATALOGO = 1;
+	public const VERSION_CATALOGO = 2;
 
 	public static function init(): void {
 		add_action( 'plugins_loaded', [ __CLASS__, 'sembrar' ], 20 );
@@ -70,6 +70,19 @@ class SWPK_Normas {
 
 	/**
 	 * Las normas con las que arranca el panel.
+	 *
+	 * Cada norma lleva DOS textos y hacen falta los dos:
+	 *
+	 *   `nombre`    la regla, en afirmativo: «No existe un usuario llamado
+	 *               admin». Es lo que la norma exige, y es lo que va en la
+	 *               lista de normas.
+	 *   `problema`  lo que pasa cuando no se cumple: «Existe un usuario
+	 *               llamado admin». Es lo que va en la lista de fallos.
+	 *
+	 * Tener solo el primero hacía que el tablero se contradijera solo: el
+	 * título decía «No existe un usuario llamado admin» y justo debajo la fila
+	 * decía que sí existe. Quien lo leía tenía que deducir que el título era la
+	 * regla y la fila el incumplimiento, y nadie debería tener que deducir eso.
 	 *
 	 * `arreglable` significa que el agente sabe cómo cumplirla si se le ordena.
 	 * Las que no lo son no es por pereza: cambiarle el nombre al usuario
@@ -83,6 +96,7 @@ class SWPK_Normas {
 		return [
 			'dos_pasos_activa' => [
 				'nombre'      => 'La verificación en dos pasos está activa en el sitio',
+				'problema'    => 'La verificación en dos pasos está apagada',
 				'porque'      => 'Sin ella, una contraseña filtrada es la entrada completa. Es la única norma '
 					. 'de esta lista que sigue protegiendo el sitio después de que la contraseña ya se perdió.',
 				'comprobador' => 'dos_pasos_activa',
@@ -92,6 +106,7 @@ class SWPK_Normas {
 			],
 			'admins_dos_pasos' => [
 				'nombre'      => 'Ningún administrador sin verificación en dos pasos',
+				'problema'    => 'Hay administradores sin verificación en dos pasos',
 				'porque'      => 'Que esté activa en el sitio no sirve si hay administradores que nunca la '
 					. 'configuraron: esos siguen entrando con contraseña a secas, y son los que tienen control total.',
 				'comprobador' => 'admins_dos_pasos',
@@ -101,6 +116,7 @@ class SWPK_Normas {
 			],
 			'editor_codigo' => [
 				'nombre'      => 'No se puede escribir código desde el escritorio',
+				'problema'    => 'Se puede escribir código desde el escritorio',
 				'porque'      => 'Con el editor de temas y plugins abierto, cualquiera que entre como '
 					. 'administrador puede dejar código suyo corriendo en el sitio sin tocar el servidor. '
 					. 'Es el paso que convierte una cuenta robada en un sitio robado.',
@@ -111,6 +127,7 @@ class SWPK_Normas {
 			],
 			'php_en_uploads' => [
 				'nombre'      => 'En la carpeta de subidas no se ejecuta PHP',
+				'problema'    => 'En la carpeta de subidas SÍ se ejecuta PHP',
 				'porque'      => 'Si se ejecuta, un archivo subido por un formulario deja de ser un archivo y '
 					. 'pasa a ser un programa. Es la vía clásica de entrada por un formulario mal protegido.',
 				'comprobador' => 'php_en_uploads',
@@ -120,6 +137,7 @@ class SWPK_Normas {
 			],
 			'xmlrpc_cerrado' => [
 				'nombre'      => 'XML-RPC está cerrado',
+				'problema'    => 'XML-RPC está abierto',
 				'porque'      => 'Es una puerta vieja de WordPress que casi ningún sitio usa y que permite '
 					. 'probar cientos de contraseñas en una sola petición, sin que el sitio lo note como cientos de intentos.',
 				'comprobador' => 'xmlrpc_cerrado',
@@ -129,6 +147,7 @@ class SWPK_Normas {
 			],
 			'registro_cerrado' => [
 				'nombre'      => 'El registro de usuarios está cerrado',
+				'problema'    => 'Cualquiera puede crearse una cuenta',
 				'porque'      => 'Un sitio informativo con el registro abierto termina lleno de cuentas que '
 					. 'nadie creó a propósito, y es por donde entra el spam.',
 				'comprobador' => 'registro_cerrado',
@@ -138,6 +157,7 @@ class SWPK_Normas {
 			],
 			'sin_usuario_admin' => [
 				'nombre'      => 'No existe un usuario llamado «admin»',
+				'problema'    => 'Existe un usuario llamado «admin»',
 				'porque'      => 'Es el primer nombre que prueba cualquier ataque automático. Con el nombre '
 					. 'acertado, solo les falta la contraseña.',
 				'comprobador' => 'sin_usuario_admin',
@@ -147,6 +167,7 @@ class SWPK_Normas {
 			],
 			'formularios_honeypot' => [
 				'nombre'      => 'Los formularios tienen honeypot o captcha',
+				'problema'    => 'Los formularios no tienen honeypot ni captcha',
 				'porque'      => 'Sin eso, los formularios se llenan de spam automático y el correo del cliente '
 					. 'se vuelve inservible. Esta se marca a mano: no hay forma de comprobarla igual en todos los '
 					. 'plugins de formularios.',
@@ -157,6 +178,7 @@ class SWPK_Normas {
 			],
 			'wp_al_dia' => [
 				'nombre'      => 'WordPress está en una versión con soporte',
+				'problema'    => 'WordPress está en una versión sin soporte',
 				'porque'      => 'Una versión vieja acumula fallas conocidas y publicadas. No es que pueda '
 					. 'pasar algo: es que ya está escrito dónde y cómo.',
 				'comprobador' => 'wp_al_dia',
@@ -166,6 +188,7 @@ class SWPK_Normas {
 			],
 			'php_soportado' => [
 				'nombre'      => 'PHP está en una versión con soporte',
+				'problema'    => 'PHP está en una versión sin soporte',
 				'porque'      => 'Una versión de PHP sin soporte ya no recibe parches de seguridad, así que las '
 					. 'fallas que le encuentren de ahora en adelante se quedan sin arreglar.',
 				'comprobador' => 'php_soportado',
@@ -191,6 +214,7 @@ class SWPK_Normas {
 			$fila = [
 				'clave'       => $clave,
 				'nombre'      => $n['nombre'],
+				'problema'    => $n['problema'],
 				'porque'      => $n['porque'],
 				'comprobador' => $n['comprobador'],
 				'severidad'   => $n['severidad'],
@@ -263,6 +287,7 @@ class SWPK_Normas {
 
 		$fila = [
 			'nombre'    => $nombre,
+			'problema'  => sanitize_text_field( (string) ( $datos['problema'] ?? '' ) ),
 			'porque'    => wp_kses_post( (string) ( $datos['porque'] ?? '' ) ),
 			'aplica_a'  => self::limpiar_aplica_a( (string) ( $datos['aplica_a'] ?? '' ) ),
 			'severidad' => in_array( $datos['severidad'] ?? '', [ 'alta', 'media', 'baja' ], true )
@@ -277,7 +302,7 @@ class SWPK_Normas {
 				// código, y se vuelven a escribir en cada siembra. Dejar que se
 				// editen aquí sería prometer un cambio que la siguiente
 				// actualización borra sin avisar.
-				unset( $fila['nombre'], $fila['porque'] );
+				unset( $fila['nombre'], $fila['problema'], $fila['porque'] );
 			}
 
 			$wpdb->update( $tabla, $fila, [ 'id' => (int) $existe->id ] );
@@ -848,6 +873,20 @@ class SWPK_Normas {
 			'sin_dato'  => $sin_dato,
 			'total'     => count( $filas ),
 		];
+	}
+
+	/**
+	 * Cómo se dice que esta norma NO se cumple.
+	 *
+	 * Si nadie escribió el texto —una norma que puso una persona a mano— se
+	 * arma uno que al menos no se contradice. Mejor «No se cumple: los
+	 * formularios tienen captcha» que repetir la regla en afirmativo debajo de
+	 * un título que dice que algo está mal.
+	 */
+	public static function problema( object $norma ): string {
+		$propio = trim( (string) ( $norma->problema ?? '' ) );
+
+		return '' !== $propio ? $propio : 'No se cumple: ' . $norma->nombre;
 	}
 
 	/** Cómo se dice cada veredicto en pantalla. */

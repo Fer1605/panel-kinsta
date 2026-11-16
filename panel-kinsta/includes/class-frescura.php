@@ -304,15 +304,26 @@ class SWPK_Frescura {
 			'que'    => sprintf( 'El panel le preguntó a %s qué hay en cada sitio', $proveedor ),
 			'cuando' => self::corrida(),
 			'al_dia' => self::corrida_al_dia(),
-			'si_no'  => 'La corrida diaria no ha pasado. Lo de abajo es el último inventario bueno.',
+			// El porqué va en el aviso, porque sin él nadie lo adivina: el reloj
+			// de WordPress no es un reloj, solo corre cuando alguien visita el
+			// sitio. En un panel que nadie abre el fin de semana, el lunes
+			// aparecen tres días sin corrida y no hay nada roto.
+			'si_no'  => 'La corrida diaria no ha pasado. Lo de abajo es el último inventario bueno. '
+				. 'Suele ser porque el reloj de WordPress solo corre cuando alguien entra al panel: '
+				. 'dale a «Correr ahora», o pon un cron de verdad en el servidor.',
 		];
 
+		// La línea de Wordfence dice CUÁNDO SE COMPROBÓ, no cuándo cambió la
+		// lista. Antes decía «se bajó la lista» con la fecha de la última
+		// descarga, y eso hacía que «Wordfence no ha publicado nada nuevo en
+		// tres días» —que es una buena noticia— se leyera igual que «llevamos
+		// tres días sin comprobar», que es un fallo. Son lo contrario.
 		$resto = [
 			[
-				'que'    => 'Se bajó la lista de vulnerabilidades conocidas (Wordfence)',
-				'cuando' => self::feed(),
+				'que'    => 'El panel le preguntó a Wordfence si hay vulnerabilidades nuevas',
+				'cuando' => SWPK_Wordfence::comprobado(),
 				'al_dia' => self::feed_al_dia(),
-				'si_no'  => 'Sin lista nueva no aparecen las vulnerabilidades publicadas estos días.',
+				'si_no'  => 'La comprobación diaria no ha pasado. Lo de abajo sigue valiendo, pero si Wordfence publicó algo desde entonces, aquí no está.',
 			],
 		];
 
@@ -365,8 +376,21 @@ class SWPK_Frescura {
 	 * Deliberadamente arriba de todo y en rojo. El día que esto pase, tiene que
 	 * ser imposible seguir leyendo el panel sin haberlo visto.
 	 */
-	public static function aviso(): void {
+	/**
+	 * @param bool $incluir_feed false en la pantalla de Vulnerabilidades, que
+	 *                           ya dice lo de la lista con sus propias palabras
+	 *                           justo debajo. Repetirlo en rojo arriba no avisa
+	 *                           de nada nuevo: solo hace que la pantalla abra
+	 *                           con dos alarmas diciendo lo mismo.
+	 */
+	public static function aviso( bool $incluir_feed = true ): void {
 		if ( ! self::hay_problema() ) {
+			return;
+		}
+
+		// Si lo único que pasa es que la lista está vieja y esta pantalla ya lo
+		// dice por su cuenta, no hay nada que avisar aquí.
+		if ( ! $incluir_feed && self::corrida_al_dia() && ! self::corrida_fallo() ) {
 			return;
 		}
 
@@ -415,11 +439,9 @@ class SWPK_Frescura {
 				<?php endif; ?>
 			<?php endif; ?>
 
-			<?php if ( ! self::feed_al_dia() && ! $vieja && ! $fallo ) : ?>
-				<p><strong>La lista de vulnerabilidades está vieja.</strong>
-					La última se bajó <?php echo esc_html( self::fecha_y_edad( self::feed() ) ); ?>.
-					Los sitios y sus versiones sí están al día, pero una vulnerabilidad publicada
-					estos días todavía no está en la lista, así que no aparece marcada.
+			<?php if ( $incluir_feed && ! self::feed_al_dia() && ! $vieja && ! $fallo ) : ?>
+				<p><strong>Hace días que no comprobamos si hay vulnerabilidades nuevas.</strong>
+					<?php echo esc_html( SWPK_Wordfence::como_va()['frase'] ); ?>
 				</p>
 			<?php endif; ?>
 		</div>

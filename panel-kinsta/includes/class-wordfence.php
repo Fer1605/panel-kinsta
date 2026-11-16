@@ -67,6 +67,27 @@ class SWPK_Wordfence {
 
 	private const OPCION_ESPERA = 'swpk_wordfence_no_antes_de';
 
+	/**
+	 * Tres fechas distintas, y confundirlas era el problema.
+	 *
+	 * El panel solo guardaba una —cuándo se bajó la lista— y la enseñaba con
+	 * un aviso rojo cuando pasaban días. Eso hacía que «Wordfence no ha
+	 * publicado nada nuevo» y «hace tres días que no comprobamos» se vieran
+	 * exactamente igual, y son cosas opuestas: la primera es una buena
+	 * noticia y la segunda es un fallo.
+	 *
+	 *   COMPROBADO  la última vez que le preguntamos a Wordfence y contestó.
+	 *               Esto es lo que dice si el panel está haciendo su trabajo.
+	 *   CAMBIO      la última vez que lo que contestó era distinto. Esto dice
+	 *               si hay novedades en el mundo, y puede ser de hace semanas
+	 *               sin que nada esté mal.
+	 *   FIRMA       con qué comparamos para saber si cambió.
+	 */
+	private const OPCION_COMPROBADO = 'swpk_wordfence_comprobado';
+	private const OPCION_CAMBIO     = 'swpk_wordfence_ultimo_cambio';
+	private const OPCION_FIRMA      = 'swpk_wordfence_firma';
+	private const OPCION_MAS_NUEVA  = 'swpk_wordfence_mas_nueva';
+
 	/** Hasta cuándo no hay que volver a pedirle nada a Wordfence. */
 	public static function esperar_hasta(): int {
 		return (int) get_option( self::OPCION_ESPERA, 0 );
@@ -102,6 +123,83 @@ class SWPK_Wordfence {
 		// timezone_string, y restar el offset a mano se rompe el día que
 		// cambie el horario de verano en algún sitio donde se instale esto.
 		return ( new DateTimeImmutable( 'tomorrow 06:30', wp_timezone() ) )->getTimestamp();
+	}
+
+	/** La última vez que le preguntamos a Wordfence y contestó. */
+	public static function comprobado(): string {
+		// Si nunca se ha anotado por separado —un panel de antes de este
+		// cambio— vale la fecha de la última descarga, que es lo mismo.
+		return (string) get_option( self::OPCION_COMPROBADO, '' )
+			?: (string) get_option( 'swpk_wordfence_actualizado', '' );
+	}
+
+	/** La última vez que lo que contestó traía algo nuevo. */
+	public static function ultimo_cambio(): string {
+		return (string) get_option( self::OPCION_CAMBIO, '' )
+			?: (string) get_option( 'swpk_wordfence_actualizado', '' );
+	}
+
+	/**
+	 * Lo que hay que decir de la lista, en una frase.
+	 *
+	 * Que Wordfence lleve días sin publicar nada NO es un problema: es que no
+	 * ha pasado nada. El problema es que nosotros llevemos días sin preguntar.
+	 * La frase distingue las dos, que es lo que el panel no hacía.
+	 */
+	public static function como_va(): array {
+		$comprobado = self::comprobado();
+		$cambio     = self::ultimo_cambio();
+		$mas_nueva  = (string) get_option( self::OPCION_MAS_NUEVA, '' );
+
+		if ( '' === $comprobado ) {
+			return [
+				'al_dia' => false,
+				'frase'  => 'Todavía no se ha bajado la lista de vulnerabilidades ni una vez, así que abajo no hay nada marcado como vulnerable — y eso no quiere decir que no lo sea.',
+			];
+		}
+
+		// `hace()` ya devuelve «hace 3 días», con el «hace» incluido.
+		$desde = SWPK_Frescura::hace( $comprobado );
+
+		if ( ! SWPK_Frescura::feed_al_dia() ) {
+			return [
+				'al_dia' => false,
+				// Ojo con el formato: en PHP la «e» suelta es un código de
+				// fecha —la zona horaria— así que escribir «el» sin escapar
+				// metía «America/Guatemala» en mitad de la frase.
+				'frase'  => sprintf(
+					'El panel no le pregunta a Wordfence desde el %s. Lo de abajo sigue valiendo —son las vulnerabilidades que tienen nuestros sitios según esa lista— pero si Wordfence publicó algo después, aquí no sale.',
+					SWPK_Frescura::fmt( 'j \d\e F', $comprobado )
+				),
+			];
+		}
+
+		// Comprobado al día. Lo que queda por decir es de cuándo es la lista, y
+		// para eso vale más la fecha de la vulnerabilidad más reciente que trae
+		// que la fecha en que nosotros notamos el cambio: una dice algo del
+		// mundo, la otra solo dice algo de nuestro reloj.
+		$cola = '' !== $mas_nueva
+			? sprintf( ' La más reciente que trae es del %s.', SWPK_Frescura::fmt( 'j \d\e F', $mas_nueva ) )
+			: '';
+
+		$edad_cambio = SWPK_Frescura::edad( $cambio );
+
+		if ( null !== $edad_cambio && $edad_cambio > DAY_IN_SECONDS ) {
+			return [
+				'al_dia' => true,
+				'frase'  => sprintf(
+					'Comprobado %s: Wordfence no ha publicado nada nuevo desde el %s, así que lo de abajo está al día.%s',
+					$desde,
+					SWPK_Frescura::fmt( 'j \d\e F', $cambio ),
+					$cola
+				),
+			];
+		}
+
+		return [
+			'al_dia' => true,
+			'frase'  => sprintf( 'Comprobado %s, con lo último que ha publicado Wordfence.%s', $desde, $cola ),
+		];
 	}
 
 	public static function atribucion(): string {
@@ -212,9 +310,25 @@ class SWPK_Wordfence {
 		}
 
 		$guardadas = 0;
+
+		// La firma de la lista entera, para saber si Wordfence publicó algo.
+		// Se arma con lo que ya pasa por delante al recorrer: cuántas
+		// vulnerabilidades trae el feed y cuál es la más reciente. No hace
+		// falta más: si el conteo o la fecha de la última cambian, hay
+		// novedades; si los dos son iguales, es la misma lista.
+		$cuantas = 0;
+		$ultima  = '';
+
 		self::recorrer_feed(
 			$destino,
-			static function ( array $registro ) use ( $slugs, &$guardadas ): void {
+			static function ( array $registro ) use ( $slugs, &$guardadas, &$cuantas, &$ultima ): void {
+				++$cuantas;
+
+				$publicada = (string) ( $registro['published'] ?? '' );
+				if ( $publicada > $ultima ) {
+					$ultima = $publicada;
+				}
+
 				if ( self::guardar_si_interesa( $registro, $slugs ) ) {
 					++$guardadas;
 				}
@@ -223,7 +337,19 @@ class SWPK_Wordfence {
 
 		@unlink( $destino );
 		self::limpiar_espera();
-		update_option( 'swpk_wordfence_actualizado', current_time( 'mysql' ), false );
+
+		$ahora = current_time( 'mysql' );
+		$firma = $cuantas . '|' . $ultima;
+
+		update_option( 'swpk_wordfence_actualizado', $ahora, false );
+		update_option( self::OPCION_COMPROBADO, $ahora, false );
+
+		update_option( self::OPCION_MAS_NUEVA, $ultima, false );
+
+		if ( (string) get_option( self::OPCION_FIRMA, '' ) !== $firma ) {
+			update_option( self::OPCION_FIRMA, $firma, false );
+			update_option( self::OPCION_CAMBIO, $ahora, false );
+		}
 
 		return $guardadas;
 	}

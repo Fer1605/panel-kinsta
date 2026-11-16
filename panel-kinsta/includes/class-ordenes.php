@@ -542,15 +542,37 @@ class SWPK_Ordenes {
 		) ?: null;
 	}
 
+	/**
+	 * Cómo se llama cada estado en pantalla.
+	 *
+	 * La primera versión decía «Esperando que el sitio pregunte», «El sitio ya
+	 * se la llevó», «Venció sin entregarse». Describían bien el mecanismo y no
+	 * se entendía ninguna: hablan de cómo funciona por dentro, no de en qué va
+	 * el encargo. Ahora son dos palabras que contestan «¿y esto cómo va?», y
+	 * la explicación larga vive aparte, en `explicacion()`.
+	 */
 	public static function etiqueta( string $estado ): string {
 		return match ( $estado ) {
-			self::PENDIENTE => 'Esperando que el sitio pregunte',
-			self::ENTREGADA => 'El sitio ya se la llevó',
-			self::HECHA     => 'Hecho',
-			self::FALLO     => 'Falló',
-			self::VENCIDA   => 'Venció sin entregarse',
-			self::CANCELADA => 'Sustituida por otra',
+			self::PENDIENTE => 'En cola',
+			self::ENTREGADA => 'Aplicándose',
+			self::HECHA     => 'Listo',
+			self::FALLO     => 'No se pudo',
+			self::VENCIDA   => 'Caducó',
+			self::CANCELADA => 'Reemplazada',
 			default         => $estado,
+		};
+	}
+
+	/** La frase que explica el estado, para la ayuda al pasar el cursor. */
+	public static function explicacion( string $estado ): string {
+		return match ( $estado ) {
+			self::PENDIENTE => 'El panel ya lo apuntó. El sitio lo recogerá la próxima vez que se comunique, cada cinco minutos.',
+			self::ENTREGADA => 'El sitio ya se lo llevó y lo está haciendo. Falta que avise cómo salió.',
+			self::HECHA     => 'El sitio lo hizo y lo confirmó.',
+			self::FALLO     => 'El sitio lo intentó y no pudo, o se lo llevó y nunca contestó.',
+			self::VENCIDA   => 'Era un cambio de contraseña y el sitio no vino a recogerlo a tiempo. La contraseña se borró por seguridad: hay que volver a pedirlo.',
+			self::CANCELADA => 'Se pidió otra vez lo mismo antes de que el sitio lo recogiera, así que vale la petición nueva.',
+			default         => '',
 		};
 	}
 

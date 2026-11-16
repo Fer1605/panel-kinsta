@@ -1,25 +1,34 @@
 <?php
 /**
- * El tablero: cómo está cada sitio contra cada norma.
+ * Qué le falta a cada sitio.
  *
- * ─── Por qué NO abre con una cuadrícula ─────────────────────────────────────
+ * ─── Lo que se rehízo, y por qué ────────────────────────────────────────────
  *
- * Lo primero que sale de la mano es una matriz: 107 filas de sitios por 10
- * columnas de normas, con palomitas y tachitas. Se ve muy bien en una captura
- * y es inútil para trabajar: para saber qué hacer hay que recorrer mil celdas
- * con el dedo y después ir a buscar cada sitio.
+ * La primera versión de esta pantalla no se entendía. Fer la leyó entera y
+ * salió con una lista de preguntas que son todas justas:
  *
- * El jefe ya rechazó esa forma de presentar las cosas, dos veces:
+ *  1. El bloque se titulaba con la REGLA en afirmativo —«No existe un usuario
+ *     llamado admin»— y justo debajo la fila decía que sí existe. Leído de
+ *     corrido, el panel se contradecía solo. Ahora el título de un bloque de
+ *     fallos dice el PROBLEMA, no la regla. Ver SWPK_Normas::problema().
  *
- *   «el panel debe ser a nivel sistema darme la info rapidamente y no pequeños
- *    resumenes de numeros, (...) rapido tendria que captar que esta bien y que
- *    esta mal»                                      (WhatsApp, 11/11/2026)
- *   «Individual, mucha información, pero no en paquete.»   (audio corto)
+ *  2. No se entendía por qué un solo sitio tenía datos. El veredicto de arriba
+ *     ahora lo dice con todas sus letras: de cuántos sitios se puede saber
+ *     algo, por qué, y cuáles son.
  *
- * Así que esto abre por norma, con los sitios nombrados debajo de cada una. Se
- * lee como una lista de pendientes, que es lo que es. La cuadrícula completa
- * sigue estando, al final, plegada: sirve para una auditoría o para una
- * captura, no para el día a día.
+ *  3. La cuadrícula de 108 filas por 10 columnas era, en sus palabras,
+ *     «demasiado ruido visual, todo aparece como incógnito». Tenía razón: con
+ *     un solo sitio medido eran 1.070 celdas con un signo de interrogación.
+ *     Se quitó. En su lugar va la lista de los sitios que SÍ se pueden medir,
+ *     que hoy es corta y mañana será la útil.
+ *
+ * ─── Por qué abre por norma y no por sitio ──────────────────────────────────
+ *
+ * Porque el trabajo se hace por norma: «hay que ponerle doble autenticación a
+ * estos cuatro» es una tarea; «el sitio tal tiene tres cosas» son tres tareas
+ * de tres tipos distintos. Y porque el jefe ya pidió dos veces lo mismo: la
+ * información con el nombre del sitio puesto, no contadores que hay que
+ * interpretar y después ir a buscar.
  */
 
 defined( 'ABSPATH' ) || exit;
@@ -33,107 +42,134 @@ $url_sitio = static fn( string $id ) => add_query_arg(
 	admin_url( 'admin.php' )
 );
 
-/** El nombre con el que se le dice a una persona qué sitio es. */
 $nombre_de = static fn( object $s ) => (string) ( $s->nombre_visible ?: $s->nombre ?: $s->sitio_id );
 
-// Las normas que hoy tienen algo que atender, lo peor primero. Una norma que
-// nadie incumple no abre la pantalla: baja al final, dicha en una línea.
+// Qué sitios tienen el plugin. Una consulta y no 108: la de antes preguntaba
+// agente por agente dentro del bucle.
+global $wpdb;
+$con_plugin = array_flip(
+	$wpdb->get_col( 'SELECT sitio_id FROM ' . SWPK_Tablas::tabla( 'agentes' ) . " WHERE sitio_id <> ''" ) ?: []
+);
+
+$medibles = [];
+$ciegos   = [];
+
+foreach ( $tablero['filas'] as $f ) {
+	if ( isset( $con_plugin[ (string) $f['sitio']->sitio_id ] ) ) {
+		$medibles[] = $f;
+	} else {
+		$ciegos[] = $f;
+	}
+}
+
+$fallando_medibles = count( array_filter( $medibles, static fn( $f ) => $f['fallas'] > 0 ) );
+$al_dia_medibles   = count( $medibles ) - $fallando_medibles;
+?>
+
+<?php if ( ! $normas ) : ?>
+	<div class="notice notice-warning inline" style="margin-top:16px">
+		<p>
+			No hay ninguna norma encendida, así que no hay nada que revisar.
+			<a href="<?php echo esc_url( add_query_arg( [ 'page' => 'panel-kinsta-seguridad', 'seccion' => 'normas' ], admin_url( 'admin.php' ) ) ); ?>">Ver la lista de normas</a>.
+		</p>
+	</div>
+	<?php return; ?>
+<?php endif; ?>
+
+<p class="swpk-intro">
+	Esta pantalla contesta una sola pregunta: <strong>¿qué le falta a cada sitio para cumplir nuestras
+	normas de seguridad?</strong> Abajo están los problemas encontrados, agrupados por norma y con el
+	nombre del sitio puesto.
+</p>
+
+<?php
+// ── El veredicto ─────────────────────────────────────────────────────────────
+//
+// Antes decía «1 sitio incumple… y de 107 no se sabe», que deja la pregunta
+// obvia sin contestar: ¿y por qué de 107 no se sabe? Ahora lo primero que se
+// explica es de cuántos sitios se puede saber algo y por qué.
+?>
+<?php if ( ! $medibles ) : ?>
+	<div class="swpk-veredicto swpk-veredicto-ciego">
+		<strong>Todavía no se puede revisar ningún sitio.</strong>
+		Estas normas no se ven desde fuera —si el editor de código está abierto, si alguien puede
+		registrarse, si el servidor ejecuta archivos subidos— solo se ven desde dentro del sitio, y para eso
+		hace falta el plugin instalado. No lo tiene ninguno de los <?php echo (int) $tablero['total']; ?> todavía.
+	</div>
+<?php else : ?>
+	<div class="swpk-veredicto <?php echo $fallando_medibles > 0 ? 'swpk-veredicto-mal' : 'swpk-veredicto-bien'; ?>">
+		<?php if ( $fallando_medibles > 0 ) : ?>
+			<strong>
+				<?php echo esc_html( SWPK_Vista::plural( $fallando_medibles, 'sitio tiene algo', 'sitios tienen algo' ) ); ?>
+				que arreglar.
+			</strong>
+		<?php else : ?>
+			<strong>Los sitios que se pueden revisar están en orden.</strong>
+		<?php endif; ?>
+
+		<span class="swpk-veredicto-mas">
+			El panel puede revisar <?php echo (int) count( $medibles ); ?> de los
+			<?php echo (int) $tablero['total']; ?> sitios: son los que tienen el plugin instalado.
+			<?php if ( $al_dia_medibles > 0 && $fallando_medibles > 0 ) : ?>
+				De esos, <?php echo (int) $al_dia_medibles; ?> cumplen todo.
+			<?php endif; ?>
+			<?php if ( $ciegos ) : ?>
+				De los otros <?php echo (int) count( $ciegos ); ?> no se sabe nada, ni bueno ni malo.
+			<?php endif; ?>
+		</span>
+	</div>
+<?php endif; ?>
+
+<?php if ( $ciegos ) : ?>
+	<div class="notice notice-warning inline">
+		<p>
+			<strong>Por qué de <?php echo (int) count( $ciegos ); ?> sitios no se sabe nada.</strong>
+			Casi ninguna de estas normas se puede comprobar desde fuera: hay que estar dentro del sitio para
+			saber si el editor de código está abierto, si cualquiera puede registrarse o si el servidor
+			ejecuta un archivo PHP subido por un formulario. Eso lo mira el plugin que va instalado en cada
+			sitio, y <strong>falta instalarlo en <?php echo (int) count( $ciegos ); ?></strong>.
+			Mientras tanto esos sitios no aparecen aquí: ni como buenos ni como malos, porque no lo sabemos.
+		</p>
+	</div>
+<?php endif; ?>
+
+<?php
+// ── Lo que hay que atender ───────────────────────────────────────────────────
 $con_fallas = [];
 $cumplidas  = [];
 
 foreach ( $normas as $n ) {
-	$clave = (string) $n->clave;
-	$r     = $tablero['por_norma'][ $clave ];
-
-	if ( $r['falla'] > 0 ) {
-		$con_fallas[] = $r;
-	} else {
-		$cumplidas[] = $r;
-	}
+	$r = $tablero['por_norma'][ (string) $n->clave ];
+	if ( $r['falla'] > 0 ) { $con_fallas[] = $r; } else { $cumplidas[] = $r; }
 }
 
 usort(
 	$con_fallas,
 	static function ( $a, $b ) {
 		$peso = [ 'alta' => 0, 'media' => 1, 'baja' => 2 ];
-		$pa   = $peso[ (string) $a['norma']->severidad ] ?? 1;
-		$pb   = $peso[ (string) $b['norma']->severidad ] ?? 1;
+		$pa = $peso[ (string) $a['norma']->severidad ] ?? 1;
+		$pb = $peso[ (string) $b['norma']->severidad ] ?? 1;
 
 		return $pa !== $pb ? $pa <=> $pb : $b['falla'] <=> $a['falla'];
 	}
 );
 
-// Qué sitios incumplen cada norma, con nombre. Es el dato que la pantalla
-// existe para dar.
 $quienes_fallan = [];
-$quienes_huecos = [];
 
 foreach ( $tablero['filas'] as $f ) {
 	foreach ( $f['celdas'] as $clave => $celda ) {
 		if ( SWPK_Normas::FALLA === $celda['estado'] ) {
 			$quienes_fallan[ $clave ][] = [ 'sitio' => $f['sitio'], 'detalle' => $celda['detalle'] ];
-		} elseif ( SWPK_Normas::SIN_DATO === $celda['estado'] ) {
-			$quienes_huecos[ $clave ][] = [ 'sitio' => $f['sitio'], 'detalle' => $celda['detalle'] ];
 		}
 	}
 }
-
-$sin_agente = 0;
-
-foreach ( $sitios as $s ) {
-	if ( ! SWPK_Ordenes::agente_de( (string) $s->sitio_id ) ) {
-		++$sin_agente;
-	}
-}
 ?>
-
-<?php if ( ! $normas ) : ?>
-	<div class="notice notice-warning inline" style="margin-top:16px">
-		<p>
-			No hay ninguna norma encendida, así que no hay nada que medir.
-			<a href="<?php echo esc_url( add_query_arg( [ 'page' => 'panel-kinsta-seguridad', 'seccion' => 'normas' ], admin_url( 'admin.php' ) ) ); ?>">Ver las normas</a>.
-		</p>
-	</div>
-	<?php return; ?>
-<?php endif; ?>
-
-<?php
-// ── El veredicto, en una línea ───────────────────────────────────────────────
-//
-// Antes de cualquier tabla. Si lo único que alguien lee de esta pantalla es
-// esta frase, tiene que haberse llevado lo importante.
-$total_fallas = array_sum( array_column( $tablero['por_norma'], 'falla' ) );
-?>
-<div class="swpk-veredicto <?php echo $total_fallas > 0 ? 'swpk-veredicto-mal' : 'swpk-veredicto-bien'; ?>">
-	<?php if ( $total_fallas > 0 ) : ?>
-		<strong><?php echo esc_html( SWPK_Vista::plural( (int) $tablero['fallando'], 'sitio incumple', 'sitios incumplen' ) ); ?></strong>
-		alguna de las <?php echo (int) count( $normas ); ?> normas,
-		<?php echo esc_html( SWPK_Vista::plural( $total_fallas, 'incumplimiento en total', 'incumplimientos en total' ) ); ?>.
-	<?php else : ?>
-		<strong>Ninguno de los <?php echo (int) $tablero['total']; ?> sitios incumple ninguna norma.</strong>
-	<?php endif; ?>
-
-	<?php if ( $tablero['sin_dato'] > 0 ) : ?>
-		<span class="swpk-veredicto-mas">
-			Y de <?php echo esc_html( SWPK_Vista::plural( (int) $tablero['sin_dato'], 'sitio', 'sitios' ) ); ?>
-			no se sabe: nunca han reportado.
-		</span>
-	<?php endif; ?>
-</div>
-
-<?php if ( $sin_agente > 0 ) : ?>
-	<div class="notice notice-warning inline">
-		<p>
-			<strong><?php echo esc_html( SWPK_Vista::plural( $sin_agente, 'sitio no tiene', 'sitios no tienen' ) ); ?> el agente instalado.</strong>
-			De esos, el panel no puede comprobar casi ninguna norma: estas cosas —si el editor de código está
-			abierto, si alguien puede registrarse, si PHP se ejecuta en las subidas— solo se ven desde dentro
-			del sitio. Aparecen como «sin medir», que no es lo mismo que «está bien».
-		</p>
-	</div>
-<?php endif; ?>
 
 <?php if ( $con_fallas ) : ?>
-	<h2 style="margin-top:28px">Lo que hay que atender</h2>
+	<h2 style="margin-top:28px">Lo que hay que arreglar</h2>
+	<p class="swpk-mudo" style="margin:-4px 0 14px">
+		Cada bloque es un problema encontrado. Debajo, los sitios que lo tienen.
+	</p>
 
 	<?php foreach ( $con_fallas as $r ) : ?>
 		<?php
@@ -147,13 +183,18 @@ $total_fallas = array_sum( array_column( $tablero['por_norma'], 'falla' ) );
 				<span class="swpk-etq swpk-sev-<?php echo esc_attr( (string) $n->severidad ); ?>">
 					<?php echo esc_html( ucfirst( (string) $n->severidad ) ); ?>
 				</span>
-				<h3><?php echo esc_html( (string) $n->nombre ); ?></h3>
+				<?php // El PROBLEMA, no la regla: aquí abajo van los sitios que lo tienen. ?>
+				<h3><?php echo esc_html( SWPK_Normas::problema( $n ) ); ?></h3>
 				<span class="swpk-norma-cuenta">
-					<?php echo esc_html( SWPK_Vista::plural( (int) $r['falla'], 'sitio', 'sitios' ) ); ?>
+					en <?php echo esc_html( SWPK_Vista::plural( (int) $r['falla'], 'sitio', 'sitios' ) ); ?>
 				</span>
 			</div>
 
 			<p class="swpk-norma-porque"><?php echo esc_html( (string) $n->porque ); ?></p>
+
+			<p class="swpk-norma-regla">
+				La norma dice: <em><?php echo esc_html( (string) $n->nombre ); ?></em>
+			</p>
 
 			<table class="widefat striped swpk-norma-tabla">
 				<tbody>
@@ -166,14 +207,14 @@ $total_fallas = array_sum( array_column( $tablero['por_norma'], 'falla' ) );
 							<?php echo SWPK_Admin::grupo_badge( (string) $item['sitio']->tag ); ?>
 						</td>
 						<td><?php echo esc_html( (string) $item['detalle'] ); ?></td>
-						<td style="width:150px;text-align:right">
+						<td style="width:160px;text-align:right">
 							<?php if ( '' !== $orden && (int) $n->arreglable === 1 && SWPK_Etiquetas::NO_UPDATE !== (string) $item['sitio']->tag ) : ?>
 								<a class="button button-small"
-									href="<?php echo esc_url( SWPK_Admin::url_arreglar( $clave, (string) $item['sitio']->sitio_id ) ); ?>">Arreglar</a>
+									href="<?php echo esc_url( SWPK_Admin::url_arreglar( $clave, (string) $item['sitio']->sitio_id ) ); ?>">Arreglarlo</a>
 							<?php elseif ( SWPK_Etiquetas::NO_UPDATE === (string) $item['sitio']->tag ) : ?>
-								<span class="swpk-mudo" title="Es un sitio que administra el cliente: se mide, no se cambia.">Es del cliente</span>
+								<span class="swpk-mudo" title="Es un sitio que administra el cliente: lo revisamos, pero no le cambiamos nada sin que lo pida.">Lo lleva el cliente</span>
 							<?php else : ?>
-								<span class="swpk-mudo">A mano</span>
+								<span class="swpk-mudo" title="Esto no lo puede cambiar el panel: hay que entrar a hacerlo.">Hay que hacerlo a mano</span>
 							<?php endif; ?>
 						</td>
 					</tr>
@@ -181,73 +222,81 @@ $total_fallas = array_sum( array_column( $tablero['por_norma'], 'falla' ) );
 				</tbody>
 			</table>
 
-			<?php if ( '' !== $orden && (int) $n->arreglable === 1 ) : ?>
-				<?php
-				// Cuántos de los que fallan son nuestros. En los del cliente no
-				// se actúa, así que ofrecer "arreglar los 14" cuando 3 son del
-				// cliente sería prometer algo que el panel va a rechazar.
-				$nuestros = array_values(
-					array_filter(
-						$lista,
-						static fn( $i ) => SWPK_Etiquetas::NO_UPDATE !== (string) $i['sitio']->tag
-							&& SWPK_Ordenes::agente_de( (string) $i['sitio']->sitio_id )
-					)
-				);
-				?>
-				<?php if ( count( $nuestros ) > 1 ) : ?>
-					<p class="swpk-norma-pie">
-						<a class="button"
-							href="<?php echo esc_url( SWPK_Admin::url_arreglar( $clave, '' ) ); ?>"
-							onclick="return confirm('Se va a pedir el arreglo en <?php echo (int) count( $nuestros ); ?> sitios nuestros. No es inmediato: cada sitio lo aplica cuando pregunte al panel. ¿Seguimos?')">
-							Arreglar en los <?php echo (int) count( $nuestros ); ?> sitios nuestros
-						</a>
-						<span class="swpk-mudo">Los del cliente quedan fuera, y los que no tienen agente también.</span>
-					</p>
-				<?php endif; ?>
+			<?php
+			$nuestros = array_values(
+				array_filter(
+					$lista,
+					static fn( $i ) => SWPK_Etiquetas::NO_UPDATE !== (string) $i['sitio']->tag
+						&& isset( $con_plugin[ (string) $i['sitio']->sitio_id ] )
+				)
+			);
+			?>
+			<?php if ( '' !== $orden && (int) $n->arreglable === 1 && count( $nuestros ) > 1 ) : ?>
+				<p class="swpk-norma-pie">
+					<a class="button"
+						href="<?php echo esc_url( SWPK_Admin::url_arreglar( $clave, '' ) ); ?>"
+						onclick="return confirm('Se va a pedir el arreglo en <?php echo (int) count( $nuestros ); ?> sitios. No pasa al instante: cada sitio lo aplica la próxima vez que se comunique con el panel. ¿Seguimos?')">
+						Arreglarlo en los <?php echo (int) count( $nuestros ); ?> de golpe
+					</a>
+					<span class="swpk-mudo">Los sitios que lleva el cliente quedan fuera.</span>
+				</p>
 			<?php endif; ?>
 		</div>
 	<?php endforeach; ?>
 <?php endif; ?>
 
 <?php
-// ── Lo que falta medir ───────────────────────────────────────────────────────
-$huecos_totales = array_sum( array_column( $tablero['por_norma'], 'sin_dato' ) );
+// ── Lo que falta por revisar, de los sitios que SÍ se pueden revisar ─────────
+//
+// Esto antes listaba las diez normas con «107 sitios» al lado, que era repetir
+// diez veces la misma noticia: que falta instalar el plugin. Ahora solo sale
+// lo que está sin revisar en un sitio que sí tiene plugin, que es un hueco de
+// verdad y no el mismo aviso otra vez.
+$huecos_reales = [];
+
+foreach ( $medibles as $f ) {
+	foreach ( $f['celdas'] as $clave => $celda ) {
+		if ( SWPK_Normas::SIN_DATO === $celda['estado'] ) {
+			$huecos_reales[ $clave ][] = $f['sitio'];
+		}
+	}
+}
 ?>
-<?php if ( $huecos_totales > 0 ) : ?>
-	<h2 style="margin-top:28px">Lo que todavía no se ha medido</h2>
-	<p style="max-width:860px;color:#3c434a">
-		No es una lista de problemas: es la lista de lo que el panel no sabe. Un sitio sin medir puede estar
-		perfecto o puede estar mal, y decir cualquiera de las dos cosas sería inventar.
+
+<?php if ( $huecos_reales ) : ?>
+	<h2 style="margin-top:28px">Lo que falta revisar</h2>
+	<p class="swpk-mudo" style="margin:-4px 0 12px;max-width:860px">
+		Esto no son problemas: es lo que el panel todavía no sabe de sitios que sí puede revisar. Un sitio
+		sin revisar puede estar perfecto o puede estar mal, y decir cualquiera de las dos cosas sería
+		inventar.
 	</p>
 
 	<table class="widefat striped" style="max-width:980px">
-		<thead>
-			<tr>
-				<th>Norma</th>
-				<th style="width:120px">Sin medir</th>
-				<th>Por qué</th>
-			</tr>
-		</thead>
+		<thead><tr><th style="width:42%">La norma</th><th>Dónde falta, y por qué</th></tr></thead>
 		<tbody>
 		<?php foreach ( $normas as $n ) : ?>
 			<?php
 			$clave = (string) $n->clave;
-			$r     = $tablero['por_norma'][ $clave ];
-
-			if ( $r['sin_dato'] < 1 ) {
-				continue;
-			}
-
-			$ejemplo = $quienes_huecos[ $clave ][0]['detalle'] ?? '';
+			if ( empty( $huecos_reales[ $clave ] ) ) { continue; }
+			$quienes = $huecos_reales[ $clave ];
 			?>
 			<tr>
 				<td><strong><?php echo esc_html( (string) $n->nombre ); ?></strong></td>
-				<td><?php echo esc_html( SWPK_Vista::plural( (int) $r['sin_dato'], 'sitio', 'sitios' ) ); ?></td>
 				<td>
-					<?php echo esc_html( $ejemplo ); ?>
-					<?php if ( 'declarativa' === (string) $n->comprobador ) : ?>
-						<br><span class="swpk-mudo">Esta se marca a mano, sitio por sitio, desde la ficha del sitio.</span>
-					<?php endif; ?>
+					<?php
+					echo esc_html(
+						implode( ', ', array_map( $nombre_de, array_slice( $quienes, 0, 6 ) ) )
+						. ( count( $quienes ) > 6 ? ' y ' . ( count( $quienes ) - 6 ) . ' más' : '' )
+					);
+					?>
+					<br>
+					<span class="swpk-mudo">
+						<?php
+						echo 'declarativa' === (string) $n->comprobador
+							? 'Esta no se puede comprobar sola: alguien tiene que entrar a la ficha del sitio y marcarla.'
+							: 'El sitio todavía no ha mandado este dato. Llega con su próximo reporte.';
+						?>
+					</span>
 				</td>
 			</tr>
 		<?php endforeach; ?>
@@ -255,7 +304,51 @@ $huecos_totales = array_sum( array_column( $tablero['por_norma'], 'sin_dato' ) )
 	</table>
 <?php endif; ?>
 
-<?php if ( $cumplidas ) : ?>
+<?php if ( $medibles ) : ?>
+	<h2 style="margin-top:28px">Sitio por sitio</h2>
+	<p class="swpk-mudo" style="margin:-4px 0 12px">
+		Los <?php echo (int) count( $medibles ); ?> que el panel puede revisar, con su cuenta.
+		<?php if ( $ciegos ) : ?>
+			Los otros <?php echo (int) count( $ciegos ); ?> aparecerán aquí según se les vaya instalando el plugin.
+		<?php endif; ?>
+	</p>
+
+	<table class="widefat striped" style="max-width:980px">
+		<thead>
+			<tr>
+				<th style="width:34%">Sitio</th>
+				<th style="width:16%">Cumple</th>
+				<th style="width:16%">Le falta</th>
+				<th>Sin revisar</th>
+			</tr>
+		</thead>
+		<tbody>
+		<?php foreach ( $medibles as $f ) : ?>
+			<tr>
+				<td>
+					<a href="<?php echo esc_url( $url_sitio( (string) $f['sitio']->sitio_id ) ); ?>"><strong><?php
+						echo esc_html( $nombre_de( $f['sitio'] ) );
+					?></strong></a>
+					<?php echo SWPK_Admin::grupo_badge( (string) $f['sitio']->tag ); ?>
+				</td>
+				<td><?php echo (int) $f['cumples']; ?> normas</td>
+				<td>
+					<?php if ( $f['fallas'] > 0 ) : ?>
+						<span class="swpk-etq swpk-sev-alta"><?php echo (int) $f['fallas']; ?> cosas</span>
+					<?php else : ?>
+						<span class="swpk-mudo">nada</span>
+					<?php endif; ?>
+				</td>
+				<td>
+					<?php echo $f['huecos'] > 0 ? (int) $f['huecos'] . ' normas' : '<span class="swpk-mudo">nada</span>'; ?>
+				</td>
+			</tr>
+		<?php endforeach; ?>
+		</tbody>
+	</table>
+<?php endif; ?>
+
+<?php if ( $cumplidas && $medibles ) : ?>
 	<h2 style="margin-top:28px">Lo que está bien</h2>
 	<ul class="swpk-bien-lista">
 	<?php foreach ( $cumplidas as $r ) : ?>
@@ -269,77 +362,8 @@ $huecos_totales = array_sum( array_column( $tablero['por_norma'], 'sin_dato' ) )
 	</ul>
 <?php endif; ?>
 
-<?php
-// ── La cuadrícula completa, plegada ──────────────────────────────────────────
-//
-// Existe porque una auditoría la pide y porque a veces hay que ver un sitio
-// concreto en todas sus normas de un golpe. Va plegada para que no sea lo
-// primero que se ve.
-?>
-<details class="swpk-cuadricula">
-	<summary>Ver la cuadrícula completa: los <?php echo (int) $tablero['total']; ?> sitios por las <?php echo (int) count( $normas ); ?> normas</summary>
-
-	<p style="color:#50575e;margin:10px 0">
-		Cada celda dice cómo estaba ese sitio en esa norma la última vez que reportó. Pasa el cursor por una
-		celda para ver el detalle y la fecha.
-	</p>
-
-	<div class="swpk-cuadricula-scroll">
-		<table class="widefat striped swpk-matriz">
-			<thead>
-				<tr>
-					<th class="swpk-matriz-sitio">Sitio</th>
-					<?php foreach ( $normas as $n ) : ?>
-						<th class="swpk-matriz-col" title="<?php echo esc_attr( (string) $n->nombre ); ?>">
-							<span><?php echo esc_html( (string) $n->nombre ); ?></span>
-						</th>
-					<?php endforeach; ?>
-				</tr>
-			</thead>
-			<tbody>
-			<?php foreach ( $tablero['filas'] as $f ) : ?>
-				<tr>
-					<td class="swpk-matriz-sitio">
-						<a href="<?php echo esc_url( $url_sitio( (string) $f['sitio']->sitio_id ) ); ?>"><?php
-							echo esc_html( $nombre_de( $f['sitio'] ) );
-						?></a>
-					</td>
-					<?php foreach ( $normas as $n ) : ?>
-						<?php
-						$celda = $f['celdas'][ (string) $n->clave ] ?? [ 'estado' => SWPK_Normas::SIN_DATO, 'detalle' => '', 'medido_en' => '' ];
-						$titulo = SWPK_Normas::etiqueta( (string) $celda['estado'] );
-
-						if ( '' !== (string) $celda['detalle'] ) {
-							$titulo .= ' — ' . $celda['detalle'];
-						}
-
-						if ( ! empty( $celda['medido_en'] ) ) {
-							$titulo .= ' (medido el ' . SWPK_Frescura::fmt( 'j/n/Y H:i', (string) $celda['medido_en'] ) . ')';
-						}
-						?>
-						<td class="swpk-celda swpk-celda-<?php echo esc_attr( (string) $celda['estado'] ); ?>"
-							title="<?php echo esc_attr( $titulo ); ?>">
-							<?php
-							echo esc_html(
-								match ( (string) $celda['estado'] ) {
-									SWPK_Normas::CUMPLE    => 'Sí',
-									SWPK_Normas::FALLA     => 'No',
-									SWPK_Normas::NO_APLICA => '—',
-									default                => '?',
-								}
-							);
-							?>
-						</td>
-					<?php endforeach; ?>
-				</tr>
-			<?php endforeach; ?>
-			</tbody>
-		</table>
-	</div>
-</details>
-
-<p class="swpk-atribucion" style="margin-top:20px">
-	Estas normas no las comprueba el panel por su cuenta: las trae el agente instalado en cada sitio, en su
-	reporte. Lo que se ve es, siempre, cómo estaba el sitio la última vez que reportó — por eso cada celda
-	lleva su fecha.
+<p class="swpk-atribucion" style="margin-top:22px">
+	El panel no comprueba estas normas por su cuenta: las mira el plugin instalado en cada sitio y las manda
+	en su reporte. Así que lo que se ve es siempre cómo estaba ese sitio la última vez que reportó, y por eso
+	cada dato lleva su fecha en la ficha del sitio.
 </p>

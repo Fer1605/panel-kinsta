@@ -33,7 +33,7 @@ defined( 'ABSPATH' ) || exit;
 
 class SWPK_Tablas {
 
-	public const VERSION = 10;
+	public const VERSION = 11;
 
 	public static function tabla( string $nombre ): string {
 		global $wpdb;
@@ -257,6 +257,7 @@ class SWPK_Tablas {
 				id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
 				clave VARCHAR(64) NOT NULL,
 				nombre VARCHAR(191) NOT NULL DEFAULT '',
+				problema VARCHAR(191) NOT NULL DEFAULT '',
 				porque TEXT NULL,
 				comprobador VARCHAR(64) NOT NULL DEFAULT '',
 				aplica_a VARCHAR(191) NOT NULL DEFAULT '',

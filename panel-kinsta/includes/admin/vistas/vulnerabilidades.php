@@ -87,9 +87,23 @@ $por_nivel[ SWPK_Riesgo::SIN_DATOS ] = 0;
 <div class="wrap">
 	<h1>Vulnerabilidades y pendientes</h1>
 	<?php SWPK_Admin::mostrar_mensaje(); ?>
-	<?php SWPK_Frescura::aviso(); ?>
+	<?php // Sin la parte de la lista: esta pantalla la dice abajo, con más detalle.
+	SWPK_Frescura::aviso( false ); ?>
 	<?php SWPK_Admin::tira_de_perfil(); ?>
 	<?php SWPK_Admin::aviso_demo(); ?>
+	<?php
+	// La frase de la lista de Wordfence, antes de nada.
+	//
+	// Esta pantalla vive de esa lista, así que lo primero que hay que saber es
+	// si está al día — y sobre todo, distinguir «Wordfence no ha publicado
+	// nada» de «no hemos comprobado». El sello de abajo da las fechas; esto da
+	// la frase, que es lo que se lee de verdad.
+	$wf = SWPK_Wordfence::como_va();
+	?>
+	<p class="swpk-lista <?php echo $wf['al_dia'] ? '' : 'swpk-lista-mal'; ?>">
+		<?php echo esc_html( $wf['frase'] ); ?>
+	</p>
+
 	<?php SWPK_Frescura::sello(); ?>
 
 	<?php SWPK_Vista::selector_de_grupo( 'panel-kinsta-vulnerabilidades', $tag, $por_tag, [], $detalles ); ?>

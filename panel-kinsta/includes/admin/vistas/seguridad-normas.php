@@ -28,9 +28,15 @@ $editar = isset( $_GET['editar'] ) ? sanitize_key( (string) $_GET['editar'] ) : 
 $norma  = '' !== $editar ? SWPK_Normas::una( $editar ) : null;
 ?>
 
-<p style="max-width:880px;color:#3c434a;margin-top:16px">
-	Esta es la lista contra la que se mide cada sitio. Lo que se apague aquí deja de medirse y desaparece del
-	tablero; lo que se encienda se empieza a medir en el siguiente reporte de cada sitio, no al instante.
+<p class="swpk-intro">
+	<strong>Esta es la lista de lo que revisamos en cada sitio.</strong> Es la que decide qué sale en la
+	pestaña anterior: cada norma encendida se comprueba en todos los sitios que tengan el plugin instalado.
+	Se le pueden agregar normas y quitar, sin tocar el programa.
+</p>
+<p class="swpk-mudo" style="max-width:880px;margin:-6px 0 14px">
+	La <strong>gravedad</strong> solo decide el orden en que salen los problemas: las altas primero.
+	<strong>Apagar</strong> una norma hace que deje de revisarse y desaparezca de la pestaña anterior;
+	encenderla la vuelve a meter, pero no al instante — se mide con el siguiente reporte de cada sitio.
 </p>
 
 <table class="widefat striped" style="margin-top:10px">
@@ -146,6 +152,20 @@ $norma  = '' !== $editar ? SWPK_Normas::una( $editar ) : null;
 		</tr>
 
 		<?php if ( ! $norma || (int) $norma->de_fabrica !== 1 ) : ?>
+			<tr>
+				<th scope="row"><label for="swpk-norma-problema">Y si no se cumple, ¿qué se dice?</label></th>
+				<td>
+					<input type="text" id="swpk-norma-problema" name="problema" class="regular-text" style="width:100%"
+						value="<?php echo esc_attr( $norma ? (string) $norma->problema : '' ); ?>">
+					<p class="description">
+						La misma idea, pero al revés: si arriba pusiste «Los formularios tienen captcha», aquí va
+						«Los formularios no tienen captcha». Es el título que sale en la lista de problemas, y
+						hacen falta los dos textos: sin este, el panel pondría la regla en afirmativo encima de
+						una lista de sitios que no la cumplen, y se contradiría solo.
+					</p>
+				</td>
+			</tr>
+
 			<tr>
 				<th scope="row"><label for="swpk-norma-porque">Por qué importa</label></th>
 				<td>

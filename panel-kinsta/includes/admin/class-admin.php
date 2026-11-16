@@ -197,7 +197,21 @@ class SWPK_Admin {
 			.swpk-norma-cabeza{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 			.swpk-norma-cabeza h3{margin:0;font-size:15px}
 			.swpk-norma-cuenta{margin-left:auto;color:#50575e;font-size:13px;white-space:nowrap}
-			.swpk-norma-porque{color:#3c434a;max-width:860px;margin:8px 0 12px}
+			.swpk-norma-porque{color:#3c434a;max-width:860px;margin:8px 0 8px}
+			.swpk-norma-regla{color:#646970;font-size:12px;margin:0 0 12px}
+			.swpk-norma-regla em{font-style:normal;font-weight:600}
+			/* La frase que abre cada pestaña: qué es esta pantalla, antes de
+			   enseñar nada. Sin esto hay que deducirlo del contenido, y lo que
+			   se deduce mal no se vuelve a mirar. */
+			.swpk-intro{max-width:880px;font-size:14px;line-height:1.6;margin:16px 0 12px;color:#1d2327}
+			.swpk-veredicto-ciego{background:#f6f7f7;border-color:#c3c4c7}
+			.swpk-filtros-estado{color:#50575e;margin:10px 0 14px}
+			.swpk-filtros-estado a{text-decoration:none}
+			.swpk-filtros-estado a.current{font-weight:700;color:#1d2327}
+			/* La frase de la lista de Wordfence, arriba de Vulnerabilidades. */
+			.swpk-lista{max-width:900px;font-size:14px;line-height:1.6;margin:14px 0;
+				padding:11px 14px;border-radius:5px;background:#edfaef;border:1px solid #a3dcb0}
+			.swpk-lista-mal{background:#fcf9e8;border-color:#e3cf94}
 			.swpk-norma-tabla{border:1px solid #dcdcde}
 			.swpk-norma-pie{margin:12px 0 0;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 			/* La gravedad se dice con color Y con palabra: el color solo no
@@ -984,6 +998,7 @@ class SWPK_Admin {
 		$datos = [
 			'clave'     => isset( $_POST['clave'] ) ? sanitize_key( wp_unslash( (string) $_POST['clave'] ) ) : '',
 			'nombre'    => isset( $_POST['nombre'] ) ? sanitize_text_field( wp_unslash( (string) $_POST['nombre'] ) ) : '',
+			'problema'  => isset( $_POST['problema'] ) ? sanitize_text_field( wp_unslash( (string) $_POST['problema'] ) ) : '',
 			'porque'    => isset( $_POST['porque'] ) ? sanitize_textarea_field( wp_unslash( (string) $_POST['porque'] ) ) : '',
 			'severidad' => isset( $_POST['severidad'] ) ? sanitize_key( wp_unslash( (string) $_POST['severidad'] ) ) : 'media',
 			'aplica_a'  => isset( $_POST['aplica_a'] ) ? implode( ',', array_map( 'sanitize_key', (array) wp_unslash( $_POST['aplica_a'] ) ) ) : '',

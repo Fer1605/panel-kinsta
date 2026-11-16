@@ -89,6 +89,24 @@ para los dos o tres plugins que cubran la mayoría de los sitios.
 
 ---
 
+## Dos textos por norma, y hacen falta los dos
+
+Una norma lleva `nombre` y `problema`, y confundirlos tenía un coste real.
+
+La primera versión solo tenía el nombre, en afirmativo, que es lo correcto para
+una regla. El tablero lo usaba como título de los bloques de fallos, así que la
+pantalla decía:
+
+> **No existe un usuario llamado «admin»**
+> Colegio los Andes — Existe un usuario llamado «admin».
+
+El panel se contradecía solo. Quien lo leía tenía que deducir que el título era
+la regla y la fila el incumplimiento, y nadie debería tener que deducir eso.
+
+Ahora la lista de normas usa `nombre` y la lista de fallos usa `problema`. Una
+norma escrita a mano sin `problema` cae en «No se cumple: {nombre}», que al
+menos no se contradice. `SWPK_Normas::problema()` lo resuelve.
+
 ## Los cuatro veredictos
 
 | Estado | Qué quiere decir |
@@ -157,6 +175,18 @@ un cambio que la siguiente actualización borra sin avisar.
 
 ---
 
+## Lo que la pantalla NO hace, y por qué
+
+Hubo una **cuadrícula completa**: 108 filas de sitios por 10 columnas de
+normas, plegada al final. Se quitó. Con un solo sitio medido eran 1.070 celdas
+con un signo de interrogación, y la reacción de quien la vio fue exacta:
+«demasiado ruido visual, todo aparece como incógnito».
+
+En su lugar va la lista de los sitios que **sí** se pueden revisar, con su
+cuenta. Hoy es una fila; cuando el plugin esté instalado será la pantalla útil.
+Si alguna vez hace falta la matriz para una auditoría, que vuelva — pero
+mostrando solo los sitios medidos, no 107 columnas de interrogaciones.
+
 ## El canal de órdenes
 
 ### Por qué una cola y no una llamada
@@ -185,14 +215,20 @@ que nadie pulse el botón, no después.
 
 ### Los estados
 
-| Estado | Qué quiere decir |
-|---|---|
-| `pendiente` | Esperando que el sitio pregunte |
-| `entregada` | El sitio ya se la llevó |
-| `hecha` | Hecho |
-| `fallo` | Falló, con el motivo |
-| `vencida` | Venció sin entregarse (la contraseña del lote caducó) |
-| `cancelada` | Sustituida por otra posterior |
+| Estado | En pantalla | Qué quiere decir |
+|---|---|---|
+| `pendiente` | En cola | El panel lo apuntó; el sitio no ha venido a recogerlo |
+| `entregada` | Aplicándose | El sitio se lo llevó y lo está haciendo |
+| `hecha` | Listo | El sitio lo hizo y lo confirmó |
+| `fallo` | No se pudo | Lo intentó y no pudo, o se lo llevó y nunca contestó |
+| `vencida` | Caducó | La contraseña del lote venció antes de entregarse |
+| `cancelada` | Reemplazada | Se pidió otra vez lo mismo antes de recogerlo |
+
+Las etiquetas de pantalla son de dos palabras a propósito. Las primeras
+—«Esperando que el sitio pregunte», «El sitio ya se la llevó»— describían bien
+el mecanismo y no las entendía nadie: hablan de cómo viaja una orden por
+dentro, cuando lo que hace falta saber es en qué va el encargo. La explicación
+larga vive en `SWPK_Ordenes::explicacion()` y sale debajo de la etiqueta.
 
 Una orden entregada que nunca se resuelve se cierra como `fallo` a las 24
 horas, en la corrida diaria. Dejarla en `entregada` para siempre haría que el

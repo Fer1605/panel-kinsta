@@ -62,40 +62,67 @@ $url_estado = static fn( string $e ) => add_query_arg(
 );
 ?>
 
-<div class="notice notice-info inline" style="margin-top:16px">
+<p class="swpk-intro">
+	Cuando en la pestaña anterior le das a <strong>«Arreglarlo»</strong>, el arreglo no pasa en ese momento:
+	el panel lo apunta aquí y el sitio lo recoge la próxima vez que se comunica. <strong>Esta pantalla es la
+	lista de lo que pediste y en qué va cada cosa.</strong>
+</p>
+
+<div class="notice notice-info inline">
 	<p>
-		<strong>Una orden no es un botón que apaga una luz.</strong>
-		El panel la deja anotada y el sitio se la lleva cuando pasa a reportar, cada cinco minutos. Ese reloj
-		depende de que alguien visite el sitio, así que un sitio con poco tráfico puede tardar horas. Es el
-		precio de que el sitio del cliente no tenga que abrir ninguna puerta a internet, y se eligió a
-		propósito.
+		<strong>Por qué no es inmediato.</strong> El panel nunca llama a los sitios de los clientes — son
+		ellos los que llaman al panel, cada cinco minutos, y de paso preguntan si les dejamos algo. Así
+		ningún sitio de cliente tiene que dejar una puerta abierta a internet, que es la promesa de fondo de
+		todo este proyecto.
+	</p>
+	<p>
+		El precio es la espera: un sitio con visitas contesta en minutos, uno que nadie visita de noche
+		contesta por la mañana. <strong>No se puede prometer que un cambio en 94 sitios pase al instante.</strong>
 	</p>
 </div>
 
-<h2>Lo que está en camino</h2>
+<h2>Lo que pedimos</h2>
 
-<p>
-	<a href="<?php echo esc_url( $url_estado( '' ) ); ?>" class="<?php echo '' === $filtro ? 'current' : ''; ?>">Todas</a>
-	<?php foreach ( [ SWPK_Ordenes::PENDIENTE, SWPK_Ordenes::ENTREGADA, SWPK_Ordenes::HECHA, SWPK_Ordenes::FALLO, SWPK_Ordenes::VENCIDA, SWPK_Ordenes::CANCELADA ] as $e ) : ?>
-		· <a href="<?php echo esc_url( $url_estado( $e ) ); ?>" class="<?php echo $filtro === $e ? 'current' : ''; ?>">
-			<?php echo esc_html( SWPK_Ordenes::etiqueta( $e ) ); ?> (<?php echo (int) ( $conteos[ $e ] ?? 0 ); ?>)
-		</a>
-	<?php endforeach; ?>
-</p>
+<?php
+// Solo se dibujan los estados que tienen algo. Seis filtros en cero son seis
+// cosas que leer para nada, y hacen que la pantalla parezca más complicada de
+// lo que es.
+$con_algo = array_filter(
+	[ SWPK_Ordenes::PENDIENTE, SWPK_Ordenes::ENTREGADA, SWPK_Ordenes::HECHA,
+	  SWPK_Ordenes::FALLO, SWPK_Ordenes::VENCIDA, SWPK_Ordenes::CANCELADA ],
+	static fn( $e ) => ( $conteos[ $e ] ?? 0 ) > 0
+);
+?>
+<?php if ( count( $con_algo ) > 1 ) : ?>
+	<p class="swpk-filtros-estado">
+		<a href="<?php echo esc_url( $url_estado( '' ) ); ?>" class="<?php echo '' === $filtro ? 'current' : ''; ?>">Ver todo</a>
+		<?php foreach ( $con_algo as $e ) : ?>
+			· <a href="<?php echo esc_url( $url_estado( $e ) ); ?>"
+				title="<?php echo esc_attr( SWPK_Ordenes::explicacion( $e ) ); ?>"
+				class="<?php echo $filtro === $e ? 'current' : ''; ?>">
+				<?php echo esc_html( SWPK_Ordenes::etiqueta( $e ) ); ?> (<?php echo (int) $conteos[ $e ]; ?>)
+			</a>
+		<?php endforeach; ?>
+	</p>
+<?php endif; ?>
 
 <?php if ( ! $ordenes ) : ?>
-	<p style="color:#50575e">
-		<?php echo '' !== $filtro ? 'Ninguna orden en ese estado.' : 'Todavía no se le ha pedido nada a ningún sitio.'; ?>
+	<p style="color:#50575e;max-width:860px">
+		<?php
+		echo '' !== $filtro
+			? 'Nada en ese estado ahora mismo.'
+			: 'Todavía no le hemos pedido nada a ningún sitio. Cuando le des a «Arreglarlo» en la pestaña anterior, el encargo aparece aquí y se puede seguir hasta que el sitio confirme que lo hizo.';
+		?>
 	</p>
 <?php else : ?>
 	<table class="widefat striped">
 		<thead>
 			<tr>
-				<th style="width:22%">Sitio</th>
-				<th style="width:22%">Qué se pidió</th>
-				<th style="width:16%">Cómo va</th>
-				<th>Resultado</th>
-				<th style="width:16%">Cuándo</th>
+				<th style="width:22%">En qué sitio</th>
+				<th style="width:24%">Qué le pedimos</th>
+				<th style="width:14%">Cómo va</th>
+				<th>Qué contestó el sitio</th>
+				<th style="width:15%">Cuándo se pidió</th>
 			</tr>
 		</thead>
 		<tbody>
@@ -118,9 +145,11 @@ $url_estado = static fn( string $e ) => add_query_arg(
 				</td>
 				<td><?php echo esc_html( SWPK_Ordenes::tipos()[ (string) $o->tipo ] ?? (string) $o->tipo ); ?></td>
 				<td>
-					<span class="swpk-etq swpk-orden-<?php echo esc_attr( (string) $o->estado ); ?>">
+					<span class="swpk-etq swpk-orden-<?php echo esc_attr( (string) $o->estado ); ?>"
+						title="<?php echo esc_attr( SWPK_Ordenes::explicacion( (string) $o->estado ) ); ?>">
 						<?php echo esc_html( SWPK_Ordenes::etiqueta( (string) $o->estado ) ); ?>
 					</span>
+					<br><span class="swpk-mudo"><?php echo esc_html( SWPK_Ordenes::explicacion( (string) $o->estado ) ); ?></span>
 				</td>
 				<td><?php echo esc_html( (string) $o->resultado ?: '—' ); ?></td>
 				<td>
@@ -137,7 +166,7 @@ $url_estado = static fn( string $e ) => add_query_arg(
 
 <hr style="margin:34px 0">
 
-<h2>Cambiar la contraseña en varios sitios a la vez</h2>
+<h2>Cambiarle la contraseña a un usuario nuestro en varios sitios de golpe</h2>
 
 <p style="max-width:880px;color:#3c434a">
 	Para cuando alguien se va del equipo. Lo pidió así: <em>«mañana se va alguien y resulta que tiene las
