@@ -332,6 +332,15 @@ foreach ( $medibles as $f ) {
 		<?php endif; ?>
 	</p>
 
+	<?php
+	// Esto puede llegar a 108 filas. «No quiero tablas infinitas»: se pagina
+	// con el mismo mecanismo que el resto del panel, así que el número de
+	// página viaja en la dirección y se puede enlazar y compartir.
+	[ $medibles_pagina, $pag_med, $pags_med ] = SWPK_Vista::paginar(
+		$medibles,
+		SWPK_Vista::pagina_pedida()
+	);
+	?>
 	<table class="widefat striped" style="max-width:980px">
 		<thead>
 			<tr>
@@ -342,7 +351,7 @@ foreach ( $medibles as $f ) {
 			</tr>
 		</thead>
 		<tbody>
-		<?php foreach ( $medibles as $f ) : ?>
+		<?php foreach ( $medibles_pagina as $f ) : ?>
 			<tr>
 				<td>
 					<a href="<?php echo esc_url( $url_sitio( (string) $f['sitio']->sitio_id ) ); ?>"><strong><?php
@@ -365,6 +374,8 @@ foreach ( $medibles as $f ) {
 		<?php endforeach; ?>
 		</tbody>
 	</table>
+
+	<?php SWPK_Vista::paginador( $pag_med, $pags_med, count( $medibles ), 'sitios revisables' ); ?>
 <?php endif; ?>
 
 <?php if ( $cumplidas && $medibles ) : ?>

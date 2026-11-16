@@ -1,0 +1,391 @@
+/* ──────────────────────────────────────────────────────────────────────────
+   Panel Kinsta — la capa de diseño.
+
+   De dónde sale esto: el jefe miró el panel y dijo «es todo menos un panel»,
+   y mandó cinco capturas de MyKinsta como ejemplo. Lo que tenía razón en ver
+   es que esto parecía un listado del escritorio de WordPress con mejores
+   textos, no un producto.
+
+   Esta hoja va ENCIMA de heredado.css y transforma el marcado que las
+   pantallas ya generan —`.wrap`, `h1`, `table.widefat`, `.button`— en
+   tarjetas blancas sobre fondo claro. Se eligió así, y no reescribiendo las
+   diecisiete vistas, por una razón concreta: la petición fue cambiar cómo se
+   presenta la información, no la funcionalidad. Tocando solo estilos, ninguna
+   acción, ningún filtro y ningún formulario puede romperse.
+
+   ─── Las reglas que vienen de él, y que no se tocan ────────────────────────
+
+   · El azul es la MARCA. El rojo, el ámbar y el verde son SEMÁNTICA de riesgo
+     y no se reutilizan para decorar.
+   · La gravedad se dice con color Y con palabra: el color solo no le sirve a
+     quien no distingue rojo de verde, y esto se imprime.
+   · Nada de barra lateral propia. El panel vive dentro de WordPress y el menú
+     es el suyo — por eso aquí no hay una sola regla que toque `#adminmenu`.
+   · «Más claros»: por eso el azul y no el morado del ejemplo, que además era
+     el suyo.
+   ────────────────────────────────────────────────────────────────────────── */
+
+:root {
+	--swpk-marca: #1f7ae0;
+	--swpk-marca-suave: #e7f1fd;
+	--swpk-fondo: #f5f7fa;
+	--swpk-tarjeta: #fff;
+	--swpk-borde: #e6e7ee;
+	--swpk-texto: #1b1b2f;
+	--swpk-apagado: #6b6f80;
+	--swpk-tenue: #9598a8;
+
+	--swpk-critico: #d63638;
+	--swpk-alto: #e07c00;
+	--swpk-medio: #dba617;
+	--swpk-bajo: #8a8a94;
+	--swpk-bien: #00a32a;
+
+	--swpk-radio: 10px;
+	--swpk-sombra: 0 1px 2px rgba(20, 20, 63, .04), 0 4px 12px rgba(20, 20, 63, .04);
+}
+
+/* ── El lienzo ──────────────────────────────────────────────────────────── */
+
+body[class*="panel-kinsta"] #wpbody-content,
+body[class*="panel-kinsta"] #wpcontent {
+	background: var(--swpk-fondo);
+}
+
+body[class*="panel-kinsta"] .wrap {
+	margin: 18px 20px 0 2px;
+	max-width: 1480px;
+	color: var(--swpk-texto);
+	font-size: 14px;
+	line-height: 1.55;
+}
+
+body[class*="panel-kinsta"] .wrap h1 {
+	font-size: 29px;
+	font-weight: 700;
+	letter-spacing: -.6px;
+	line-height: 1.2;
+	padding: 0;
+	margin: 0 0 4px;
+	color: var(--swpk-texto);
+}
+
+/* Cada h2 abre una sección. No lleva caja propia: la caja la pone la tabla o
+   la tarjeta que viene detrás, y dos cajas anidadas se leen como un error. */
+body[class*="panel-kinsta"] .wrap h2 {
+	font-size: 17px;
+	font-weight: 700;
+	letter-spacing: -.2px;
+	margin: 26px 0 10px;
+	color: var(--swpk-texto);
+}
+
+body[class*="panel-kinsta"] .wrap h3 {
+	font-size: 15px;
+	font-weight: 700;
+	margin: 18px 0 8px;
+}
+
+/* ── Las tablas, que son el grueso de todas las pantallas ───────────────── */
+
+body[class*="panel-kinsta"] .wrap table.widefat {
+	background: var(--swpk-tarjeta);
+	border: 1px solid var(--swpk-borde);
+	border-radius: var(--swpk-radio);
+	box-shadow: var(--swpk-sombra);
+	border-collapse: separate;
+	border-spacing: 0;
+	overflow: hidden;
+	margin: 0 0 18px;
+}
+
+body[class*="panel-kinsta"] .wrap table.widefat thead th {
+	background: #fbfbfd;
+	border-bottom: 1px solid var(--swpk-borde);
+	color: var(--swpk-tenue);
+	font-size: 11px;
+	font-weight: 600;
+	text-transform: uppercase;
+	letter-spacing: .5px;
+	padding: 11px 16px;
+}
+
+body[class*="panel-kinsta"] .wrap table.widefat tbody td {
+	border-bottom: 1px solid #f3f4f9;
+	padding: 13px 16px;
+	font-size: 13.5px;
+	vertical-align: middle;
+	color: var(--swpk-texto);
+}
+
+body[class*="panel-kinsta"] .wrap table.widefat tbody tr:last-child td {
+	border-bottom: 0;
+}
+
+/* Fuera el rayado alterno: con filas de dos líneas y etiquetas de colores,
+   el gris de fondo pelea con lo que sí tiene que saltar. */
+body[class*="panel-kinsta"] .wrap table.widefat.striped tbody tr:nth-child(odd),
+body[class*="panel-kinsta"] .wrap .striped > tbody > :nth-child(odd) {
+	background: transparent;
+}
+
+body[class*="panel-kinsta"] .wrap table.widefat tbody tr:hover {
+	background: #fbfbfe;
+}
+
+body[class*="panel-kinsta"] .wrap table.widefat tfoot th {
+	border-top: 1px solid var(--swpk-borde);
+	background: #fbfbfd;
+	font-size: 11px;
+	text-transform: uppercase;
+	letter-spacing: .5px;
+	color: var(--swpk-tenue);
+}
+
+/* ── Botones ────────────────────────────────────────────────────────────── */
+
+body[class*="panel-kinsta"] .wrap .button,
+body[class*="panel-kinsta"] .wrap .button-secondary {
+	border-radius: 7px;
+	border-color: var(--swpk-borde);
+	background: #fff;
+	color: var(--swpk-texto);
+	font-weight: 600;
+	font-size: 13px;
+	height: auto;
+	padding: 6px 14px;
+	line-height: 1.5;
+	box-shadow: none;
+}
+
+body[class*="panel-kinsta"] .wrap .button:hover {
+	border-color: #c9cbdb;
+	background: #fff;
+	color: var(--swpk-marca);
+}
+
+body[class*="panel-kinsta"] .wrap .button-primary {
+	background: var(--swpk-marca);
+	border-color: var(--swpk-marca);
+	color: #fff;
+}
+
+body[class*="panel-kinsta"] .wrap .button-primary:hover,
+body[class*="panel-kinsta"] .wrap .button-primary:focus {
+	background: #1a6bc6;
+	border-color: #1a6bc6;
+	color: #fff;
+}
+
+body[class*="panel-kinsta"] .wrap .button-small {
+	font-size: 12px;
+	padding: 4px 11px;
+}
+
+/* ── Campos ─────────────────────────────────────────────────────────────── */
+
+body[class*="panel-kinsta"] .wrap input[type="text"],
+body[class*="panel-kinsta"] .wrap input[type="search"],
+body[class*="panel-kinsta"] .wrap input[type="email"],
+body[class*="panel-kinsta"] .wrap input[type="password"],
+body[class*="panel-kinsta"] .wrap input[type="date"],
+body[class*="panel-kinsta"] .wrap select,
+body[class*="panel-kinsta"] .wrap textarea {
+	border-radius: 7px;
+	border-color: var(--swpk-borde);
+	box-shadow: none;
+	font-size: 13.5px;
+	padding: 6px 11px;
+	color: var(--swpk-texto);
+	min-height: 0;
+}
+
+body[class*="panel-kinsta"] .wrap input:focus,
+body[class*="panel-kinsta"] .wrap select:focus,
+body[class*="panel-kinsta"] .wrap textarea:focus {
+	border-color: var(--swpk-marca);
+	box-shadow: 0 0 0 1px var(--swpk-marca);
+	outline: none;
+}
+
+/* ── Avisos ─────────────────────────────────────────────────────────────── */
+
+body[class*="panel-kinsta"] .wrap .notice,
+body[class*="panel-kinsta"] .wrap div.notice {
+	border-radius: 9px;
+	border: 1px solid var(--swpk-borde);
+	border-left-width: 4px;
+	box-shadow: var(--swpk-sombra);
+	padding: 4px 16px;
+	margin: 14px 0;
+	background: #fff;
+}
+
+body[class*="panel-kinsta"] .wrap .notice-success { border-left-color: var(--swpk-bien); }
+body[class*="panel-kinsta"] .wrap .notice-warning { border-left-color: var(--swpk-medio); background: #fdfbf2; }
+body[class*="panel-kinsta"] .wrap .notice-error   { border-left-color: var(--swpk-critico); background: #fdf5f5; }
+body[class*="panel-kinsta"] .wrap .notice-info    { border-left-color: var(--swpk-marca); background: #f7fafe; }
+
+/* ── Las piezas propias del panel ───────────────────────────────────────── */
+
+/* Las tarjetas de cifra, con la cifra en color de marca y no en negro. */
+body[class*="panel-kinsta"] .swpk-tarjeta,
+body[class*="panel-kinsta"] .swpk-grupo,
+body[class*="panel-kinsta"] .swpk-ficha,
+body[class*="panel-kinsta"] .swpk-mensaje,
+body[class*="panel-kinsta"] .swpk-sello,
+body[class*="panel-kinsta"] .swpk-norma-bloque,
+body[class*="panel-kinsta"] .swpk-cuadricula {
+	border-color: var(--swpk-borde);
+	border-radius: var(--swpk-radio);
+	box-shadow: var(--swpk-sombra);
+}
+
+body[class*="panel-kinsta"] .swpk-tarjeta .swpk-n,
+body[class*="panel-kinsta"] .swpk-grupo-n {
+	color: var(--swpk-marca);
+	font-size: 34px;
+	font-weight: 700;
+	letter-spacing: -1px;
+}
+
+body[class*="panel-kinsta"] .swpk-grupo:hover,
+body[class*="panel-kinsta"] .swpk-ficha:hover {
+	border-color: var(--swpk-marca);
+}
+
+body[class*="panel-kinsta"] .swpk-grupo-activo {
+	border-color: var(--swpk-marca);
+	background: var(--swpk-marca-suave);
+}
+
+/* Las pastillas de filtro, en forma de píldora. */
+body[class*="panel-kinsta"] .swpk-filtro {
+	border-radius: 999px;
+	border-color: var(--swpk-borde);
+	padding: 6px 14px;
+	font-size: 12.5px;
+	font-weight: 500;
+}
+
+body[class*="panel-kinsta"] .swpk-filtro:hover { border-color: var(--swpk-marca); }
+
+body[class*="panel-kinsta"] .swpk-filtro-activo {
+	background: var(--swpk-marca);
+	border-color: var(--swpk-marca);
+	color: #fff;
+	font-weight: 600;
+}
+
+/* Las insignias de nivel: fondo suave y borde, no color pleno. En una tabla
+   densa, cinco colores plenos pelean entre ellos y no gana ninguno. */
+body[class*="panel-kinsta"] .swpk-nivel {
+	padding: 3px 10px;
+	border: 1px solid;
+	font-size: 11px;
+	font-weight: 600;
+}
+
+body[class*="panel-kinsta"] .swpk-etq {
+	border-radius: 999px;
+	padding: 3px 10px;
+	font-size: 11px;
+	font-weight: 600;
+}
+
+/* El sello de frescura: deja de ser un recuadro y pasa a ser un pie discreto. */
+body[class*="panel-kinsta"] .swpk-sello {
+	background: #fff;
+	border: 1px solid var(--swpk-borde);
+	border-left-width: 1px;
+	padding: 15px 18px;
+	margin: 20px 0;
+}
+
+body[class*="panel-kinsta"] .swpk-sello-t {
+	font-size: 11px;
+	text-transform: uppercase;
+	letter-spacing: .5px;
+	color: var(--swpk-tenue);
+	font-weight: 700;
+}
+
+/* El paginador, al pie de su tabla y no flotando. */
+body[class*="panel-kinsta"] .swpk-paginador {
+	background: #fff;
+	border: 1px solid var(--swpk-borde);
+	border-radius: var(--swpk-radio);
+	box-shadow: var(--swpk-sombra);
+	padding: 11px 16px;
+	margin: -4px 0 18px;
+	font-size: 12.5px;
+}
+
+body[class*="panel-kinsta"] .swpk-cuenta,
+body[class*="panel-kinsta"] .swpk-pag {
+	color: var(--swpk-apagado);
+	font-variant-numeric: tabular-nums;
+}
+
+/* La tira de perfil y la de datos de prueba. */
+body[class*="panel-kinsta"] .swpk-aviso-demo {
+	border-radius: 9px;
+	border: 1px solid #ebd9a4;
+	border-left: 4px solid var(--swpk-medio);
+	background: #fdfbf2;
+}
+
+/* El renglón del día en el Resumen. */
+body[class*="panel-kinsta"] .swpk-dia td {
+	background: #eef1f5 !important;
+	border-top: 2px solid #ccd3dc;
+}
+
+body[class*="panel-kinsta"] .swpk-dia-hoy td {
+	background: var(--swpk-marca-suave) !important;
+	border-top-color: var(--swpk-marca);
+}
+
+body[class*="panel-kinsta"] .swpk-dia-hoy .swpk-dia-f { color: #14559e; }
+
+/* Enlaces: el azul de la marca, no el de WordPress. */
+body[class*="panel-kinsta"] .wrap a:not(.button):not(.nav-tab) { color: var(--swpk-marca); }
+
+/* Las pestañas de Seguridad y Bitácora. */
+body[class*="panel-kinsta"] .wrap .nav-tab-wrapper {
+	border-bottom: 1px solid var(--swpk-borde);
+	padding-left: 0;
+	margin-bottom: 18px;
+}
+
+body[class*="panel-kinsta"] .wrap .nav-tab {
+	border: 0;
+	background: none;
+	margin: 0 20px 0 0;
+	padding: 10px 0;
+	font-size: 13.5px;
+	font-weight: 600;
+	color: var(--swpk-apagado);
+	border-bottom: 2px solid transparent;
+}
+
+body[class*="panel-kinsta"] .wrap .nav-tab:hover { color: var(--swpk-texto); background: none; }
+
+body[class*="panel-kinsta"] .wrap .nav-tab-active,
+body[class*="panel-kinsta"] .wrap .nav-tab-active:hover {
+	color: var(--swpk-marca);
+	border-bottom-color: var(--swpk-marca);
+	background: none;
+}
+
+/* La tabla de ajustes de WordPress, con aire. */
+body[class*="panel-kinsta"] .wrap .form-table th {
+	font-size: 13px;
+	font-weight: 600;
+	padding: 14px 10px 14px 0;
+	color: var(--swpk-texto);
+}
+
+body[class*="panel-kinsta"] .wrap .form-table td { padding: 12px 10px; }
+
+body[class*="panel-kinsta"] .wrap .description { color: var(--swpk-apagado); font-size: 12.5px; }

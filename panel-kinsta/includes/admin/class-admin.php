@@ -39,7 +39,7 @@ class SWPK_Admin {
 		add_action( 'admin_post_swpk_marcar_norma', [ __CLASS__, 'accion_marcar_norma' ] );
 		add_action( 'admin_post_swpk_arreglar', [ __CLASS__, 'accion_arreglar' ] );
 		add_action( 'admin_post_swpk_reseteo_masivo', [ __CLASS__, 'accion_reseteo_masivo' ] );
-		add_action( 'admin_head', [ __CLASS__, 'estilos' ] );
+		add_action( 'admin_enqueue_scripts', [ __CLASS__, 'estilos' ] );
 		add_filter( 'parent_file', [ __CLASS__, 'menu_abierto' ] );
 		add_filter( 'submenu_file', [ __CLASS__, 'submenu_marcado' ] );
 		add_filter( 'admin_title', [ __CLASS__, 'titulo_de_la_ficha' ], 10, 2 );
@@ -174,218 +174,30 @@ class SWPK_Admin {
 		return isset( $_GET['page'] ) ? sanitize_key( (string) $_GET['page'] ) : '';
 	}
 
+	/**
+	 * Las hojas de estilo del panel.
+	 *
+	 * Antes esto imprimía doscientas líneas de CSS en cada carga con
+	 * `admin_head`. Ahora son dos archivos encolados como manda WordPress, lo
+	 * que además deja que el navegador los guarde en caché:
+	 *
+	 *   heredado.css  lo que ya había, movido tal cual
+	 *   panel.css     el diseño nuevo, que va encima
+	 *
+	 * Solo se cargan en las pantallas del panel. Una hoja que reescribe tablas
+	 * y botones no tiene por qué andar suelta por el escritorio de alguien.
+	 */
 	public static function estilos(): void {
 		$pagina = isset( $_GET['page'] ) ? sanitize_key( (string) $_GET['page'] ) : '';
+
 		if ( ! str_starts_with( $pagina, self::SLUG ) ) {
 			return;
 		}
-		?>
-		<style>
-			.swpk-tarjetas{display:flex;gap:14px;flex-wrap:wrap;margin:18px 0}
-			.swpk-tarjeta{background:#fff;border:1px solid #c3c4c7;border-radius:6px;padding:16px 18px;min-width:170px;flex:1}
-			.swpk-tarjeta .swpk-n{font-size:30px;font-weight:600;line-height:1.1}
-			.swpk-tarjeta .swpk-r{color:#50575e;font-size:13px;margin-top:4px}
-			.swpk-nivel{display:inline-block;padding:2px 9px;border-radius:11px;color:#fff;font-size:11px;font-weight:600;white-space:nowrap}
-			.swpk-aviso-demo{border-left:4px solid #dba617;background:#fcf9e8;padding:12px 14px;margin:16px 0}
-			/* ── Seguridad ────────────────────────────────────────────────── */
-			.swpk-pelota{display:inline-block;min-width:18px;padding:0 5px;border-radius:9px;background:#2271b1;color:#fff;font-size:11px;line-height:18px;text-align:center;font-weight:600}
-			.swpk-veredicto{font-size:15px;line-height:1.5;padding:14px 16px;border-radius:6px;margin:18px 0;border:1px solid}
-			.swpk-veredicto-mal{background:#fcf0f1;border-color:#e6b3b6}
-			.swpk-veredicto-bien{background:#edfaef;border-color:#a3dcb0}
-			.swpk-veredicto-mas{display:block;margin-top:4px;color:#50575e;font-size:13px}
-			.swpk-norma-bloque{background:#fff;border:1px solid #c3c4c7;border-radius:6px;padding:14px 16px;margin-bottom:16px}
-			.swpk-norma-cabeza{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
-			.swpk-norma-cabeza h3{margin:0;font-size:15px}
-			.swpk-norma-cuenta{margin-left:auto;color:#50575e;font-size:13px;white-space:nowrap}
-			.swpk-norma-porque{color:#3c434a;max-width:860px;margin:8px 0 8px}
-			.swpk-norma-regla{color:#646970;font-size:12px;margin:0 0 12px}
-			.swpk-norma-regla em{font-style:normal;font-weight:600}
-			/* La frase que abre cada pestaña: qué es esta pantalla, antes de
-			   enseñar nada. Sin esto hay que deducirlo del contenido, y lo que
-			   se deduce mal no se vuelve a mirar. */
-			.swpk-intro{max-width:880px;font-size:14px;line-height:1.6;margin:16px 0 12px;color:#1d2327}
-			/* «¿Cómo así?»: la caja que contesta la pregunta que la pantalla
-			   provoca. Azul y no amarilla: no es una advertencia, es una
-			   explicación — y una advertencia que no advierte de nada enseña a
-			   ignorar las que sí. */
-			.swpk-comoasi{background:#f0f6fc;border:1px solid #a7cdea;border-left:4px solid #2271b1;
-				border-radius:5px;padding:13px 17px;margin:12px 0 16px;max-width:900px}
-			.swpk-comoasi p{margin:0 0 9px}
-			.swpk-comoasi p:last-child{margin-bottom:0}
-			.swpk-veredicto-ciego{background:#f6f7f7;border-color:#c3c4c7}
-			.swpk-filtros-estado{color:#50575e;margin:10px 0 14px}
-			.swpk-filtros-estado a{text-decoration:none}
-			.swpk-filtros-estado a.current{font-weight:700;color:#1d2327}
-			/* La frase de la lista de Wordfence, arriba de Vulnerabilidades. */
-			.swpk-lista{max-width:900px;font-size:14px;line-height:1.6;margin:14px 0;
-				padding:11px 14px;border-radius:5px;background:#edfaef;border:1px solid #a3dcb0}
-			.swpk-lista-mal{background:#fcf9e8;border-color:#e3cf94}
-			.swpk-norma-tabla{border:1px solid #dcdcde}
-			.swpk-norma-pie{margin:12px 0 0;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
-			/* La gravedad se dice con color Y con palabra: el color solo no
-			   sirve a quien no distingue rojo de verde, y esto se imprime. */
-			.swpk-sev-alta{background:#fcf0f1;color:#8a1f24;border-color:#e6b3b6}
-			.swpk-sev-media{background:#fcf9e8;color:#7a5610;border-color:#e3cf94}
-			.swpk-sev-baja{background:#f0f0f1;color:#50575e;border-color:#c3c4c7}
-			.swpk-mudo{color:#787c82;font-size:12px}
-			.swpk-bien-lista{margin:8px 0 0;max-width:900px}
-			.swpk-bien-lista li{margin-bottom:5px;color:#3c434a}
-			.swpk-cuadricula{margin-top:28px;background:#fff;border:1px solid #c3c4c7;border-radius:6px;padding:12px 16px}
-			.swpk-cuadricula summary{cursor:pointer;font-weight:600}
-			.swpk-cuadricula-scroll{overflow-x:auto;max-width:100%}
-			.swpk-matriz{min-width:900px}
-			.swpk-matriz-sitio{min-width:200px;position:sticky;left:0;background:#fff}
-			/* Los títulos de columna girados: diez normas en horizontal harían
-			   una tabla de tres metros. */
-			.swpk-matriz-col{height:150px;width:40px;padding:0 !important;vertical-align:bottom}
-			.swpk-matriz-col span{display:block;width:150px;transform-origin:bottom left;transform:translateX(26px) rotate(-60deg);font-size:11px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-			.swpk-celda{text-align:center;font-weight:600;font-size:12px;cursor:help}
-			.swpk-celda-cumple{background:#edfaef;color:#0a6c22}
-			.swpk-celda-falla{background:#fcf0f1;color:#8a1f24}
-			.swpk-celda-sin_dato{background:#f6f7f7;color:#787c82}
-			.swpk-celda-no_aplica{background:#fff;color:#c3c4c7}
-			.swpk-orden-pendiente{background:#fcf9e8;color:#7a5610;border-color:#e3cf94}
-			.swpk-orden-entregada{background:#f0f6fc;color:#1b5e8f;border-color:#a7cdea}
-			.swpk-orden-hecha{background:#edfaef;color:#0a6c22;border-color:#a3dcb0}
-			.swpk-orden-fallo,.swpk-orden-vencida{background:#fcf0f1;color:#8a1f24;border-color:#e6b3b6}
-			.swpk-orden-cancelada{background:#f0f0f1;color:#50575e;border-color:#c3c4c7}
-			.swpk-atribucion{color:#646970;font-size:12px;margin-top:18px;padding-top:12px;border-top:1px solid #dcdcde}
-			.swpk-tabla td,.swpk-tabla th{vertical-align:middle}
-			.swpk-mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px}
-			.swpk-copiable{width:100%;min-height:150px;font-family:ui-monospace,Menlo,monospace;font-size:12px}
 
-			/* Elegir grupo */
-			.swpk-grupos{display:flex;gap:12px;flex-wrap:wrap;margin:18px 0}
-			.swpk-grupo{display:block;flex:1;min-width:190px;background:#fff;border:1px solid #c3c4c7;
-				border-radius:8px;padding:16px 18px;text-decoration:none;color:#1d2327;transition:.12s}
-			.swpk-grupo:hover{border-color:#2271b1;box-shadow:0 1px 5px rgba(0,0,0,.07);color:#1d2327}
-			.swpk-grupo-activo{border-color:#2271b1;border-width:2px;background:#f0f6fc;padding:15px 17px}
-			.swpk-grupo-n{display:block;font-size:30px;font-weight:600;line-height:1.1}
-			.swpk-grupo-de{font-size:15px;font-weight:400;color:#646970;margin-left:5px}
-			.swpk-grupo-t{display:block;font-weight:600;margin-top:3px}
-			.swpk-grupo-s{display:block;color:#646970;font-size:12px;margin-top:2px}
+		$base = SWPK_URL . 'assets/';
 
-			/* Filtros */
-			.swpk-filtros{display:flex;gap:7px;flex-wrap:wrap;align-items:center;margin:14px 0}
-			.swpk-filtros-t{color:#646970;font-size:13px;margin-right:3px}
-			.swpk-filtro{display:inline-flex;align-items:center;gap:6px;padding:4px 12px;border-radius:14px;
-				border:1px solid #c3c4c7;background:#fff;text-decoration:none;color:#1d2327;font-size:13px}
-			.swpk-filtro:hover{border-color:#2271b1;color:#1d2327}
-			.swpk-filtro-activo{background:#2271b1;border-color:#2271b1;color:#fff}
-			.swpk-filtro-activo:hover{color:#fff}
-			.swpk-filtro-n{background:rgba(0,0,0,.08);border-radius:9px;padding:0 6px;font-size:11px}
-			.swpk-filtro-activo .swpk-filtro-n{background:rgba(255,255,255,.25)}
-
-			/* Barra de filtros + buscador, en una sola fila */
-			.swpk-barra{display:flex;justify-content:space-between;align-items:center;
-				gap:16px;flex-wrap:wrap;margin:14px 0}
-			.swpk-barra .swpk-filtros{margin:0}
-			.swpk-barra .swpk-buscador{margin:0}
-
-			/* Volver */
-			.swpk-volver{margin:4px 0 14px}
-			.swpk-volver a{display:inline-block;padding:6px 14px;border:1px solid #c3c4c7;
-				border-radius:4px;background:#fff;text-decoration:none;font-weight:600;color:#2271b1}
-			.swpk-volver a:hover{border-color:#2271b1;background:#f0f6fc}
-
-			/* Fichas de sitio en la lista */
-			.swpk-ficha{display:flex;justify-content:space-between;align-items:center;gap:16px;
-				background:#fff;border:1px solid #c3c4c7;border-radius:8px;padding:16px 20px;margin-bottom:10px}
-			.swpk-ficha:hover{border-color:#2271b1}
-			.swpk-ficha-nom{font-size:15px;font-weight:600;margin:0}
-			.swpk-ficha-dom{color:#646970;font-size:12px;font-family:ui-monospace,Menlo,monospace}
-			.swpk-ficha-cifras{display:flex;gap:26px;align-items:center;flex-wrap:wrap}
-			.swpk-cifra{text-align:center;min-width:72px}
-			.swpk-cifra b{display:block;font-size:22px;line-height:1.1}
-			.swpk-cifra span{color:#646970;font-size:11px}
-
-			/* Buscador y paginación */
-			.swpk-buscador{display:inline-flex;gap:6px;align-items:center;margin:0 0 14px}
-			.swpk-buscador input[type=search]{min-width:230px}
-			.swpk-paginador{display:flex;justify-content:space-between;align-items:center;
-				margin:14px 0;gap:12px;flex-wrap:wrap}
-			.swpk-cuenta{color:#646970;font-size:13px}
-			.swpk-pag{margin:0 10px;color:#646970;font-size:13px}
-
-			/* Texto para la asesora */
-			.swpk-mensaje{background:#fff;border:1px solid #c3c4c7;border-left:4px solid #2271b1;
-				border-radius:6px;padding:20px 24px;margin:14px 0;max-width:780px}
-			.swpk-mensaje h4{margin:0 0 4px;font-size:15px}
-			.swpk-mensaje-intro{margin:0 0 16px;color:#1d2327}
-			.swpk-mod{border-top:1px solid #f0f0f1;padding:14px 0 0;margin:14px 0 0}
-			.swpk-mod:first-of-type{border-top:0;padding-top:0;margin-top:0}
-			.swpk-mod-nombre{font-weight:600;font-size:14px}
-			.swpk-mod-ver{color:#646970;font-size:13px;margin:3px 0 7px}
-			.swpk-mod-ver b{color:#008a20}
-			.swpk-mod-que{margin:0;color:#1d2327}
-			.swpk-mod-ojo{color:#b32d2e;margin:7px 0 0;font-size:13px}
-			.swpk-cierre{margin:18px 0 0;padding-top:14px;border-top:1px solid #f0f0f1;color:#1d2327}
-			.swpk-copiar{margin-top:14px}
-			.swpk-plano{white-space:pre-wrap;font-family:inherit;font-size:14px;line-height:1.6;margin:0}
-			.swpk-plano-largo{max-height:380px;overflow-y:auto;padding-right:14px;
-				border-bottom:1px solid #f0f0f1}
-			.swpk-sello{background:#fff;border:1px solid #dcdcde;border-left:4px solid #72aee6;
-				padding:12px 16px;margin:16px 0;max-width:840px;font-size:13px;line-height:1.5}
-			.swpk-sello-mal{border-left-color:#b32d2e;background:#fcf0f1}
-			.swpk-sello-t{font-weight:600;color:#1d2327;margin-bottom:8px}
-			.swpk-sello ul{margin:0;padding:0;list-style:none}
-			.swpk-sello li{display:flex;flex-wrap:wrap;gap:4px 12px;padding:3px 0}
-			.swpk-sello-q{color:#50575e;flex:1 1 320px}
-			.swpk-sello-c{color:#1d2327;font-variant-numeric:tabular-nums;white-space:nowrap}
-			.swpk-sello li.swpk-viejo .swpk-sello-c{color:#b32d2e;font-weight:600}
-			.swpk-sello-p{flex:1 1 100%;color:#b32d2e}
-			.swpk-sello-ahora{margin-top:9px;padding-top:9px;border-top:1px solid #f0f0f1;color:#50575e}
-
-			/* El Resumen es una tabla. Lo único que necesita: una línea arriba,
-			   gris para lo que acompaña y rojo para una sola cosa. */
-			.swpk-linea{max-width:900px;font-size:14px;line-height:1.6;margin:14px 0 16px}
-			.swpk-gris{color:#8c8f94}
-			.swpk-rojo{color:#b32d2e;font-weight:600}
-			.swpk-nota{max-width:900px;color:#50575e;font-size:13px;margin-top:10px}
-			/* Etiquetas de grupo. Mismo tamaño que las de nivel, pero con relleno
-			   suave y borde: en una tabla densa, cuatro colores plenos pelean
-			   con lo que de verdad tiene que saltar, que es lo rojo. */
-			.swpk-etq{display:inline-block;padding:2px 10px;border-radius:11px;font-size:11px;
-				font-weight:600;white-space:nowrap;border:1px solid;line-height:1.7}
-			.swpk-etq-desarrollo{background:#f0f6fc;color:#1b5e8f;border-color:#a7cdea}
-			.swpk-etq-auto_update{background:#edfaef;color:#0a6c22;border-color:#a3dcb0}
-			.swpk-etq-no_update{background:#fcf9e8;color:#7a5610;border-color:#e3cf94}
-			.swpk-etq-sin_etiqueta{background:#f0f0f1;color:#50575e;border-color:#c3c4c7}
-			.swpk-leyenda{display:flex;gap:7px;align-items:center;flex-wrap:wrap;
-				color:#50575e;font-size:12px;margin:0 0 9px}
-
-			/* El renglón del día.
-			   Antes era #f6f7f7, que es EL MISMO gris que las filas alternas de
-			   la tabla: un día no se distinguía de una fila cualquiera y los
-			   días se leían como una sola lista corrida. Ahora la banda es más
-			   oscura que cualquier fila, lleva regla gruesa arriba, y hoy va en
-			   azul para que se encuentre sin buscarlo. */
-			.swpk-dia td{background:#e4e7ea !important;color:#1d2327;
-				border-top:2px solid #9ea3a8;padding:11px 10px !important}
-			.swpk-dia:first-child td{border-top:0}
-			.swpk-dia-hoy td{background:#d7e4f2 !important;border-top-color:#2271b1}
-			.swpk-dia-fila{display:flex;justify-content:space-between;align-items:baseline;
-				gap:14px;flex-wrap:wrap}
-			.swpk-dia-f{font-size:14px;font-weight:700}
-			.swpk-dia-hoy .swpk-dia-f{color:#135e96}
-			.swpk-dia-r{font-size:12px;color:#50575e;font-weight:400}
-
-			/* El segundo montón del día: lo que salió bien solo. Se enseña entero,
-			   con nombre de sitio y todo, pero más callado — no compite con lo que
-			   sí hay que atender, que va arriba. */
-			.swpk-sub td{background:#f6f7f7 !important;color:#50575e;font-size:12px;
-				padding:8px 10px !important;border-top:1px solid #dcdcde}
-			.swpk-solo td{color:#646970}
-			.swpk-mas td{background:#fbfbfc !important;padding:10px !important;font-size:13px}
-			.swpk-mas a{font-weight:600;text-decoration:none}
-			.swpk-mas a:hover{text-decoration:underline}
-			.swpk-mas .swpk-gris{margin-left:8px;font-size:12px}
-			.swpk-rango{display:flex;gap:14px;align-items:flex-end;flex-wrap:wrap;
-				margin:16px 0 4px;padding:14px 16px;background:#fff;border:1px solid #dcdcde;
-				border-radius:4px;max-width:900px}
-			.swpk-rango label{font-size:12px;color:#50575e}
-		</style>
-		<?php
+		wp_enqueue_style( 'swpk-heredado', $base . 'heredado.css', [], SWPK_VERSION );
+		wp_enqueue_style( 'swpk-panel', $base . 'panel.css', [ 'swpk-heredado' ], SWPK_VERSION );
 	}
 
 	public static function aviso_demo(): void {

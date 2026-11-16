@@ -18,6 +18,13 @@ $conteos = SWPK_Ordenes::conteos();
 $filtro  = isset( $_GET['estado'] ) ? sanitize_key( (string) $_GET['estado'] ) : '';
 $ordenes = SWPK_Ordenes::listar( '' !== $filtro ? [ 'estado' => $filtro ] : [] );
 
+// Las órdenes se acumulan: cada arreglo que se pide deja una. Sin paginar,
+// esta pantalla crece sin tope según se use el panel.
+[ $ordenes_pagina, $pag_ord, $pags_ord ] = SWPK_Vista::paginar(
+	$ordenes,
+	SWPK_Vista::pagina_pedida()
+);
+
 // Para el reseteo: los sitios nuestros que tienen agente. En los demás no se
 // puede, y es mejor que el formulario lo diga antes que después.
 $nuestros_con_agente = [];
@@ -121,7 +128,7 @@ $con_algo = array_filter(
 			</tr>
 		</thead>
 		<tbody>
-		<?php foreach ( $ordenes as $o ) : ?>
+		<?php foreach ( $ordenes_pagina as $o ) : ?>
 			<?php $sitio = SWPK_Inventario::obtener( (string) $o->sitio_id ); ?>
 			<tr>
 				<td>
@@ -157,6 +164,8 @@ $con_algo = array_filter(
 		<?php endforeach; ?>
 		</tbody>
 	</table>
+
+	<?php SWPK_Vista::paginador( $pag_ord, $pags_ord, count( $ordenes ), 'arreglos pedidos' ); ?>
 <?php endif; ?>
 
 <hr style="margin:34px 0">
