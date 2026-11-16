@@ -88,6 +88,29 @@ class SWPK_Wordfence {
 	private const OPCION_FIRMA      = 'swpk_wordfence_firma';
 	private const OPCION_MAS_NUEVA  = 'swpk_wordfence_mas_nueva';
 
+	/**
+	 * Cuándo se INTENTÓ por última vez, salga bien o mal.
+	 *
+	 * Es distinto de las tres de arriba, que solo se escriben cuando Wordfence
+	 * contestó. Esta se escribe antes de preguntar, y es la que de verdad
+	 * protege la llave: los frenos que miraban solo los éxitos dejaban dos
+	 * huecos por los que sí se podía machacar a Wordfence.
+	 *
+	 *   1. Un fallo de red no anotaba nada, así que se podía reintentar en
+	 *      bucle sin que nada lo frenara.
+	 *   2. El freno de «ya se bajó hoy» se apoya en la fecha de la última
+	 *      descarga buena. Si esa fecha se toca —restaurando un respaldo, o
+	 *      probando algo— el freno desaparece sin que nadie se dé cuenta.
+	 *
+	 * Pasó de verdad el 16/11/2026: se retrasó la fecha a mano para probar un
+	 * mensaje, se pidió el feed, y Wordfence mandó un 429 y un correo
+	 * avisando de que insistir puede acabar en suspensión de la llave.
+	 */
+	private const OPCION_INTENTO = 'swpk_wordfence_ultimo_intento';
+
+	/** Lo mínimo entre dos peticiones, pase lo que pase. */
+	private const ENTRE_INTENTOS = HOUR_IN_SECONDS;
+
 	/** Hasta cuándo no hay que volver a pedirle nada a Wordfence. */
 	public static function esperar_hasta(): int {
 		return (int) get_option( self::OPCION_ESPERA, 0 );
@@ -267,10 +290,31 @@ class SWPK_Wordfence {
 			);
 		}
 
+		// El freno de última instancia: una petición por hora, mire lo que mire
+		// el resto de la lógica. Los otros dos frenos se apoyan en descargas
+		// que salieron bien; este cuenta intentos, que es lo que Wordfence
+		// cuenta también.
+		$ultimo = (int) get_option( self::OPCION_INTENTO, 0 );
+
+		if ( $ultimo && ( time() - $ultimo ) < self::ENTRE_INTENTOS ) {
+			return new WP_Error(
+				'swpk_wf_muy_seguido',
+				sprintf(
+					'Ya se le pidió el feed a Wordfence hace %d minutos. Se espera una hora entre peticiones para no agotar el límite de la llave.',
+					(int) round( ( time() - $ultimo ) / 60 )
+				)
+			);
+		}
+
 		$slugs = self::slugs_instalados();
 		if ( ! $slugs ) {
 			return new WP_Error( 'swpk_sin_inventario', 'Todavía no hay inventario: primero hay que sincronizar los sitios.' );
 		}
+
+		// Se anota ANTES de pedir, no después: si se anotara al terminar, una
+		// petición que se cuelga o revienta no dejaría rastro y la siguiente
+		// saldría disparada.
+		update_option( self::OPCION_INTENTO, time(), false );
 
 		$destino   = wp_tempnam( 'swpk-wordfence' );
 		$respuesta = wp_remote_get(
