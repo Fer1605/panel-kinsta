@@ -31,15 +31,21 @@ $plano = SWPK_Textos::para_asesora( $sitio, $hallazgos );
 <div class="wrap">
 	<?php SWPK_Vista::volver( $regreso['url'], $regreso['texto'] ); ?>
 
-	<h1 style="margin-bottom:4px">
-		<?php echo wp_kses_post( SWPK_Admin::nivel_badge( $nivel ) ); ?>
-		<?php echo esc_html( $sitio->nombre_visible ); ?>
-	</h1>
-	<p style="margin:0 0 16px">
-		<a href="<?php echo esc_url( 'https://' . ltrim( $sitio->dominio, 'htps:/' ) ); ?>" target="_blank" rel="noopener"
-			class="swpk-mono" style="color:#50575e"><?php echo esc_html( $sitio->dominio ); ?></a>
-		<span style="margin-left:7px"><?php echo SWPK_Admin::grupo_badge( (string) $sitio->tag ); ?></span>
-	</p>
+	<?php
+	// La ficha de un sitio no sale en la maqueta —ahí no hay por dónde entrar
+	// a una— pero es a donde lleva cada nombre de cada tabla. Dejarla con la
+	// pinta vieja hacía que el panel cambiara de cara al primer clic.
+	SWPK_Vista::cabecera(
+		(string) $sitio->nombre_visible,
+		sprintf(
+			'<a href="%s" target="_blank" rel="noopener" class="swpk-mono">%s</a>',
+			esc_url( 'https://' . ltrim( $sitio->dominio, 'htps:/' ) ),
+			esc_html( $sitio->dominio )
+		),
+		SWPK_Admin::grupo_badge( (string) $sitio->tag )
+		. ' ' . SWPK_Admin::nivel_badge( $nivel )
+	);
+	?>
 
 	<?php SWPK_Admin::mostrar_mensaje(); ?>
 	<?php SWPK_Frescura::aviso(); ?>
@@ -119,9 +125,11 @@ $plano = SWPK_Textos::para_asesora( $sitio, $hallazgos );
 
 	<?php SWPK_Frescura::sello( $sitio ); ?>
 
+	<?php SWPK_Vista::rejilla_abrir(); ?>
+
 	<?php if ( $hallazgos ) : ?>
-		<h2>El mensaje para la asesora</h2>
-		<p style="color:#50575e;margin-top:-6px">
+		<?php SWPK_Vista::caja_abrir( 'El mensaje para la asesora', 'listo para pegar', 'swpk-c12' ); ?>
+		<p style="color:#50575e;margin-top:0">
 			Escrito para que el cliente entienda qué se juega, no solo que hay que actualizar.
 		</p>
 
@@ -148,7 +156,16 @@ $plano = SWPK_Textos::para_asesora( $sitio, $hallazgos );
 			</p>
 		</div>
 
-		<h2>Todo lo que tiene pendiente</h2>
+		<?php SWPK_Vista::caja_cerrar(); ?>
+
+		<?php
+		SWPK_Vista::caja_abrir(
+			'Todo lo que tiene pendiente',
+			esc_html( SWPK_Vista::plural( count( $hallazgos ), 'módulo', 'módulos' ) ),
+			'swpk-c12',
+			true
+		);
+		?>
 		<table class="widefat striped swpk-tabla">
 			<thead>
 				<tr>
@@ -204,19 +221,22 @@ $plano = SWPK_Textos::para_asesora( $sitio, $hallazgos );
 			<?php endforeach; ?>
 			</tbody>
 		</table>
+		<?php SWPK_Vista::caja_cerrar(); ?>
 	<?php elseif ( SWPK_Riesgo::SIN_DATOS === $nivel ) : ?>
-		<div class="notice notice-warning inline">
-			<p>
-				<strong>Aquí no hay nada que mostrar, y eso no es una buena noticia.</strong>
-				No es que este sitio esté al día: es que no tenemos su lista de módulos, así que no
-				hay nada contra qué comparar.
-			</p>
-		</div>
+		<?php SWPK_Vista::caja_abrir( 'Todo lo que tiene pendiente', 'sin datos', 'swpk-c12' ); ?>
+		<p style="margin:0">
+			<strong>Aquí no hay nada que mostrar, y eso no es una buena noticia.</strong>
+			No es que este sitio esté al día: es que no tenemos su lista de módulos, así que no
+			hay nada contra qué comparar.
+		</p>
+		<?php SWPK_Vista::caja_cerrar(); ?>
 	<?php else : ?>
-		<div class="notice notice-success"><p>
+		<?php SWPK_Vista::caja_abrir( 'Todo lo que tiene pendiente', 'nada', 'swpk-c12' ); ?>
+		<p style="margin:0;color:var(--swpk-bien);font-weight:600">
 			Este sitio no tiene nada pendiente: todos sus módulos están al día y ninguno tiene una
 			vulnerabilidad conocida.
-		</p></div>
+		</p>
+		<?php SWPK_Vista::caja_cerrar(); ?>
 	<?php endif; ?>
 
 	<?php
@@ -230,7 +250,7 @@ $plano = SWPK_Textos::para_asesora( $sitio, $hallazgos );
 	?>
 
 	<?php if ( $normas_activas ) : ?>
-		<h2>Las normas de seguridad</h2>
+		<?php SWPK_Vista::caja_abrir( 'Las normas de seguridad', '', 'swpk-c12', true ); ?>
 
 		<?php
 		$agente_sitio = SWPK_Ordenes::agente_de( $sitio_id );
@@ -325,7 +345,10 @@ $plano = SWPK_Textos::para_asesora( $sitio, $hallazgos );
 			<?php endforeach; ?>
 			</tbody>
 		</table>
+		<?php SWPK_Vista::caja_cerrar(); ?>
 	<?php endif; ?>
+
+	<?php SWPK_Vista::rejilla_cerrar(); ?>
 
 	<?php SWPK_Vista::volver( $regreso['url'], $regreso['texto'] ); ?>
 
