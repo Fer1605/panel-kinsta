@@ -198,4 +198,12 @@ $fallidos  = SWPK_Accesos::fallidos_recientes( 24 );
 		No se guarda ninguna contraseña, ni siquiera las de los intentos fallidos: un registro de
 		contraseñas intentadas es una lista de contraseñas reales de gente que se equivocó de campo.
 	</p>
+
+	<?php
+	// El sello de frescura va en TODAS las pantallas, como en la maqueta.
+	// Estaba solo en cuatro, y es justo el dato que convierte una pantalla en
+	// evidencia: de cuándo es lo que se está mirando. Una pantalla sin él
+	// afirma sin fecha.
+	SWPK_Frescura::sello();
+	?>
 </div>

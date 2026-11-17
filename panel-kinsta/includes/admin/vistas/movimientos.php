@@ -34,4 +34,12 @@ $url_sec = static fn( string $s ) => add_query_arg(
 	<?php require SWPK_RUTA . 'includes/admin/vistas/bitacora-movimientos.php'; ?>
 
 	<p class="swpk-atribucion"><?php echo wp_kses_post( SWPK_Wordfence::atribucion() ); ?></p>
+
+	<?php
+	// El sello de frescura va en TODAS las pantallas, como en la maqueta.
+	// Estaba solo en cuatro, y es justo el dato que convierte una pantalla en
+	// evidencia: de cuándo es lo que se está mirando. Una pantalla sin él
+	// afirma sin fecha.
+	SWPK_Frescura::sello();
+	?>
 </div>

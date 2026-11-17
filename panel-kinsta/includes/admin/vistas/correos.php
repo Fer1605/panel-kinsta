@@ -57,4 +57,12 @@ foreach ( array_keys( SWPK_Plantillas::catalogo() ) as $clave ) {
 	<?php SWPK_Admin::mostrar_mensaje(); ?>
 
 	<?php require SWPK_RUTA . 'includes/admin/vistas/correos-' . $seccion . '.php'; ?>
+
+	<?php
+	// El sello de frescura va en TODAS las pantallas, como en la maqueta.
+	// Estaba solo en cuatro, y es justo el dato que convierte una pantalla en
+	// evidencia: de cuándo es lo que se está mirando. Una pantalla sin él
+	// afirma sin fecha.
+	SWPK_Frescura::sello();
+	?>
 </div>

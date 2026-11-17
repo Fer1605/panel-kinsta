@@ -300,5 +300,10 @@ $nombres = SWPK_Riesgo::nombres();
 	<?php SWPK_Admin::aviso_demo(); ?>
 	<?php SWPK_Frescura::sello(); ?>
 
+	<p class="swpk-nota">
+		La gravedad no la inventa el panel: es la que publica Wordfence Intelligence para cada
+		vulnerabilidad.
+	</p>
+
 	<p class="swpk-atribucion"><?php echo wp_kses_post( SWPK_Wordfence::atribucion() ); ?></p>
 </div>

@@ -466,5 +466,11 @@ $bien_hoy = $resumen_dia[ $hoy ] ?? [ 'sitios' => 0, 'modulos' => 0 ];
 
 	<?php endif; ?>
 
+	<p class="swpk-nota">
+		Los datos de los sitios vienen de <?php echo esc_html( SWPK_Admin::proveedor() ); ?>; las
+		vulnerabilidades, del feed de Wordfence Intelligence. Lo que se ve es siempre la última foto
+		buena, por eso cada dato lleva su fecha.
+	</p>
+
 	<p class="swpk-atribucion"><?php echo wp_kses_post( SWPK_Wordfence::atribucion() ); ?></p>
 </div>

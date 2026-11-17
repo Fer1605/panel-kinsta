@@ -316,4 +316,12 @@ $a = SWPK_Ajustes::todos();
 	<?php SWPK_Vista::caja_cerrar(); ?>
 
 	<?php SWPK_Vista::rejilla_cerrar(); ?>
+
+	<?php
+	// El sello de frescura va en TODAS las pantallas, como en la maqueta.
+	// Estaba solo en cuatro, y es justo el dato que convierte una pantalla en
+	// evidencia: de cuándo es lo que se está mirando. Una pantalla sin él
+	// afirma sin fecha.
+	SWPK_Frescura::sello();
+	?>
 </div>

@@ -221,4 +221,12 @@ $hay_filtro_equipo = ( '' !== $perfil_pedido || '' !== $busca_persona );
 		Una asesora sin sitios asignados entra al panel y no ve nada. Los sitios se asignan en
 		<a href="<?php echo esc_url( admin_url( 'admin.php?page=panel-kinsta-sitios' ) ); ?>">Sitios</a>.
 	</p>
+
+	<?php
+	// El sello de frescura va en TODAS las pantallas, como en la maqueta.
+	// Estaba solo en cuatro, y es justo el dato que convierte una pantalla en
+	// evidencia: de cuándo es lo que se está mirando. Una pantalla sin él
+	// afirma sin fecha.
+	SWPK_Frescura::sello();
+	?>
 </div>
