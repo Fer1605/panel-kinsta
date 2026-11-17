@@ -111,12 +111,6 @@ $trozos_cumpl = [
 	],
 ];
 
-SWPK_Vista::caja_abrir(
-	'Cómo vamos',
-	esc_html( SWPK_Vista::plural( count( $normas ), 'norma activa', 'normas activas' ) )
-);
-SWPK_Vista::dona( $trozos_cumpl, (int) $tablero['total'], 'sitios' );
-SWPK_Vista::caja_cerrar();
 ?>
 
 <?php
@@ -179,6 +173,37 @@ foreach ( $normas as $n ) {
 	$r = $tablero['por_norma'][ (string) $n->clave ];
 	if ( $r['falla'] > 0 ) { $con_fallas[] = $r; } else { $cumplidas[] = $r; }
 }
+
+SWPK_Vista::caja_abrir(
+	'Cómo vamos',
+	esc_html( SWPK_Vista::plural( count( $normas ), 'norma activa', 'normas activas' ) )
+);
+
+SWPK_Vista::dona( $trozos_cumpl, (int) $tablero['total'], 'sitios' );
+
+// Las normas que no incumple nadie. Van aquí dentro y no en una tarjeta
+// propia: decir lo que está bien es parte de decir cómo vamos, y una
+// pantalla que solo enseña problemas se lee como si todo estuviera mal.
+if ( $cumplidas && $medibles ) {
+	$limpias = array_filter( $cumplidas, static fn( $r ) => $r['cumple'] >= 1 );
+
+	if ( $limpias ) {
+		echo '<p class="swpk-titulin" style="margin:18px 0 6px">Lo que está bien</p>';
+		echo '<ul class="swpk-bien-lista">';
+
+		foreach ( $limpias as $r ) {
+			printf(
+				'<li><strong>%s</strong> — %s, ninguno la incumple.</li>',
+				esc_html( (string) $r['norma']->nombre ),
+				esc_html( SWPK_Vista::plural( (int) $r['cumple'], 'sitio la cumple', 'sitios la cumplen' ) )
+			);
+		}
+
+		echo '</ul>';
+	}
+}
+
+SWPK_Vista::caja_cerrar();
 
 usort(
 	$con_fallas,
@@ -543,20 +568,6 @@ foreach ( $medibles as $f ) {
 	<?php SWPK_Vista::caja_cerrar(); ?>
 <?php endif; ?>
 
-<?php if ( $cumplidas && $medibles ) : ?>
-	<?php SWPK_Vista::caja_abrir( 'Lo que está bien', '', '', false ); ?>
-	<ul class="swpk-bien-lista">
-	<?php foreach ( $cumplidas as $r ) : ?>
-		<?php if ( $r['cumple'] < 1 ) { continue; } ?>
-		<li>
-			<strong><?php echo esc_html( (string) $r['norma']->nombre ); ?></strong> —
-			<?php echo esc_html( SWPK_Vista::plural( (int) $r['cumple'], 'sitio la cumple', 'sitios la cumplen' ) ); ?>,
-			ninguno la incumple.
-		</li>
-	<?php endforeach; ?>
-	</ul>
-	<?php SWPK_Vista::caja_cerrar(); ?>
-<?php endif; ?>
 
 <p class="swpk-atribucion" style="margin-top:22px">
 	El panel no comprueba estas normas por su cuenta: las mira el plugin instalado en cada sitio y las manda

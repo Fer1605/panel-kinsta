@@ -115,69 +115,15 @@ foreach ( $por_dia as $dia => $del_dia ) {
 	$resumen_dia[ $dia ] = $bien;
 }
 
-// De los que salieron bien solos se enseñan los primeros diez y el resto se
-// manda a Movimientos, filtrado por ese día. Enseñarlos todos era lo que
-// pedía Fer y era lo correcto —un contador no es el dato— pero un día movido
-// son 60 u 80 renglones de buenas noticias, y entonces el Resumen deja de ser
-// un resumen. Diez caben en pantalla y bastan para ver de qué va el día; los
-// demás están a un clic, en la pantalla que existe justamente para verlos
-// todos.
-//
-// Los que necesitan atención NO se capan: esos son la razón de abrir esto.
-$tope_solos = 10;
-
+// Solo hacen falta dos cifras del día para la frase de arriba: cuántos sitios
+// necesitan atención y cuántos se movieron sin que nadie entrara. El resto de
+// lo que se calculaba aquí —el detalle renglón por renglón— era para la tabla
+// del diario, que ya no está: vive en Movimientos, con sus filtros.
 $por_dia  = array_slice( $por_dia, 0, 8, true );
 $etq_evt  = SWPK_Eventos::etiquetas();
 $de_hoy   = count( $por_dia[ $hoy ] ?? [] );
 $bien_hoy = $resumen_dia[ $hoy ] ?? [ 'sitios' => 0, 'modulos' => 0 ];
 
-/** "3 módulos actualizados: Elementor, WooCommerce y 1 más" */
-$resumir = static function ( array $por_tipo ) use ( $etq_evt ): string {
-	$trozos = [];
-
-	foreach ( $por_tipo as $tipo => $lista ) {
-		$nombres = [];
-		foreach ( array_slice( $lista, 0, 3 ) as $e ) {
-			$nombres[] = SWPK_Textos::limpiar_titulo( (string) $e->titulo );
-		}
-
-		$texto = sprintf( '%s: %s', $etq_evt[ $tipo ] ?? $tipo, implode( ' · ', $nombres ) );
-		if ( count( $lista ) > 3 ) {
-			$texto .= sprintf( ' y %d más', count( $lista ) - 3 );
-		}
-
-		$trozos[] = $texto;
-	}
-
-	return implode( ' — ', $trozos );
-};
-
-/**
- * Un renglón de sitio. Lo usan los dos montones a propósito: lo que necesita
- * atención y lo que salió bien solo se leen igual —misma hora, mismo nombre,
- * misma etiqueta, mismo detalle— y lo único que cambia es el tono. Así nadie
- * tiene que aprender dos formatos para leer un día.
- */
-$fila = static function ( array $f, bool $solo ) use ( $resumir ): void {
-	?>
-	<tr<?php echo $solo ? ' class="swpk-solo"' : ''; ?>>
-		<td class="swpk-gris"><?php echo esc_html( SWPK_Frescura::fmt( 'H:i', $f['hora'] ) ); ?></td>
-		<td>
-			<?php if ( $f['sitio'] ) : ?>
-				<a href="<?php echo esc_url( SWPK_Vista::url_del_sitio( (string) $f['sitio']->sitio_id, 'panel-kinsta' ) ); ?>">
-					<?php echo esc_html( $f['nombre'] ); ?>
-				</a>
-			<?php else : ?>
-				<?php echo esc_html( $f['nombre'] ); ?>
-			<?php endif; ?>
-		</td>
-		<td><?php echo $f['sitio'] ? SWPK_Admin::grupo_badge( (string) $f['sitio']->tag ) : ''; ?></td>
-		<td<?php echo $f['grave'] ? ' class="swpk-rojo"' : ''; ?>>
-			<?php echo esc_html( $resumir( $f['por_tipo'] ) ); ?>
-		</td>
-	</tr>
-	<?php
-};
 ?>
 <div class="wrap">
 	<?php
@@ -488,145 +434,17 @@ $fila = static function ( array $f, bool $solo ) use ( $resumir ): void {
 		</p>
 
 		<?php
-		// ── El diario, debajo de la rejilla ─────────────────────────────────
+		// ── Dónde quedó el diario ───────────────────────────────────────────
 		//
-		// La maqueta que se aprobó no lo traía: ahí los movimientos del día
-		// son la tarjeta «Novedades», que son seis renglones y un enlace.
+		// Aquí iba una tabla con un renglón por sitio y por día, de los últimos
+		// ocho. La maqueta aprobada no la trae: ahí los movimientos del día son
+		// la tarjeta «Novedades», seis renglones y un enlace.
 		//
-		// Se queda, y en su propia tarjeta, porque esta tabla es justo lo que
-		// Fer peleó cuando el Resumen solo los contaba: "si tiene registro de
-		// que un sitio hizo movimientos, aquí debería de aparecer". Encogerla
-		// a seis renglones por fidelidad a una maqueta sería deshacer eso sin
-		// que nadie lo pidiera. Va debajo, no arriba: lo primero que se lee
-		// sigue siendo el estado, que es lo que el jefe sí pidió.
-		SWPK_Vista::caja_abrir(
-			'Qué pasó estos días',
-			sprintf(
-				'<a href="%s">Ver todo el historial</a>',
-				esc_url( admin_url( 'admin.php?page=panel-kinsta-bitacora&seccion=movimientos' ) )
-			),
-			'',
-			true
-		);
+		// No se perdió nada. Todo lo que enseñaba está en Movimientos, que
+		// además filtra por fecha, por tipo y por sitio, cosa que esta tabla no
+		// hacía. Si alguna vez se quiere de vuelta aquí, está en el historial
+		// de git, en el commit anterior a este.
 		?>
-
-		<div class="swpk-filtra">
-			<span class="swpk-gris">Un renglón por sitio: lo que necesita atención y lo que salió bien solo.</span>
-			<?php SWPK_Vista::buscador( 'panel-kinsta', $busqueda, [] ); ?>
-		</div>
-
-		<p class="swpk-leyenda" style="padding:12px 20px;margin:0;border-bottom:1px solid #f0f1f6">
-			<?php echo SWPK_Admin::grupo_badge( SWPK_Etiquetas::DESARROLLO ); ?>
-			<?php echo SWPK_Admin::grupo_badge( SWPK_Etiquetas::AUTO ); ?>
-			<span>los administramos nosotros</span>
-			<span class="swpk-gris">·</span>
-			<?php echo SWPK_Admin::grupo_badge( SWPK_Etiquetas::NO_UPDATE ); ?>
-			<span>es del cliente: no se le toca nada sin pedirlo</span>
-		</p>
-
-		<table class="widefat striped swpk-tabla">
-			<thead>
-				<tr>
-					<th style="width:70px">Hora</th>
-					<th style="width:210px">Sitio</th>
-					<th style="width:130px">Grupo</th>
-					<th>Qué le pasó</th>
-				</tr>
-			</thead>
-			<tbody>
-			<?php foreach ( $por_dia as $dia => $del_dia ) : ?>
-				<?php
-				$bien  = $resumen_dia[ $dia ] ?? [ 'sitios' => 0, 'modulos' => 0 ];
-				$solos = $solos_dia[ $dia ] ?? [];
-				$resto = [];
-
-				if ( $del_dia ) {
-					$resto[] = SWPK_Vista::plural( count( $del_dia ), 'sitio necesita atención', 'sitios necesitan atención' );
-				}
-				if ( $solos ) {
-					$resto[] = SWPK_Vista::plural( count( $solos ), 'salió bien solo', 'salieron bien solos' );
-				}
-				?>
-				<tr class="swpk-dia<?php echo $dia === $hoy ? ' swpk-dia-hoy' : ''; ?>">
-					<td colspan="4">
-						<span class="swpk-dia-fila">
-							<span class="swpk-dia-f">
-								<?php echo esc_html( ucfirst( SWPK_Frescura::fmt( 'l j \d\e F', $dia . ' 12:00:00' ) ) ); ?><?php if ( $dia === $hoy ) : ?> &mdash; hoy<?php endif; ?>
-							</span>
-							<span class="swpk-dia-r">
-								<?php echo esc_html( $resto ? implode( ' · ', $resto ) : 'sin cambios' ); ?>
-							</span>
-						</span>
-					</td>
-				</tr>
-
-				<?php if ( ! $del_dia && ! $solos ) : ?>
-					<tr>
-						<td colspan="4" class="swpk-gris">
-							<?php if ( '' !== $busqueda ) : ?>
-								Ese sitio no cambió nada este día.
-							<?php else : ?>
-								No hubo ningún cambio: todo quedó igual que el día anterior.
-								<?php if ( $dia === $hoy && ! SWPK_Frescura::corrida_al_dia() ) : ?>
-									<strong class="swpk-rojo">Ojo: la corrida de hoy tampoco pasó, así que esto no quiere decir que no haya pasado nada.</strong>
-								<?php endif; ?>
-							<?php endif; ?>
-						</td>
-					</tr>
-				<?php else : ?>
-					<?php foreach ( $del_dia as $f ) { $fila( $f, false ); } ?>
-
-					<?php if ( $solos ) : ?>
-						<tr class="swpk-sub">
-							<td colspan="4">
-								<?php
-								printf(
-									'Salieron bien solos — nadie tuvo que entrar a ninguno (%s)',
-									esc_html( SWPK_Vista::plural( (int) $bien['modulos'], 'movimiento', 'movimientos' ) )
-								);
-								?>
-							</td>
-						</tr>
-						<?php foreach ( array_slice( $solos, 0, $tope_solos, true ) as $f ) { $fila( $f, true ); } ?>
-
-						<?php if ( count( $solos ) > $tope_solos ) : ?>
-							<tr class="swpk-mas">
-								<td colspan="4">
-									<a href="<?php echo esc_url(
-										add_query_arg(
-											[
-												'page'    => 'panel-kinsta-bitacora',
-												'seccion' => 'movimientos',
-												'desde'   => $dia,
-												'hasta'   => $dia,
-											],
-											admin_url( 'admin.php' )
-										)
-									); ?>">
-										<?php
-										printf(
-											'Ver los %s de este día &rarr;',
-											esc_html( SWPK_Vista::plural( count( $solos ) - $tope_solos, 'sitio restante', 'sitios restantes' ) )
-										);
-										?>
-									</a>
-									<span class="swpk-gris">todos los movimientos del día, en Bitácora</span>
-								</td>
-							</tr>
-						<?php endif; ?>
-					<?php endif; ?>
-				<?php endif; ?>
-			<?php endforeach; ?>
-			</tbody>
-		</table>
-
-		<?php SWPK_Vista::caja_cerrar(); ?>
-
-		<p class="swpk-nota">
-			Esto es lo que cambió estos días, no el estado de la cartera. Los <?php echo (int) $estado['total']; ?>
-			sitios agrupados por etiqueta, con los botones para revisarlos uno por uno, están en
-			<a href="<?php echo esc_url( admin_url( 'admin.php?page=panel-kinsta-sitios' ) ); ?>">Sitios</a>.
-		</p>
 
 		<?php SWPK_Frescura::sello(); ?>
 
