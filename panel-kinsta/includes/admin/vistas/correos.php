@@ -38,21 +38,23 @@ foreach ( array_keys( SWPK_Plantillas::catalogo() ) as $clave ) {
 	<?php
 	SWPK_Vista::cabecera(
 		'Correos',
-		'Lo que el panel manda solo: qué sale, cuándo, a quién, y con qué palabras.'
+		'Los avisos que salen solos, a quién le llegan y qué dicen.',
+		SWPK_Vista::pastillas( [
+			[
+				'texto'  => 'Qué sale y a quién',
+				'url'    => $url_sec( 'envios' ),
+				'activa' => 'envios' === $seccion,
+			],
+			[
+				'texto'  => 'Cómo están redactados',
+				'n'      => $tocadas > 0 ? $tocadas : '',
+				'url'    => $url_sec( 'plantillas' ),
+				'activa' => 'plantillas' === $seccion,
+			],
+		] )
 	);
 	?>
 	<?php SWPK_Admin::mostrar_mensaje(); ?>
-
-	<h2 class="nav-tab-wrapper">
-		<a class="nav-tab <?php echo 'envios' === $seccion ? 'nav-tab-active' : ''; ?>"
-			href="<?php echo esc_url( $url_sec( 'envios' ) ); ?>">Qué sale y a quién</a>
-		<a class="nav-tab <?php echo 'plantillas' === $seccion ? 'nav-tab-active' : ''; ?>"
-			href="<?php echo esc_url( $url_sec( 'plantillas' ) ); ?>">Cómo están redactados<?php
-			if ( $tocadas > 0 ) {
-				printf( ' <span class="swpk-pelota">%d</span>', (int) $tocadas );
-			}
-		?></a>
-	</h2>
 
 	<?php require SWPK_RUTA . 'includes/admin/vistas/correos-' . $seccion . '.php'; ?>
 </div>

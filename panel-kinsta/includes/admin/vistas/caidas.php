@@ -27,36 +27,74 @@ $estados_posibles = [
 	'arriba' => 'Responde bien',
 ];
 
+// Cuánto tarda, en tres tramos. Es el tercer desplegable de la maqueta y
+// contesta algo que el estado solo no contesta: un sitio puede responder bien
+// y aun así tardar ocho segundos, que es de lo que se queja el cliente.
+$tramos = [
+	'rapido' => 'Menos de 1 s',
+	'medio'  => 'Entre 1 y 5 s',
+	'tardon' => 'Más de 5 s',
+];
+
 $estado_pedido = SWPK_Vista::opcion_pedida( 'estado', $estados_posibles );
+$grupo_pedido  = SWPK_Vista::opcion_pedida( 'tag', SWPK_Etiquetas::nombres() );
+$tramo_pedido  = SWPK_Vista::opcion_pedida( 'tarda', $tramos );
 $busca_caida   = SWPK_Vista::busqueda_pedida();
 
-$filtrados = $estados;
+// El grupo de cada sitio vigilado, para el desplegable y para filtrar. Se
+// arma una vez: preguntarlo dentro del filtro son 108 consultas por carga.
+$grupo_de = [];
+$por_tag  = [];
 
-if ( '' !== $estado_pedido || '' !== $busca_caida ) {
-	$aguja     = strtolower( remove_accents( $busca_caida ) );
-	$filtrados = array_values(
-		array_filter(
-			$estados,
-			static function ( $e ) use ( $estado_pedido, $aguja ) {
-				if ( 'lento' === $estado_pedido ) {
-					if ( 'arriba' !== $e->estado || $e->ms <= 5000 ) {
-						return false;
-					}
-				} elseif ( '' !== $estado_pedido && (string) $e->estado !== $estado_pedido ) {
+foreach ( $estados as $e ) {
+	$sitio                            = SWPK_Inventario::obtener( (string) $e->sitio_id );
+	$t                                = (string) ( $sitio->tag ?? '' );
+	$grupo_de[ (string) $e->sitio_id ] = $t;
+	if ( '' !== $t ) {
+		$por_tag[ $t ] = ( $por_tag[ $t ] ?? 0 ) + 1;
+	}
+}
+
+$filtrados = array_values(
+	array_filter(
+		$estados,
+		static function ( $e ) use ( $estado_pedido, $grupo_pedido, $tramo_pedido, $busca_caida, $grupo_de ) {
+			if ( 'lento' === $estado_pedido ) {
+				if ( 'arriba' !== $e->estado || $e->ms <= 5000 ) {
 					return false;
 				}
-
-				if ( '' === $aguja ) {
-					return true;
-				}
-
-				$sitio = SWPK_Inventario::obtener( (string) $e->sitio_id );
-				$pajar = strtolower( remove_accents( (string) ( $sitio->nombre_visible ?? '' ) . ' ' . (string) $e->url ) );
-				return str_contains( $pajar, $aguja );
+			} elseif ( '' !== $estado_pedido && (string) $e->estado !== $estado_pedido ) {
+				return false;
 			}
-		)
-	);
-}
+
+			if ( '' !== $grupo_pedido && ( $grupo_de[ (string) $e->sitio_id ] ?? '' ) !== $grupo_pedido ) {
+				return false;
+			}
+
+			if ( '' !== $tramo_pedido ) {
+				$ms = (int) $e->ms;
+				if ( 'rapido' === $tramo_pedido && $ms >= 1000 ) {
+					return false;
+				}
+				if ( 'medio' === $tramo_pedido && ( $ms < 1000 || $ms > 5000 ) ) {
+					return false;
+				}
+				if ( 'tardon' === $tramo_pedido && $ms <= 5000 ) {
+					return false;
+				}
+			}
+
+			if ( '' === $busca_caida ) {
+				return true;
+			}
+
+			$aguja = strtolower( remove_accents( $busca_caida ) );
+			$sitio = SWPK_Inventario::obtener( (string) $e->sitio_id );
+			$pajar = strtolower( remove_accents( (string) ( $sitio->nombre_visible ?? '' ) . ' ' . (string) $e->url ) );
+			return str_contains( $pajar, $aguja );
+		}
+	)
+);
 
 [ $en_pantalla, $pagina, $paginas ] = SWPK_Vista::paginar( $filtrados, SWPK_Vista::pagina_pedida(), 25 );
 
@@ -69,7 +107,14 @@ $historial = array_filter(
 	<?php
 	SWPK_Vista::cabecera(
 		'Caídas',
-		'El panel revisa cada sitio cada cinco minutos desde aquí, sin depender del hosting.'
+		esc_html( sprintf( 'El panel sondea los %d sitios cada cinco minutos.', count( $estados ) ) ),
+		SWPK_Vista::pastillas( [
+			[
+				'texto'  => $al_dia ? 'Sondeo automático' : 'El sondeo no está pasando',
+				'url'    => admin_url( 'admin.php?page=panel-kinsta-ajustes' ),
+				'activa' => ! $al_dia,
+			],
+		] )
 	);
 	?>
 	<?php SWPK_Admin::mostrar_mensaje(); ?>
@@ -162,6 +207,18 @@ $historial = array_filter(
 					'opciones' => $estados_posibles,
 					'actual'   => $estado_pedido,
 					'todas'    => 'Como sea',
+				],
+				'tag' => [
+					'etiqueta' => 'Grupo',
+					'opciones' => array_intersect_key( SWPK_Etiquetas::nombres(), $por_tag ),
+					'actual'   => $grupo_pedido,
+					'todas'    => 'Todos los grupos',
+				],
+				'tarda' => [
+					'etiqueta' => 'Lo que tarda',
+					'opciones' => $tramos,
+					'actual'   => $tramo_pedido,
+					'todas'    => 'Tarde lo que tarde',
 				],
 			],
 			[],

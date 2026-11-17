@@ -81,20 +81,24 @@ $hubo_alguna_vez = SWPK_Bitacora::hay_alguno();
 ?>
 <div class="wrap">
 	<?php
+	// En la maqueta estas dos son páginas distintas, cada una con su título, y
+	// se salta de una a otra con pastillas. Aquí son secciones de la misma
+	// pantalla, así que el título y el subtítulo cambian con la sección.
+	$es_movs = 'movimientos' === $seccion;
+
 	SWPK_Vista::cabecera(
-		'Bitácora',
-		'Qué pasó en los sitios y qué se le avisó a quién. Es la evidencia, por eso todo lleva fecha.'
+		$es_movs ? 'Movimientos' : 'Bitácora',
+		$es_movs
+			? 'Qué cambió en los sitios, y cuándo.'
+			: 'Qué se le notificó a quién, y cuándo.',
+		SWPK_Vista::pastillas( [
+			[ 'texto' => 'Movimientos',    'url' => $url_sec( 'movimientos' ),    'activa' => $es_movs ],
+			[ 'texto' => 'Notificaciones', 'url' => $url_sec( 'notificaciones' ), 'activa' => ! $es_movs ],
+		] )
 	);
 	?>
 	<?php SWPK_Admin::mostrar_mensaje(); ?>
 	<?php SWPK_Admin::tira_de_perfil(); ?>
-
-	<h2 class="nav-tab-wrapper">
-		<a class="nav-tab <?php echo 'movimientos' === $seccion ? 'nav-tab-active' : ''; ?>"
-			href="<?php echo esc_url( $url_sec( 'movimientos' ) ); ?>">Movimientos</a>
-		<a class="nav-tab <?php echo 'movimientos' !== $seccion ? 'nav-tab-active' : ''; ?>"
-			href="<?php echo esc_url( $url_sec( 'notificaciones' ) ); ?>">Notificaciones</a>
-	</h2>
 
 	<?php if ( 'movimientos' === $seccion ) : ?>
 		<?php require SWPK_RUTA . 'includes/admin/vistas/bitacora-movimientos.php'; ?>

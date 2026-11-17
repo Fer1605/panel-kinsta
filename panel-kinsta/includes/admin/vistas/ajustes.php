@@ -8,7 +8,7 @@ $a = SWPK_Ajustes::todos();
 	<?php
 	SWPK_Vista::cabecera(
 		'Ajustes del panel',
-		'La conexión con el hosting, cómo corre el panel y cómo se agrupan los sitios.'
+		'La llave del hosting, los grupos y cómo corre.'
 	);
 	?>
 	<?php SWPK_Admin::mostrar_mensaje(); ?>
@@ -85,6 +85,12 @@ $a = SWPK_Ajustes::todos();
 			</tr>
 		</table>
 
+		<p>
+			<a class="button" href="<?php echo esc_url( wp_nonce_url( admin_url( 'admin-post.php?action=swpk_probar' ), 'swpk_probar' ) ); ?>">
+				Probar <?php echo esc_html( swpk_fuente()->nombre() ); ?>
+			</a>
+			<span class="swpk-gris">no guarda nada: solo pregunta si la llave sirve.</span>
+		</p>
 		<?php SWPK_Vista::caja_cerrar(); ?>
 
 		<?php SWPK_Vista::caja_abrir( 'Los grupos de sitios' ); ?>
@@ -146,19 +152,25 @@ $a = SWPK_Ajustes::todos();
 
 		<?php SWPK_Vista::caja_cerrar(); ?>
 
-		<?php SWPK_Vista::caja_abrir( 'Los correos del cliente' ); ?>
+		<?php SWPK_Vista::caja_abrir( 'A quién le llega' ); ?>
 		<table class="form-table" role="presentation">
 			<tr>
-				<th scope="row"><label for="correo_ventas">Ventas</label></th>
+				<th scope="row"><label for="correo_ventas">Copia a ventas</label></th>
 				<td><input type="text" class="regular-text" name="correo_ventas" id="correo_ventas" value="<?php echo esc_attr( $a['correo_ventas'] ); ?>">
-				<p class="description">Dirección de grupo o varias separadas por coma.</p></td>
+				<p class="description">Recibe copia de lo que se le manda a cada cliente. Una dirección de grupo, o varias separadas por coma.</p></td>
 			</tr>
 			<tr>
-				<th scope="row"><label for="correo_soporte">Soporte</label></th>
-				<td><input type="text" class="regular-text" name="correo_soporte" id="correo_soporte" value="<?php echo esc_attr( $a['correo_soporte'] ); ?>"></td>
+				<th scope="row"><label for="correo_soporte">Correo de soporte</label></th>
+				<td><input type="text" class="regular-text" name="correo_soporte" id="correo_soporte" value="<?php echo esc_attr( $a['correo_soporte'] ); ?>">
+				<p class="description">Le llega el diario con todo lo técnico.</p></td>
 			</tr>
+		</table>
+		<?php SWPK_Vista::caja_cerrar(); ?>
+
+		<?php SWPK_Vista::caja_abrir( 'Nuestros dominios' ); ?>
+		<table class="form-table" role="presentation">
 			<tr>
-				<th scope="row"><label for="dominios_propios">Dominios nuestros</label></th>
+				<th scope="row"><label for="dominios_propios">Dominios de la casa</label></th>
 				<td>
 					<input type="text" class="regular-text" name="dominios_propios" id="dominios_propios" value="<?php echo esc_attr( $a['dominios_propios'] ); ?>">
 					<p class="description">
@@ -172,15 +184,6 @@ $a = SWPK_Ajustes::todos();
 		<?php submit_button( 'Guardar ajustes' ); ?>
 		<?php SWPK_Vista::caja_cerrar(); ?>
 	</form>
-
-	<?php SWPK_Vista::caja_abrir( 'Probar la conexión' ); ?>
-	<p>
-		<a class="button" href="<?php echo esc_url( wp_nonce_url( admin_url( 'admin-post.php?action=swpk_probar' ), 'swpk_probar' ) ); ?>">
-			Probar <?php echo esc_html( swpk_fuente()->nombre() ); ?>
-		</a>
-	</p>
-
-	<?php SWPK_Vista::caja_cerrar(); ?>
 
 	<?php SWPK_Vista::caja_abrir( 'Cómo corre', '', '', true ); ?>
 	<table class="widefat striped" style="max-width:720px">

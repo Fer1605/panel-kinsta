@@ -204,8 +204,18 @@ $fila = static function ( array $f, bool $solo ) use ( $resumir ): void {
 
 	SWPK_Vista::cabecera(
 		'Panel Kinsta',
+		// «revisados hoy» solo si de verdad se revisaron hoy. La maqueta lo
+		// daba por hecho; aquí la corrida puede no haber pasado, y decirlo
+		// igual sería la clase de mentira tranquilizadora que este panel no
+		// cuenta. Si no pasó, se calla — el aviso de frescura de abajo ya lo
+		// dice con todas sus letras.
 		$estado['total']
-			? esc_html( sprintf( 'Los %d sitios de la cuenta.', (int) $estado['total'] ) )
+			? esc_html( sprintf(
+				SWPK_Frescura::corrida_al_dia()
+					? 'Los %d sitios de la cuenta, revisados hoy.'
+					: 'Los %d sitios de la cuenta.',
+				(int) $estado['total']
+			) )
 			: '',
 		SWPK_Vista::pastillas( $pastillas )
 	);

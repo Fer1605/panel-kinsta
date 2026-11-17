@@ -72,7 +72,7 @@ $accion = static fn( $a ) => wp_nonce_url( admin_url( 'admin-post.php?action=' .
 	</table>
 	<?php SWPK_Vista::caja_cerrar(); ?>
 
-	<?php SWPK_Vista::caja_abrir( 'Qué sale, cuándo y a quién', '', '', true ); ?>
+	<?php SWPK_Vista::caja_abrir( 'Qué sale, y a quién', '', '', true ); ?>
 	<table class="widefat striped swpk-tabla" style="max-width:980px">
 		<thead>
 			<tr>
@@ -116,6 +116,44 @@ $accion = static fn( $a ) => wp_nonce_url( admin_url( 'admin-post.php?action=' .
 		<a href="<?php echo esc_url( admin_url( 'admin.php?page=panel-kinsta-bitacora' ) ); ?>">bitácora</a>,
 		donde se puede abrir y leer completo. En modo de prueba no sale a nadie.
 	</p>
+
+	<?php
+	// La tarjeta de la maqueta. Aquí solo ENSEÑA: los campos viven en Ajustes,
+	// que es donde está el formulario que los guarda. Repetir el formulario en
+	// dos pantallas es la forma segura de que un día guarden cosas distintas.
+	$aj = SWPK_Ajustes::todos();
+	SWPK_Vista::caja_abrir(
+		'A quién le llega',
+		sprintf(
+			'<a href="%s">Cambiarlo en Ajustes</a>',
+			esc_url( admin_url( 'admin.php?page=panel-kinsta-ajustes' ) )
+		)
+	);
+	?>
+	<table class="form-table" role="presentation">
+		<tr>
+			<th scope="row">Correo de soporte</th>
+			<td>
+				<code><?php echo esc_html( $aj['correo_soporte'] ?: '— sin poner —' ); ?></code>
+				<p class="description">Le llega el diario con todo lo técnico.</p>
+			</td>
+		</tr>
+		<tr>
+			<th scope="row">Copia a ventas</th>
+			<td>
+				<code><?php echo esc_html( $aj['correo_ventas'] ?: '— sin poner —' ); ?></code>
+				<p class="description">Recibe copia de lo que se le manda a cada cliente.</p>
+			</td>
+		</tr>
+		<tr>
+			<th scope="row">Dominios nuestros</th>
+			<td>
+				<code><?php echo esc_html( $aj['dominios_propios'] ?: '— sin poner —' ); ?></code>
+				<p class="description">Los correos de estos dominios no cuentan como contacto del cliente.</p>
+			</td>
+		</tr>
+	</table>
+	<?php SWPK_Vista::caja_cerrar(); ?>
 
 	<?php SWPK_Vista::caja_abrir( 'Cosas que conviene revisar antes de abrir la llave', '', '', true ); ?>
 	<?php

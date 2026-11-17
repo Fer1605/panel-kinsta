@@ -1,9 +1,27 @@
 <?php
 /**
- * Vulnerabilidades: la lista de sitios con algo pendiente, en resumen.
+ * Vulnerabilidades: un renglón por hallazgo, no por sitio.
  *
- * Aquí no se ven las vulnerabilidades una por una — con 107 sitios eso era una
- * página infinita. Se ve cuánto tiene cada sitio, y se entra al que interese.
+ * ─── Por qué cambió ─────────────────────────────────────────────────────────
+ *
+ * Esta pantalla enseñaba una ficha por sitio con dos cifras —«4 con
+ * vulnerabilidad, 9 por actualizar»— y un botón para entrar. Servía para saber
+ * a qué sitio ir, pero no contestaba la pregunta que de verdad se hace:
+ * «¿quién tiene este plugin vulnerable?». Para eso había que entrar a los 38
+ * sitios uno por uno.
+ *
+ * La maqueta que el jefe aprobó la resuelve de otra forma: una tabla plana,
+ * un renglón por hallazgo, con el sitio y el módulo en la misma fila y un
+ * filtro por módulo. Así «enseñame todos los sitios con Elementor vulnerable»
+ * son dos clics.
+ *
+ * ─── Lo que cuesta ──────────────────────────────────────────────────────────
+ *
+ * Armar la tabla obliga a abrir los hallazgos de cada sitio, que es lo que ya
+ * hacía la versión anterior para pintar sus cifras — el costo es el mismo. Se
+ * guarda cinco minutos en caché porque ahora cada cambio de filtro recarga la
+ * pantalla, y pagar el recorrido entero por mover un desplegable no tiene
+ * sentido.
  */
 defined( 'ABSPATH' ) || exit;
 
@@ -12,83 +30,136 @@ $tag      = SWPK_Vista::tag_pedido();
 $nivel    = SWPK_Vista::nivel_pedido();
 $busqueda = SWPK_Vista::busqueda_pedida();
 
-$por_tag   = SWPK_Vista::conteo_por_tag( $todos );
-$del_grupo = SWPK_Vista::filtrar( $todos, $tag, '', '' );
-
-$tiene_algo = static fn( $s ) => ! in_array(
-	SWPK_Riesgo::nivel_del_sitio( $s->sitio_id ),
-	[ SWPK_Riesgo::AL_DIA, SWPK_Riesgo::SIN_DATOS ],
-	true
-);
-
-$con_algo = array_values( array_filter( SWPK_Vista::filtrar( $todos, $tag, $nivel, $busqueda ), $tiene_algo ) );
+$por_tag = SWPK_Vista::conteo_por_tag( $todos );
 
 /**
- * El desglose de cada grupo, para la tarjeta.
+ * Todos los hallazgos de los sitios que esta persona puede ver, aplanados.
  *
- * La tarjeta no puede decir "82": eso se lee como "82 sitios con
- * vulnerabilidades". Dice "31 de 82" y abajo qué pasa con los otros 51.
+ * La caché es por persona porque una asesora ve su cartera y no la de todos,
+ * y la corrida diaria la olvida al terminar para que nadie vea datos viejos
+ * sin que se le avise.
  */
-$detalles = [];
-foreach ( SWPK_Etiquetas::nombres() as $t => $nombre_tag ) {
-	$del_t = SWPK_Vista::filtrar( $todos, $t, '', '' );
-	if ( ! $del_t ) {
-		continue;
-	}
+$clave_cache = 'swpk_hallazgos_' . get_current_user_id();
+$todas       = get_transient( $clave_cache );
 
-	$pend = 0;
-	$dia  = 0;
-	$sin  = 0;
+if ( ! is_array( $todas ) ) {
+	$todas = [];
 
-	foreach ( $del_t as $s ) {
-		$n = SWPK_Riesgo::nivel_del_sitio( $s->sitio_id );
-		if ( SWPK_Riesgo::AL_DIA === $n ) {
-			++$dia;
-		} elseif ( SWPK_Riesgo::SIN_DATOS === $n ) {
-			++$sin;
-		} else {
-			++$pend;
+	foreach ( $todos as $s ) {
+		foreach ( SWPK_Riesgo::hallazgos( (string) $s->sitio_id ) as $h ) {
+			$v = $h['vulnerabilidades'][0] ?? null;
+
+			$todas[] = [
+				'sitio_id'   => (string) $s->sitio_id,
+				'nombre'     => (string) $s->nombre_visible,
+				'dominio'    => (string) $s->dominio,
+				'tag'        => (string) $s->tag,
+				'revisado'   => (string) ( $s->inventario_en ?? '' ),
+				'nivel'      => (string) $h['nivel'],
+				'motivo'     => (string) $h['motivo'],
+				'modulo'     => SWPK_Textos::limpiar_titulo( (string) $h['titulo'] ),
+				'version'    => (string) $h['version'],
+				'disponible' => (string) $h['version_disponible'],
+				'sin_cuenta' => $v && SWPK_Textos::quien_puede(
+					(string) ( $v->cvss_vector ?? '' ),
+					(string) ( $v->descripcion ?? '' )
+				)['sin_cuenta'],
+			];
 		}
 	}
 
-	$resto = [];
-	if ( $dia ) {
-		$resto[] = $dia . ' al día';
-	}
-	if ( $sin ) {
-		$resto[] = $sin . ' sin escanear';
-	}
-
-	$detalles[ $t ] = [
-		'n'   => $pend,
-		'de'  => count( $del_t ),
-		'sub' => $resto ? implode( ' · ', $resto ) : 'todos con algo pendiente',
-	];
+	set_transient( $clave_cache, $todas, 5 * MINUTE_IN_SECONDS );
 }
 
-$al_dia    = $detalles[ $tag ]['de'] ?? 0;
-$sin_datos = 0;
+// Lo del grupo elegido. De aquí salen las cuentas de las pastillas y las
+// opciones del desplegable de módulos: si salieran de lo ya filtrado, elegir
+// un módulo dejaría ese módulo como única opción y no habría forma de cambiar
+// de idea sin quitar el filtro.
+$del_grupo = array_values( array_filter(
+	$todas,
+	static fn( $f ) => '' === $tag || $f['tag'] === $tag
+) );
 
-$orden = [ SWPK_Riesgo::CRITICO => 0, SWPK_Riesgo::ALTO => 1, SWPK_Riesgo::MEDIO => 2, SWPK_Riesgo::BAJO => 3 ];
+$por_nivel = [];
+$modulos   = [];
+
+foreach ( $del_grupo as $f ) {
+	$por_nivel[ $f['nivel'] ] = ( $por_nivel[ $f['nivel'] ] ?? 0 ) + 1;
+	$modulos[ $f['modulo'] ]  = $f['modulo'];
+}
+
+ksort( $modulos, SORT_NATURAL | SORT_FLAG_CASE );
+$modulo = SWPK_Vista::opcion_pedida( 'modulo', $modulos );
+
+$filas = array_values( array_filter(
+	$del_grupo,
+	static function ( $f ) use ( $nivel, $modulo, $busqueda ) {
+		if ( '' !== $nivel && $f['nivel'] !== $nivel ) {
+			return false;
+		}
+		if ( '' !== $modulo && $f['modulo'] !== $modulo ) {
+			return false;
+		}
+		if ( '' !== $busqueda ) {
+			$aguja = strtolower( remove_accents( $busqueda ) );
+			$pajar = strtolower( remove_accents( $f['nombre'] . ' ' . $f['dominio'] . ' ' . $f['modulo'] ) );
+			if ( ! str_contains( $pajar, $aguja ) ) {
+				return false;
+			}
+		}
+		return true;
+	}
+) );
+
+// Lo más grave primero y, a igualdad de gravedad, lo que se aprovecha sin
+// tener cuenta en el sitio: eso es lo que buscan los ataques automáticos.
 usort(
-	$con_algo,
-	static fn( $a, $b ) => ( $orden[ SWPK_Riesgo::nivel_del_sitio( $a->sitio_id ) ] ?? 9 )
-		<=> ( $orden[ SWPK_Riesgo::nivel_del_sitio( $b->sitio_id ) ] ?? 9 )
+	$filas,
+	static fn( $a, $b ) =>
+		[ SWPK_Riesgo::peso( $b['nivel'] ), (int) $b['sin_cuenta'], $a['nombre'] ]
+		<=> [ SWPK_Riesgo::peso( $a['nivel'] ), (int) $a['sin_cuenta'], $b['nombre'] ]
 );
 
-$por_nivel = SWPK_Vista::conteo_por_nivel( $del_grupo );
-// En esta pantalla solo hay sitios con pendientes, así que esos dos filtros
-// no devolverían nada. Se ponen en cero para que el filtro los esconda.
-$por_nivel[ SWPK_Riesgo::AL_DIA ]    = 0;
-$por_nivel[ SWPK_Riesgo::SIN_DATOS ] = 0;
+$sitios_tocados = count( array_unique( array_column( $filas, 'sitio_id' ) ) );
 
-[ $en_pantalla, $pagina, $paginas ] = SWPK_Vista::paginar( $con_algo, SWPK_Vista::pagina_pedida(), 15 );
+[ $en_pantalla, $pagina, $paginas ] = SWPK_Vista::paginar( $filas, SWPK_Vista::pagina_pedida(), 25 );
+
+$colores = SWPK_Riesgo::colores();
+$nombres = SWPK_Riesgo::nombres();
 ?>
 <div class="wrap">
 	<?php
+	// Las pastillas de gravedad, con la cuenta de hallazgos de cada una.
+	$pastillas_sev = [];
+
+	foreach ( [ SWPK_Riesgo::CRITICO, SWPK_Riesgo::ALTO, SWPK_Riesgo::MEDIO, SWPK_Riesgo::BAJO ] as $sev ) {
+		if ( empty( $por_nivel[ $sev ] ) ) {
+			continue;
+		}
+
+		$pastillas_sev[] = [
+			'texto'  => $nombres[ $sev ],
+			'n'      => (int) $por_nivel[ $sev ],
+			'url'    => add_query_arg(
+				array_filter( [
+					'page'  => 'panel-kinsta-vulnerabilidades',
+					'tag'   => $tag,
+					'nivel' => $nivel === $sev ? '' : $sev,
+				] ),
+				admin_url( 'admin.php' )
+			),
+			'activa' => $nivel === $sev,
+		];
+	}
+
 	SWPK_Vista::cabecera(
 		'Vulnerabilidades y pendientes',
-		'Cada módulo con una falla conocida o una actualización esperando, sitio por sitio.'
+		esc_html( sprintf(
+			'%s en %s.',
+			SWPK_Vista::plural( count( $filas ), 'hallazgo', 'hallazgos' ),
+			SWPK_Vista::plural( $sitios_tocados, 'sitio', 'sitios' )
+		) ),
+		SWPK_Vista::pastillas( $pastillas_sev )
 	);
 	?>
 	<?php SWPK_Admin::mostrar_mensaje(); ?>
@@ -111,88 +182,117 @@ $por_nivel[ SWPK_Riesgo::SIN_DATOS ] = 0;
 
 	<?php SWPK_Frescura::sello(); ?>
 
-	<?php SWPK_Vista::selector_de_grupo( 'panel-kinsta-vulnerabilidades', $tag, $por_tag, [], $detalles ); ?>
-
-	<?php if ( '' === $tag ) : ?>
-		</div>
-		<?php return; ?>
-	<?php endif; ?>
-
 	<?php SWPK_Vista::abrir_barra(); ?>
-		<?php SWPK_Vista::filtro_de_riesgo( $nivel, $por_nivel ); ?>
-		<span>
-			<?php SWPK_Vista::buscador( 'panel-kinsta-vulnerabilidades', $busqueda, [ 'tag' => $tag, 'nivel' => $nivel ] ); ?>
-			<?php SWPK_Admin::boton_exportar( 'vulnerabilidades' ); ?>
-		</span>
+		<span></span>
+		<span><?php SWPK_Admin::boton_exportar( 'vulnerabilidades' ); ?></span>
 	<?php SWPK_Vista::cerrar_barra(); ?>
 
 	<?php
 	SWPK_Vista::caja_abrir(
 		'Todo lo que hay que parchar',
-		esc_html( SWPK_Vista::plural( count( $con_algo ), 'sitio con pendientes', 'sitios con pendientes' ) ),
+		esc_html( SWPK_Vista::plural( count( $filas ), 'hallazgo', 'hallazgos' ) ),
 		'',
 		true
 	);
+
+	$opciones_sev = [];
+	foreach ( [ SWPK_Riesgo::CRITICO, SWPK_Riesgo::ALTO, SWPK_Riesgo::MEDIO, SWPK_Riesgo::BAJO ] as $sev ) {
+		if ( ! empty( $por_nivel[ $sev ] ) ) {
+			$opciones_sev[ $sev ] = sprintf( '%s (%d)', $nombres[ $sev ], (int) $por_nivel[ $sev ] );
+		}
+	}
+
+	SWPK_Vista::barra_de_filtros(
+		'panel-kinsta-vulnerabilidades',
+		[
+			'nivel' => [
+				'etiqueta' => 'Gravedad',
+				'opciones' => $opciones_sev,
+				'actual'   => $nivel,
+				'todas'    => 'Toda gravedad',
+			],
+			'tag' => [
+				'etiqueta' => 'Grupo',
+				'opciones' => array_intersect_key( SWPK_Etiquetas::nombres(), array_filter( $por_tag ) ),
+				'actual'   => $tag,
+				'todas'    => 'Todos los grupos',
+			],
+			'modulo' => [
+				'etiqueta' => 'Módulo',
+				'opciones' => $modulos,
+				'actual'   => $modulo,
+				'todas'    => 'Todos los módulos',
+			],
+		],
+		[],
+		$busqueda,
+		'sitio o módulo…'
+	);
 	?>
 
-	<?php SWPK_Vista::paginador( $pagina, $paginas, count( $con_algo ), 'sitios con pendientes', 'sitio con pendientes' ); ?>
+	<?php SWPK_Vista::paginador( $pagina, $paginas, count( $filas ), 'hallazgos', 'hallazgo' ); ?>
 
 	<?php if ( ! $en_pantalla ) : ?>
 		<div class="notice notice-success inline"><p>
-			Nada pendiente en este grupo con ese filtro.
+			Nada pendiente con ese filtro.
 		</p></div>
+	<?php else : ?>
+		<table class="widefat striped swpk-tabla">
+			<thead>
+				<tr>
+					<th style="width:230px">Sitio</th>
+					<th>Módulo</th>
+					<th style="width:150px">Gravedad</th>
+					<th style="width:130px">Revisado</th>
+				</tr>
+			</thead>
+			<tbody>
+			<?php foreach ( $en_pantalla as $f ) : ?>
+				<tr>
+					<td>
+						<a href="<?php echo esc_url( SWPK_Vista::url_del_sitio( $f['sitio_id'], 'panel-kinsta-vulnerabilidades' ) ); ?>">
+							<?php echo esc_html( $f['nombre'] ); ?>
+						</a>
+						<br><?php echo SWPK_Admin::grupo_badge( $f['tag'] ); ?>
+					</td>
+					<td>
+						<strong><?php echo esc_html( $f['modulo'] ); ?></strong>
+						<br>
+						<span class="swpk-gris">
+							<?php
+							if ( '' !== $f['disponible'] && $f['disponible'] !== $f['version'] ) {
+								echo esc_html( sprintf( 'tiene la %s, hay la %s', $f['version'], $f['disponible'] ) );
+							} else {
+								echo esc_html( sprintf( 'versión %s', $f['version'] ) );
+							}
+							?>
+						</span>
+						<?php if ( $f['sin_cuenta'] ) : ?>
+							<br><span class="swpk-rojo">se puede aprovechar sin tener cuenta en el sitio</span>
+						<?php elseif ( 'vulnerable_sin_detalle' === $f['motivo'] ) : ?>
+							<br><span class="swpk-gris">
+								<?php echo esc_html( SWPK_Admin::proveedor() ); ?> la marca vulnerable, sin detalle publicado
+							</span>
+						<?php endif; ?>
+					</td>
+					<td>
+						<span class="swpk-nivel" style="color:<?php echo esc_attr( $colores[ $f['nivel'] ] ?? '' ); ?>">
+							<?php echo esc_html( $nombres[ $f['nivel'] ] ?? $f['nivel'] ); ?>
+						</span>
+						<?php if ( 'actualizacion_pendiente' === $f['motivo'] ) : ?>
+							<br><span class="swpk-gris">solo actualización</span>
+						<?php endif; ?>
+					</td>
+					<td class="swpk-gris">
+						<?php echo esc_html( '' !== $f['revisado'] ? SWPK_Frescura::fmt( 'j M, H:i', $f['revisado'] ) : '—' ); ?>
+					</td>
+				</tr>
+			<?php endforeach; ?>
+			</tbody>
+		</table>
+
+		<?php SWPK_Vista::paginador( $pagina, $paginas, count( $filas ), 'hallazgos', 'hallazgo' ); ?>
 	<?php endif; ?>
-
-	<?php foreach ( $en_pantalla as $s ) : ?>
-		<?php
-		$hallazgos = SWPK_Riesgo::hallazgos( $s->sitio_id );
-		$vulns     = 0;
-		$sin_cta   = 0;
-		foreach ( $hallazgos as $h ) {
-			if ( 'actualizacion_pendiente' === $h['motivo'] ) {
-				continue;
-			}
-			++$vulns;
-			$v = $h['vulnerabilidades'][0] ?? null;
-			if ( $v && SWPK_Textos::quien_puede( (string) ( $v->cvss_vector ?? '' ), (string) $v->descripcion )['sin_cuenta'] ) {
-				++$sin_cta;
-			}
-		}
-		$url = SWPK_Vista::url_del_sitio( (string) $s->sitio_id, 'panel-kinsta-vulnerabilidades' );
-		?>
-		<div class="swpk-ficha">
-			<div>
-				<p class="swpk-ficha-nom">
-					<?php echo wp_kses_post( SWPK_Admin::nivel_badge( SWPK_Riesgo::nivel_del_sitio( $s->sitio_id ) ) ); ?>
-					<?php echo esc_html( $s->nombre_visible ); ?>
-				</p>
-				<span class="swpk-ficha-dom"><?php echo esc_html( $s->dominio ); ?></span>
-				<?php if ( $sin_cta ) : ?>
-					<p style="margin:6px 0 0;color:#b32d2e;font-size:13px">
-						<?php echo (int) $sin_cta; ?> se <?php echo 1 === $sin_cta ? 'puede' : 'pueden'; ?>
-						aprovechar sin tener cuenta en el sitio
-					</p>
-				<?php endif; ?>
-			</div>
-
-			<div class="swpk-ficha-cifras">
-				<div class="swpk-cifra">
-					<b style="color:<?php echo $vulns ? '#b32d2e' : '#008a20'; ?>"><?php echo (int) $vulns; ?></b>
-					<span>con vulnerabilidad</span>
-				</div>
-				<div class="swpk-cifra">
-					<b><?php echo count( $hallazgos ) - $vulns; ?></b>
-					<span>por actualizar</span>
-				</div>
-				<a class="button button-primary" href="<?php echo esc_url( $url ); ?>">Ver detalle</a>
-			</div>
-		</div>
-	<?php endforeach; ?>
-
-	<?php if ( $en_pantalla ) : ?>
-		<?php SWPK_Vista::paginador( $pagina, $paginas, count( $con_algo ), 'sitios con pendientes', 'sitio con pendientes' ); ?>
-	<?php endif; ?>
-
 	<?php SWPK_Vista::caja_cerrar(); ?>
 
 	<p class="swpk-atribucion"><?php echo wp_kses_post( SWPK_Wordfence::atribucion() ); ?></p>

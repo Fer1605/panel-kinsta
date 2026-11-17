@@ -16,6 +16,31 @@ $acciones  = array_map( static fn( $e ) => $e[0], $etiquetas );
 $filtro    = SWPK_Vista::opcion_pedida( 'accion', $acciones );
 $registros = SWPK_Accesos::listar( 500, $filtro );
 
+// Las cuentas de cada cosa, para las pastillas de arriba. Salen de TODO lo
+// anotado, no de lo filtrado: una pastilla que cambia de número al pulsarla
+// deja de servir para saltar entre filtros.
+$todo_lo_anotado = SWPK_Accesos::listar( 500, '' );
+$por_accion      = [];
+$quienes         = [];
+
+foreach ( $todo_lo_anotado as $r ) {
+	$por_accion[ (string) $r->accion ] = ( $por_accion[ (string) $r->accion ] ?? 0 ) + 1;
+	$quien                             = (string) $r->login;
+	if ( '' !== $quien ) {
+		$quienes[ $quien ] = $quien;
+	}
+}
+
+ksort( $quienes, SORT_NATURAL | SORT_FLAG_CASE );
+$quien_pedido = SWPK_Vista::opcion_pedida( 'quien', $quienes );
+
+if ( '' !== $quien_pedido ) {
+	$registros = array_values( array_filter(
+		$registros,
+		static fn( $r ) => (string) $r->login === $quien_pedido
+	) );
+}
+
 // Buscar por usuario o por dirección.
 //
 // Es el filtro que de verdad se usa aquí: cuando saltan cuarenta intentos
@@ -41,9 +66,29 @@ $fallidos  = SWPK_Accesos::fallidos_recientes( 24 );
 ?>
 <div class="wrap">
 	<?php
+	// Las tres cosas que más se anotan, de más a menos, como pastillas.
+	arsort( $por_accion );
+	$pastillas_acc = [];
+
+	foreach ( array_slice( $por_accion, 0, 3, true ) as $clave_a => $cuantas ) {
+		$pastillas_acc[] = [
+			'texto'  => $etiquetas[ $clave_a ][0] ?? $clave_a,
+			'n'      => (int) $cuantas,
+			'url'    => add_query_arg(
+				array_filter( [
+					'page'   => 'panel-kinsta-accesos',
+					'accion' => $filtro === $clave_a ? '' : $clave_a,
+				] ),
+				admin_url( 'admin.php' )
+			),
+			'activa' => $filtro === $clave_a,
+		];
+	}
+
 	SWPK_Vista::cabecera(
 		'Accesos al panel',
-		'Quién entró, cuándo, y desde dónde — también lo que no logró entrar.'
+		'Quién entró, cuándo, y quién lo intentó.',
+		SWPK_Vista::pastillas( $pastillas_acc )
 	);
 	?>
 	<?php SWPK_Admin::mostrar_mensaje(); ?>
@@ -93,7 +138,13 @@ $fallidos  = SWPK_Accesos::fallidos_recientes( 24 );
 				'etiqueta' => 'Qué pasó',
 				'opciones' => $acciones,
 				'actual'   => $filtro,
-				'todas'    => 'Todo',
+				'todas'    => 'Todo lo que se anota',
+			],
+			'quien' => [
+				'etiqueta' => 'Quién',
+				'opciones' => $quienes,
+				'actual'   => $quien_pedido,
+				'todas'    => 'Cualquiera',
 			],
 		],
 		[],

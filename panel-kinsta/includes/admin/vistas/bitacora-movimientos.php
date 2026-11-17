@@ -40,10 +40,31 @@ foreach ( SWPK_Perfiles::sitios_visibles() as $s ) {
 
 $puede_todo = SWPK_Perfiles::puede( SWPK_Perfiles::VER_TODO );
 
+// El desplegable de sitios sale de los que SÍ se movieron en el rango, no de
+// los 108: ofrecer un sitio que no tiene nada en estas fechas es ofrecer un
+// clic que deja la tabla vacía. Se arma antes de filtrar por tipo o por
+// búsqueda, para que elegir un sitio no borre el resto de opciones.
+$del_rango = SWPK_Eventos::entre( $desde, $hasta, '', '' );
+$con_movs  = [];
+
+foreach ( $del_rango as $e ) {
+	$id = (string) $e->sitio_id;
+	if ( ! $puede_todo && ! isset( $sitios[ $id ] ) ) {
+		continue;
+	}
+	$con_movs[ $id ] = (string) ( $sitios[ $id ]->nombre_visible ?? $id );
+}
+
+asort( $con_movs, SORT_NATURAL | SORT_FLAG_CASE );
+$sitio_pedido = SWPK_Vista::opcion_pedida( 'sitio', $con_movs );
+
 $movimientos = array_filter(
 	SWPK_Eventos::entre( $desde, $hasta, '', $tipo ),
-	static function ( $e ) use ( $sitios, $puede_todo, $busqueda ) {
+	static function ( $e ) use ( $sitios, $puede_todo, $busqueda, $sitio_pedido ) {
 		if ( ! $puede_todo && ! isset( $sitios[ (string) $e->sitio_id ] ) ) {
+			return false;
+		}
+		if ( '' !== $sitio_pedido && (string) $e->sitio_id !== $sitio_pedido ) {
 			return false;
 		}
 		if ( '' === $busqueda ) {
@@ -79,7 +100,7 @@ arsort( $por_tipo );
 	<label>Hasta<br><input type="date" name="hasta" value="<?php echo esc_attr( $hasta ); ?>"></label>
 	<label>Qué pasó<br>
 		<select name="tipo">
-			<option value="">Todo</option>
+			<option value="">Todo lo que pasa</option>
 			<?php foreach ( $etq_evt as $clave => $nombre ) : ?>
 				<option value="<?php echo esc_attr( $clave ); ?>" <?php selected( $tipo, $clave ); ?>>
 					<?php echo esc_html( $nombre ); ?>
@@ -87,11 +108,21 @@ arsort( $por_tipo );
 			<?php endforeach; ?>
 		</select>
 	</label>
-	<label>Sitio o módulo<br>
-		<input type="search" name="q" value="<?php echo esc_attr( $busqueda ); ?>" placeholder="buscar…">
+	<label>Sitio<br>
+		<select name="sitio">
+			<option value="">Todos los sitios</option>
+			<?php foreach ( $con_movs as $id => $nombre_s ) : ?>
+				<option value="<?php echo esc_attr( $id ); ?>" <?php selected( $sitio_pedido, (string) $id ); ?>>
+					<?php echo esc_html( $nombre_s ); ?>
+				</option>
+			<?php endforeach; ?>
+		</select>
+	</label>
+	<label>Buscar<br>
+		<input type="search" name="q" value="<?php echo esc_attr( $busqueda ); ?>" placeholder="sitio o módulo…">
 	</label>
 	<button class="button">Filtrar</button>
-	<?php if ( $tipo || '' !== $busqueda ) : ?>
+	<?php if ( $tipo || '' !== $busqueda || '' !== $sitio_pedido ) : ?>
 		<a class="button" href="<?php echo esc_url( add_query_arg( [ 'page' => 'panel-kinsta-bitacora', 'seccion' => 'movimientos', 'desde' => $desde, 'hasta' => $hasta ], admin_url( 'admin.php' ) ) ); ?>">Quitar filtros</a>
 	<?php endif; ?>
 </form>

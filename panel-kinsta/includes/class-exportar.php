@@ -135,18 +135,61 @@ class SWPK_Exportar {
 		];
 	}
 
+	/**
+	 * Las vulnerabilidades, con los mismos filtros que la pantalla.
+	 *
+	 * Ojo con `nivel`: aquí NO es el nivel del sitio sino el del hallazgo, que
+	 * es lo que significa en esa pantalla desde que pasó a ser una tabla plana.
+	 * Si se filtrara por el del sitio, pedir «solo los críticos» bajaría todos
+	 * los hallazgos de los sitios críticos, incluidos los de nivel bajo — y el
+	 * Excel diría otra cosa que la pantalla de la que salió.
+	 */
 	private static function datos_vulnerabilidades(): array {
 		$filas = [];
 
-		foreach ( self::sitios_filtrados() as $s ) {
+		// Sin el nivel: ese se aplica abajo, hallazgo por hallazgo. La búsqueda
+		// tampoco, porque en esa pantalla busca también por módulo.
+		$versiones = SWPK_Vista::filtros_de_version( SWPK_Perfiles::sitios_visibles() );
+		$sitios    = SWPK_Vista::filtrar(
+			SWPK_Perfiles::sitios_visibles(),
+			SWPK_Vista::tag_pedido(),
+			'',
+			'',
+			$versiones['wp'],
+			$versiones['php']
+		);
+
+		$nivel    = SWPK_Vista::nivel_pedido();
+		$busqueda = SWPK_Vista::busqueda_pedida();
+		$modulo   = isset( $_GET['modulo'] )
+			? sanitize_text_field( wp_unslash( (string) $_GET['modulo'] ) )
+			: '';
+
+		foreach ( $sitios as $s ) {
 			foreach ( SWPK_Riesgo::hallazgos( (string) $s->sitio_id ) as $h ) {
+				$titulo = SWPK_Textos::limpiar_titulo( (string) $h['titulo'] );
+
+				if ( '' !== $nivel && $h['nivel'] !== $nivel ) {
+					continue;
+				}
+				if ( '' !== $modulo && $titulo !== $modulo ) {
+					continue;
+				}
+				if ( '' !== $busqueda ) {
+					$aguja = strtolower( remove_accents( $busqueda ) );
+					$pajar = strtolower( remove_accents( $s->nombre_visible . ' ' . $s->dominio . ' ' . $titulo ) );
+					if ( ! str_contains( $pajar, $aguja ) ) {
+						continue;
+					}
+				}
+
 				$v     = $h['vulnerabilidades'][0] ?? null;
 				$quien = $v ? SWPK_Textos::quien_puede( (string) ( $v->cvss_vector ?? '' ), (string) $v->descripcion ) : null;
 
 				$filas[] = [
 					$s->nombre_visible,
 					SWPK_Etiquetas::nombres()[ $s->tag ] ?? $s->tag,
-					SWPK_Textos::limpiar_titulo( (string) $h['titulo'] ),
+					$titulo,
 					$h['slug'],
 					$h['version'],
 					$h['version_disponible'],

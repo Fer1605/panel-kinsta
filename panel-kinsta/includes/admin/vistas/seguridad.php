@@ -36,9 +36,40 @@ $en_camino       = $conteos_ordenes[ SWPK_Ordenes::PENDIENTE ] + $conteos_ordene
 ?>
 <div class="wrap">
 	<?php
+	// El subtítulo de la maqueta: lo primero que hay que saber de esta pantalla
+	// es de cuántos sitios NO puede decir nada, porque casi ninguna de estas
+	// normas se ve desde fuera.
+	$sin_agente_vis = count( array_filter(
+		SWPK_Perfiles::sitios_visibles(),
+		static fn( $s ) => empty( $s->cobertura_agente )
+	) );
+
 	SWPK_Vista::cabecera(
 		'Seguridad',
-		'Las normas que cada sitio tiene que cumplir, y qué le falta a cada uno.'
+		$sin_agente_vis > 0
+			? esc_html( sprintf(
+				'De %d sitios no se sabe nada: les falta el plugin instalado.',
+				$sin_agente_vis
+			) )
+			: 'Las normas que cada sitio tiene que cumplir, y qué le falta a cada uno.',
+		SWPK_Vista::pastillas( [
+			[
+				'texto'  => 'Qué le falta a cada sitio',
+				'url'    => $url_sec( 'cumplimiento' ),
+				'activa' => 'cumplimiento' === $seccion,
+			],
+			[
+				'texto'  => 'Los arreglos que pedimos',
+				'n'      => $en_camino > 0 ? $en_camino : '',
+				'url'    => $url_sec( 'ordenes' ),
+				'activa' => 'ordenes' === $seccion,
+			],
+			[
+				'texto'  => 'Qué revisamos',
+				'url'    => $url_sec( 'normas' ),
+				'activa' => 'normas' === $seccion,
+			],
+		] )
 	);
 	?>
 	<?php
@@ -46,19 +77,6 @@ $en_camino       = $conteos_ordenes[ SWPK_Ordenes::PENDIENTE ] + $conteos_ordene
 	SWPK_Admin::aviso_demo();
 	SWPK_Admin::tira_de_perfil();
 	?>
-
-	<h2 class="nav-tab-wrapper">
-		<a class="nav-tab <?php echo 'cumplimiento' === $seccion ? 'nav-tab-active' : ''; ?>"
-			href="<?php echo esc_url( $url_sec( 'cumplimiento' ) ); ?>">Qué le falta a cada sitio</a>
-		<a class="nav-tab <?php echo 'ordenes' === $seccion ? 'nav-tab-active' : ''; ?>"
-			href="<?php echo esc_url( $url_sec( 'ordenes' ) ); ?>">Los arreglos que pedimos<?php
-			if ( $en_camino > 0 ) {
-				printf( ' <span class="swpk-pelota">%d</span>', (int) $en_camino );
-			}
-		?></a>
-		<a class="nav-tab <?php echo 'normas' === $seccion ? 'nav-tab-active' : ''; ?>"
-			href="<?php echo esc_url( $url_sec( 'normas' ) ); ?>">Qué revisamos</a>
-	</h2>
 
 	<?php require SWPK_RUTA . 'includes/admin/vistas/seguridad-' . $seccion . '.php'; ?>
 </div>

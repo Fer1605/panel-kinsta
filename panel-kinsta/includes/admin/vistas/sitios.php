@@ -57,9 +57,41 @@ $volver = add_query_arg(
 ?>
 <div class="wrap">
 	<?php
+	// Las pastillas de grupo, como en la maqueta: «Todos» primero y después
+	// los tres grupos, cada una con su cuenta y la puesta marcada.
+	//
+	// Antes esto era un selector de tarjetas grandes y la pantalla NO enseñaba
+	// nada hasta elegir un grupo. La maqueta no tiene esa puerta: abre con los
+	// 108 y el grupo es un filtro más. Se quitó la puerta.
+	$pastillas_tag = [
+		[
+			'texto'  => 'Todos',
+			'n'      => count( $todos ),
+			'url'    => admin_url( 'admin.php?page=panel-kinsta-sitios' ),
+			'activa' => '' === $tag,
+		],
+	];
+
+	foreach ( SWPK_Etiquetas::nombres() as $t => $nombre_t ) {
+		if ( empty( $por_tag[ $t ] ) ) {
+			continue;
+		}
+
+		$pastillas_tag[] = [
+			'texto'  => $nombre_t,
+			'n'      => $por_tag[ $t ],
+			'url'    => add_query_arg(
+				[ 'page' => 'panel-kinsta-sitios', 'tag' => $t ],
+				admin_url( 'admin.php' )
+			),
+			'activa' => $t === $tag,
+		];
+	}
+
 	SWPK_Vista::cabecera(
 		'Sitios',
-		'Los sitios de la cuenta, agrupados por cómo se actualizan.'
+		esc_html( SWPK_Vista::plural( count( $filtrados ), 'sitio', 'sitios' ) . '.' ),
+		SWPK_Vista::pastillas( $pastillas_tag )
 	);
 	?>
 	<?php SWPK_Admin::mostrar_mensaje(); ?>
@@ -80,14 +112,7 @@ $volver = add_query_arg(
 		<?php return; ?>
 	<?php endif; ?>
 
-	<?php SWPK_Vista::selector_de_grupo( 'panel-kinsta-sitios', $tag, $por_tag ); ?>
-
-	<?php if ( '' === $tag ) : ?>
-		</div>
-		<?php return; ?>
-	<?php endif; ?>
-
-	<?php if ( ! SWPK_Etiquetas::es_nuestro( $tag ) ) : ?>
+	<?php if ( '' !== $tag && ! SWPK_Etiquetas::es_nuestro( $tag ) ) : ?>
 		<p style="color:#50575e;max-width:800px;margin:0">
 			Estos sitios los administra el cliente. Quedan fuera de la doble autenticación y de la
 			lectura de usuarios: no podemos instalarles nada mientras no se les venda. Lo que sí se
@@ -97,7 +122,7 @@ $volver = add_query_arg(
 	<?php endif; ?>
 
 	<?php SWPK_Vista::abrir_barra(); ?>
-		<?php SWPK_Vista::filtro_de_riesgo( $nivel, $por_nivel ); ?>
+		<span></span>
 		<span>
 			<?php SWPK_Admin::boton_exportar( 'sitios' ); ?>
 			<?php if ( $asignar ) : ?>
@@ -123,10 +148,42 @@ $volver = add_query_arg(
 		true
 	);
 
+	// Los cuatro selectores de la maqueta: grupo, cómo está, y las dos
+	// versiones. El grupo también está arriba en pastillas; se repite porque
+	// las pastillas son para saltar de un grupo a otro y el selector es para
+	// combinarlo con lo demás sin perder lo que ya estaba puesto.
+	//
+	// «Cómo está» era una fila de pastillas aparte. Pasa a selector, como en
+	// la maqueta, y lleva la cuenta en el texto: elegir un nivel que dejaría
+	// la tabla vacía es un clic perdido.
+	$opciones_nivel = [];
+	foreach ( SWPK_Riesgo::nombres() as $clave_n => $nombre_n ) {
+		if ( empty( $por_nivel[ $clave_n ] ) ) {
+			continue;
+		}
+		$opciones_nivel[ $clave_n ] = sprintf( '%s (%d)', $nombre_n, (int) $por_nivel[ $clave_n ] );
+	}
+
 	SWPK_Vista::barra_de_filtros(
 		'panel-kinsta-sitios',
-		$versiones['campos'],
-		[ 'tag' => $tag, 'nivel' => $nivel ],
+		[
+			'tag' => [
+				'etiqueta' => 'Grupo',
+				'opciones' => array_intersect_key(
+					SWPK_Etiquetas::nombres(),
+					array_filter( $por_tag )
+				),
+				'actual'   => $tag,
+				'todas'    => 'Todos los grupos',
+			],
+			'nivel' => [
+				'etiqueta' => 'Cómo está',
+				'opciones' => $opciones_nivel,
+				'actual'   => $nivel,
+				'todas'    => 'Como sea',
+			],
+		] + $versiones['campos'],
+		[],
 		$busqueda
 	);
 	?>

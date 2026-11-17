@@ -40,7 +40,7 @@ $hay_filtro_equipo = ( '' !== $perfil_pedido || '' !== $busca_persona );
 	<?php
 	SWPK_Vista::cabecera(
 		'Equipo',
-		'Quién entra al panel, con qué perfil y a qué sitios.'
+		'Quién entra al panel y con qué perfil.'
 	);
 	?>
 	<?php SWPK_Admin::mostrar_mensaje(); ?>

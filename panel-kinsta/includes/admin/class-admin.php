@@ -101,7 +101,9 @@ class SWPK_Admin {
 	/** El botón de bajar a Excel, con los filtros que estén puestos. */
 	public static function boton_exportar( string $tipo ): void {
 		$filtros = [];
-		foreach ( [ 'tag', 'nivel', 'q', 'wp', 'php' ] as $k ) {
+		// 'modulo' entró con la tabla plana de Vulnerabilidades. Si no viajara,
+		// el Excel traería los 294 hallazgos cuando en pantalla se ven 17.
+		foreach ( [ 'tag', 'nivel', 'q', 'wp', 'php', 'modulo' ] as $k ) {
 			if ( ! empty( $_GET[ $k ] ) ) {
 				$filtros[ $k ] = sanitize_text_field( wp_unslash( (string) $_GET[ $k ] ) );
 			}

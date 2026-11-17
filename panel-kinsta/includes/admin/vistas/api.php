@@ -28,8 +28,8 @@ $llamadas = array_slice( $llamadas, 0, 25 );
 <div class="wrap">
 	<?php
 	SWPK_Vista::cabecera(
-		'Conectarse (API)',
-		'Para consultar el panel desde fuera, o desde Claude, sin entrar a WordPress.'
+		'Conectarse al panel',
+		'Consultarlo desde fuera, o desde Claude.'
 	);
 	?>
 	<?php SWPK_Admin::mostrar_mensaje(); ?>
@@ -66,7 +66,85 @@ $llamadas = array_slice( $llamadas, 0, 25 );
 		</div>
 	<?php endif; ?>
 
-	<?php SWPK_Vista::caja_abrir( '1 · La dirección' ); ?>
+	<?php SWPK_Vista::caja_abrir( 'Conectarlo a Claude' ); ?>
+
+	<p style="max-width:860px;color:#3c434a">
+		<strong>No hay nada que bajar ni que instalar.</strong> El panel habla MCP por su cuenta, así
+		que en Claude Desktop se agrega como conector personalizado: se pega una dirección y se le da
+		conectar. Esa dirección sale al crear la llave, aquí arriba, y es lo único que hace falta.
+	</p>
+
+	<ol style="max-width:860px;color:#3c434a;line-height:1.7">
+		<li><strong>Crear la llave</strong> aquí arriba. La ventana entrega la dirección, con su botón
+			de copiar. <strong>Se enseña una sola vez.</strong></li>
+		<li>En Claude Desktop: <strong>Ajustes → Conectores → Agregar conector personalizado</strong>.</li>
+		<li>Ponerle un <strong>nombre</strong> —por ejemplo <em>Panel Kinsta</em>— y pegar la
+			<strong>dirección</strong>.</li>
+		<li><strong>Conectar.</strong> Ya queda; no pide usuario ni contraseña, porque la dirección
+			misma es la llave.</li>
+	</ol>
+
+	<div class="notice notice-warning inline" style="max-width:860px">
+		<p>
+			<strong>Esto exige que el panel esté en internet, con HTTPS. No es opcional y no se puede
+			rodear con código.</strong>
+			Claude Desktop no se conecta desde la computadora de quien lo usa: le manda la dirección a
+			la nube de Anthropic, y es la nube la que abre la conexión al servidor. Una dirección
+			<code>localhost</code> o de red interna la rechaza de entrada.
+		</p>
+		<p>
+			<?php if ( ! $alcanzable ) : ?>
+				Hoy el panel vive en
+				<code><?php echo esc_html( (string) wp_parse_url( home_url(), PHP_URL_HOST ) ); ?></code>,
+				así que <strong>esto todavía no se puede probar</strong> — ni desde esta misma máquina.
+				El día que el panel tenga su dominio, funciona sin tocar una línea.
+			<?php else : ?>
+				Este panel ya está en una dirección pública. Si el cortafuegos del servidor filtra por
+				origen, hay que dejar entrar al rango de salida de Anthropic.
+			<?php endif; ?>
+		</p>
+	</div>
+
+	<p style="max-width:860px;color:#3c434a">
+		Una vez conectado se le pregunta en español y contesta con lo que hay en el panel:
+		<em>¿qué sitios necesitan atención hoy?</em>, <em>¿cuántas veces se actualizó tal proyecto este
+		mes?</em>, <em>¿quién tiene acceso de administrador a este sitio?</em>
+	</p>
+
+	<table class="widefat striped swpk-tabla" style="max-width:860px">
+		<thead>
+			<tr>
+				<th style="width:210px">Lo que puede consultar</th>
+				<th>Qué contesta</th>
+			</tr>
+		</thead>
+		<tbody>
+		<?php foreach ( SWPK_Mcp::catalogo() as $h ) : ?>
+			<tr>
+				<td><code><?php echo esc_html( $h['nombre'] ); ?></code></td>
+				<td class="swpk-gris"><?php echo esc_html( $h['que'] ); ?></td>
+			</tr>
+		<?php endforeach; ?>
+		</tbody>
+	</table>
+
+	<p class="swpk-nota">
+		<strong>La dirección es la llave: quien la tenga, consulta.</strong> Por eso vale lo mismo que
+		una contraseña — no se manda por chat ni se deja escrita donde la vea cualquiera, y se revoca
+		desde la tabla de arriba en cuanto sobre. En la base de datos no queda guardada: vive su huella,
+		igual que una contraseña, y por eso se enseña una sola vez.
+	</p>
+
+	<p class="swpk-nota">
+		El conector <strong>solo lee</strong>, y tiene el alcance de su llave: una llave de ventas
+		contesta sobre sus sitios y nada más. Las tres rutas que disparan procesos no se le entregan,
+		porque una conversación no debería poder lanzar más de 200 peticiones al hosting a media
+		pregunta. Cada consulta queda escrita abajo, marcada como MCP.
+	</p>
+
+		<?php SWPK_Vista::caja_cerrar(); ?>
+
+	<?php SWPK_Vista::caja_abrir( 'La dirección' ); ?>
 
 	<p>Todas las rutas salen de aquí:</p>
 
@@ -74,7 +152,7 @@ $llamadas = array_slice( $llamadas, 0, 25 );
 
 	<?php SWPK_Vista::caja_cerrar(); ?>
 
-	<?php SWPK_Vista::caja_abrir( '2 · La llave' ); ?>
+	<?php SWPK_Vista::caja_abrir( 'Las llaves que hay' ); ?>
 
 	<p style="max-width:860px;color:#3c434a">
 		Una llave es una cuenta que <strong>solo puede leer</strong>: consulta los sitios, las
@@ -322,7 +400,7 @@ $llamadas = array_slice( $llamadas, 0, 25 );
 
 	<?php SWPK_Vista::caja_cerrar(); ?>
 
-	<?php SWPK_Vista::caja_abrir( '3 · Las rutas' ); ?>
+	<?php SWPK_Vista::caja_abrir( 'Qué se puede consultar' ); ?>
 
 	<p style="max-width:860px;color:#3c434a">
 		Cada una envuelve la misma función que alimenta su pantalla. No hay una sola consulta
@@ -364,7 +442,7 @@ $llamadas = array_slice( $llamadas, 0, 25 );
 
 	<?php SWPK_Vista::caja_cerrar(); ?>
 
-	<?php SWPK_Vista::caja_abrir( '4 · Probarlo' ); ?>
+	<?php SWPK_Vista::caja_abrir( 'Probarlo desde aquí' ); ?>
 
 	<p style="max-width:860px;color:#3c434a">
 		Desde fuera, con la llave de arriba y autenticación básica:
@@ -420,85 +498,8 @@ $llamadas = array_slice( $llamadas, 0, 25 );
 
 	<?php SWPK_Vista::caja_cerrar(); ?>
 
-	<?php SWPK_Vista::caja_abrir( '5 · Conectar Claude Desktop' ); ?>
 
-	<p style="max-width:860px;color:#3c434a">
-		<strong>No hay nada que bajar ni que instalar.</strong> El panel habla MCP por su cuenta, así
-		que en Claude Desktop se agrega como conector personalizado: se pega una dirección y se le da
-		conectar. Esa dirección sale al crear la llave, aquí arriba, y es lo único que hace falta.
-	</p>
-
-	<ol style="max-width:860px;color:#3c434a;line-height:1.7">
-		<li><strong>Crear la llave</strong> aquí arriba. La ventana entrega la dirección, con su botón
-			de copiar. <strong>Se enseña una sola vez.</strong></li>
-		<li>En Claude Desktop: <strong>Ajustes → Conectores → Agregar conector personalizado</strong>.</li>
-		<li>Ponerle un <strong>nombre</strong> —por ejemplo <em>Panel Kinsta</em>— y pegar la
-			<strong>dirección</strong>.</li>
-		<li><strong>Conectar.</strong> Ya queda; no pide usuario ni contraseña, porque la dirección
-			misma es la llave.</li>
-	</ol>
-
-	<div class="notice notice-warning inline" style="max-width:860px">
-		<p>
-			<strong>Esto exige que el panel esté en internet, con HTTPS. No es opcional y no se puede
-			rodear con código.</strong>
-			Claude Desktop no se conecta desde la computadora de quien lo usa: le manda la dirección a
-			la nube de Anthropic, y es la nube la que abre la conexión al servidor. Una dirección
-			<code>localhost</code> o de red interna la rechaza de entrada.
-		</p>
-		<p>
-			<?php if ( ! $alcanzable ) : ?>
-				Hoy el panel vive en
-				<code><?php echo esc_html( (string) wp_parse_url( home_url(), PHP_URL_HOST ) ); ?></code>,
-				así que <strong>esto todavía no se puede probar</strong> — ni desde esta misma máquina.
-				El día que el panel tenga su dominio, funciona sin tocar una línea.
-			<?php else : ?>
-				Este panel ya está en una dirección pública. Si el cortafuegos del servidor filtra por
-				origen, hay que dejar entrar al rango de salida de Anthropic.
-			<?php endif; ?>
-		</p>
-	</div>
-
-	<p style="max-width:860px;color:#3c434a">
-		Una vez conectado se le pregunta en español y contesta con lo que hay en el panel:
-		<em>¿qué sitios necesitan atención hoy?</em>, <em>¿cuántas veces se actualizó tal proyecto este
-		mes?</em>, <em>¿quién tiene acceso de administrador a este sitio?</em>
-	</p>
-
-	<table class="widefat striped swpk-tabla" style="max-width:860px">
-		<thead>
-			<tr>
-				<th style="width:210px">Lo que puede consultar</th>
-				<th>Qué contesta</th>
-			</tr>
-		</thead>
-		<tbody>
-		<?php foreach ( SWPK_Mcp::catalogo() as $h ) : ?>
-			<tr>
-				<td><code><?php echo esc_html( $h['nombre'] ); ?></code></td>
-				<td class="swpk-gris"><?php echo esc_html( $h['que'] ); ?></td>
-			</tr>
-		<?php endforeach; ?>
-		</tbody>
-	</table>
-
-	<p class="swpk-nota">
-		<strong>La dirección es la llave: quien la tenga, consulta.</strong> Por eso vale lo mismo que
-		una contraseña — no se manda por chat ni se deja escrita donde la vea cualquiera, y se revoca
-		desde la tabla de arriba en cuanto sobre. En la base de datos no queda guardada: vive su huella,
-		igual que una contraseña, y por eso se enseña una sola vez.
-	</p>
-
-	<p class="swpk-nota">
-		El conector <strong>solo lee</strong>, y tiene el alcance de su llave: una llave de ventas
-		contesta sobre sus sitios y nada más. Las tres rutas que disparan procesos no se le entregan,
-		porque una conversación no debería poder lanzar más de 200 peticiones al hosting a media
-		pregunta. Cada consulta queda escrita abajo, marcada como MCP.
-	</p>
-
-		<?php SWPK_Vista::caja_cerrar(); ?>
-
-		<?php SWPK_Vista::caja_abrir( '6 · Lo que ya se consultó' ); ?>
+		<?php SWPK_Vista::caja_abrir( 'Lo que ya se consultó' ); ?>
 
 	<p style="max-width:860px;color:#3c434a">
 		Cada llamada queda escrita, la que pasa y la que se rechaza. Hace falta porque una contraseña

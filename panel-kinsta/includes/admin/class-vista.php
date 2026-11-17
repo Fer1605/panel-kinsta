@@ -503,12 +503,16 @@ class SWPK_Vista {
 		$html = '';
 
 		foreach ( $items as $it ) {
+			// Sin número también vale: las pastillas que hacen de pestañas
+			// —Movimientos, Notificaciones— no cuentan nada, solo llevan.
+			$n = (string) ( $it['n'] ?? '' );
+
 			$html .= sprintf(
-				'<a class="swpk-pastilla%s" href="%s">%s<span class="swpk-pastilla-n">%s</span></a>',
+				'<a class="swpk-pastilla%s" href="%s">%s%s</a>',
 				! empty( $it['activa'] ) ? ' swpk-pastilla-activa' : '',
 				esc_url( (string) $it['url'] ),
 				esc_html( (string) $it['texto'] ),
-				esc_html( (string) $it['n'] )
+				'' !== $n ? '<span class="swpk-pastilla-n">' . esc_html( $n ) . '</span>' : ''
 			);
 		}
 

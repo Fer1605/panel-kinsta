@@ -62,9 +62,17 @@ class SWPK_Estado {
 		global $wpdb;
 
 		// Se borran las de todo el mundo: una corrida cambia lo que ve cualquiera.
+		//
+		// Y se borra también la de Vulnerabilidades, que guarda los hallazgos
+		// aplanados: es el mismo recorrido y los mismos datos, así que dejarla
+		// viva mientras esta se olvida dejaría dos pantallas contándose cosas
+		// distintas sobre el mismo sitio.
 		$wpdb->query(
-			"DELETE FROM {$wpdb->options} WHERE option_name LIKE '_transient_swpk_estado%'
-			 OR option_name LIKE '_transient_timeout_swpk_estado%'"
+			"DELETE FROM {$wpdb->options}
+			 WHERE option_name LIKE '_transient_swpk_estado%'
+			    OR option_name LIKE '_transient_timeout_swpk_estado%'
+			    OR option_name LIKE '_transient_swpk_hallazgos_%'
+			    OR option_name LIKE '_transient_timeout_swpk_hallazgos_%'"
 		);
 	}
 
