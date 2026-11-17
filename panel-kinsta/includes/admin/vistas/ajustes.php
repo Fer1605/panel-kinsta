@@ -97,102 +97,34 @@ $a = SWPK_Ajustes::todos();
 		<?php SWPK_Vista::caja_cerrar(); ?>
 	</form>
 
-	<?php SWPK_Vista::caja_abrir( 'Cómo corre', '', 'swpk-c6', true ); ?>
+	<?php
+	// «Cómo corre» es, en la maqueta, la lista de horarios: cada cuánto pasa
+	// cada cosa. Aquí tenía la tabla de estado del panel, que es otra cosa y
+	// se bajó a su propia tarjeta.
+	SWPK_Vista::caja_abrir( 'Cómo corre', '', 'swpk-c6' );
+
+	$horarios = [
+		'Inventario de los sitios'        => 'cada día, 6:30',
+		'Lista de vulnerabilidades'       => 'cada día, una vez',
+		'Sondeo de caídas'                => 'cada 5 minutos',
+		'Reporte de los sitios con plugin' => 'cada día, 5:00',
+	];
+
+	foreach ( $horarios as $que => $cuando ) {
+		printf(
+			'<div class="swpk-par"><span class="swpk-q">%s</span><span class="swpk-v">%s</span></div>',
+			esc_html( $que ),
+			esc_html( $cuando )
+		);
+	}
+	?>
+
 	<?php if ( SWPK_Perfiles::puede( SWPK_Perfiles::ADMINISTRAR ) ) : ?>
-		<?php // Los dos botones que la maqueta pone en esta tarjeta. ?>
-		<p style="padding:16px 20px 0;margin:0">
+		<p style="margin:16px 0 0">
 			<a class="button button-primary" href="<?php echo esc_url( wp_nonce_url( admin_url( 'admin-post.php?action=swpk_correr' ), 'swpk_correr' ) ); ?>">Correr ahora</a>
 			<a class="button" href="<?php echo esc_url( wp_nonce_url( admin_url( 'admin-post.php?action=swpk_sondear' ), 'swpk_sondear' ) ); ?>" style="margin-left:6px">Sondear ahora</a>
 		</p>
 	<?php endif; ?>
-	<?php // swpk-pares: nombre a la izquierda en gris, dato a la derecha en negrita, como la maqueta. ?>
-	<table class="widefat swpk-pares">
-		<tbody>
-			<tr><td>Fuente de datos</td><td><strong><?php echo esc_html( swpk_fuente()->nombre() ); ?></strong></td></tr>
-			<?php $perdidos = SWPK_Eventos::fallos(); ?>
-			<?php if ( $perdidos ) : ?>
-				<tr>
-					<td>Avisos perdidos</td>
-					<td>
-						<strong style="color:#b32d2e"><?php echo esc_html( SWPK_Vista::plural( count( $perdidos ), 'evento no se pudo guardar', 'eventos no se pudieron guardar' ) ); ?>.</strong>
-						<br><span style="font-size:12px">
-							Un panel que avisa no puede perder avisos callado. El último fue
-							<?php echo esc_html( SWPK_Frescura::fecha( (string) $perdidos[0]['cuando'] ) ); ?>:
-							<code><?php echo esc_html( (string) $perdidos[0]['error'] ); ?></code>
-						</span>
-					</td>
-				</tr>
-			<?php endif; ?>
-			<tr>
-				<td>Último dato bueno de <?php echo esc_html( swpk_fuente()->proveedor() ); ?></td>
-				<td>
-					<?php echo esc_html( SWPK_Frescura::fecha_y_edad( SWPK_Frescura::corrida() ) ); ?>
-					<?php if ( ! SWPK_Frescura::corrida_al_dia() ) : ?>
-						<br><strong style="color:#b32d2e">La corrida diaria no está pasando.</strong>
-					<?php endif; ?>
-					<?php if ( SWPK_Frescura::corrida_fallo() ) : ?>
-						<br><span style="color:#b32d2e;font-size:12px">
-							Hubo un intento posterior, el <?php echo esc_html( SWPK_Frescura::fecha( SWPK_Frescura::intento() ) ); ?>,
-							que arrancó y no trajo nada.
-						</span>
-					<?php endif; ?>
-				</td>
-			</tr>
-			<tr>
-				<td>Último intento de corrida</td>
-				<td><?php echo esc_html( SWPK_Frescura::fecha_y_edad( SWPK_Frescura::intento() ) ); ?></td>
-			</tr>
-			<tr>
-				<td>Feed de vulnerabilidades</td>
-				<td>
-					<?php
-					$wf = SWPK_Wordfence::ultima_actualizacion();
-					echo '' !== $wf
-						? esc_html( SWPK_Frescura::fecha_y_edad( $wf ) )
-						: 'nunca se ha descargado';
-					?>
-					<?php if ( '' !== $wf && ! SWPK_Frescura::feed_al_dia() ) : ?>
-						<br><strong style="color:#b32d2e">La lista está vieja.</strong>
-						<span style="font-size:12px">Una vulnerabilidad publicada estos días todavía no aparece marcada.</span>
-					<?php endif; ?>
-					<?php $proxima = SWPK_Wordfence::proxima_descarga(); ?>
-					<?php if ( $proxima > time() ) : ?>
-						<br><span style="color:#50575e;font-size:12px">
-							Próxima descarga a partir del <?php echo esc_html( SWPK_Frescura::fmt( 'j \d\e F, H:i', $proxima ) ); ?>.
-							<?php if ( SWPK_Wordfence::esperar_hasta() > time() ) : ?>
-								<strong>Wordfence pidió esperar</strong>, así que el panel no va a insistir:
-								insistir contra su límite puede terminar en que suspendan la llave.
-							<?php else : ?>
-								El feed se publica una vez al día; pedirlo más seguido no trae nada nuevo.
-							<?php endif; ?>
-						</span>
-					<?php endif; ?>
-				</td>
-			</tr>
-			<tr><td>Próxima corrida automática</td><td>
-				<?php
-				$ts = wp_next_scheduled( SWPK_Sincronizador::HOOK );
-				echo $ts ? esc_html( SWPK_Frescura::fmt( 'j M Y, H:i', gmdate( 'Y-m-d H:i:s', $ts + ( (int) get_option( 'gmt_offset' ) * 3600 ) ) ) ) : 'no programada';
-				?>
-			</td></tr>
-			<tr>
-				<td>Llaves</td>
-				<td>
-					<?php if ( SWPK_Ajustes::llaves_en_claro() ) : ?>
-						<span style="color:#dba617">Hay alguna sin cifrar</span>
-					<?php else : ?>
-						<span style="color:#008a20">✓ Cifradas en la base de datos</span>
-						<br><span style="color:#50575e;font-size:12px">
-							Se cifran con las claves de seguridad de este WordPress, que están en
-							<code>wp-config.php</code> y no en la base. Un respaldo de la base de datos,
-							por sí solo, no sirve para sacarlas.
-						</span>
-					<?php endif; ?>
-				</td>
-			</tr>
-			<tr><td>Versión del plugin</td><td><?php echo esc_html( SWPK_VERSION ); ?></td></tr>
-		</tbody>
-	</table>
 	<?php SWPK_Vista::caja_cerrar(); ?>
 
 	<form method="post" class="swpk-pasa" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
@@ -291,6 +223,97 @@ $a = SWPK_Ajustes::todos();
 		<?php SWPK_Vista::caja_cerrar(); ?>
 
 	</form>
+
+	<?php SWPK_Vista::caja_abrir( 'Cómo está el panel', esc_html( 'versión ' . SWPK_VERSION ), 'swpk-c12', true ); ?>
+	<?php // swpk-pares: nombre a la izquierda en gris, dato a la derecha en negrita, como la maqueta. ?>
+	<table class="widefat swpk-pares">
+		<tbody>
+			<tr><td>Fuente de datos</td><td><strong><?php echo esc_html( swpk_fuente()->nombre() ); ?></strong></td></tr>
+			<?php $perdidos = SWPK_Eventos::fallos(); ?>
+			<?php if ( $perdidos ) : ?>
+				<tr>
+					<td>Avisos perdidos</td>
+					<td>
+						<strong style="color:#b32d2e"><?php echo esc_html( SWPK_Vista::plural( count( $perdidos ), 'evento no se pudo guardar', 'eventos no se pudieron guardar' ) ); ?>.</strong>
+						<br><span style="font-size:12px">
+							Un panel que avisa no puede perder avisos callado. El último fue
+							<?php echo esc_html( SWPK_Frescura::fecha( (string) $perdidos[0]['cuando'] ) ); ?>:
+							<code><?php echo esc_html( (string) $perdidos[0]['error'] ); ?></code>
+						</span>
+					</td>
+				</tr>
+			<?php endif; ?>
+			<tr>
+				<td>Último dato bueno de <?php echo esc_html( swpk_fuente()->proveedor() ); ?></td>
+				<td>
+					<?php echo esc_html( SWPK_Frescura::fecha_y_edad( SWPK_Frescura::corrida() ) ); ?>
+					<?php if ( ! SWPK_Frescura::corrida_al_dia() ) : ?>
+						<br><strong style="color:#b32d2e">La corrida diaria no está pasando.</strong>
+					<?php endif; ?>
+					<?php if ( SWPK_Frescura::corrida_fallo() ) : ?>
+						<br><span style="color:#b32d2e;font-size:12px">
+							Hubo un intento posterior, el <?php echo esc_html( SWPK_Frescura::fecha( SWPK_Frescura::intento() ) ); ?>,
+							que arrancó y no trajo nada.
+						</span>
+					<?php endif; ?>
+				</td>
+			</tr>
+			<tr>
+				<td>Último intento de corrida</td>
+				<td><?php echo esc_html( SWPK_Frescura::fecha_y_edad( SWPK_Frescura::intento() ) ); ?></td>
+			</tr>
+			<tr>
+				<td>Feed de vulnerabilidades</td>
+				<td>
+					<?php
+					$wf = SWPK_Wordfence::ultima_actualizacion();
+					echo '' !== $wf
+						? esc_html( SWPK_Frescura::fecha_y_edad( $wf ) )
+						: 'nunca se ha descargado';
+					?>
+					<?php if ( '' !== $wf && ! SWPK_Frescura::feed_al_dia() ) : ?>
+						<br><strong style="color:#b32d2e">La lista está vieja.</strong>
+						<span style="font-size:12px">Una vulnerabilidad publicada estos días todavía no aparece marcada.</span>
+					<?php endif; ?>
+					<?php $proxima = SWPK_Wordfence::proxima_descarga(); ?>
+					<?php if ( $proxima > time() ) : ?>
+						<br><span style="color:#50575e;font-size:12px">
+							Próxima descarga a partir del <?php echo esc_html( SWPK_Frescura::fmt( 'j \d\e F, H:i', $proxima ) ); ?>.
+							<?php if ( SWPK_Wordfence::esperar_hasta() > time() ) : ?>
+								<strong>Wordfence pidió esperar</strong>, así que el panel no va a insistir:
+								insistir contra su límite puede terminar en que suspendan la llave.
+							<?php else : ?>
+								El feed se publica una vez al día; pedirlo más seguido no trae nada nuevo.
+							<?php endif; ?>
+						</span>
+					<?php endif; ?>
+				</td>
+			</tr>
+			<tr><td>Próxima corrida automática</td><td>
+				<?php
+				$ts = wp_next_scheduled( SWPK_Sincronizador::HOOK );
+				echo $ts ? esc_html( SWPK_Frescura::fmt( 'j M Y, H:i', gmdate( 'Y-m-d H:i:s', $ts + ( (int) get_option( 'gmt_offset' ) * 3600 ) ) ) ) : 'no programada';
+				?>
+			</td></tr>
+			<tr>
+				<td>Llaves</td>
+				<td>
+					<?php if ( SWPK_Ajustes::llaves_en_claro() ) : ?>
+						<span style="color:#dba617">Hay alguna sin cifrar</span>
+					<?php else : ?>
+						<span style="color:#008a20">✓ Cifradas en la base de datos</span>
+						<br><span style="color:#50575e;font-size:12px">
+							Se cifran con las claves de seguridad de este WordPress, que están en
+							<code>wp-config.php</code> y no en la base. Un respaldo de la base de datos,
+							por sí solo, no sirve para sacarlas.
+						</span>
+					<?php endif; ?>
+				</td>
+			</tr>
+			<tr><td>Versión del plugin</td><td><?php echo esc_html( SWPK_VERSION ); ?></td></tr>
+		</tbody>
+	</table>
+	<?php SWPK_Vista::caja_cerrar(); ?>
 
 	<?php SWPK_Vista::rejilla_cerrar(); ?>
 </div>

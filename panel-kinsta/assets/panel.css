@@ -918,7 +918,6 @@ body[class*="panel-kinsta"] .swpk-caja .swpk-pares td:first-child {
 body[class*="panel-kinsta"] .swpk-caja .swpk-pares td:last-child {
 	text-align: right;
 	font-weight: 600;
-	white-space: nowrap;
 }
 
 body[class*="panel-kinsta"] .swpk-caja .swpk-pares tr:hover { background: transparent; }
@@ -1136,4 +1135,57 @@ body[class*="panel-kinsta"] .swpk-pastillas .button {
 	padding: 6px 14px;
 	border-radius: 999px;
 	font-size: 12.5px;
+}
+
+
+/* ──────────────────────────────────────────────────────────────────────────
+   Que ningún texto se corte.
+
+   Las tarjetas llevan `overflow: hidden` para que el contenido respete las
+   esquinas redondeadas. El precio: lo que no cabe NO se ve, y no avisa. En
+   «Cómo corre» eso dejaba frases cortadas a media palabra —«a partir del 17
+   de noviembre, 06:3»— y una llave explicada hasta «y no en».
+
+   Dos reglas lo cierran para todo el panel: las palabras largas parten en vez
+   de empujar, y una tabla que de verdad no cabe se desliza en lugar de
+   recortarse. Nada de esto depende de acordarse en cada vista.
+   ────────────────────────────────────────────────────────────────────────── */
+
+body[class*="panel-kinsta"] .swpk-caja td,
+body[class*="panel-kinsta"] .swpk-caja th,
+body[class*="panel-kinsta"] .swpk-caja p,
+body[class*="panel-kinsta"] .swpk-caja li,
+body[class*="panel-kinsta"] .swpk-renglon-nom,
+body[class*="panel-kinsta"] .swpk-renglon-sub {
+	overflow-wrap: anywhere;
+	word-break: break-word;
+}
+
+/* `code` y las direcciones son lo que más se pasa de largo. */
+body[class*="panel-kinsta"] .wrap code,
+body[class*="panel-kinsta"] .wrap .swpk-mono {
+	overflow-wrap: anywhere;
+}
+
+/* Una tabla que no cabe se desliza. Vale para las tarjetas estrechas —c5, c7—
+   donde una tabla de cinco columnas no entra en pantallas chicas. */
+body[class*="panel-kinsta"] .swpk-caja-cuerpo.swpk-sin-aire { overflow-x: auto; }
+
+/* ── Filas de dato, las de la maqueta ───────────────────────────────────── */
+
+body[class*="panel-kinsta"] .swpk-par {
+	display: flex;
+	justify-content: space-between;
+	gap: 16px;
+	padding: 10px 0;
+	border-bottom: 1px solid #f3f4f9;
+	font-size: 13.5px;
+}
+
+body[class*="panel-kinsta"] .swpk-par:last-of-type { border-bottom: 0; }
+body[class*="panel-kinsta"] .swpk-par .swpk-q { color: var(--swpk-apagado); }
+
+body[class*="panel-kinsta"] .swpk-par .swpk-v {
+	font-weight: 600;
+	text-align: right;
 }
