@@ -182,6 +182,7 @@ $hay_filtro_equipo = ( '' !== $perfil_pedido || '' !== $busca_persona );
 							</option>
 						<?php endforeach; ?>
 					</select>
+					<p class="description">El perfil decide qué ve y qué no.</p>
 				</td>
 			</tr>
 		</table>

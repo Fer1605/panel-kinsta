@@ -93,36 +93,45 @@ $accion = static fn( $a ) => wp_nonce_url( admin_url( 'admin-post.php?action=' .
 	<table class="widefat striped swpk-tabla" style="max-width:980px">
 		<thead>
 			<tr>
-				<th style="width:200px">El aviso</th>
+				<th style="width:190px">El aviso</th>
+				<th style="width:150px">Cuándo</th>
 				<th>Qué dice</th>
-				<th style="width:180px">Cuándo</th>
 				<th style="width:160px"></th>
 			</tr>
 		</thead>
 		<tbody>
 			<tr>
-				<td><strong>Semanal a las asesoras</strong><br><span style="color:#50575e;font-size:12px">lunes 7:00</span></td>
+				<td><strong>Semanal a las asesoras</strong></td>
+				<td>
+					Cada lunes, 7:00<br>
+					<span class="swpk-gris" style="font-size:12px">próximo: <?php echo $proximos['Semanal a las asesoras'] ? esc_html( SWPK_Frescura::fmt( 'j M, H:i', $proximos['Semanal a las asesoras'] ) ) : '<span style="color:#d63638">sin programar</span>'; ?></span>
+				</td>
 				<td>
 					A cada asesora, solo sus sitios con algo pendiente, con el texto listo para reenviarle
 					al cliente. Copia a la dirección de ventas si está configurada.
 				</td>
-				<td><?php echo $proximos['Semanal a las asesoras'] ? esc_html( SWPK_Frescura::fmt( 'j M, H:i', $proximos['Semanal a las asesoras'] ) ) : '<span style="color:#d63638">sin programar</span>'; ?></td>
 				<td><a class="button" href="<?php echo esc_url( $accion( 'swpk_correo_semanal' ) ); ?>">Mandar una prueba</a></td>
 			</tr>
 			<tr>
-				<td><strong>Diario a soporte</strong><br><span style="color:#50575e;font-size:12px">todos los días 7:30</span></td>
+				<td><strong>Diario a soporte</strong></td>
+				<td>
+					Cada día, 7:30<br>
+					<span class="swpk-gris" style="font-size:12px">próximo: <?php echo $proximos['Diario a soporte'] ? esc_html( SWPK_Frescura::fmt( 'j M, H:i', $proximos['Diario a soporte'] ) ) : '<span style="color:#d63638">sin programar</span>'; ?></span>
+				</td>
 				<td>Lo que cambió en las últimas 24 horas en toda la cartera.</td>
-				<td><?php echo $proximos['Diario a soporte'] ? esc_html( SWPK_Frescura::fmt( 'j M, H:i', $proximos['Diario a soporte'] ) ) : '<span style="color:#d63638">sin programar</span>'; ?></td>
-				<td><a class="button" href="<?php echo esc_url( $accion( 'swpk_correo_diario' ) ); ?>">Generarlo ahora</a></td>
+				<td><a class="button" href="<?php echo esc_url( $accion( 'swpk_correo_diario' ) ); ?>">Mandar una prueba</a></td>
 			</tr>
 			<tr>
-				<td><strong>Mensual a los clientes</strong><br><span style="color:#50575e;font-size:12px">día 1 a las 8:00</span></td>
+				<td><strong>Mensual a los clientes</strong></td>
+				<td>
+					El día 1, 8:00<br>
+					<span class="swpk-gris" style="font-size:12px">próximo: <?php echo $proximos['Mensual a los clientes'] ? esc_html( SWPK_Frescura::fmt( 'j M, H:i', $proximos['Mensual a los clientes'] ) ) : '<span style="color:#d63638">sin programar</span>'; ?></span>
+				</td>
 				<td>
 					A los administradores de cada sitio que administramos nosotros, excluyendo las
 					direcciones propias. Cuántas veces se actualizó su sitio y qué se mantuvo al día.
 				</td>
-				<td><?php echo $proximos['Mensual a los clientes'] ? esc_html( SWPK_Frescura::fmt( 'j M, H:i', $proximos['Mensual a los clientes'] ) ) : '<span style="color:#d63638">sin programar</span>'; ?></td>
-				<td><a class="button" href="<?php echo esc_url( $accion( 'swpk_correo_mensual' ) ); ?>">Generarlo ahora</a></td>
+				<td><a class="button" href="<?php echo esc_url( $accion( 'swpk_correo_mensual' ) ); ?>">Mandar una prueba</a></td>
 			</tr>
 		</tbody>
 	</table>
