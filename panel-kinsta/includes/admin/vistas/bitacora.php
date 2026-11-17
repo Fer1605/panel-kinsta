@@ -196,9 +196,9 @@ $hubo_alguna_vez = SWPK_Bitacora::hay_alguno();
 			<thead>
 				<tr>
 					<th style="width:140px">Cuándo</th>
-					<th style="width:110px">A quién</th>
+					<th style="width:110px">Tipo</th>
 					<th>Sitio</th>
-					<th>Destinatarios</th>
+					<th>A quién</th>
 					<th>Asunto</th>
 					<th style="width:120px">Resultado</th>
 					<th style="width:90px"></th>

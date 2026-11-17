@@ -164,10 +164,10 @@ $fallidos  = SWPK_Accesos::fallidos_recientes( 24 );
 			<thead>
 				<tr>
 					<th style="width:160px">Cuándo</th>
-					<th style="width:150px">Qué pasó</th>
-					<th>Usuario</th>
+					<th style="width:150px">Qué hizo</th>
+					<th>Quién</th>
 					<th style="width:160px">Desde</th>
-					<th>Navegador</th>
+					<th>Detalle</th>
 				</tr>
 			</thead>
 			<tbody>

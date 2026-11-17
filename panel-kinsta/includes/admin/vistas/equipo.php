@@ -108,9 +108,9 @@ $hay_filtro_equipo = ( '' !== $perfil_pedido || '' !== $busca_persona );
 		<table class="widefat striped swpk-tabla">
 			<thead>
 				<tr>
-					<th>Persona</th>
+					<th>Nombre</th>
 					<th style="width:180px">Perfil</th>
-					<th style="width:160px">Sitios asignados</th>
+					<th style="width:160px">Qué alcanza</th>
 					<th style="width:170px">Última entrada</th>
 					<th style="width:110px"></th>
 				</tr>
@@ -185,7 +185,7 @@ $hay_filtro_equipo = ( '' !== $perfil_pedido || '' !== $busca_persona );
 				</td>
 			</tr>
 		</table>
-		<?php submit_button( 'Crear acceso' ); ?>
+		<?php submit_button( 'Crear el acceso' ); ?>
 	</form>
 	<?php SWPK_Vista::caja_cerrar(); ?>
 

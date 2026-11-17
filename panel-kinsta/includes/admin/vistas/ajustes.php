@@ -89,7 +89,7 @@ $a = SWPK_Ajustes::todos();
 
 		<p>
 			<a class="button" href="<?php echo esc_url( wp_nonce_url( admin_url( 'admin-post.php?action=swpk_probar' ), 'swpk_probar' ) ); ?>">
-				Probar <?php echo esc_html( swpk_fuente()->nombre() ); ?>
+				Probar la conexión
 			</a>
 			<span class="swpk-gris">no guarda nada: solo pregunta si la llave sirve.</span>
 		</p>
@@ -98,6 +98,13 @@ $a = SWPK_Ajustes::todos();
 	</form>
 
 	<?php SWPK_Vista::caja_abrir( 'Cómo corre', '', 'swpk-c6', true ); ?>
+	<?php if ( SWPK_Perfiles::puede( SWPK_Perfiles::ADMINISTRAR ) ) : ?>
+		<?php // Los dos botones que la maqueta pone en esta tarjeta. ?>
+		<p style="padding:16px 20px 0;margin:0">
+			<a class="button button-primary" href="<?php echo esc_url( wp_nonce_url( admin_url( 'admin-post.php?action=swpk_correr' ), 'swpk_correr' ) ); ?>">Correr ahora</a>
+			<a class="button" href="<?php echo esc_url( wp_nonce_url( admin_url( 'admin-post.php?action=swpk_sondear' ), 'swpk_sondear' ) ); ?>" style="margin-left:6px">Sondear ahora</a>
+		</p>
+	<?php endif; ?>
 	<?php // swpk-pares: nombre a la izquierda en gris, dato a la derecha en negrita, como la maqueta. ?>
 	<table class="widefat swpk-pares">
 		<tbody>
@@ -212,9 +219,9 @@ $a = SWPK_Ajustes::todos();
 			<table class="widefat striped swpk-tabla" style="max-width:760px">
 				<thead>
 					<tr>
-						<th>Etiqueta en <?php echo esc_html( SWPK_Admin::proveedor() ); ?></th>
+						<th>Grupo</th>
 						<th style="width:90px">Sitios</th>
-						<th style="width:210px">Grupo del panel</th>
+						<th style="width:210px">Qué quiere decir</th>
 					</tr>
 				</thead>
 				<tbody>
@@ -280,7 +287,7 @@ $a = SWPK_Ajustes::todos();
 				<p class="description">Le llega el diario con todo lo técnico.</p></td>
 			</tr>
 		</table>
-		<?php submit_button( 'Guardar ajustes' ); ?>
+		<?php submit_button( 'Guardar' ); ?>
 		<?php SWPK_Vista::caja_cerrar(); ?>
 
 	</form>

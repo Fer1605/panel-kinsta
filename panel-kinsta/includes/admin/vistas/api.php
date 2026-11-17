@@ -79,7 +79,7 @@ $llamadas = array_slice( $llamadas, 0, 25 );
 	</p>
 
 	<ol style="max-width:860px;color:#3c434a;line-height:1.7">
-		<li><strong>Crear la llave</strong> aquí arriba. La ventana entrega la dirección, con su botón
+		<li><strong>Crear una llave</strong> aquí arriba. La ventana entrega la dirección, con su botón
 			de copiar. <strong>Se enseña una sola vez.</strong></li>
 		<li>En Claude Desktop: <strong>Ajustes → Conectores → Agregar conector personalizado</strong>.</li>
 		<li>Ponerle un <strong>nombre</strong> —por ejemplo <em>Panel Kinsta</em>— y pegar la
@@ -119,7 +119,7 @@ $llamadas = array_slice( $llamadas, 0, 25 );
 		<thead>
 			<tr>
 				<th style="width:210px">Lo que puede consultar</th>
-				<th>Qué contesta</th>
+				<th>Qué devuelve</th>
 			</tr>
 		</thead>
 		<tbody>
@@ -152,7 +152,15 @@ $llamadas = array_slice( $llamadas, 0, 25 );
 
 	<p>Todas las rutas salen de aquí:</p>
 
-	<p><code style="display:inline-block;padding:8px 12px;background:#f6f7f7;border:1px solid #dcdcde;font-size:14px"><?php echo esc_html( $base ); ?></code></p>
+	<p>
+		<code id="swpk-base" style="display:inline-block;padding:8px 12px;background:#f6f7f7;border:1px solid #dcdcde;font-size:14px"><?php echo esc_html( $base ); ?></code>
+		<?php // El botón de la maqueta. Si el navegador no deja copiar —pasa fuera de https— lo dice en vez de fingir que copió. ?>
+		<button type="button" class="button" style="margin-left:6px" onclick="
+			navigator.clipboard &amp;&amp; navigator.clipboard.writeText(document.getElementById('swpk-base').textContent.trim())
+				.then(function(){ this.textContent = 'Copiada'; }.bind(this))
+				.catch(function(){ this.textContent = 'Copiala a mano'; }.bind(this));
+		">Copiar</button>
+	</p>
 
 	<?php SWPK_Vista::caja_cerrar(); ?>
 
@@ -363,8 +371,8 @@ $llamadas = array_slice( $llamadas, 0, 25 );
 		<table class="widefat striped swpk-tabla" style="max-width:860px">
 			<thead>
 				<tr>
-					<th>Llave</th>
-					<th style="width:200px">Usuario</th>
+					<th>Nombre</th>
+					<th style="width:200px">Creada</th>
 					<th style="width:160px">Última consulta</th>
 					<th style="width:110px"></th>
 				</tr>
@@ -382,8 +390,18 @@ $llamadas = array_slice( $llamadas, 0, 25 );
 				);
 				?>
 				<tr>
-					<td><strong><?php echo esc_html( $u->display_name ); ?></strong></td>
-					<td><code><?php echo esc_html( $u->user_login ); ?></code></td>
+					<td>
+						<strong><?php echo esc_html( $u->display_name ); ?></strong><br>
+						<code class="swpk-gris"><?php echo esc_html( $u->user_login ); ?></code>
+					</td>
+					<?php
+					// La maqueta llama «Creada» a esta columna, así que tiene que
+					// decir cuándo se creó la llave y no quién es. La fecha de alta
+					// del usuario ES esa fecha: la llave y el usuario nacen juntos.
+					?>
+					<td class="swpk-gris">
+						<?php echo esc_html( SWPK_Frescura::fmt( 'j M Y', (string) $u->user_registered ) ); ?>
+					</td>
 					<td class="swpk-gris">
 						<?php echo esc_html( '' !== $ultima ? SWPK_Frescura::hace( $ultima ) : 'nunca' ); ?>
 					</td>
@@ -418,7 +436,7 @@ $llamadas = array_slice( $llamadas, 0, 25 );
 		<thead>
 			<tr>
 				<th style="width:60px">Cómo</th>
-				<th style="width:230px">Ruta</th>
+				<th style="width:230px">La ruta</th>
 				<th>Qué contesta</th>
 				<th style="width:110px">Quién puede</th>
 				<th style="width:190px">Se le puede pedir</th>
@@ -465,7 +483,7 @@ $llamadas = array_slice( $llamadas, 0, 25 );
 				<option value="<?php echo esc_attr( $r['ruta'] ); ?>"><?php echo esc_html( $r['ruta'] ); ?></option>
 			<?php endforeach; ?>
 		</select>
-		<button class="button" id="swpk-probar">Preguntar</button>
+		<button class="button" id="swpk-probar">Probar</button>
 		<span class="swpk-gris" id="swpk-estado"></span>
 	</p>
 

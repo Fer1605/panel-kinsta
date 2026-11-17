@@ -231,12 +231,13 @@ $historial = array_filter(
 			<thead>
 				<tr>
 					<th>Sitio</th>
-					<th style="width:110px">Estado</th>
+					<th style="width:120px">Grupo</th>
+					<th style="width:110px">Ahora</th>
 					<th style="width:80px">Respuesta</th>
-					<th style="width:90px">Tiempo</th>
+					<th style="width:90px">Tarda</th>
 					<th>Detalle</th>
 					<th style="width:150px">Desde</th>
-					<th style="width:120px">Caídas del mes</th>
+					<th style="width:120px">Caídas este mes</th>
 				</tr>
 			</thead>
 			<tbody>
@@ -257,7 +258,8 @@ $historial = array_filter(
 							<?php echo esc_html( $e->url ); ?>
 						</a>
 					</td>
-					<td><span class="swpk-nivel" style="background:<?php echo esc_attr( $color ); ?>"><?php echo esc_html( $texto ); ?></span></td>
+					<td><?php echo SWPK_Admin::grupo_badge( $grupo_de[ (string) $e->sitio_id ] ?? '' ); ?></td>
+					<td><span class="swpk-nivel" style="background:<?php echo esc_attr( $color ); ?>;color:#fff;border-color:<?php echo esc_attr( $color ); ?>"><?php echo esc_html( $texto ); ?></span></td>
 					<td class="swpk-mono"><?php echo $e->codigo ? (int) $e->codigo : '—'; ?></td>
 					<td class="swpk-mono"><?php echo $e->ms ? esc_html( number_format( $e->ms / 1000, 2 ) ) . ' s' : '—'; ?></td>
 					<td style="color:<?php echo 'abajo' === $e->estado ? '#b32d2e' : '#50575e'; ?>">

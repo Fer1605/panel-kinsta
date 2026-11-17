@@ -132,7 +132,7 @@ $url_de = static fn( string $c ) => add_query_arg(
 	</table>
 
 	<p>
-		<?php submit_button( 'Guardar la redacción', 'primary', 'submit', false ); ?>
+		<?php submit_button( 'Guardar la plantilla', 'primary', 'submit', false ); ?>
 
 		<a class="button" style="margin-left:6px"
 			href="<?php echo esc_url( add_query_arg( [ 'page' => 'panel-kinsta-correos', 'seccion' => 'envios' ], admin_url( 'admin.php' ) ) ); ?>">

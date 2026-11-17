@@ -43,10 +43,10 @@ $norma  = '' !== $editar ? SWPK_Normas::una( $editar ) : null;
 <table class="widefat striped" style="margin-top:10px">
 	<thead>
 		<tr>
-			<th style="width:34%">Norma</th>
+			<th style="width:34%">La norma</th>
 			<th style="width:90px">Gravedad</th>
-			<th style="width:170px">¿Quién la revisa?</th>
-			<th>Aplica a</th>
+			<th style="width:170px">Quién la revisa</th>
+			<th>Estado</th>
 			<th style="width:150px"></th>
 		</tr>
 	</thead>

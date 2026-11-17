@@ -170,8 +170,8 @@ SWPK_Vista::caja_abrir(
 				<th style="width:150px">Cuándo</th>
 				<th style="width:200px">Sitio</th>
 				<th style="width:130px">Grupo</th>
-				<th style="width:170px">Qué pasó</th>
-				<th>Detalle</th>
+				<th style="width:170px">Tipo</th>
+				<th>Qué pasó</th>
 			</tr>
 		</thead>
 		<tbody>

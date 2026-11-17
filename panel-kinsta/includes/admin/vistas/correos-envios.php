@@ -93,9 +93,9 @@ $accion = static fn( $a ) => wp_nonce_url( admin_url( 'admin-post.php?action=' .
 	<table class="widefat striped swpk-tabla" style="max-width:980px">
 		<thead>
 			<tr>
-				<th style="width:200px">Correo</th>
-				<th>A quién</th>
-				<th style="width:180px">Próximo</th>
+				<th style="width:200px">El aviso</th>
+				<th>Qué dice</th>
+				<th style="width:180px">Cuándo</th>
 				<th style="width:160px"></th>
 			</tr>
 		</thead>
@@ -107,7 +107,7 @@ $accion = static fn( $a ) => wp_nonce_url( admin_url( 'admin-post.php?action=' .
 					al cliente. Copia a la dirección de ventas si está configurada.
 				</td>
 				<td><?php echo $proximos['Semanal a las asesoras'] ? esc_html( SWPK_Frescura::fmt( 'j M, H:i', $proximos['Semanal a las asesoras'] ) ) : '<span style="color:#d63638">sin programar</span>'; ?></td>
-				<td><a class="button" href="<?php echo esc_url( $accion( 'swpk_correo_semanal' ) ); ?>">Generarlo ahora</a></td>
+				<td><a class="button" href="<?php echo esc_url( $accion( 'swpk_correo_semanal' ) ); ?>">Mandar una prueba</a></td>
 			</tr>
 			<tr>
 				<td><strong>Diario a soporte</strong><br><span style="color:#50575e;font-size:12px">todos los días 7:30</span></td>

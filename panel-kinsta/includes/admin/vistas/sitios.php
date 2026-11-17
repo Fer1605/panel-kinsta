@@ -205,13 +205,15 @@ $volver = add_query_arg(
 			<thead>
 				<tr>
 					<th>Sitio</th>
-					<th style="width:95px">Estado</th>
+					<th style="width:120px">Grupo</th>
+					<th style="width:95px">Cómo está</th>
 					<th style="width:140px">Pendientes</th>
 					<th style="width:85px">WordPress</th>
 					<th style="width:60px">PHP</th>
 					<?php if ( SWPK_Etiquetas::es_nuestro( $tag ) ) : ?>
 						<th style="width:120px">Doble paso</th>
 					<?php endif; ?>
+					<th style="width:120px">Revisado</th>
 					<th style="width:165px">Asesora</th>
 					<?php if ( $asignar ) : ?>
 						<th style="width:190px">Contacto del cliente</th>
@@ -238,6 +240,7 @@ $volver = add_query_arg(
 						</a><br>
 						<span class="swpk-mono" style="color:#50575e"><?php echo esc_html( $s->dominio ); ?></span>
 					</td>
+					<td><?php echo SWPK_Admin::grupo_badge( (string) $s->tag ); ?></td>
 					<td><?php echo wp_kses_post( SWPK_Admin::nivel_badge( $nivel_s ) ); ?></td>
 					<td>
 						<?php if ( SWPK_Riesgo::SIN_DATOS === $nivel_s ) : ?>
@@ -265,6 +268,15 @@ $volver = add_query_arg(
 							<?php endif; ?>
 						</td>
 					<?php endif; ?>
+					<td class="swpk-gris">
+						<?php
+						echo esc_html(
+							! empty( $s->inventario_en )
+								? SWPK_Frescura::fmt( 'j M, H:i', (string) $s->inventario_en )
+								: '—'
+						);
+						?>
+					</td>
 					<td>
 						<?php if ( $asignar ) : ?>
 							<select name="asesora[<?php echo esc_attr( $s->sitio_id ); ?>]" style="width:100%">
