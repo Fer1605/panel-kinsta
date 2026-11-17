@@ -43,35 +43,50 @@ $accion = static fn( $a ) => wp_nonce_url( admin_url( 'admin-post.php?action=' .
 
 	<?php SWPK_Vista::rejilla_abrir(); ?>
 
-	<?php SWPK_Vista::caja_abrir( 'El interruptor', '', 'swpk-c5', true ); ?>
-	<table class="widefat striped" style="max-width:760px">
-		<tbody>
-			<tr>
-				<td style="width:230px"><strong>Modo</strong></td>
-				<td>
-					<?php echo $en_prueba ? 'Prueba: se arman y se guardan, no se envían' : 'Real: los correos salen'; ?>
-				</td>
-				<td style="width:200px;text-align:right">
-					<a class="button <?php echo $en_prueba ? 'button-primary' : ''; ?>"
-						href="<?php echo esc_url( $accion( 'swpk_modo_envio' ) ); ?>"
-						<?php if ( $en_prueba ) : ?>
-							onclick="return confirm('A partir de ahora los correos van a salir de verdad, a clientes reales. ¿Seguro?');"
-						<?php endif; ?>>
-						<?php echo $en_prueba ? 'Activar el envío real' : 'Volver a modo de prueba'; ?>
-					</a>
-				</td>
-			</tr>
-			<tr>
-				<td><strong>Envíos</strong></td>
-				<td><?php echo $activos ? 'Encendidos' : 'Apagados: no sale nada'; ?></td>
-				<td style="text-align:right">
-					<a class="button" href="<?php echo esc_url( $accion( 'swpk_envios' ) ); ?>">
-						<?php echo $activos ? 'Apagar todo' : 'Encender'; ?>
-					</a>
-				</td>
-			</tr>
-		</tbody>
-	</table>
+	<?php SWPK_Vista::caja_abrir( 'El interruptor', '', 'swpk-c5' ); ?>
+
+	<?php
+	// Las dos palancas de la maqueta. Cada una es un enlace que dispara su
+	// acción con su nonce, no un <input>: el estado no se guarda escribiendo
+	// en un formulario, se cambia pulsando. Y la de salir de modo de prueba
+	// pregunta antes, porque al otro lado hay clientes de verdad.
+	?>
+	<a class="swpk-interruptor<?php echo $activos ? ' swpk-encendido' : ''; ?>"
+		href="<?php echo esc_url( $accion( 'swpk_envios' ) ); ?>">
+		<span class="swpk-palanca"></span>
+		<span>
+			<span class="swpk-que">
+				<?php echo $activos ? 'Los avisos están encendidos' : 'Los avisos están apagados'; ?>
+			</span>
+			<span class="swpk-como">
+				El interruptor general. Apagarlo no borra nada: solo deja de mandar.
+				<strong><?php echo $activos ? 'Pulsa para apagarlos.' : 'Pulsa para encenderlos.'; ?></strong>
+			</span>
+		</span>
+	</a>
+
+	<a class="swpk-interruptor<?php echo $en_prueba ? '' : ' swpk-encendido swpk-ojo'; ?>"
+		href="<?php echo esc_url( $accion( 'swpk_modo_envio' ) ); ?>"
+		<?php if ( $en_prueba ) : ?>
+			onclick="return confirm('A partir de ahora los correos van a salir de verdad, a clientes reales. ¿Seguro?');"
+		<?php endif; ?>>
+		<span class="swpk-palanca"></span>
+		<span>
+			<span class="swpk-que">
+				Modo de envío: <?php echo $en_prueba ? 'prueba' : 'real'; ?>
+			</span>
+			<span class="swpk-como">
+				<?php if ( $en_prueba ) : ?>
+					En prueba los correos no salen a los clientes: se arman y se guardan en la
+					bitácora. Hay que cambiarlo a propósito.
+					<strong>Pulsa para activar el envío real.</strong>
+				<?php else : ?>
+					Los correos están saliendo a clientes de verdad.
+					<strong>Pulsa para volver a modo de prueba.</strong>
+				<?php endif; ?>
+			</span>
+		</span>
+	</a>
 	<?php SWPK_Vista::caja_cerrar(); ?>
 
 	<?php SWPK_Vista::caja_abrir( 'Qué sale, y a quién', '', 'swpk-c7', true ); ?>

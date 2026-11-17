@@ -276,9 +276,7 @@ $nombres = SWPK_Riesgo::nombres();
 						<?php endif; ?>
 					</td>
 					<td>
-						<span class="swpk-nivel" style="color:<?php echo esc_attr( $colores[ $f['nivel'] ] ?? '' ); ?>">
-							<?php echo esc_html( $nombres[ $f['nivel'] ] ?? $f['nivel'] ); ?>
-						</span>
+						<?php echo wp_kses_post( SWPK_Admin::nivel_badge( (string) $f['nivel'] ) ); ?>
 						<?php if ( 'actualizacion_pendiente' === $f['motivo'] ) : ?>
 							<br><span class="swpk-gris">solo actualización</span>
 						<?php endif; ?>

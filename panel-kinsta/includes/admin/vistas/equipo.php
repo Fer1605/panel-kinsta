@@ -189,20 +189,24 @@ $hay_filtro_equipo = ( '' !== $perfil_pedido || '' !== $busca_persona );
 	</form>
 	<?php SWPK_Vista::caja_cerrar(); ?>
 
-	<?php SWPK_Vista::caja_abrir( 'Qué ve cada perfil', '', 'swpk-c12' ); ?>
-	<div class="swpk-tarjetas">
+	<?php SWPK_Vista::caja_abrir( 'Qué ve cada perfil', esc_html( SWPK_Vista::plural( count( $roles ), 'perfil', 'perfiles' ) ), 'swpk-c12' ); ?>
+	<div class="swpk-perfiles">
 		<?php foreach ( $roles as $slug => $nombre ) : ?>
-			<div class="swpk-tarjeta" style="min-width:250px">
-				<p style="font-weight:600;margin:0 0 10px"><?php echo esc_html( $nombre ); ?></p>
-				<ul style="margin:0;color:#1d2327">
+			<div class="swpk-perfil">
+				<h4><?php echo esc_html( $nombre ); ?></h4>
+
+				<p class="swpk-titulin">Ve</p>
+				<ul>
 					<?php foreach ( $descrip[ $slug ]['ve'] as $x ) : ?>
-						<li style="margin-bottom:3px">✓ <?php echo esc_html( $x ); ?></li>
+						<li><?php echo esc_html( $x ); ?></li>
 					<?php endforeach; ?>
 				</ul>
+
 				<?php if ( $descrip[ $slug ]['no_ve'] ) : ?>
-					<ul style="margin:10px 0 0;color:#8c8f94">
+					<p class="swpk-titulin">No ve</p>
+					<ul class="swpk-no">
 						<?php foreach ( $descrip[ $slug ]['no_ve'] as $x ) : ?>
-							<li style="margin-bottom:3px">✕ <?php echo esc_html( $x ); ?></li>
+							<li><?php echo esc_html( $x ); ?></li>
 						<?php endforeach; ?>
 					</ul>
 				<?php endif; ?>

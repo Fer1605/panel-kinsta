@@ -238,11 +238,15 @@ class SWPK_Admin {
 	}
 
 	public static function nivel_badge( string $nivel ): string {
-		$colores = SWPK_Riesgo::colores();
 		$nombres = SWPK_Riesgo::nombres();
+
+		// El color lo pone la clase, no un `style` en línea. Antes era el color
+		// pleno de SWPK_Riesgo::colores() con el texto en blanco; la maqueta las
+		// quiere en fondo suave, y eso no se puede decir desde aquí sin repetir
+		// seis parejas de colores que ya viven en la hoja de estilos.
 		return sprintf(
-			'<span class="swpk-nivel" style="background:%s">%s</span>',
-			esc_attr( $colores[ $nivel ] ?? '#50575e' ),
+			'<span class="swpk-nivel swpk-nivel-%s">%s</span>',
+			esc_attr( $nivel ),
 			esc_html( $nombres[ $nivel ] ?? $nivel )
 		);
 	}

@@ -268,9 +268,8 @@ $bien_hoy = $resumen_dia[ $hoy ] ?? [ 'sitios' => 0, 'modulos' => 0 ];
 					'sub'  => SWPK_Vista::recortar( $sub, 95 ),
 					'url'  => SWPK_Vista::url_del_sitio( (string) $u['sitio_id'], 'panel-kinsta' ),
 					'dato' => 'caido' === $u['nivel']
-						? '<span class="swpk-nivel" style="color:' . esc_attr( $colores[ SWPK_Riesgo::CRITICO ] ) . '">Caído</span>'
-						: '<span class="swpk-nivel" style="color:' . esc_attr( $colores[ $u['nivel'] ] ?? '' ) . '">'
-							. esc_html( $nombres[ $u['nivel'] ] ?? $u['nivel'] ) . '</span>',
+						? '<span class="swpk-nivel swpk-nivel-caido">Caído</span>'
+						: SWPK_Admin::nivel_badge( (string) $u['nivel'] ),
 				];
 			}
 
