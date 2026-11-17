@@ -103,8 +103,7 @@ SWPK_Vista::caja_abrir(
 ?>
 
 <form method="get" class="swpk-rango">
-	<input type="hidden" name="page" value="panel-kinsta-bitacora">
-	<input type="hidden" name="seccion" value="movimientos">
+	<input type="hidden" name="page" value="panel-kinsta-movimientos">
 	<label>Desde<br><input type="date" name="desde" value="<?php echo esc_attr( $desde ); ?>"></label>
 	<label>Hasta<br><input type="date" name="hasta" value="<?php echo esc_attr( $hasta ); ?>"></label>
 	<label>Qué pasó<br>
@@ -132,7 +131,7 @@ SWPK_Vista::caja_abrir(
 	</label>
 	<button class="button">Filtrar</button>
 	<?php if ( $tipo || '' !== $busqueda || '' !== $sitio_pedido ) : ?>
-		<a class="button" href="<?php echo esc_url( add_query_arg( [ 'page' => 'panel-kinsta-bitacora', 'seccion' => 'movimientos', 'desde' => $desde, 'hasta' => $hasta ], admin_url( 'admin.php' ) ) ); ?>">Quitar filtros</a>
+		<a class="button" href="<?php echo esc_url( add_query_arg( [ 'page' => 'panel-kinsta-movimientos', 'desde' => $desde, 'hasta' => $hasta ], admin_url( 'admin.php' ) ) ); ?>">Quitar filtros</a>
 	<?php endif; ?>
 </form>
 
@@ -181,7 +180,7 @@ SWPK_Vista::caja_abrir(
 				<td class="swpk-gris"><?php echo esc_html( SWPK_Frescura::fmt( 'j M Y, H:i', $e->ocurrio_en ) ); ?></td>
 				<td>
 					<?php if ( $s ) : ?>
-						<a href="<?php echo esc_url( SWPK_Vista::url_del_sitio( (string) $e->sitio_id, 'panel-kinsta-bitacora' ) ); ?>">
+						<a href="<?php echo esc_url( SWPK_Vista::url_del_sitio( (string) $e->sitio_id, 'panel-kinsta-movimientos' ) ); ?>">
 							<?php echo esc_html( $s->nombre_visible ); ?>
 						</a>
 					<?php else : ?>

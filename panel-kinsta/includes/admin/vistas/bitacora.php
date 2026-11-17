@@ -40,12 +40,13 @@ if ( $ver ) {
 	}
 }
 
-// Abre en Movimientos a propósito: es la pestaña que contesta "¿qué pasó?",
-// que es con lo que uno entra. Notificaciones contesta "¿a quién se le avisó?",
-// que se consulta cuando alguien reclama, no todos los días.
-$seccion = isset( $_GET['seccion'] ) ? sanitize_key( (string) $_GET['seccion'] ) : 'movimientos';
+// Movimientos se mudó a su propia entrada del menú, así que esta pantalla ya
+// solo es Notificaciones. Las dos pastillas se quedan: son dos preguntas
+// vecinas —«¿qué pasó?» y «¿a quién se le avisó?»— y saltar de una a otra es
+// la mitad del trabajo.
+$seccion = 'notificaciones';
 $url_sec = static fn( string $s ) => add_query_arg(
-	[ 'page' => 'panel-kinsta-bitacora', 'seccion' => $s ],
+	[ 'page' => 'movimientos' === $s ? 'panel-kinsta-movimientos' : 'panel-kinsta-bitacora' ],
 	admin_url( 'admin.php' )
 );
 
@@ -99,13 +100,6 @@ $hubo_alguna_vez = SWPK_Bitacora::hay_alguno();
 	?>
 	<?php SWPK_Admin::mostrar_mensaje(); ?>
 	<?php SWPK_Admin::tira_de_perfil(); ?>
-
-	<?php if ( 'movimientos' === $seccion ) : ?>
-		<?php require SWPK_RUTA . 'includes/admin/vistas/bitacora-movimientos.php'; ?>
-		<p class="swpk-atribucion"><?php echo wp_kses_post( SWPK_Wordfence::atribucion() ); ?></p>
-		</div>
-		<?php return; ?>
-	<?php endif; ?>
 
 	<p style="max-width:820px;color:#3c434a">
 		Todo lo que el panel notifica queda aquí con su fecha, su destinatario y su contenido. Esto

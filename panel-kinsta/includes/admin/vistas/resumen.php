@@ -302,7 +302,7 @@ $bien_hoy = $resumen_dia[ $hoy ] ?? [ 'sitios' => 0, 'modulos' => 0 ];
 				'Novedades',
 				sprintf(
 					'<a href="%s">Ver todo</a>',
-					esc_url( admin_url( 'admin.php?page=panel-kinsta-bitacora&seccion=movimientos' ) )
+					esc_url( admin_url( 'admin.php?page=panel-kinsta-movimientos' ) )
 				),
 				'swpk-c4',
 				true

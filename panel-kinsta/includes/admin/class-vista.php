@@ -244,6 +244,7 @@ class SWPK_Vista {
 		'panel-kinsta-sitios'           => 'Volver a Sitios',
 		'panel-kinsta-vulnerabilidades' => 'Volver a Vulnerabilidades',
 		'panel-kinsta-bitacora'         => 'Volver a Bitácora',
+		'panel-kinsta-movimientos'      => 'Volver a Movimientos',
 	];
 
 	/**
@@ -275,13 +276,6 @@ class SWPK_Vista {
 
 		$texto = self::ORIGENES[ $origen ];
 
-		// La Bitácora son dos pestañas y no es lo mismo volver a una que a la
-		// otra: el botón dice a cuál.
-		if ( 'panel-kinsta-bitacora' === $origen ) {
-			$texto = 'notificaciones' === ( $args['seccion'] ?? 'movimientos' )
-				? 'Volver a Notificaciones'
-				: 'Volver a Movimientos';
-		}
 
 		return [
 			'url'   => add_query_arg( $args, admin_url( 'admin.php' ) ),

@@ -87,6 +87,12 @@ class SWPK_Admin {
 		add_submenu_page( self::SLUG, 'Seguridad', 'Seguridad', $ver, self::SLUG . '-seguridad', [ __CLASS__, 'pantalla_seguridad' ] );
 		add_submenu_page( self::SLUG, 'Caídas', 'Caídas', $tecnico, self::SLUG . '-caidas', [ __CLASS__, 'pantalla_caidas' ] );
 
+		// Movimientos tiene entrada propia, como en la maqueta aprobada. Era
+		// una pestaña dentro de Bitácora, y ahí no se encontraba: Bitácora
+		// contesta «¿a quién se le avisó?» y esto contesta «¿qué pasó?», que
+		// es la pregunta de todos los días.
+		add_submenu_page( self::SLUG, 'Movimientos', 'Movimientos', $ver, self::SLUG . '-movimientos', [ __CLASS__, 'pantalla_movimientos' ] );
+
 		// La ficha de un sitio no va en el menú: se llega desde las listas.
 		add_submenu_page( null, 'Sitio', 'Sitio', $ver, self::SLUG . '-sitio', [ __CLASS__, 'pantalla_sitio' ] );
 		add_submenu_page( null, 'Reporte', 'Reporte', $ver, self::SLUG . '-reporte', [ __CLASS__, 'pantalla_reporte' ] );
@@ -344,6 +350,13 @@ class SWPK_Admin {
 			wp_die( 'Sin permiso.' );
 		}
 		require SWPK_RUTA . 'includes/admin/vistas/correos.php';
+	}
+
+	public static function pantalla_movimientos(): void {
+		if ( ! self::puede_ver() ) {
+			wp_die( 'Sin permiso.' );
+		}
+		require SWPK_RUTA . 'includes/admin/vistas/movimientos.php';
 	}
 
 	public static function pantalla_bitacora(): void {
