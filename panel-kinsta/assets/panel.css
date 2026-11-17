@@ -1095,3 +1095,45 @@ body[class*="panel-kinsta"] .swpk-nivel-bajo      { background: #f1f1f5; color: 
 body[class*="panel-kinsta"] .swpk-nivel-al_dia    { background: #e8f7ec; color: #0a6c22; border-color: #b7e2c2; }
 body[class*="panel-kinsta"] .swpk-nivel-sin_datos { background: #f1f1f5; color: #6b6f80; border-color: #dcdde6; }
 body[class*="panel-kinsta"] .swpk-nivel-caido     { background: #fdecec; color: #a01b1d; border-color: #f3c6c7; }
+
+
+/* ── El veredicto ───────────────────────────────────────────────────────── */
+
+/* La maqueta lo pone entre la cabecera y las tarjetas en Caídas: una frase
+   grande que contesta la pantalla de un vistazo, en tarjeta blanca con una
+   franja de color a la izquierda. Es la única cosa que ella deja ahí arriba. */
+body[class*="panel-kinsta"] .swpk-veredicto {
+	background: #fff;
+	border: 1px solid var(--swpk-borde);
+	border-left: 5px solid var(--swpk-bien);
+	border-radius: var(--swpk-radio);
+	box-shadow: var(--swpk-sombra);
+	padding: 20px 24px;
+	margin: 0 0 18px;
+	font-size: 14px;
+}
+
+body[class*="panel-kinsta"] .swpk-veredicto h2 {
+	margin: 0;
+	font-size: 21px;
+	font-weight: 700;
+	letter-spacing: -.3px;
+}
+
+body[class*="panel-kinsta"] .swpk-veredicto p {
+	margin: 5px 0 0;
+	color: var(--swpk-apagado);
+	font-size: 13.5px;
+	max-width: 70ch;
+}
+
+body[class*="panel-kinsta"] .swpk-veredicto-mal { border-left-color: var(--swpk-critico); }
+body[class*="panel-kinsta"] .swpk-veredicto-ciego { border-left-color: var(--swpk-bajo); }
+
+/* La pastilla que en realidad es un botón: «Sondear ahora» al lado de
+   «Sondeo automático», como en la maqueta. */
+body[class*="panel-kinsta"] .swpk-pastillas .button {
+	padding: 6px 14px;
+	border-radius: 999px;
+	font-size: 12.5px;
+}

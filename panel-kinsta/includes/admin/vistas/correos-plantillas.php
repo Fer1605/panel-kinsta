@@ -56,7 +56,7 @@ $url_de = static fn( string $c ) => add_query_arg(
 	</p>
 </div>
 
-<?php SWPK_Vista::caja_abrir( 'Qué aviso' ); ?>
+<?php SWPK_Vista::caja_abrir( 'Las plantillas de los avisos', esc_html( SWPK_Vista::plural( count( $catalogo ), 'plantilla', 'plantillas' ) ) ); ?>
 
 <p class="swpk-filtros-estado">
 	<?php foreach ( $catalogo as $clave => $c ) : ?>

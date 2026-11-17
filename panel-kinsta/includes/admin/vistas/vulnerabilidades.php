@@ -183,7 +183,7 @@ $nombres = SWPK_Riesgo::nombres();
 	<?php
 	SWPK_Vista::caja_abrir(
 		'Todo lo que hay que parchar',
-		'<span style="margin-right:12px">' . esc_html( SWPK_Vista::plural( count( $filas ), 'hallazgo', 'hallazgos' ) ) . '</span>' . $boton_excel,
+		'<span style="margin-right:12px">Lo más grave primero</span>' . $boton_excel,
 		'',
 		true
 	);

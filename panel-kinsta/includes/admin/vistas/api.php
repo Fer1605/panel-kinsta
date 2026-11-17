@@ -60,7 +60,7 @@ $llamadas = array_slice( $llamadas, 0, 25 );
 
 	<?php SWPK_Vista::rejilla_abrir(); ?>
 
-	<?php SWPK_Vista::caja_abrir( 'Conectarlo a Claude', '', 'swpk-c6' ); ?>
+	<?php SWPK_Vista::caja_abrir( 'Conectarlo a Claude', esc_html( SWPK_Vista::plural( count( $catalogo ), 'consulta disponible', 'consultas disponibles' ) ), 'swpk-c6' ); ?>
 
 	<div class="notice notice-warning">
 			<p>
@@ -164,7 +164,7 @@ $llamadas = array_slice( $llamadas, 0, 25 );
 
 	<?php SWPK_Vista::caja_cerrar(); ?>
 
-	<?php SWPK_Vista::caja_abrir( 'Las llaves que hay', '', 'swpk-c12' ); ?>
+	<?php SWPK_Vista::caja_abrir( 'Las llaves que hay', '<a href="#swpk-crear-llave">Crear una llave</a>', 'swpk-c12' ); ?>
 
 	<p style="max-width:860px;color:#3c434a">
 		Una llave es una cuenta que <strong>solo puede leer</strong>: consulta los sitios, las
@@ -357,7 +357,7 @@ $llamadas = array_slice( $llamadas, 0, 25 );
 		</script>
 	<?php endif; ?>
 
-	<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" style="margin:14px 0 22px">
+	<form id="swpk-crear-llave" method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" style="margin:14px 0 22px">
 		<?php wp_nonce_field( 'swpk_crear_llave' ); ?>
 		<input type="hidden" name="action" value="swpk_crear_llave">
 		<label>
@@ -422,7 +422,7 @@ $llamadas = array_slice( $llamadas, 0, 25 );
 
 	<?php SWPK_Vista::caja_cerrar(); ?>
 
-	<?php SWPK_Vista::caja_abrir( 'Qué se puede consultar', '', 'swpk-c12' ); ?>
+	<?php SWPK_Vista::caja_abrir( 'Qué se puede consultar', esc_html( SWPK_Vista::plural( count( $catalogo ), 'ruta', 'rutas' ) ), 'swpk-c12' ); ?>
 
 	<p style="max-width:860px;color:#3c434a">
 		Cada una envuelve la misma función que alimenta su pantalla. No hay una sola consulta
@@ -431,6 +431,48 @@ $llamadas = array_slice( $llamadas, 0, 25 );
 		hosting, cuándo se bajó la lista de vulnerabilidades, si la corrida está al día— por lo mismo
 		que lo traen los Excel y los PDF: un JSON sin fecha es una afirmación sin fecha.
 	</p>
+
+	<?php
+	// Los dos desplegables de la maqueta. Van por GET como el resto del panel
+	// y no en el navegador: diez filas no justifican el único filtro del panel
+	// que trabajaría de otra forma que todos los demás.
+	$metodos = [];
+	$quienes_ruta = [];
+	foreach ( $catalogo as $r ) {
+		$metodos[ $r['metodo'] ]      = $r['metodo'];
+		$quienes_ruta[ $r['quien'] ]  = $r['quien'];
+	}
+
+	$metodo_pedido = SWPK_Vista::opcion_pedida( 'metodo', $metodos );
+	$quien_ruta    = SWPK_Vista::opcion_pedida( 'perfil', $quienes_ruta );
+
+	SWPK_Vista::barra_de_filtros(
+		'panel-kinsta-api',
+		[
+			'metodo' => [
+				'etiqueta' => 'Cómo',
+				'opciones' => $metodos,
+				'actual'   => $metodo_pedido,
+				'todas'    => 'GET y POST',
+			],
+			'perfil' => [
+				'etiqueta' => 'Quién puede',
+				'opciones' => $quienes_ruta,
+				'actual'   => $quien_ruta,
+				'todas'    => 'Cualquier perfil',
+			],
+		],
+		[],
+		null
+	);
+
+	$rutas_vis = array_filter(
+		$catalogo,
+		static fn( $r ) =>
+			( '' === $metodo_pedido || $r['metodo'] === $metodo_pedido )
+			&& ( '' === $quien_ruta || $r['quien'] === $quien_ruta )
+	);
+	?>
 
 	<table class="widefat striped swpk-tabla">
 		<thead>
@@ -443,7 +485,7 @@ $llamadas = array_slice( $llamadas, 0, 25 );
 			</tr>
 		</thead>
 		<tbody>
-		<?php foreach ( $catalogo as $r ) : ?>
+		<?php foreach ( $rutas_vis as $r ) : ?>
 			<tr>
 				<td><strong style="color:<?php echo 'GET' === $r['metodo'] ? '#2271b1' : '#b32d2e'; ?>"><?php echo esc_html( $r['metodo'] ); ?></strong></td>
 				<td><code><?php echo esc_html( $r['ruta'] ); ?></code></td>

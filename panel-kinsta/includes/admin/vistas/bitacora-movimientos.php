@@ -96,7 +96,7 @@ arsort( $por_tipo );
 <?php
 SWPK_Vista::caja_abrir(
 	'El historial',
-	esc_html( SWPK_Vista::plural( count( $movimientos ), 'movimiento', 'movimientos' ) ),
+	'lo más reciente primero',
 	'',
 	true
 );

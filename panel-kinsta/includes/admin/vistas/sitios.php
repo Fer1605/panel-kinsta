@@ -35,6 +35,17 @@ $por_nivel = SWPK_Vista::conteo_por_nivel(
 );
 
 $filtrados = SWPK_Vista::filtrar( $todos, $tag, $nivel, $busqueda, $versiones['wp'], $versiones['php'] );
+
+// Lo que más urge, primero. Es lo que dice el pie de la tarjeta en la maqueta,
+// y sin el orden ese pie sería mentira: la lista venía como la devolvía la
+// base, que es por nombre. A igualdad de nivel, por nombre, para que dos
+// recargas seguidas no barajen la tabla.
+usort(
+	$filtrados,
+	static fn( $a, $b ) =>
+		[ SWPK_Riesgo::peso( SWPK_Riesgo::nivel_del_sitio( (string) $b->sitio_id ) ), $a->nombre_visible ]
+		<=> [ SWPK_Riesgo::peso( SWPK_Riesgo::nivel_del_sitio( (string) $a->sitio_id ) ), $b->nombre_visible ]
+);
 [ $pagina_de_sitios, $pagina, $paginas ] = SWPK_Vista::paginar( $filtrados, SWPK_Vista::pagina_pedida() );
 
 // A dónde vuelve el botón de analizar: a esta misma página, con sus filtros.
@@ -146,7 +157,7 @@ $volver = add_query_arg(
 	// tabla. Dentro de la tarjeta va solo lo que la tabla filtra y pagina.
 	SWPK_Vista::caja_abrir(
 		'La cartera',
-		'<span style="margin-right:12px">' . esc_html( SWPK_Vista::plural( count( $filtrados ), 'sitio', 'sitios' ) ) . '</span>' . $botones_cartera,
+		'<span style="margin-right:12px">Ordenados por lo que más urge</span>' . $botones_cartera,
 		'',
 		true
 	);
@@ -183,7 +194,7 @@ $volver = add_query_arg(
 				'etiqueta' => 'Cómo está',
 				'opciones' => $opciones_nivel,
 				'actual'   => $nivel,
-				'todas'    => 'Como sea',
+				'todas'    => 'Cómo está',
 			],
 		] + $versiones['campos'],
 		[],

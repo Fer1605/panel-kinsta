@@ -89,7 +89,7 @@ $accion = static fn( $a ) => wp_nonce_url( admin_url( 'admin-post.php?action=' .
 		<?php endif; ?>
 	<?php SWPK_Vista::caja_cerrar(); ?>
 
-	<?php SWPK_Vista::caja_abrir( 'Qué sale, y a quién', '', 'swpk-c7', true ); ?>
+	<?php SWPK_Vista::caja_abrir( 'Qué sale, y a quién', esc_html( SWPK_Vista::plural( 3, 'aviso automático', 'avisos automáticos' ) ), 'swpk-c7', true ); ?>
 	<table class="widefat striped swpk-tabla" style="max-width:980px">
 		<thead>
 			<tr>

@@ -400,7 +400,7 @@ class SWPK_Vista {
 			<?php if ( $hay_algo ) : ?>
 				<a class="swpk-filtra-limpiar"
 					href="<?php echo esc_url( remove_query_arg( array_merge( array_keys( $campos ), [ 'q', 'p' ] ) ) ); ?>">
-					quitar los filtros
+					Limpiar
 				</a>
 			<?php endif; ?>
 		</form>
@@ -880,13 +880,13 @@ class SWPK_Vista {
 					'etiqueta' => 'WordPress',
 					'opciones' => $wps,
 					'actual'   => self::opcion_pedida( 'wp', $wps ),
-					'todas'    => 'Cualquiera',
+					'todas'    => 'Versión de WordPress',
 				],
 				'php' => [
 					'etiqueta' => 'PHP',
 					'opciones' => $phps,
 					'actual'   => self::opcion_pedida( 'php', $phps ),
-					'todas'    => 'Cualquiera',
+					'todas'    => 'Versión de PHP',
 				],
 			],
 			'wp'     => self::opcion_pedida( 'wp', $wps ),

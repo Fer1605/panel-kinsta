@@ -20,11 +20,13 @@ foreach ( $estados as $e ) {
 // «Lento» no es un estado guardado: es responder bien pero tardando más de
 // cinco segundos. Se filtra igual porque es justo lo que uno quiere mirar
 // cuando un cliente dice que su sitio va pesado.
+// La maqueta ofrece tres cosas y no cinco: responde, no responde, o todo.
+// «Respuesta rara» y «lento» eran matices del primero, y de los cinco solo se
+// usaban dos. Lo que se perdía al simplificar —el 4xx, el motivo— no se
+// pierde: está en la celda de «Ahora», que ahora los dice debajo.
 $estados_posibles = [
-	'abajo'  => 'Sin responder',
-	'raro'   => 'Respuesta rara (4xx)',
-	'lento'  => 'Responde, pero lento',
-	'arriba' => 'Responde bien',
+	'arriba' => 'Responden',
+	'abajo'  => 'No responden',
 ];
 
 // Cuánto tarda, en tres tramos. Es el tercer desplegable de la maqueta y
@@ -32,8 +34,8 @@ $estados_posibles = [
 // y aun así tardar ocho segundos, que es de lo que se queja el cliente.
 $tramos = [
 	'rapido' => 'Menos de 1 s',
-	'medio'  => 'Entre 1 y 5 s',
-	'tardon' => 'Más de 5 s',
+	'medio'  => 'Entre 1 y 3 s',
+	'tardon' => 'Más de 3 s',
 ];
 
 $estado_pedido = SWPK_Vista::opcion_pedida( 'estado', $estados_posibles );
@@ -59,11 +61,12 @@ $filtrados = array_values(
 	array_filter(
 		$estados,
 		static function ( $e ) use ( $estado_pedido, $grupo_pedido, $tramo_pedido, $busca_caida, $grupo_de ) {
-			if ( 'lento' === $estado_pedido ) {
-				if ( 'arriba' !== $e->estado || $e->ms <= 5000 ) {
-					return false;
-				}
-			} elseif ( '' !== $estado_pedido && (string) $e->estado !== $estado_pedido ) {
+			// «Responden» incluye la respuesta rara: el sitio contesta, aunque
+			// conteste mal. «No responden» es el que no contesta nada.
+			if ( 'arriba' === $estado_pedido && 'abajo' === (string) $e->estado ) {
+				return false;
+			}
+			if ( 'abajo' === $estado_pedido && 'abajo' !== (string) $e->estado ) {
 				return false;
 			}
 
@@ -76,10 +79,10 @@ $filtrados = array_values(
 				if ( 'rapido' === $tramo_pedido && $ms >= 1000 ) {
 					return false;
 				}
-				if ( 'medio' === $tramo_pedido && ( $ms < 1000 || $ms > 5000 ) ) {
+				if ( 'medio' === $tramo_pedido && ( $ms < 1000 || $ms > 3000 ) ) {
 					return false;
 				}
-				if ( 'tardon' === $tramo_pedido && $ms <= 5000 ) {
+				if ( 'tardon' === $tramo_pedido && $ms <= 3000 ) {
 					return false;
 				}
 			}
@@ -94,6 +97,16 @@ $filtrados = array_values(
 			return str_contains( $pajar, $aguja );
 		}
 	)
+);
+
+// Los que más tardan, primero: es lo que dice el pie de la tarjeta en la
+// maqueta, y es el orden con el que uno abre esta pantalla —«¿cuál va
+// pesado?»—. Los caídos van antes que todos: no tardan, directamente no están.
+usort(
+	$filtrados,
+	static fn( $a, $b ) =>
+		[ 'abajo' === (string) $b->estado, (int) $b->ms ]
+		<=> [ 'abajo' === (string) $a->estado, (int) $a->ms ]
 );
 
 [ $en_pantalla, $pagina, $paginas ] = SWPK_Vista::paginar( $filtrados, SWPK_Vista::pagina_pedida(), 25 );
@@ -115,15 +128,38 @@ $historial = array_filter(
 				'activa' => ! $al_dia,
 			],
 		] )
+		. ( SWPK_Perfiles::puede( SWPK_Perfiles::ADMINISTRAR )
+			? sprintf(
+				'<a class="button" href="%s">Sondear ahora</a>',
+				esc_url( wp_nonce_url( admin_url( 'admin-post.php?action=swpk_sondear' ), 'swpk_sondear' ) )
+			)
+			: '' )
 	);
 	?>
 	<?php SWPK_Admin::mostrar_mensaje(); ?>
 
-	<p style="max-width:840px;color:#3c434a">
-		El panel revisa cada sitio cada cinco minutos desde este servidor, por su cuenta. No depende
-		de que el hosting avise: un aviso que depende de Kinsta no sirve para enterarse de que Kinsta
-		se cayó. Por eso el panel vive fuera.
-	</p>
+	<?php
+	// El veredicto de la maqueta: la frase que contesta la pantalla entera.
+	// Es lo único que ella deja entre la cabecera y las tarjetas.
+	?>
+	<div class="swpk-veredicto<?php echo $abajo ? ' swpk-veredicto-mal' : ''; ?>">
+		<h2>
+			<?php
+			echo esc_html(
+				$abajo
+					? sprintf(
+						'%s sin responder ahora mismo.',
+						SWPK_Vista::plural( (int) $abajo, 'sitio está', 'sitios están' )
+					)
+					: sprintf( 'Ninguno de los %d sitios está caído ahora mismo.', count( $estados ) )
+			);
+			?>
+		</h2>
+		<p>
+			No se avisa al primer fallo: hacen falta dos sondeos fallidos seguidos, porque un fallo
+			suelto casi siempre es la red y no el sitio.
+		</p>
+	</div>
 
 	<?php if ( ! $al_dia ) : ?>
 		<div class="notice notice-error">
@@ -144,48 +180,30 @@ $historial = array_filter(
 		</div>
 	<?php endif; ?>
 
-	<p>
-		<?php if ( SWPK_Perfiles::puede( SWPK_Perfiles::ADMINISTRAR ) ) : ?>
-			<a href="<?php echo esc_url( wp_nonce_url( admin_url( 'admin-post.php?action=swpk_sondear' ), 'swpk_sondear' ) ); ?>"
-				class="button button-primary">Sondear ahora</a>
-		<?php endif; ?>
-		<?php SWPK_Admin::boton_exportar( 'caidas' ); ?>
-		<span style="margin-left:10px;color:#50575e">
-			<?php
-			echo ! empty( $ultimo['cuando'] )
-				? sprintf(
-					'Último sondeo: %s · %d sitios · %d sin responder',
-					esc_html( SWPK_Frescura::fmt( 'j M, H:i', (string) $ultimo['cuando'] ) ),
-					(int) ( $ultimo['sondeados'] ?? 0 ),
-					(int) ( $ultimo['abajo'] ?? 0 )
-				)
-				: 'Todavía no se ha sondeado.';
-			?>
-		</span>
-	</p>
 
 	<?php SWPK_Vista::rejilla_abrir(); ?>
 
 	<?php if ( $estados ) : ?>
-		<?php SWPK_Vista::caja_abrir( 'Cómo están ahora', esc_html( SWPK_Frescura::fmt( 'j M, H:i', current_time( 'mysql' ) ) ), 'swpk-c5' ); ?>
-		<div class="swpk-tarjetas">
-			<div class="swpk-tarjeta">
-				<div class="swpk-n" style="color:<?php echo $abajo ? '#b32d2e' : '#008a20'; ?>"><?php echo (int) $abajo; ?></div>
-				<div class="swpk-r">Sin responder ahora</div>
-			</div>
-			<div class="swpk-tarjeta">
-				<div class="swpk-n"><?php echo (int) $raro; ?></div>
-				<div class="swpk-r">Respuesta rara (4xx)</div>
-			</div>
-			<div class="swpk-tarjeta">
-				<div class="swpk-n"><?php echo (int) $lentos; ?></div>
-				<div class="swpk-r">Lentos (más de 5 s)</div>
-			</div>
-			<div class="swpk-tarjeta">
-				<div class="swpk-n"><?php echo count( $estados ); ?></div>
-				<div class="swpk-r">Sitios vigilados</div>
-			</div>
-		</div>
+		<?php
+		SWPK_Vista::caja_abrir( 'Cómo están ahora', 'sondeo cada 5 minutos', 'swpk-c5' );
+
+		SWPK_Vista::dona(
+			[
+				[
+					'n'     => count( $estados ) - (int) $abajo,
+					'color' => SWPK_Riesgo::colores()[ SWPK_Riesgo::AL_DIA ],
+					'texto' => 'Responden',
+				],
+				[
+					'n'     => (int) $abajo,
+					'color' => SWPK_Riesgo::colores()[ SWPK_Riesgo::CRITICO ],
+					'texto' => 'No responden',
+				],
+			],
+			count( $estados ),
+			'sitios'
+		);
+		?>
 		<?php SWPK_Vista::caja_cerrar(); ?>
 
 		<?php
@@ -194,7 +212,7 @@ $historial = array_filter(
 		// no el de la página que estás mirando.
 		SWPK_Vista::caja_abrir(
 			'Sitio por sitio',
-			esc_html( SWPK_Vista::plural( count( $filtrados ), 'sitio', 'sitios' ) ),
+			'los que más tardan, primero',
 			'swpk-c7',
 			true
 		);
@@ -206,7 +224,7 @@ $historial = array_filter(
 					'etiqueta' => 'Cómo responde',
 					'opciones' => $estados_posibles,
 					'actual'   => $estado_pedido,
-					'todas'    => 'Como sea',
+					'todas'    => 'Todos',
 				],
 				'tag' => [
 					'etiqueta' => 'Grupo',
@@ -218,7 +236,7 @@ $historial = array_filter(
 					'etiqueta' => 'Lo que tarda',
 					'opciones' => $tramos,
 					'actual'   => $tramo_pedido,
-					'todas'    => 'Tarde lo que tarde',
+					'todas'    => 'Lo que tarda',
 				],
 			],
 			[],
@@ -232,12 +250,9 @@ $historial = array_filter(
 				<tr>
 					<th>Sitio</th>
 					<th style="width:120px">Grupo</th>
-					<th style="width:110px">Ahora</th>
-					<th style="width:80px">Respuesta</th>
-					<th style="width:90px">Tarda</th>
-					<th>Detalle</th>
-					<th style="width:150px">Desde</th>
-					<th style="width:120px">Caídas este mes</th>
+					<th style="width:190px">Ahora</th>
+					<th style="width:80px">Tarda</th>
+					<th style="width:110px">Caídas este mes</th>
 				</tr>
 			</thead>
 			<tbody>
@@ -259,13 +274,25 @@ $historial = array_filter(
 						</a>
 					</td>
 					<td><?php echo SWPK_Admin::grupo_badge( $grupo_de[ (string) $e->sitio_id ] ?? '' ); ?></td>
-					<td><span class="swpk-nivel" style="background:<?php echo esc_attr( $color ); ?>;color:#fff;border-color:<?php echo esc_attr( $color ); ?>"><?php echo esc_html( $texto ); ?></span></td>
-					<td class="swpk-mono"><?php echo $e->codigo ? (int) $e->codigo : '—'; ?></td>
-					<td class="swpk-mono"><?php echo $e->ms ? esc_html( number_format( $e->ms / 1000, 2 ) ) . ' s' : '—'; ?></td>
-					<td style="color:<?php echo 'abajo' === $e->estado ? '#b32d2e' : '#50575e'; ?>">
-						<?php echo esc_html( (string) $e->motivo ); ?>
+					<td>
+						<span class="swpk-nivel" style="background:<?php echo esc_attr( $color ); ?>;color:#fff;border-color:<?php echo esc_attr( $color ); ?>"><?php echo esc_html( $texto ); ?></span>
+						<?php if ( $e->codigo || $e->motivo ) : ?>
+							<br>
+							<span class="swpk-gris" style="font-size:12px">
+								<?php
+								$detalle = array_filter( [
+									$e->codigo ? (string) (int) $e->codigo : '',
+									(string) $e->motivo,
+								] );
+								echo esc_html( implode( ' · ', $detalle ) );
+								?>
+							</span>
+						<?php endif; ?>
+						<?php if ( $e->desde ) : ?>
+							<br><span class="swpk-gris" style="font-size:12px">desde <?php echo esc_html( SWPK_Frescura::fmt( 'j M, H:i', $e->desde ) ); ?></span>
+						<?php endif; ?>
 					</td>
-					<td><?php echo $e->desde ? esc_html( SWPK_Frescura::fmt( 'j M, H:i', $e->desde ) ) : '—'; ?></td>
+					<td class="swpk-mono"><?php echo $e->ms ? esc_html( number_format( $e->ms / 1000, 1 ) ) . ' s' : '—'; ?></td>
 					<td>
 						<?php echo (int) $e->caidas_mes; ?>
 						<?php if ( $e->segundos_caido ) : ?>

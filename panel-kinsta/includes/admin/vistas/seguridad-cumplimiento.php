@@ -214,7 +214,7 @@ if ( '' !== $sev_pedida || '' !== $norma_pedida ) {
 ?>
 
 <?php if ( $con_fallas_todas ) : ?>
-	<?php SWPK_Vista::caja_abrir( 'Lo que hay que arreglar', '', 'swpk-c7', false ); ?>
+	<?php SWPK_Vista::caja_abrir( 'Lo que hay que arreglar', esc_html( sprintf( '%d de %d sitios se pueden revisar', count( $medibles ), (int) $tablero['total'] ) ), 'swpk-c7', false ); ?>
 	<p class="swpk-mudo" style="margin:-4px 0 10px">
 		Cada bloque es un problema encontrado. Debajo, los sitios que lo tienen.
 	</p>
@@ -227,13 +227,13 @@ if ( '' !== $sev_pedida || '' !== $norma_pedida ) {
 				'etiqueta' => 'Gravedad',
 				'opciones' => $sev_posibles,
 				'actual'   => $sev_pedida,
-				'todas'    => 'Cualquiera',
+				'todas'    => 'Toda gravedad',
 			],
 			'norma' => [
 				'etiqueta' => 'Qué norma',
 				'opciones' => $normas_malas,
 				'actual'   => $norma_pedida,
-				'todas'    => 'Cualquiera',
+				'todas'    => 'Quién la revisa',
 			],
 		],
 		// Los dos filtros de esta pantalla son dos formularios distintos, así
@@ -453,7 +453,7 @@ foreach ( $medibles as $f ) {
 				'etiqueta' => 'Cómo está',
 				'opciones' => $como_posibles,
 				'actual'   => $como_pedido,
-				'todas'    => 'Como sea',
+				'todas'    => 'Listas y por construir',
 			],
 		],
 		[ 'seccion' => 'cumplimiento', 'sev' => $sev_pedida, 'norma' => $norma_pedida ],

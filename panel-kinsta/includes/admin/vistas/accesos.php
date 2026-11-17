@@ -119,8 +119,8 @@ $fallidos  = SWPK_Accesos::fallidos_recientes( 24 );
 	SWPK_Vista::caja_abrir(
 		'El registro',
 		esc_html( sprintf(
-			'%s · %s en las últimas 24 h',
-			SWPK_Vista::plural( count( $registros ), 'registro', 'registros' ),
+			'los últimos %d · %s en 24 h',
+			count( $registros ),
 			SWPK_Vista::plural( (int) $fallidos, 'intento fallido', 'intentos fallidos' )
 		) ),
 		'',

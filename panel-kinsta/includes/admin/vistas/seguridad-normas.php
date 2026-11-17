@@ -39,7 +39,7 @@ $norma  = '' !== $editar ? SWPK_Normas::una( $editar ) : null;
 	encenderla la vuelve a meter, pero no al instante — se mide con el siguiente reporte de cada sitio.
 </p>
 
-<?php SWPK_Vista::caja_abrir( 'Qué revisamos en cada sitio', '', '', true ); ?>
+<?php SWPK_Vista::caja_abrir( 'Qué revisamos en cada sitio', esc_html( SWPK_Vista::plural( count( $normas ), 'norma', 'normas' ) ), '', true ); ?>
 <table class="widefat striped" style="margin-top:10px">
 	<thead>
 		<tr>

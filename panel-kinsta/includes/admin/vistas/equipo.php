@@ -75,7 +75,7 @@ $hay_filtro_equipo = ( '' !== $perfil_pedido || '' !== $busca_persona );
 	<?php
 	SWPK_Vista::caja_abrir(
 		'Quién entra al panel',
-		esc_html( SWPK_Vista::plural( count( $equipo ), 'persona', 'personas' ) ),
+		esc_html( SWPK_Vista::plural( count( $equipo ), 'con acceso', 'con acceso' ) ),
 		'swpk-c7',
 		true
 	);
