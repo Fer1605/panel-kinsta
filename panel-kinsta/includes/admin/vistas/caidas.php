@@ -166,8 +166,10 @@ $historial = array_filter(
 		</span>
 	</p>
 
+	<?php SWPK_Vista::rejilla_abrir(); ?>
+
 	<?php if ( $estados ) : ?>
-		<?php SWPK_Vista::caja_abrir( 'Cómo están ahora', esc_html( SWPK_Frescura::fmt( 'j M, H:i', current_time( 'mysql' ) ) ) ); ?>
+		<?php SWPK_Vista::caja_abrir( 'Cómo están ahora', esc_html( SWPK_Frescura::fmt( 'j M, H:i', current_time( 'mysql' ) ) ), 'swpk-c5' ); ?>
 		<div class="swpk-tarjetas">
 			<div class="swpk-tarjeta">
 				<div class="swpk-n" style="color:<?php echo $abajo ? '#b32d2e' : '#008a20'; ?>"><?php echo (int) $abajo; ?></div>
@@ -195,7 +197,7 @@ $historial = array_filter(
 		SWPK_Vista::caja_abrir(
 			'Sitio por sitio',
 			esc_html( SWPK_Vista::plural( count( $filtrados ), 'sitio', 'sitios' ) ),
-			'',
+			'swpk-c7',
 			true
 		);
 
@@ -287,7 +289,7 @@ $historial = array_filter(
 		</p></div>
 	<?php endif; ?>
 
-	<?php SWPK_Vista::caja_abrir( 'El historial', '', '', ! empty( $historial ) ); ?>
+	<?php SWPK_Vista::caja_abrir( 'El historial', '', 'swpk-c12', ! empty( $historial ) ); ?>
 	<?php if ( ! $historial ) : ?>
 		<p style="color:#50575e">
 			No se ha caído nada desde que el monitor está encendido. Cada caída y cada recuperación
@@ -321,4 +323,6 @@ $historial = array_filter(
 		</table>
 	<?php endif; ?>
 	<?php SWPK_Vista::caja_cerrar(); ?>
+
+	<?php SWPK_Vista::rejilla_cerrar(); ?>
 </div>

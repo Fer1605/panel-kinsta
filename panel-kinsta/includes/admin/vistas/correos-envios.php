@@ -41,7 +41,9 @@ $accion = static fn( $a ) => wp_nonce_url( admin_url( 'admin-post.php?action=' .
 		</div>
 	<?php endif; ?>
 
-	<?php SWPK_Vista::caja_abrir( 'El interruptor', '', '', true ); ?>
+	<?php SWPK_Vista::rejilla_abrir(); ?>
+
+	<?php SWPK_Vista::caja_abrir( 'El interruptor', '', 'swpk-c5', true ); ?>
 	<table class="widefat striped" style="max-width:760px">
 		<tbody>
 			<tr>
@@ -72,7 +74,7 @@ $accion = static fn( $a ) => wp_nonce_url( admin_url( 'admin-post.php?action=' .
 	</table>
 	<?php SWPK_Vista::caja_cerrar(); ?>
 
-	<?php SWPK_Vista::caja_abrir( 'Qué sale, y a quién', '', '', true ); ?>
+	<?php SWPK_Vista::caja_abrir( 'Qué sale, y a quién', '', 'swpk-c7', true ); ?>
 	<table class="widefat striped swpk-tabla" style="max-width:980px">
 		<thead>
 			<tr>
@@ -111,12 +113,6 @@ $accion = static fn( $a ) => wp_nonce_url( admin_url( 'admin-post.php?action=' .
 	</table>
 	<?php SWPK_Vista::caja_cerrar(); ?>
 
-	<p class="swpk-nota">
-		"Generarlo ahora" arma el correo con los datos de hoy y lo deja en la
-		<a href="<?php echo esc_url( admin_url( 'admin.php?page=panel-kinsta-bitacora' ) ); ?>">bitácora</a>,
-		donde se puede abrir y leer completo. En modo de prueba no sale a nadie.
-	</p>
-
 	<?php
 	// La tarjeta de la maqueta. Aquí solo ENSEÑA: los campos viven en Ajustes,
 	// que es donde está el formulario que los guarda. Repetir el formulario en
@@ -127,7 +123,8 @@ $accion = static fn( $a ) => wp_nonce_url( admin_url( 'admin-post.php?action=' .
 		sprintf(
 			'<a href="%s">Cambiarlo en Ajustes</a>',
 			esc_url( admin_url( 'admin.php?page=panel-kinsta-ajustes' ) )
-		)
+		),
+		'swpk-c12'
 	);
 	?>
 	<table class="form-table" role="presentation">
@@ -155,7 +152,7 @@ $accion = static fn( $a ) => wp_nonce_url( admin_url( 'admin-post.php?action=' .
 	</table>
 	<?php SWPK_Vista::caja_cerrar(); ?>
 
-	<?php SWPK_Vista::caja_abrir( 'Cosas que conviene revisar antes de abrir la llave', '', '', true ); ?>
+	<?php SWPK_Vista::caja_abrir( 'Cosas que conviene revisar antes de abrir la llave', '', 'swpk-c12', true ); ?>
 	<?php
 	$sin_asesora  = 0;
 	$sin_contacto = 0;
@@ -213,3 +210,11 @@ $accion = static fn( $a ) => wp_nonce_url( admin_url( 'admin-post.php?action=' .
 	</table>
 
 <?php SWPK_Vista::caja_cerrar(); ?>
+
+<?php SWPK_Vista::rejilla_cerrar(); ?>
+
+<p class="swpk-nota">
+	"Generarlo ahora" arma el correo con los datos de hoy y lo deja en la
+	<a href="<?php echo esc_url( admin_url( 'admin.php?page=panel-kinsta-bitacora' ) ); ?>">bitácora</a>,
+	donde se puede abrir y leer completo. En modo de prueba no sale a nadie.
+</p>

@@ -828,3 +828,122 @@ body[class*="panel-kinsta"] .swpk-dona {
 
 body[class*="panel-kinsta"] .swpk-dona svg { flex: 0 0 140px; }
 body[class*="panel-kinsta"] .swpk-dona .swpk-claves { flex: 1; min-width: 170px; }
+
+
+/* ──────────────────────────────────────────────────────────────────────────
+   Los formularios, por dentro.
+
+   Hasta aquí las tarjetas eran la caja y nada más: adentro seguía el
+   `form-table` de WordPress, que pone la etiqueta en una columna y el campo
+   en otra. La maqueta aprobada hace lo contrario —etiqueta arriba, campo
+   ancho debajo, la ayuda en gris al pie— y por eso Ajustes seguía sin
+   parecerse a ella por mucho que la tarjeta estuviera bien.
+
+   Se arregla aquí y no en las vistas: `form-table` lo generan siete
+   pantallas, y reescribirlas una por una es siete veces la oportunidad de
+   romper un formulario que ya guarda bien.
+   ────────────────────────────────────────────────────────────────────────── */
+
+body[class*="panel-kinsta"] .swpk-caja .form-table,
+body[class*="panel-kinsta"] .swpk-caja .form-table tbody,
+body[class*="panel-kinsta"] .swpk-caja .form-table tr,
+body[class*="panel-kinsta"] .swpk-caja .form-table th,
+body[class*="panel-kinsta"] .swpk-caja .form-table td {
+	display: block;
+	width: 100%;
+	padding: 0;
+	border: 0;
+}
+
+body[class*="panel-kinsta"] .swpk-caja .form-table { margin: 0; }
+
+body[class*="panel-kinsta"] .swpk-caja .form-table tr { margin-bottom: 16px; }
+body[class*="panel-kinsta"] .swpk-caja .form-table tr:last-child { margin-bottom: 0; }
+
+body[class*="panel-kinsta"] .swpk-caja .form-table th {
+	font-size: 12.5px;
+	font-weight: 600;
+	margin-bottom: 5px;
+	color: var(--swpk-texto);
+	line-height: 1.4;
+}
+
+body[class*="panel-kinsta"] .swpk-caja .form-table th label { font-weight: 600; }
+
+/* El campo ocupa el ancho de la tarjeta, con un tope para que en una tarjeta
+   de doce columnas no quede un renglón de texto de 1.400 píxeles. */
+body[class*="panel-kinsta"] .swpk-caja .form-table td input[type="text"],
+body[class*="panel-kinsta"] .swpk-caja .form-table td input[type="email"],
+body[class*="panel-kinsta"] .swpk-caja .form-table td input[type="password"],
+body[class*="panel-kinsta"] .swpk-caja .form-table td input[type="url"],
+body[class*="panel-kinsta"] .swpk-caja .form-table td select,
+body[class*="panel-kinsta"] .swpk-caja .form-table td textarea {
+	width: 100%;
+	max-width: 560px;
+	padding: 9px 12px;
+	font-size: 13.5px;
+}
+
+body[class*="panel-kinsta"] .swpk-caja .form-table td .description,
+body[class*="panel-kinsta"] .swpk-caja .form-table td p {
+	font-size: 12px;
+	color: var(--swpk-apagado);
+	margin: 5px 0 0;
+	max-width: 70ch;
+}
+
+/* Los botones al pie de una tarjeta, en fila y sin el margen que WordPress
+   le pone a su `submit` para separarlo de una tabla que aquí ya no existe. */
+body[class*="panel-kinsta"] .swpk-caja .submit {
+	margin: 18px 0 0;
+	padding: 0;
+}
+
+body[class*="panel-kinsta"] .swpk-caja p.submit + p.submit { margin-top: 10px; }
+
+/* ── Filas de dato: nombre a la izquierda, valor a la derecha ───────────── */
+
+/* Es el formato de «Cómo corre» y de «Qué se puede consultar» en la maqueta.
+   Aquí esas listas son tablas de dos columnas; esto las lee como la maqueta
+   sin tocar el marcado: la primera columna en gris, la última a la derecha. */
+body[class*="panel-kinsta"] .swpk-caja .swpk-pares td {
+	padding: 11px 20px;
+	font-size: 13.5px;
+}
+
+body[class*="panel-kinsta"] .swpk-caja .swpk-pares td:first-child {
+	color: var(--swpk-apagado);
+}
+
+body[class*="panel-kinsta"] .swpk-caja .swpk-pares td:last-child {
+	text-align: right;
+	font-weight: 600;
+	white-space: nowrap;
+}
+
+body[class*="panel-kinsta"] .swpk-caja .swpk-pares tr:hover { background: transparent; }
+
+/* ── Un título pequeño dentro de una tarjeta ───────────────────────────── */
+
+body[class*="panel-kinsta"] .swpk-titulin {
+	font-size: 11px;
+	text-transform: uppercase;
+	letter-spacing: .5px;
+	color: var(--swpk-tenue);
+	font-weight: 700;
+}
+
+/* Un <form> que no estorba la rejilla.
+
+   En Ajustes hay dos formularios y una tarjeta que no guarda nada, y las
+   cuatro tienen que repartirse en dos columnas. `display: contents` saca al
+   <form> de la maqueta visual sin sacarlo del documento: sus tarjetas pasan a
+   ser celdas de la rejilla de fuera, y el formulario sigue enviando igual. */
+body[class*="panel-kinsta"] .swpk-rejilla > form.swpk-pasa { display: contents; }
+
+/* Lo que caiga dentro de una rejilla sin decir cuánto mide, ocupa el ancho.
+   Pasa con los avisos de «no hay nada todavía», que viven entre tarjetas: sin
+   esto quedarían de una columna de doce, es decir, ilegibles. */
+body[class*="panel-kinsta"] .swpk-rejilla > *:not([class*="swpk-c"]) {
+	grid-column: span 12;
+}

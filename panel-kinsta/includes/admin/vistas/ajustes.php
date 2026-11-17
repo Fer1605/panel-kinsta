@@ -32,11 +32,13 @@ $a = SWPK_Ajustes::todos();
 		</div>
 	<?php endif; ?>
 
-	<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+	<?php SWPK_Vista::rejilla_abrir(); ?>
+
+	<form method="post" class="swpk-pasa" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
 		<input type="hidden" name="action" value="swpk_guardar_ajustes">
 		<?php wp_nonce_field( 'swpk_ajustes' ); ?>
 
-		<?php SWPK_Vista::caja_abrir( 'La conexión con el hosting' ); ?>
+		<?php SWPK_Vista::caja_abrir( 'La conexión con el hosting', esc_html( 'modo: ' . ( 'api' === $a['modo'] ? 'datos reales' : 'datos de prueba' ) ), 'swpk-c6' ); ?>
 		<table class="form-table" role="presentation">
 			<tr>
 				<th scope="row"><label for="modo">Modo</label></th>
@@ -95,8 +97,9 @@ $a = SWPK_Ajustes::todos();
 		<?php SWPK_Vista::caja_cerrar(); ?>
 	</form>
 
-	<?php SWPK_Vista::caja_abrir( 'Cómo corre', '', '', true ); ?>
-	<table class="widefat striped" style="max-width:720px">
+	<?php SWPK_Vista::caja_abrir( 'Cómo corre', '', 'swpk-c6', true ); ?>
+	<?php // swpk-pares: nombre a la izquierda en gris, dato a la derecha en negrita, como la maqueta. ?>
+	<table class="widefat swpk-pares">
 		<tbody>
 			<tr><td>Fuente de datos</td><td><strong><?php echo esc_html( swpk_fuente()->nombre() ); ?></strong></td></tr>
 			<?php $perdidos = SWPK_Eventos::fallos(); ?>
@@ -185,11 +188,11 @@ $a = SWPK_Ajustes::todos();
 	</table>
 	<?php SWPK_Vista::caja_cerrar(); ?>
 
-	<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+	<form method="post" class="swpk-pasa" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
 		<input type="hidden" name="action" value="swpk_guardar_ajustes">
 		<?php wp_nonce_field( 'swpk_ajustes' ); ?>
 
-		<?php SWPK_Vista::caja_abrir( 'Los grupos de sitios' ); ?>
+		<?php SWPK_Vista::caja_abrir( 'Los grupos de sitios', 'se descubren solos', 'swpk-c7' ); ?>
 		<?php $etiquetas = SWPK_Etiquetas::descubrir(); ?>
 
 		<?php if ( ! $etiquetas ) : ?>
@@ -248,22 +251,7 @@ $a = SWPK_Ajustes::todos();
 
 		<?php SWPK_Vista::caja_cerrar(); ?>
 
-		<?php SWPK_Vista::caja_abrir( 'A quién le llega' ); ?>
-		<table class="form-table" role="presentation">
-			<tr>
-				<th scope="row"><label for="correo_ventas">Copia a ventas</label></th>
-				<td><input type="text" class="regular-text" name="correo_ventas" id="correo_ventas" value="<?php echo esc_attr( $a['correo_ventas'] ); ?>">
-				<p class="description">Recibe copia de lo que se le manda a cada cliente. Una dirección de grupo, o varias separadas por coma.</p></td>
-			</tr>
-			<tr>
-				<th scope="row"><label for="correo_soporte">Correo de soporte</label></th>
-				<td><input type="text" class="regular-text" name="correo_soporte" id="correo_soporte" value="<?php echo esc_attr( $a['correo_soporte'] ); ?>">
-				<p class="description">Le llega el diario con todo lo técnico.</p></td>
-			</tr>
-		</table>
-		<?php SWPK_Vista::caja_cerrar(); ?>
-
-		<?php SWPK_Vista::caja_abrir( 'Nuestros dominios' ); ?>
+		<?php SWPK_Vista::caja_abrir( 'Nuestros dominios', '', 'swpk-c5' ); ?>
 		<table class="form-table" role="presentation">
 			<tr>
 				<th scope="row"><label for="dominios_propios">Dominios de la casa</label></th>
@@ -277,8 +265,25 @@ $a = SWPK_Ajustes::todos();
 			</tr>
 		</table>
 
+		<?php SWPK_Vista::caja_cerrar(); ?>
+
+		<?php SWPK_Vista::caja_abrir( 'A quién le llega', '', 'swpk-c12' ); ?>
+		<table class="form-table" role="presentation">
+			<tr>
+				<th scope="row"><label for="correo_ventas">Copia a ventas</label></th>
+				<td><input type="text" class="regular-text" name="correo_ventas" id="correo_ventas" value="<?php echo esc_attr( $a['correo_ventas'] ); ?>">
+				<p class="description">Recibe copia de lo que se le manda a cada cliente. Una dirección de grupo, o varias separadas por coma.</p></td>
+			</tr>
+			<tr>
+				<th scope="row"><label for="correo_soporte">Correo de soporte</label></th>
+				<td><input type="text" class="regular-text" name="correo_soporte" id="correo_soporte" value="<?php echo esc_attr( $a['correo_soporte'] ); ?>">
+				<p class="description">Le llega el diario con todo lo técnico.</p></td>
+			</tr>
+		</table>
 		<?php submit_button( 'Guardar ajustes' ); ?>
 		<?php SWPK_Vista::caja_cerrar(); ?>
+
 	</form>
 
+	<?php SWPK_Vista::rejilla_cerrar(); ?>
 </div>

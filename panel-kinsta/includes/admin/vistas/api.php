@@ -66,7 +66,9 @@ $llamadas = array_slice( $llamadas, 0, 25 );
 		</div>
 	<?php endif; ?>
 
-	<?php SWPK_Vista::caja_abrir( 'Conectarlo a Claude' ); ?>
+	<?php SWPK_Vista::rejilla_abrir(); ?>
+
+	<?php SWPK_Vista::caja_abrir( 'Conectarlo a Claude', '', 'swpk-c6' ); ?>
 
 	<p style="max-width:860px;color:#3c434a">
 		<strong>No hay nada que bajar ni que instalar.</strong> El panel habla MCP por su cuenta, así
@@ -144,7 +146,7 @@ $llamadas = array_slice( $llamadas, 0, 25 );
 
 		<?php SWPK_Vista::caja_cerrar(); ?>
 
-	<?php SWPK_Vista::caja_abrir( 'La dirección' ); ?>
+	<?php SWPK_Vista::caja_abrir( 'La dirección', '', 'swpk-c6' ); ?>
 
 	<p>Todas las rutas salen de aquí:</p>
 
@@ -152,7 +154,7 @@ $llamadas = array_slice( $llamadas, 0, 25 );
 
 	<?php SWPK_Vista::caja_cerrar(); ?>
 
-	<?php SWPK_Vista::caja_abrir( 'Las llaves que hay' ); ?>
+	<?php SWPK_Vista::caja_abrir( 'Las llaves que hay', '', 'swpk-c12' ); ?>
 
 	<p style="max-width:860px;color:#3c434a">
 		Una llave es una cuenta que <strong>solo puede leer</strong>: consulta los sitios, las
@@ -400,7 +402,7 @@ $llamadas = array_slice( $llamadas, 0, 25 );
 
 	<?php SWPK_Vista::caja_cerrar(); ?>
 
-	<?php SWPK_Vista::caja_abrir( 'Qué se puede consultar' ); ?>
+	<?php SWPK_Vista::caja_abrir( 'Qué se puede consultar', '', 'swpk-c12' ); ?>
 
 	<p style="max-width:860px;color:#3c434a">
 		Cada una envuelve la misma función que alimenta su pantalla. No hay una sola consulta
@@ -442,7 +444,7 @@ $llamadas = array_slice( $llamadas, 0, 25 );
 
 	<?php SWPK_Vista::caja_cerrar(); ?>
 
-	<?php SWPK_Vista::caja_abrir( 'Probarlo desde aquí' ); ?>
+	<?php SWPK_Vista::caja_abrir( 'Probarlo desde aquí', '', 'swpk-c12' ); ?>
 
 	<p style="max-width:860px;color:#3c434a">
 		Desde fuera, con la llave de arriba y autenticación básica:
@@ -499,7 +501,7 @@ $llamadas = array_slice( $llamadas, 0, 25 );
 	<?php SWPK_Vista::caja_cerrar(); ?>
 
 
-		<?php SWPK_Vista::caja_abrir( 'Lo que ya se consultó' ); ?>
+		<?php SWPK_Vista::caja_abrir( 'Lo que ya se consultó', '', 'swpk-c12' ); ?>
 
 	<p style="max-width:860px;color:#3c434a">
 		Cada llamada queda escrita, la que pasa y la que se rechaza. Hace falta porque una contraseña
@@ -542,4 +544,6 @@ $llamadas = array_slice( $llamadas, 0, 25 );
 		descuido.
 	</p>
 	<?php SWPK_Vista::caja_cerrar(); ?>
+
+	<?php SWPK_Vista::rejilla_cerrar(); ?>
 </div>

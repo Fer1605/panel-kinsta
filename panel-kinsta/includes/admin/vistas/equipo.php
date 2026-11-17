@@ -70,11 +70,13 @@ $hay_filtro_equipo = ( '' !== $perfil_pedido || '' !== $busca_persona );
 	</p>
 
 
+	<?php SWPK_Vista::rejilla_abrir(); ?>
+
 	<?php
 	SWPK_Vista::caja_abrir(
 		'Quién entra al panel',
 		esc_html( SWPK_Vista::plural( count( $equipo ), 'persona', 'personas' ) ),
-		'',
+		'swpk-c7',
 		true
 	);
 
@@ -157,7 +159,7 @@ $hay_filtro_equipo = ( '' !== $perfil_pedido || '' !== $busca_persona );
 	<?php endif; ?>
 	<?php SWPK_Vista::caja_cerrar(); ?>
 
-	<?php SWPK_Vista::caja_abrir( 'Dar acceso a alguien' ); ?>
+	<?php SWPK_Vista::caja_abrir( 'Dar acceso a alguien', '', 'swpk-c5' ); ?>
 	<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
 		<input type="hidden" name="action" value="swpk_crear_acceso">
 		<?php wp_nonce_field( 'swpk_crear_acceso' ); ?>
@@ -187,7 +189,7 @@ $hay_filtro_equipo = ( '' !== $perfil_pedido || '' !== $busca_persona );
 	</form>
 	<?php SWPK_Vista::caja_cerrar(); ?>
 
-	<?php SWPK_Vista::caja_abrir( 'Qué ve cada perfil' ); ?>
+	<?php SWPK_Vista::caja_abrir( 'Qué ve cada perfil', '', 'swpk-c12' ); ?>
 	<div class="swpk-tarjetas">
 		<?php foreach ( $roles as $slug => $nombre ) : ?>
 			<div class="swpk-tarjeta" style="min-width:250px">
@@ -208,6 +210,8 @@ $hay_filtro_equipo = ( '' !== $perfil_pedido || '' !== $busca_persona );
 		<?php endforeach; ?>
 	</div>
 	<?php SWPK_Vista::caja_cerrar(); ?>
+
+	<?php SWPK_Vista::rejilla_cerrar(); ?>
 
 	<p class="swpk-nota">
 		Una asesora sin sitios asignados entra al panel y no ve nada. Los sitios se asignan en

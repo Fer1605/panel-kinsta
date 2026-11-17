@@ -174,9 +174,12 @@ foreach ( $normas as $n ) {
 	if ( $r['falla'] > 0 ) { $con_fallas[] = $r; } else { $cumplidas[] = $r; }
 }
 
+SWPK_Vista::rejilla_abrir();
+
 SWPK_Vista::caja_abrir(
 	'Cómo vamos',
-	esc_html( SWPK_Vista::plural( count( $normas ), 'norma activa', 'normas activas' ) )
+	esc_html( SWPK_Vista::plural( count( $normas ), 'norma activa', 'normas activas' ) ),
+	'swpk-c5'
 );
 
 SWPK_Vista::dona( $trozos_cumpl, (int) $tablero['total'], 'sitios' );
@@ -271,7 +274,7 @@ if ( '' !== $sev_pedida || '' !== $norma_pedida ) {
 ?>
 
 <?php if ( $con_fallas_todas ) : ?>
-	<?php SWPK_Vista::caja_abrir( 'Lo que hay que arreglar', '', '', false ); ?>
+	<?php SWPK_Vista::caja_abrir( 'Lo que hay que arreglar', '', 'swpk-c7', false ); ?>
 	<p class="swpk-mudo" style="margin:-4px 0 10px">
 		Cada bloque es un problema encontrado. Debajo, los sitios que lo tienen.
 	</p>
@@ -417,7 +420,7 @@ foreach ( $medibles as $f ) {
 ?>
 
 <?php if ( $huecos_reales ) : ?>
-	<?php SWPK_Vista::caja_abrir( 'Lo que falta revisar', '', '', true ); ?>
+	<?php SWPK_Vista::caja_abrir( 'Lo que falta revisar', '', 'swpk-c12', true ); ?>
 	<p class="swpk-mudo" style="margin:-4px 0 12px;max-width:860px">
 		Esto no son problemas: es lo que el panel todavía no sabe de sitios que sí puede revisar. Un sitio
 		sin revisar puede estar perfecto o puede estar mal, y decir cualquiera de las dos cosas sería
@@ -459,7 +462,7 @@ foreach ( $medibles as $f ) {
 <?php endif; ?>
 
 <?php if ( $medibles ) : ?>
-	<?php SWPK_Vista::caja_abrir( 'Sitio por sitio', '', '', true ); ?>
+	<?php SWPK_Vista::caja_abrir( 'Sitio por sitio', '', 'swpk-c12', true ); ?>
 	<p class="swpk-mudo" style="margin:-4px 0 12px">
 		Los <?php echo (int) count( $medibles ); ?> que el panel puede revisar, con su cuenta.
 		<?php if ( $ciegos ) : ?>
@@ -568,6 +571,8 @@ foreach ( $medibles as $f ) {
 	<?php SWPK_Vista::caja_cerrar(); ?>
 <?php endif; ?>
 
+
+<?php SWPK_Vista::rejilla_cerrar(); ?>
 
 <p class="swpk-atribucion" style="margin-top:22px">
 	El panel no comprueba estas normas por su cuenta: las mira el plugin instalado en cada sitio y las manda
