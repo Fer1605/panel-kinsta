@@ -69,57 +69,6 @@ $hay_filtro_equipo = ( '' !== $perfil_pedido || '' !== $busca_persona );
 		y al entrar caen directo aquí.
 	</p>
 
-	<?php SWPK_Vista::caja_abrir( 'Dar acceso a alguien' ); ?>
-	<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
-		<input type="hidden" name="action" value="swpk_crear_acceso">
-		<?php wp_nonce_field( 'swpk_crear_acceso' ); ?>
-		<table class="form-table" role="presentation">
-			<tr>
-				<th scope="row"><label for="nombre">Nombre</label></th>
-				<td><input type="text" class="regular-text" name="nombre" id="nombre" required placeholder="Nombre y apellido"></td>
-			</tr>
-			<tr>
-				<th scope="row"><label for="correo">Correo</label></th>
-				<td><input type="email" class="regular-text" name="correo" id="correo" required placeholder="nombre@solucionweb.com"></td>
-			</tr>
-			<tr>
-				<th scope="row"><label for="perfil">Perfil</label></th>
-				<td>
-					<select name="perfil" id="perfil">
-						<?php foreach ( $roles as $slug => $nombre ) : ?>
-							<option value="<?php echo esc_attr( $slug ); ?>" <?php selected( $slug, SWPK_Perfiles::VENTAS ); ?>>
-								<?php echo esc_html( $nombre ); ?>
-							</option>
-						<?php endforeach; ?>
-					</select>
-				</td>
-			</tr>
-		</table>
-		<?php submit_button( 'Crear acceso' ); ?>
-	</form>
-	<?php SWPK_Vista::caja_cerrar(); ?>
-
-	<?php SWPK_Vista::caja_abrir( 'Qué ve cada perfil' ); ?>
-	<div class="swpk-tarjetas">
-		<?php foreach ( $roles as $slug => $nombre ) : ?>
-			<div class="swpk-tarjeta" style="min-width:250px">
-				<p style="font-weight:600;margin:0 0 10px"><?php echo esc_html( $nombre ); ?></p>
-				<ul style="margin:0;color:#1d2327">
-					<?php foreach ( $descrip[ $slug ]['ve'] as $x ) : ?>
-						<li style="margin-bottom:3px">✓ <?php echo esc_html( $x ); ?></li>
-					<?php endforeach; ?>
-				</ul>
-				<?php if ( $descrip[ $slug ]['no_ve'] ) : ?>
-					<ul style="margin:10px 0 0;color:#8c8f94">
-						<?php foreach ( $descrip[ $slug ]['no_ve'] as $x ) : ?>
-							<li style="margin-bottom:3px">✕ <?php echo esc_html( $x ); ?></li>
-						<?php endforeach; ?>
-					</ul>
-				<?php endif; ?>
-			</div>
-		<?php endforeach; ?>
-	</div>
-	<?php SWPK_Vista::caja_cerrar(); ?>
 
 	<?php
 	SWPK_Vista::caja_abrir(
@@ -206,6 +155,58 @@ $hay_filtro_equipo = ( '' !== $perfil_pedido || '' !== $busca_persona );
 			</tbody>
 		</table>
 	<?php endif; ?>
+	<?php SWPK_Vista::caja_cerrar(); ?>
+
+	<?php SWPK_Vista::caja_abrir( 'Dar acceso a alguien' ); ?>
+	<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+		<input type="hidden" name="action" value="swpk_crear_acceso">
+		<?php wp_nonce_field( 'swpk_crear_acceso' ); ?>
+		<table class="form-table" role="presentation">
+			<tr>
+				<th scope="row"><label for="nombre">Nombre</label></th>
+				<td><input type="text" class="regular-text" name="nombre" id="nombre" required placeholder="Nombre y apellido"></td>
+			</tr>
+			<tr>
+				<th scope="row"><label for="correo">Correo</label></th>
+				<td><input type="email" class="regular-text" name="correo" id="correo" required placeholder="nombre@solucionweb.com"></td>
+			</tr>
+			<tr>
+				<th scope="row"><label for="perfil">Perfil</label></th>
+				<td>
+					<select name="perfil" id="perfil">
+						<?php foreach ( $roles as $slug => $nombre ) : ?>
+							<option value="<?php echo esc_attr( $slug ); ?>" <?php selected( $slug, SWPK_Perfiles::VENTAS ); ?>>
+								<?php echo esc_html( $nombre ); ?>
+							</option>
+						<?php endforeach; ?>
+					</select>
+				</td>
+			</tr>
+		</table>
+		<?php submit_button( 'Crear acceso' ); ?>
+	</form>
+	<?php SWPK_Vista::caja_cerrar(); ?>
+
+	<?php SWPK_Vista::caja_abrir( 'Qué ve cada perfil' ); ?>
+	<div class="swpk-tarjetas">
+		<?php foreach ( $roles as $slug => $nombre ) : ?>
+			<div class="swpk-tarjeta" style="min-width:250px">
+				<p style="font-weight:600;margin:0 0 10px"><?php echo esc_html( $nombre ); ?></p>
+				<ul style="margin:0;color:#1d2327">
+					<?php foreach ( $descrip[ $slug ]['ve'] as $x ) : ?>
+						<li style="margin-bottom:3px">✓ <?php echo esc_html( $x ); ?></li>
+					<?php endforeach; ?>
+				</ul>
+				<?php if ( $descrip[ $slug ]['no_ve'] ) : ?>
+					<ul style="margin:10px 0 0;color:#8c8f94">
+						<?php foreach ( $descrip[ $slug ]['no_ve'] as $x ) : ?>
+							<li style="margin-bottom:3px">✕ <?php echo esc_html( $x ); ?></li>
+						<?php endforeach; ?>
+					</ul>
+				<?php endif; ?>
+			</div>
+		<?php endforeach; ?>
+	</div>
 	<?php SWPK_Vista::caja_cerrar(); ?>
 
 	<p class="swpk-nota">

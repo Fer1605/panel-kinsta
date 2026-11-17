@@ -83,6 +83,43 @@ $al_dia_medibles   = count( $medibles ) - $fallando_medibles;
 </p>
 
 <?php
+// ── Cómo vamos ───────────────────────────────────────────────────────────────
+//
+// La tarjeta que la maqueta aprobada pone arriba de esta pantalla. Es lo
+// mismo que dice el veredicto de abajo, pero en números y de un vistazo: el
+// jefe pidió "rapido tendria que captar que esta bien y que esta mal", y una
+// frase de tres renglones no es un vistazo.
+//
+// Los tres trozos suman el total a propósito. «Sin revisar» no es un relleno:
+// es la parte de la cartera de la que este panel no sabe nada, y esconderla
+// dejaría una dona que promete saber más de lo que sabe.
+$trozos_cumpl = [
+	[
+		'n'     => (int) $al_dia_medibles,
+		'color' => SWPK_Riesgo::colores()[ SWPK_Riesgo::AL_DIA ],
+		'texto' => 'Cumplen todo',
+	],
+	[
+		'n'     => (int) $fallando_medibles,
+		'color' => SWPK_Riesgo::colores()[ SWPK_Riesgo::CRITICO ],
+		'texto' => 'Les falta algo',
+	],
+	[
+		'n'     => (int) count( $ciegos ),
+		'color' => SWPK_Riesgo::colores()[ SWPK_Riesgo::SIN_DATOS ],
+		'texto' => 'Sin revisar',
+	],
+];
+
+SWPK_Vista::caja_abrir(
+	'Cómo vamos',
+	esc_html( SWPK_Vista::plural( count( $normas ), 'norma activa', 'normas activas' ) )
+);
+SWPK_Vista::dona( $trozos_cumpl, (int) $tablero['total'], 'sitios' );
+SWPK_Vista::caja_cerrar();
+?>
+
+<?php
 // ── El veredicto ─────────────────────────────────────────────────────────────
 //
 // Antes decía «1 sitio incumple… y de 107 no se sabe», que deja la pregunta
