@@ -93,6 +93,15 @@ arsort( $por_tipo );
 	los correos</strong>: aunque hoy no se le esté avisando a nadie, el movimiento queda escrito.
 </p>
 
+<?php
+SWPK_Vista::caja_abrir(
+	'El historial',
+	esc_html( SWPK_Vista::plural( count( $movimientos ), 'movimiento', 'movimientos' ) ),
+	'',
+	true
+);
+?>
+
 <form method="get" class="swpk-rango">
 	<input type="hidden" name="page" value="panel-kinsta-bitacora">
 	<input type="hidden" name="seccion" value="movimientos">
@@ -144,14 +153,6 @@ arsort( $por_tipo );
 	<?php endif; ?>
 </p>
 
-<?php
-SWPK_Vista::caja_abrir(
-	'El historial',
-	esc_html( SWPK_Vista::plural( count( $movimientos ), 'movimiento', 'movimientos' ) ),
-	'',
-	true
-);
-?>
 
 <?php SWPK_Vista::paginador( $pagina, $paginas, count( $movimientos ), 'movimientos', 'movimiento' ); ?>
 

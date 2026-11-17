@@ -109,24 +109,20 @@ $fallidos  = SWPK_Accesos::fallidos_recientes( 24 );
 		</div>
 	<?php endif; ?>
 
-	<div class="swpk-tarjetas">
-		<div class="swpk-tarjeta">
-			<div class="swpk-n" style="color:<?php echo $fallidos ? '#d63638' : '#008a20'; ?>"><?php echo (int) $fallidos; ?></div>
-			<div class="swpk-r">Intentos fallidos (24 h)</div>
-		</div>
-		<div class="swpk-tarjeta">
-			<div class="swpk-n"><?php echo count( SWPK_Perfiles::asesoras() ); ?></div>
-			<div class="swpk-r">Personas con acceso</div>
-		</div>
-	</div>
-
 	<?php
 	// Antes esto eran siete botones en fila, uno por cada cosa que puede pasar.
 	// Ocupaban dos renglones, no se veía cuál estaba puesto y no había forma de
 	// buscar una dirección. Ahora es la misma barra que el resto del panel.
+	// Los intentos fallidos iban en una tarjeta de cifra encima de esta; ahora
+	// van en su encabezado. Es el dato por el que se abre esta pantalla, y una
+	// cifra sola flotando arriba empujaba la tabla fuera de la pantalla.
 	SWPK_Vista::caja_abrir(
 		'El registro',
-		esc_html( SWPK_Vista::plural( count( $registros ), 'registro', 'registros' ) ),
+		esc_html( sprintf(
+			'%s · %s en las últimas 24 h',
+			SWPK_Vista::plural( count( $registros ), 'registro', 'registros' ),
+			SWPK_Vista::plural( (int) $fallidos, 'intento fallido', 'intentos fallidos' )
+		) ),
 		'',
 		true
 	);

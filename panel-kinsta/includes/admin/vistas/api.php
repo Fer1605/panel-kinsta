@@ -44,15 +44,7 @@ $llamadas = array_slice( $llamadas, 0, 25 );
 	</p>
 
 	<?php if ( ! $alcanzable ) : ?>
-		<div class="notice notice-warning">
-			<p>
-				<strong>La API ya funciona, pero hoy solo desde esta máquina.</strong>
-				El panel vive en <code><?php echo esc_html( (string) wp_parse_url( home_url(), PHP_URL_HOST ) ); ?></code>,
-				que no existe para nadie más. Todo lo de abajo es real y se puede probar aquí mismo;
-				para que lo consuma otro sistema hace falta que el panel esté en un servidor al que
-				se pueda llegar. Eso no es trabajo de código, es dónde se pone.
-			</p>
-		</div>
+		
 	<?php endif; ?>
 
 	<?php if ( ! $hay_app_pw ) : ?>
@@ -69,6 +61,16 @@ $llamadas = array_slice( $llamadas, 0, 25 );
 	<?php SWPK_Vista::rejilla_abrir(); ?>
 
 	<?php SWPK_Vista::caja_abrir( 'Conectarlo a Claude', '', 'swpk-c6' ); ?>
+
+	<div class="notice notice-warning">
+			<p>
+				<strong>La API ya funciona, pero hoy solo desde esta máquina.</strong>
+				El panel vive en <code><?php echo esc_html( (string) wp_parse_url( home_url(), PHP_URL_HOST ) ); ?></code>,
+				que no existe para nadie más. Todo lo de abajo es real y se puede probar aquí mismo;
+				para que lo consuma otro sistema hace falta que el panel esté en un servidor al que
+				se pueda llegar. Eso no es trabajo de código, es dónde se pone.
+			</p>
+		</div>
 
 	<p style="max-width:860px;color:#3c434a">
 		<strong>No hay nada que bajar ni que instalar.</strong> El panel habla MCP por su cuenta, así

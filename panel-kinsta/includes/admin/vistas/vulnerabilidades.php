@@ -165,8 +165,6 @@ $nombres = SWPK_Riesgo::nombres();
 	<?php SWPK_Admin::mostrar_mensaje(); ?>
 	<?php // Sin la parte de la lista: esta pantalla la dice abajo, con más detalle.
 	SWPK_Frescura::aviso( false ); ?>
-	<?php SWPK_Admin::tira_de_perfil(); ?>
-	<?php SWPK_Admin::aviso_demo(); ?>
 	<?php
 	// La frase de la lista de Wordfence, antes de nada.
 	//
@@ -176,21 +174,16 @@ $nombres = SWPK_Riesgo::nombres();
 	// la frase, que es lo que se lee de verdad.
 	$wf = SWPK_Wordfence::como_va();
 	?>
-	<p class="swpk-lista <?php echo $wf['al_dia'] ? '' : 'swpk-lista-mal'; ?>">
-		<?php echo esc_html( $wf['frase'] ); ?>
-	</p>
-
-	<?php SWPK_Frescura::sello(); ?>
-
-	<?php SWPK_Vista::abrir_barra(); ?>
-		<span></span>
-		<span><?php SWPK_Admin::boton_exportar( 'vulnerabilidades' ); ?></span>
-	<?php SWPK_Vista::cerrar_barra(); ?>
+	<?php
+	ob_start();
+	SWPK_Admin::boton_exportar( 'vulnerabilidades' );
+	$boton_excel = ob_get_clean();
+	?>
 
 	<?php
 	SWPK_Vista::caja_abrir(
 		'Todo lo que hay que parchar',
-		esc_html( SWPK_Vista::plural( count( $filas ), 'hallazgo', 'hallazgos' ) ),
+		'<span style="margin-right:12px">' . esc_html( SWPK_Vista::plural( count( $filas ), 'hallazgo', 'hallazgos' ) ) . '</span>' . $boton_excel,
 		'',
 		true
 	);
@@ -292,6 +285,20 @@ $nombres = SWPK_Riesgo::nombres();
 		<?php SWPK_Vista::paginador( $pagina, $paginas, count( $filas ), 'hallazgos', 'hallazgo' ); ?>
 	<?php endif; ?>
 	<?php SWPK_Vista::caja_cerrar(); ?>
+
+	<?php
+	// El sello, la tira de perfil y los botones van AL PIE, como en la maqueta:
+	// entre la cabecera y la primera tarjeta ella no pone nada. Arriba, el
+	// sello solo —que son cuatro renglones de fechas— empujaba la tabla fuera
+	// de la pantalla.
+	?>
+	<p class="swpk-lista <?php echo $wf['al_dia'] ? '' : 'swpk-lista-mal'; ?>">
+		<?php echo esc_html( $wf['frase'] ); ?>
+	</p>
+
+	<?php SWPK_Admin::tira_de_perfil(); ?>
+	<?php SWPK_Admin::aviso_demo(); ?>
+	<?php SWPK_Frescura::sello(); ?>
 
 	<p class="swpk-atribucion"><?php echo wp_kses_post( SWPK_Wordfence::atribucion() ); ?></p>
 </div>

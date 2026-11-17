@@ -168,9 +168,6 @@ $bien_hoy = $resumen_dia[ $hoy ] ?? [ 'sitios' => 0, 'modulos' => 0 ];
 	?>
 	<?php SWPK_Admin::mostrar_mensaje(); ?>
 	<?php SWPK_Frescura::aviso(); ?>
-	<?php SWPK_Admin::tira_de_perfil(); ?>
-	<?php SWPK_Admin::aviso_demo(); ?>
-	<?php if ( SWPK_Perfiles::puede( SWPK_Perfiles::ADMINISTRAR ) ) { SWPK_Admin::barra_acciones(); } ?>
 
 	<?php
 	// ── Las normas de seguridad, en una línea ───────────────────────────────
@@ -203,7 +200,8 @@ $bien_hoy = $resumen_dia[ $hoy ] ?? [ 'sitios' => 0, 'modulos' => 0 ];
 	}
 	?>
 
-	<?php if ( $normas_fallando > 0 ) : ?>
+	<?php // La línea de normas baja con el resto: arriba empujaba las tarjetas. ?>
+	<?php if ( false ) : ?>
 		<p class="swpk-linea">
 			<strong><?php echo esc_html( SWPK_Vista::plural( $sitios_fallando, 'sitio incumple', 'sitios incumplen' ) ); ?></strong>
 			alguna norma de seguridad
@@ -444,6 +442,25 @@ $bien_hoy = $resumen_dia[ $hoy ] ?? [ 'sitios' => 0, 'modulos' => 0 ];
 		// hacía. Si alguna vez se quiere de vuelta aquí, está en el historial
 		// de git, en el commit anterior a este.
 		?>
+
+		<?php
+		// Lo que antes separaba la cabecera de las tarjetas, ahora al pie.
+		SWPK_Admin::tira_de_perfil();
+		SWPK_Admin::aviso_demo();
+
+		if ( SWPK_Perfiles::puede( SWPK_Perfiles::ADMINISTRAR ) ) {
+			SWPK_Admin::barra_acciones();
+		}
+		?>
+
+		<?php if ( $normas_fallando > 0 ) : ?>
+			<p class="swpk-linea">
+				<strong><?php echo esc_html( SWPK_Vista::plural( $sitios_fallando, 'sitio incumple', 'sitios incumplen' ) ); ?></strong>
+				alguna norma de seguridad
+				(<?php echo esc_html( SWPK_Vista::plural( $normas_fallando, 'incumplimiento', 'incumplimientos' ) ); ?> en total).
+				<a href="<?php echo esc_url( admin_url( 'admin.php?page=panel-kinsta-seguridad' ) ); ?>">Ver cuáles &rarr;</a>
+			</p>
+		<?php endif; ?>
 
 		<?php SWPK_Frescura::sello(); ?>
 

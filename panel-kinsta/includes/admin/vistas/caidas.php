@@ -144,8 +144,6 @@ $historial = array_filter(
 		</div>
 	<?php endif; ?>
 
-	<?php SWPK_Frescura::sello(); ?>
-
 	<p>
 		<?php if ( SWPK_Perfiles::puede( SWPK_Perfiles::ADMINISTRAR ) ) : ?>
 			<a href="<?php echo esc_url( wp_nonce_url( admin_url( 'admin-post.php?action=swpk_sondear' ), 'swpk_sondear' ) ); ?>"
@@ -325,4 +323,12 @@ $historial = array_filter(
 	<?php SWPK_Vista::caja_cerrar(); ?>
 
 	<?php SWPK_Vista::rejilla_cerrar(); ?>
+
+	<?php
+	// El sello, la tira de perfil y los botones van AL PIE, como en la maqueta:
+	// entre la cabecera y la primera tarjeta ella no pone nada. Arriba, el
+	// sello solo —que son cuatro renglones de fechas— empujaba la tabla fuera
+	// de la pantalla.
+	?>
+	<?php SWPK_Frescura::sello(); ?>
 </div>

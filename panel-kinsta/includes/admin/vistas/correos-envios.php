@@ -19,28 +19,6 @@ $proximos = [
 $accion = static fn( $a ) => wp_nonce_url( admin_url( 'admin-post.php?action=' . $a ), $a );
 ?>
 
-	<?php if ( ! $activos ) : ?>
-		<div class="notice notice-error">
-			<p><strong>Los envíos están apagados.</strong> No sale ningún correo, ni de prueba ni real.</p>
-		</div>
-	<?php elseif ( $en_prueba ) : ?>
-		<div class="notice notice-warning">
-			<p>
-				<strong>Modo de prueba.</strong> Los correos se arman completos y quedan en la bitácora
-				para leerlos, pero <strong>no se envían a nadie</strong>.
-			</p>
-			<p>
-				Es a propósito: el primer lote sale a clientes reales, y un error de redacción o un
-				destinatario mal calculado se vuelve cien correos que no se pueden recoger. Conviene
-				leer unos cuantos antes de abrir la llave.
-			</p>
-		</div>
-	<?php else : ?>
-		<div class="notice notice-success">
-			<p><strong>Envío real activo.</strong> Los correos salen de verdad a asesoras, clientes y soporte.</p>
-		</div>
-	<?php endif; ?>
-
 	<?php SWPK_Vista::rejilla_abrir(); ?>
 
 	<?php SWPK_Vista::caja_abrir( 'El interruptor', '', 'swpk-c5' ); ?>
@@ -87,6 +65,28 @@ $accion = static fn( $a ) => wp_nonce_url( admin_url( 'admin-post.php?action=' .
 			</span>
 		</span>
 	</a>
+
+		<?php if ( ! $activos ) : ?>
+		<div class="notice notice-error">
+			<p><strong>Los envíos están apagados.</strong> No sale ningún correo, ni de prueba ni real.</p>
+		</div>
+		<?php elseif ( $en_prueba ) : ?>
+		<div class="notice notice-warning">
+			<p>
+				<strong>Modo de prueba.</strong> Los correos se arman completos y quedan en la bitácora
+				para leerlos, pero <strong>no se envían a nadie</strong>.
+			</p>
+			<p>
+				Es a propósito: el primer lote sale a clientes reales, y un error de redacción o un
+				destinatario mal calculado se vuelve cien correos que no se pueden recoger. Conviene
+				leer unos cuantos antes de abrir la llave.
+			</p>
+		</div>
+		<?php else : ?>
+		<div class="notice notice-success">
+			<p><strong>Envío real activo.</strong> Los correos salen de verdad a asesoras, clientes y soporte.</p>
+		</div>
+		<?php endif; ?>
 	<?php SWPK_Vista::caja_cerrar(); ?>
 
 	<?php SWPK_Vista::caja_abrir( 'Qué sale, y a quién', '', 'swpk-c7', true ); ?>

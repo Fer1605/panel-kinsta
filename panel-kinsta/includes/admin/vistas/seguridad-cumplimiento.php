@@ -76,13 +76,16 @@ $al_dia_medibles   = count( $medibles ) - $fallando_medibles;
 	<?php return; ?>
 <?php endif; ?>
 
-<p class="swpk-intro">
-	Esta pantalla contesta una sola pregunta: <strong>¿qué le falta a cada sitio para cumplir nuestras
-	normas de seguridad?</strong> Abajo están los problemas encontrados, agrupados por norma y con el
-	nombre del sitio puesto.
-</p>
-
 <?php
+// ── Lo que hay que atender ───────────────────────────────────────────────────
+$con_fallas = [];
+$cumplidas  = [];
+
+foreach ( $normas as $n ) {
+	$r = $tablero['por_norma'][ (string) $n->clave ];
+	if ( $r['falla'] > 0 ) { $con_fallas[] = $r; } else { $cumplidas[] = $r; }
+}
+
 // ── Cómo vamos ───────────────────────────────────────────────────────────────
 //
 // La tarjeta que la maqueta aprobada pone arriba de esta pantalla. Es lo
@@ -110,69 +113,6 @@ $trozos_cumpl = [
 		'texto' => 'Sin revisar',
 	],
 ];
-
-?>
-
-<?php
-// ── El veredicto ─────────────────────────────────────────────────────────────
-//
-// Antes decía «1 sitio incumple… y de 107 no se sabe», que deja la pregunta
-// obvia sin contestar: ¿y por qué de 107 no se sabe? Ahora lo primero que se
-// explica es de cuántos sitios se puede saber algo y por qué.
-?>
-<?php if ( ! $medibles ) : ?>
-	<div class="swpk-veredicto swpk-veredicto-ciego">
-		<strong>Todavía no se puede revisar ningún sitio.</strong>
-		Estas normas no se ven desde fuera —si el editor de código está abierto, si alguien puede
-		registrarse, si el servidor ejecuta archivos subidos— solo se ven desde dentro del sitio, y para eso
-		hace falta el plugin instalado. No lo tiene ninguno de los <?php echo (int) $tablero['total']; ?> todavía.
-	</div>
-<?php else : ?>
-	<div class="swpk-veredicto <?php echo $fallando_medibles > 0 ? 'swpk-veredicto-mal' : 'swpk-veredicto-bien'; ?>">
-		<?php if ( $fallando_medibles > 0 ) : ?>
-			<strong>
-				<?php echo esc_html( SWPK_Vista::plural( $fallando_medibles, 'sitio tiene algo', 'sitios tienen algo' ) ); ?>
-				que arreglar.
-			</strong>
-		<?php else : ?>
-			<strong>Los sitios que se pueden revisar están en orden.</strong>
-		<?php endif; ?>
-
-		<span class="swpk-veredicto-mas">
-			El panel puede revisar <?php echo (int) count( $medibles ); ?> de los
-			<?php echo (int) $tablero['total']; ?> sitios: son los que tienen el plugin instalado.
-			<?php if ( $al_dia_medibles > 0 && $fallando_medibles > 0 ) : ?>
-				De esos, <?php echo (int) $al_dia_medibles; ?> cumplen todo.
-			<?php endif; ?>
-			<?php if ( $ciegos ) : ?>
-				De los otros <?php echo (int) count( $ciegos ); ?> no se sabe nada, ni bueno ni malo.
-			<?php endif; ?>
-		</span>
-	</div>
-<?php endif; ?>
-
-<?php if ( $ciegos ) : ?>
-	<div class="notice notice-warning inline">
-		<p>
-			<strong>Por qué de <?php echo (int) count( $ciegos ); ?> sitios no se sabe nada.</strong>
-			Casi ninguna de estas normas se puede comprobar desde fuera: hay que estar dentro del sitio para
-			saber si el editor de código está abierto, si cualquiera puede registrarse o si el servidor
-			ejecuta un archivo PHP subido por un formulario. Eso lo mira el plugin que va instalado en cada
-			sitio, y <strong>falta instalarlo en <?php echo (int) count( $ciegos ); ?></strong>.
-			Mientras tanto esos sitios no aparecen aquí: ni como buenos ni como malos, porque no lo sabemos.
-		</p>
-	</div>
-<?php endif; ?>
-
-<?php
-// ── Lo que hay que atender ───────────────────────────────────────────────────
-$con_fallas = [];
-$cumplidas  = [];
-
-foreach ( $normas as $n ) {
-	$r = $tablero['por_norma'][ (string) $n->clave ];
-	if ( $r['falla'] > 0 ) { $con_fallas[] = $r; } else { $cumplidas[] = $r; }
-}
 
 SWPK_Vista::rejilla_abrir();
 
@@ -573,6 +513,76 @@ foreach ( $medibles as $f ) {
 
 
 <?php SWPK_Vista::rejilla_cerrar(); ?>
+
+<?php
+// Lo que antes iba encima de las tarjetas: la pregunta que contesta la
+// pantalla, el veredicto en una frase y el porqué de los sitios de los que no
+// se sabe nada. La maqueta no pone nada entre la cabecera y la primera
+// tarjeta, y esto son tres bloques de texto que empujaban la dona fuera de la
+// pantalla. Lo que dicen sigue estando; lo que cambia es que ya no estorban.
+?>
+
+<p class="swpk-intro">
+	Esta pantalla contesta una sola pregunta: <strong>¿qué le falta a cada sitio para cumplir nuestras
+	normas de seguridad?</strong> Abajo están los problemas encontrados, agrupados por norma y con el
+	nombre del sitio puesto.
+</p>
+
+<?php
+
+?>
+
+<?php
+// ── El veredicto ─────────────────────────────────────────────────────────────
+//
+// Antes decía «1 sitio incumple… y de 107 no se sabe», que deja la pregunta
+// obvia sin contestar: ¿y por qué de 107 no se sabe? Ahora lo primero que se
+// explica es de cuántos sitios se puede saber algo y por qué.
+?>
+<?php if ( ! $medibles ) : ?>
+	<div class="swpk-veredicto swpk-veredicto-ciego">
+		<strong>Todavía no se puede revisar ningún sitio.</strong>
+		Estas normas no se ven desde fuera —si el editor de código está abierto, si alguien puede
+		registrarse, si el servidor ejecuta archivos subidos— solo se ven desde dentro del sitio, y para eso
+		hace falta el plugin instalado. No lo tiene ninguno de los <?php echo (int) $tablero['total']; ?> todavía.
+	</div>
+<?php else : ?>
+	<div class="swpk-veredicto <?php echo $fallando_medibles > 0 ? 'swpk-veredicto-mal' : 'swpk-veredicto-bien'; ?>">
+		<?php if ( $fallando_medibles > 0 ) : ?>
+			<strong>
+				<?php echo esc_html( SWPK_Vista::plural( $fallando_medibles, 'sitio tiene algo', 'sitios tienen algo' ) ); ?>
+				que arreglar.
+			</strong>
+		<?php else : ?>
+			<strong>Los sitios que se pueden revisar están en orden.</strong>
+		<?php endif; ?>
+
+		<span class="swpk-veredicto-mas">
+			El panel puede revisar <?php echo (int) count( $medibles ); ?> de los
+			<?php echo (int) $tablero['total']; ?> sitios: son los que tienen el plugin instalado.
+			<?php if ( $al_dia_medibles > 0 && $fallando_medibles > 0 ) : ?>
+				De esos, <?php echo (int) $al_dia_medibles; ?> cumplen todo.
+			<?php endif; ?>
+			<?php if ( $ciegos ) : ?>
+				De los otros <?php echo (int) count( $ciegos ); ?> no se sabe nada, ni bueno ni malo.
+			<?php endif; ?>
+		</span>
+	</div>
+<?php endif; ?>
+
+<?php if ( $ciegos ) : ?>
+	<div class="notice notice-warning inline">
+		<p>
+			<strong>Por qué de <?php echo (int) count( $ciegos ); ?> sitios no se sabe nada.</strong>
+			Casi ninguna de estas normas se puede comprobar desde fuera: hay que estar dentro del sitio para
+			saber si el editor de código está abierto, si cualquiera puede registrarse o si el servidor
+			ejecuta un archivo PHP subido por un formulario. Eso lo mira el plugin que va instalado en cada
+			sitio, y <strong>falta instalarlo en <?php echo (int) count( $ciegos ); ?></strong>.
+			Mientras tanto esos sitios no aparecen aquí: ni como buenos ni como malos, porque no lo sabemos.
+		</p>
+	</div>
+<?php endif; ?>
+
 
 <p class="swpk-atribucion" style="margin-top:22px">
 	El panel no comprueba estas normas por su cuenta: las mira el plugin instalado en cada sitio y las manda

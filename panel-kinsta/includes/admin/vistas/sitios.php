@@ -96,9 +96,6 @@ $volver = add_query_arg(
 	?>
 	<?php SWPK_Admin::mostrar_mensaje(); ?>
 	<?php SWPK_Frescura::aviso(); ?>
-	<?php SWPK_Admin::tira_de_perfil(); ?>
-	<?php SWPK_Admin::aviso_demo(); ?>
-	<?php SWPK_Frescura::sello(); ?>
 
 	<?php if ( ! $todos ) : ?>
 		<div class="notice notice-info"><p>
@@ -121,18 +118,24 @@ $volver = add_query_arg(
 		</p>
 	<?php endif; ?>
 
-	<?php SWPK_Vista::abrir_barra(); ?>
-		<span></span>
-		<span>
-			<?php SWPK_Admin::boton_exportar( 'sitios' ); ?>
-			<?php if ( $asignar ) : ?>
-				<a class="button" href="<?php echo esc_url( wp_nonce_url( admin_url( 'admin-post.php?action=swpk_correr' ), 'swpk_correr' ) ); ?>"
-					title="Vuelve a revisar los 107 sitios. Tarda un par de minutos.">
-					Revisar todos
-				</a>
-			<?php endif; ?>
-		</span>
-	<?php SWPK_Vista::cerrar_barra(); ?>
+	<?php
+	// Los botones de la pantalla van en el encabezado de la tarjeta, no en una
+	// barra suelta encima: la maqueta no pone nada entre la cabecera y la
+	// primera tarjeta, y una fila de botones flotando ahí era justo lo que
+	// hacía que esta pantalla no se pareciera.
+	ob_start();
+	SWPK_Admin::boton_exportar( 'sitios' );
+
+	if ( $asignar ) {
+		printf(
+			'<a class="button" href="%s" title="%s" style="margin-left:6px">Revisar todos</a>',
+			esc_url( wp_nonce_url( admin_url( 'admin-post.php?action=swpk_correr' ), 'swpk_correr' ) ),
+			esc_attr( 'Vuelve a revisar los ' . count( $todos ) . ' sitios. Tarda un par de minutos.' )
+		);
+	}
+
+	$botones_cartera = ob_get_clean();
+	?>
 
 	<?php
 	// El buscador se mudó aquí dentro: antes era un formulario aparte, y con
@@ -143,7 +146,7 @@ $volver = add_query_arg(
 	// tabla. Dentro de la tarjeta va solo lo que la tabla filtra y pagina.
 	SWPK_Vista::caja_abrir(
 		'La cartera',
-		esc_html( SWPK_Vista::plural( count( $filtrados ), 'sitio', 'sitios' ) ),
+		'<span style="margin-right:12px">' . esc_html( SWPK_Vista::plural( count( $filtrados ), 'sitio', 'sitios' ) ) . '</span>' . $botones_cartera,
 		'',
 		true
 	);
@@ -314,4 +317,14 @@ $volver = add_query_arg(
 		<?php SWPK_Vista::paginador( $pagina, $paginas, count( $filtrados ) ); ?>
 	<?php endif; ?>
 	<?php SWPK_Vista::caja_cerrar(); ?>
+
+	<?php
+	// El sello, la tira de perfil y los botones van AL PIE, como en la maqueta:
+	// entre la cabecera y la primera tarjeta ella no pone nada. Arriba, el
+	// sello solo —que son cuatro renglones de fechas— empujaba la tabla fuera
+	// de la pantalla.
+	?>
+	<?php SWPK_Admin::tira_de_perfil(); ?>
+	<?php SWPK_Admin::aviso_demo(); ?>
+	<?php SWPK_Frescura::sello(); ?>
 </div>
