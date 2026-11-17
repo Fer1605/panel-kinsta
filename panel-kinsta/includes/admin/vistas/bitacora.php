@@ -80,7 +80,12 @@ $registros = array_values( $registros );
 $hubo_alguna_vez = SWPK_Bitacora::hay_alguno();
 ?>
 <div class="wrap">
-	<h1>Bitácora</h1>
+	<?php
+	SWPK_Vista::cabecera(
+		'Bitácora',
+		'Qué pasó en los sitios y qué se le avisó a quién. Es la evidencia, por eso todo lleva fecha.'
+	);
+	?>
 	<?php SWPK_Admin::mostrar_mensaje(); ?>
 	<?php SWPK_Admin::tira_de_perfil(); ?>
 
@@ -157,6 +162,15 @@ $hubo_alguna_vez = SWPK_Bitacora::hay_alguno();
 
 	<p><?php SWPK_Admin::boton_exportar( 'bitacora' ); ?></p>
 
+	<?php
+	SWPK_Vista::caja_abrir(
+		'Lo que se ha notificado',
+		esc_html( SWPK_Vista::plural( count( $registros ), 'aviso', 'avisos' ) ),
+		'',
+		true
+	);
+	?>
+
 	<?php SWPK_Vista::paginador( $pagina, $paginas, count( $registros ), 'avisos', 'aviso' ); ?>
 
 	<?php if ( ! $registros ) : ?>
@@ -221,4 +235,5 @@ $hubo_alguna_vez = SWPK_Bitacora::hay_alguno();
 		</table>
 		<?php SWPK_Vista::paginador( $pagina, $paginas, count( $registros ), 'avisos', 'aviso' ); ?>
 	<?php endif; ?>
+	<?php SWPK_Vista::caja_cerrar(); ?>
 </div>

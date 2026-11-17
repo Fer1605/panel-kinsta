@@ -180,7 +180,36 @@ $fila = static function ( array $f, bool $solo ) use ( $resumir ): void {
 };
 ?>
 <div class="wrap">
-	<h1>Panel Kinsta</h1>
+	<?php
+	// Las pastillas de grupo, a la derecha del título. Cada una lleva a Sitios
+	// ya filtrado por esa etiqueta: el número dice a cuántos te lleva, no es
+	// un contador de adorno.
+	$conteo_tags = SWPK_Vista::conteo_por_tag( SWPK_Perfiles::sitios_visibles() );
+	$pastillas   = [];
+
+	foreach ( SWPK_Etiquetas::nombres() as $tag => $nombre ) {
+		if ( empty( $conteo_tags[ $tag ] ) ) {
+			continue;
+		}
+
+		$pastillas[] = [
+			'texto' => $nombre,
+			'n'     => $conteo_tags[ $tag ],
+			'url'   => add_query_arg(
+				[ 'page' => 'panel-kinsta-sitios', 'tag' => $tag ],
+				admin_url( 'admin.php' )
+			),
+		];
+	}
+
+	SWPK_Vista::cabecera(
+		'Panel Kinsta',
+		$estado['total']
+			? esc_html( sprintf( 'Los %d sitios de la cuenta.', (int) $estado['total'] ) )
+			: '',
+		SWPK_Vista::pastillas( $pastillas )
+	);
+	?>
 	<?php SWPK_Admin::mostrar_mensaje(); ?>
 	<?php SWPK_Frescura::aviso(); ?>
 	<?php SWPK_Admin::tira_de_perfil(); ?>
@@ -236,6 +265,194 @@ $fila = static function ( array $f, bool $solo ) use ( $resumir ): void {
 
 	<?php else : ?>
 
+		<?php
+		// ── La rejilla ──────────────────────────────────────────────────────
+		//
+		// Esta es la maqueta que el jefe aprobó, construida con los datos de
+		// verdad. Son cinco tarjetas, y el orden es el suyo: primero lo que
+		// hay que atender con el nombre del sitio puesto, después cómo está la
+		// cartera entera, y al final las dos cifras de volumen.
+		//
+		// Lo que NO es: ocho contadores en fila, que es con lo que abría antes
+		// y lo que él rechazó dos veces —"no pequeños resumenes de numeros"—.
+		// Un número aquí siempre viene acompañado del enlace a los renglones
+		// que lo forman.
+		$colores = SWPK_Riesgo::colores();
+		$nombres = SWPK_Riesgo::nombres();
+		$urg     = $estado['caidos'] ? array_merge( $estado['caidos'], $estado['urgentes'] ) : $estado['urgentes'];
+		?>
+
+		<?php SWPK_Vista::rejilla_abrir(); ?>
+
+			<?php
+			// ── Lo que no puede esperar ─────────────────────────────────────
+			SWPK_Vista::caja_abrir(
+				'Lo que no puede esperar',
+				$urg
+					? sprintf(
+						'<a href="%s">%s</a>',
+						esc_url( admin_url( 'admin.php?page=panel-kinsta-vulnerabilidades' ) ),
+						1 === count( $urg ) ? 'Ver el sitio' : esc_html( sprintf( 'Ver los %d', count( $urg ) ) )
+					)
+					: '',
+				'swpk-c4',
+				true
+			);
+
+			$filas_urg = [];
+
+			foreach ( array_slice( $urg, 0, 6 ) as $u ) {
+				$sub = trim( (string) $u['modulo'] );
+				if ( '' !== (string) $u['explicacion'] ) {
+					$sub = ( '' !== $sub ? $sub . ' · ' : '' ) . $u['explicacion'];
+				}
+
+				$filas_urg[] = [
+					'nom'  => $u['nombre'],
+					'sub'  => SWPK_Vista::recortar( $sub, 95 ),
+					'url'  => SWPK_Vista::url_del_sitio( (string) $u['sitio_id'], 'panel-kinsta' ),
+					'dato' => 'caido' === $u['nivel']
+						? '<span class="swpk-nivel" style="color:' . esc_attr( $colores[ SWPK_Riesgo::CRITICO ] ) . '">Caído</span>'
+						: '<span class="swpk-nivel" style="color:' . esc_attr( $colores[ $u['nivel'] ] ?? '' ) . '">'
+							. esc_html( $nombres[ $u['nivel'] ] ?? $u['nivel'] ) . '</span>',
+				];
+			}
+
+			SWPK_Vista::lista( $filas_urg, 'Nada urgente. Ningún sitio tiene una falla que se aproveche desde internet sin cuenta.' );
+			SWPK_Vista::caja_cerrar();
+			?>
+
+			<?php
+			// ── Cómo está la cartera ────────────────────────────────────────
+			SWPK_Vista::caja_abrir(
+				'Cómo está la cartera',
+				esc_html( SWPK_Frescura::fmt( 'j M', $estado['armado_en'] ) ),
+				'swpk-c4'
+			);
+
+			$trozos = [];
+			foreach ( $estado['por_nivel'] as $nivel => $cuantos ) {
+				$trozos[] = [
+					'n'      => (int) $cuantos,
+					'color'  => $colores[ $nivel ] ?? '#8c8f94',
+					'texto'  => $nombres[ $nivel ] ?? $nivel,
+				];
+			}
+
+			SWPK_Vista::dona( $trozos, (int) $estado['total'], 'sitios' );
+			SWPK_Vista::caja_cerrar();
+			?>
+
+			<?php
+			// ── Novedades ───────────────────────────────────────────────────
+			SWPK_Vista::caja_abrir(
+				'Novedades',
+				sprintf(
+					'<a href="%s">Ver todo</a>',
+					esc_url( admin_url( 'admin.php?page=panel-kinsta-bitacora&seccion=movimientos' ) )
+				),
+				'swpk-c4',
+				true
+			);
+
+			$ultimos = [];
+
+			foreach ( array_slice( array_values( $eventos ), 0, 6 ) as $e ) {
+				$ultimos[] = [
+					'nom'  => SWPK_Vista::recortar( (string) $e->titulo, 60 ),
+					'sub'  => $etq_evt[ $e->tipo ] ?? $e->tipo,
+					'url'  => isset( $sitios[ (string) $e->sitio_id ] )
+						? SWPK_Vista::url_del_sitio( (string) $e->sitio_id, 'panel-kinsta' )
+						: '',
+					'dato' => esc_html( SWPK_Frescura::fmt( 'j M', (string) $e->ocurrio_en ) ),
+				];
+			}
+
+			SWPK_Vista::lista( $ultimos, 'Todavía no hay nada anotado.' );
+			SWPK_Vista::caja_cerrar();
+			?>
+
+			<?php
+			// ── Se actualizaron ─────────────────────────────────────────────
+			//
+			// El pie dice desde cuándo mide el panel, y no «este mes», porque
+			// el panel lleva pocos días midiendo y un «este mes» con tres días
+			// de datos es un número que se lee como lo que no es.
+			$por_dia_act = SWPK_Eventos::conteo_por_dia( SWPK_Eventos::ACTUALIZADO, 14 );
+			$primer_dia  = SWPK_Eventos::primer_dia();
+			$dias_mide   = $primer_dia
+				? max( 1, 1 + (int) floor( ( strtotime( current_time( 'Y-m-d' ) ) - strtotime( $primer_dia ) ) / DAY_IN_SECONDS ) )
+				: 0;
+
+			SWPK_Vista::caja_abrir(
+				'Se actualizaron',
+				$primer_dia
+					? esc_html( sprintf(
+						'%s – %s',
+						SWPK_Frescura::fmt( 'j M', $primer_dia . ' 12:00:00' ),
+						SWPK_Frescura::fmt( 'j M', current_time( 'Y-m-d' ) . ' 12:00:00' )
+					) )
+					: '',
+				'swpk-c6'
+			);
+			?>
+				<div class="swpk-cifron"><?php echo (int) array_sum( $por_dia_act ); ?></div>
+				<div class="swpk-cifron-pie">
+					<?php
+					$d = min( $dias_mide, 14 );
+					echo esc_html( sprintf(
+						'módulos actualizados en %s',
+						0 === $d ? 'lo que lleva midiendo el panel'
+							: ( 1 === $d ? 'el día que lleva midiendo el panel'
+								: sprintf( 'los %d días que lleva midiendo el panel', $d ) )
+					) );
+					?>
+				</div>
+				<?php SWPK_Vista::grafica( array_map(
+					static fn( $dia, $n ) => [ 'etq' => SWPK_Frescura::fmt( 'j M', $dia . ' 12:00:00' ), 'n' => $n ],
+					array_keys( $por_dia_act ),
+					array_values( $por_dia_act )
+				) ); ?>
+			<?php SWPK_Vista::caja_cerrar(); ?>
+
+			<?php
+			// ── Vulnerabilidades y pendientes ───────────────────────────────
+			SWPK_Vista::caja_abrir(
+				'Vulnerabilidades y pendientes',
+				sprintf(
+					'<a href="%s">Ver todo</a>',
+					esc_url( admin_url( 'admin.php?page=panel-kinsta-vulnerabilidades' ) )
+				),
+				'swpk-c6'
+			);
+
+			$sev = [];
+			foreach ( [ SWPK_Riesgo::CRITICO, SWPK_Riesgo::ALTO, SWPK_Riesgo::MEDIO, SWPK_Riesgo::BAJO ] as $nivel ) {
+				$sev[] = [
+					'n'     => (int) ( $estado['por_sev'][ $nivel ] ?? 0 ),
+					'color' => $colores[ $nivel ],
+					'texto' => $nombres[ $nivel ],
+				];
+			}
+			?>
+				<div class="swpk-cifron"><?php echo (int) $estado['hallazgos']; ?></div>
+				<div class="swpk-cifron-pie">
+					<?php
+					echo esc_html( sprintf(
+						'%s en %s',
+						SWPK_Vista::plural( (int) $estado['hallazgos'], 'hallazgo abierto', 'hallazgos abiertos' ),
+						SWPK_Vista::plural( (int) $estado['con_hallazgos'], 'sitio', 'sitios' )
+					) );
+					?>
+				</div>
+				<?php
+				SWPK_Vista::barra_apilada( $sev );
+				SWPK_Vista::leyenda( $sev );
+				?>
+			<?php SWPK_Vista::caja_cerrar(); ?>
+
+		<?php SWPK_Vista::rejilla_cerrar(); ?>
+
 		<p class="swpk-linea">
 			<strong>
 				<?php
@@ -260,17 +477,35 @@ $fila = static function ( array $f, bool $solo ) use ( $resumir ): void {
 			<?php endif; ?>
 		</p>
 
-		<?php SWPK_Vista::abrir_barra(); ?>
-			<span class="swpk-gris">Los últimos días, un renglón por sitio: lo que necesita atención y lo que salió bien solo.</span>
-			<span>
-				<?php SWPK_Vista::buscador( 'panel-kinsta', $busqueda, [] ); ?>
-				<a class="button" href="<?php echo esc_url( admin_url( 'admin.php?page=panel-kinsta-bitacora&seccion=movimientos' ) ); ?>">
-					Ver todo el historial
-				</a>
-			</span>
-		<?php SWPK_Vista::cerrar_barra(); ?>
+		<?php
+		// ── El diario, debajo de la rejilla ─────────────────────────────────
+		//
+		// La maqueta que se aprobó no lo traía: ahí los movimientos del día
+		// son la tarjeta «Novedades», que son seis renglones y un enlace.
+		//
+		// Se queda, y en su propia tarjeta, porque esta tabla es justo lo que
+		// Fer peleó cuando el Resumen solo los contaba: "si tiene registro de
+		// que un sitio hizo movimientos, aquí debería de aparecer". Encogerla
+		// a seis renglones por fidelidad a una maqueta sería deshacer eso sin
+		// que nadie lo pidiera. Va debajo, no arriba: lo primero que se lee
+		// sigue siendo el estado, que es lo que el jefe sí pidió.
+		SWPK_Vista::caja_abrir(
+			'Qué pasó estos días',
+			sprintf(
+				'<a href="%s">Ver todo el historial</a>',
+				esc_url( admin_url( 'admin.php?page=panel-kinsta-bitacora&seccion=movimientos' ) )
+			),
+			'',
+			true
+		);
+		?>
 
-		<p class="swpk-leyenda">
+		<div class="swpk-filtra">
+			<span class="swpk-gris">Un renglón por sitio: lo que necesita atención y lo que salió bien solo.</span>
+			<?php SWPK_Vista::buscador( 'panel-kinsta', $busqueda, [] ); ?>
+		</div>
+
+		<p class="swpk-leyenda" style="padding:12px 20px;margin:0;border-bottom:1px solid #f0f1f6">
 			<?php echo SWPK_Admin::grupo_badge( SWPK_Etiquetas::DESARROLLO ); ?>
 			<?php echo SWPK_Admin::grupo_badge( SWPK_Etiquetas::AUTO ); ?>
 			<span>los administramos nosotros</span>
@@ -374,6 +609,8 @@ $fila = static function ( array $f, bool $solo ) use ( $resumir ): void {
 			<?php endforeach; ?>
 			</tbody>
 		</table>
+
+		<?php SWPK_Vista::caja_cerrar(); ?>
 
 		<p class="swpk-nota">
 			Esto es lo que cambió estos días, no el estado de la cartera. Los <?php echo (int) $estado['total']; ?>

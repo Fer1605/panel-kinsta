@@ -31,12 +31,35 @@ class SWPK_Riesgo {
 		];
 	}
 
+	/**
+	 * Los colores del riesgo, los de la maqueta que aprobó el jefe.
+	 *
+	 * Tres cambiaron al construir la dona del Resumen, y por un motivo que
+	 * solo se ve cuando los colores quedan pegados en un mismo gráfico:
+	 *
+	 *   · CRÍTICO y ALTO eran #b32d2e y #d63638, dos rojos. En una insignia
+	 *     suelta se distinguen; en la dona, uno al lado del otro, son el mismo
+	 *     color y la cartera parecía tener 26 sitios críticos.
+	 *     Ahora ALTO es ámbar oscuro, como en la maqueta.
+	 *   · BAJO era #2271b1, el azul de WordPress, que es también el color de
+	 *     marca del panel. Un nivel de riesgo pintado del color de la marca se
+	 *     lee como un acento de diseño, no como un dato. Ahora es gris.
+	 *
+	 * Los otros dos se quedan como estaban y NO son los de la maqueta: ahí
+	 * eran #00a32a y #c3c4d0, y estos colores se usan también de fondo con
+	 * texto blanco encima —en las insignias y en los correos—, donde esos dos
+	 * dejan el texto ilegible.
+	 *
+	 * Y el color nunca va solo: al lado siempre está la palabra. Es regla del
+	 * jefe, porque esto se imprime y se manda por correo, y porque el color
+	 * solo no le sirve a quien no distingue rojo de verde.
+	 */
 	public static function colores(): array {
 		return [
-			self::CRITICO => '#b32d2e',
-			self::ALTO    => '#d63638',
+			self::CRITICO => '#d63638',
+			self::ALTO    => '#e07c00',
 			self::MEDIO   => '#dba617',
-			self::BAJO    => '#2271b1',
+			self::BAJO    => '#8a8a94',
 			self::AL_DIA  => '#008a20',
 			self::SIN_DATOS => '#8c8f94',
 		];

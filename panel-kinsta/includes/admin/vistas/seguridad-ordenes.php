@@ -113,7 +113,7 @@ $url_estado = static fn( string $e ) => add_query_arg(
 	</p>
 </div>
 
-<h2>Lo que pedimos</h2>
+<?php SWPK_Vista::caja_abrir( 'Lo que pedimos', '', '', true ); ?>
 
 <?php
 // Solo se dibujan los estados que tienen algo. Seis filtros en cero son seis
@@ -220,7 +220,9 @@ SWPK_Vista::barra_de_filtros(
 
 <hr style="margin:34px 0">
 
-<h2>Cambiarle la contraseña a un usuario nuestro en varios sitios de golpe</h2>
+<?php SWPK_Vista::caja_cerrar(); ?>
+
+<?php SWPK_Vista::caja_abrir( 'Cambiar una contraseña en varios sitios de golpe' ); ?>
 
 <p style="max-width:880px;color:#3c434a">
 	Para cuando alguien se va del equipo. Lo pidió así: <em>«mañana se va alguien y resulta que tiene las
@@ -333,3 +335,5 @@ SWPK_Vista::barra_de_filtros(
 		</span>
 	</p>
 </form>
+
+<?php SWPK_Vista::caja_cerrar(); ?>

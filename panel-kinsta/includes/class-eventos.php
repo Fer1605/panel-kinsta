@@ -389,6 +389,55 @@ class SWPK_Eventos {
 	}
 
 	/** @return array<int,object> */
+	/**
+	 * Cuántos eventos de un tipo hubo cada día, para la gráfica del Resumen.
+	 *
+	 * Devuelve TODOS los días del rango, incluidos los de cero. Saltarse los
+	 * días vacíos deja una gráfica que miente: tres puntos seguidos subiendo
+	 * se leen como tres días seguidos de movimiento aunque entre el primero y
+	 * el segundo hayan pasado dos semanas sin nada.
+	 *
+	 * @return array<string,int> «2026-11-16» => 42
+	 */
+	public static function conteo_por_dia( string $tipo, int $dias = 14 ): array {
+		global $wpdb;
+		$tabla = SWPK_Tablas::tabla( 'eventos' );
+
+		$dias  = max( 2, $dias );
+		$desde = gmdate( 'Y-m-d', strtotime( current_time( 'Y-m-d' ) . ' -' . ( $dias - 1 ) . ' days' ) );
+
+		$filas = $wpdb->get_results(
+			$wpdb->prepare(
+				"SELECT DATE( ocurrio_en ) AS dia, COUNT(*) AS n FROM {$tabla}
+				 WHERE tipo = %s AND DATE( ocurrio_en ) >= %s
+				 GROUP BY DATE( ocurrio_en )",
+				$tipo,
+				$desde
+			)
+		) ?: [];
+
+		$tiene = [];
+		foreach ( $filas as $f ) {
+			$tiene[ (string) $f->dia ] = (int) $f->n;
+		}
+
+		$todos = [];
+		for ( $i = $dias - 1; $i >= 0; $i-- ) {
+			$dia           = gmdate( 'Y-m-d', strtotime( current_time( 'Y-m-d' ) . ' -' . $i . ' days' ) );
+			$todos[ $dia ] = $tiene[ $dia ] ?? 0;
+		}
+
+		return $todos;
+	}
+
+	/** El primer día del que este panel tiene algo anotado. */
+	public static function primer_dia(): string {
+		global $wpdb;
+		$tabla = SWPK_Tablas::tabla( 'eventos' );
+
+		return (string) $wpdb->get_var( "SELECT MIN( DATE( ocurrio_en ) ) FROM {$tabla}" );
+	}
+
 	public static function recientes( int $limite = 50, string $sitio_id = '' ): array {
 		global $wpdb;
 		$tabla = SWPK_Tablas::tabla( 'eventos' );

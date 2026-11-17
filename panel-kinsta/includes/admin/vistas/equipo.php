@@ -37,7 +37,12 @@ if ( '' !== $perfil_pedido || '' !== $busca_persona ) {
 $hay_filtro_equipo = ( '' !== $perfil_pedido || '' !== $busca_persona );
 ?>
 <div class="wrap">
-	<h1>Equipo</h1>
+	<?php
+	SWPK_Vista::cabecera(
+		'Equipo',
+		'Quién entra al panel, con qué perfil y a qué sitios.'
+	);
+	?>
 	<?php SWPK_Admin::mostrar_mensaje(); ?>
 
 	<?php if ( is_array( $recien ) ) : ?>
@@ -64,7 +69,7 @@ $hay_filtro_equipo = ( '' !== $perfil_pedido || '' !== $busca_persona );
 		y al entrar caen directo aquí.
 	</p>
 
-	<h2>Dar acceso a alguien</h2>
+	<?php SWPK_Vista::caja_abrir( 'Dar acceso a alguien' ); ?>
 	<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
 		<input type="hidden" name="action" value="swpk_crear_acceso">
 		<?php wp_nonce_field( 'swpk_crear_acceso' ); ?>
@@ -92,8 +97,9 @@ $hay_filtro_equipo = ( '' !== $perfil_pedido || '' !== $busca_persona );
 		</table>
 		<?php submit_button( 'Crear acceso' ); ?>
 	</form>
+	<?php SWPK_Vista::caja_cerrar(); ?>
 
-	<h2>Qué ve cada perfil</h2>
+	<?php SWPK_Vista::caja_abrir( 'Qué ve cada perfil' ); ?>
 	<div class="swpk-tarjetas">
 		<?php foreach ( $roles as $slug => $nombre ) : ?>
 			<div class="swpk-tarjeta" style="min-width:250px">
@@ -113,10 +119,16 @@ $hay_filtro_equipo = ( '' !== $perfil_pedido || '' !== $busca_persona );
 			</div>
 		<?php endforeach; ?>
 	</div>
-
-	<h2>Quién tiene acceso hoy</h2>
+	<?php SWPK_Vista::caja_cerrar(); ?>
 
 	<?php
+	SWPK_Vista::caja_abrir(
+		'Quién entra al panel',
+		esc_html( SWPK_Vista::plural( count( $equipo ), 'persona', 'personas' ) ),
+		'',
+		true
+	);
+
 	SWPK_Vista::barra_de_filtros(
 		'panel-kinsta-equipo',
 		[
@@ -193,9 +205,11 @@ $hay_filtro_equipo = ( '' !== $perfil_pedido || '' !== $busca_persona );
 			<?php endforeach; ?>
 			</tbody>
 		</table>
-		<p style="color:#50575e">
-			Una asesora sin sitios asignados entra al panel y no ve nada. Los sitios se asignan en
-			<a href="<?php echo esc_url( admin_url( 'admin.php?page=panel-kinsta-sitios' ) ); ?>">Sitios</a>.
-		</p>
 	<?php endif; ?>
+	<?php SWPK_Vista::caja_cerrar(); ?>
+
+	<p class="swpk-nota">
+		Una asesora sin sitios asignados entra al panel y no ve nada. Los sitios se asignan en
+		<a href="<?php echo esc_url( admin_url( 'admin.php?page=panel-kinsta-sitios' ) ); ?>">Sitios</a>.
+	</p>
 </div>

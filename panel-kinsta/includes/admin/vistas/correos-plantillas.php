@@ -56,7 +56,7 @@ $url_de = static fn( string $c ) => add_query_arg(
 	</p>
 </div>
 
-<h2>Qué aviso</h2>
+<?php SWPK_Vista::caja_abrir( 'Qué aviso' ); ?>
 
 <p class="swpk-filtros-estado">
 	<?php foreach ( $catalogo as $clave => $c ) : ?>
@@ -71,6 +71,9 @@ $url_de = static fn( string $c ) => add_query_arg(
 	<?php endforeach; ?>
 </p>
 
+<?php SWPK_Vista::caja_cerrar(); ?>
+
+<?php SWPK_Vista::caja_abrir( 'Cómo está redactado' ); ?>
 <form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" style="max-width:980px">
 	<input type="hidden" name="action" value="swpk_guardar_plantilla">
 	<input type="hidden" name="plantilla" value="<?php echo esc_attr( $cual ); ?>">
@@ -152,3 +155,5 @@ $url_de = static fn( string $c ) => add_query_arg(
 		corresponda — así lo que se lee es el correo real y no una simulación que podría no coincidir.
 	</p>
 </form>
+
+<?php SWPK_Vista::caja_cerrar(); ?>

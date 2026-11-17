@@ -85,7 +85,12 @@ $por_nivel[ SWPK_Riesgo::SIN_DATOS ] = 0;
 [ $en_pantalla, $pagina, $paginas ] = SWPK_Vista::paginar( $con_algo, SWPK_Vista::pagina_pedida(), 15 );
 ?>
 <div class="wrap">
-	<h1>Vulnerabilidades y pendientes</h1>
+	<?php
+	SWPK_Vista::cabecera(
+		'Vulnerabilidades y pendientes',
+		'Cada módulo con una falla conocida o una actualización esperando, sitio por sitio.'
+	);
+	?>
 	<?php SWPK_Admin::mostrar_mensaje(); ?>
 	<?php // Sin la parte de la lista: esta pantalla la dice abajo, con más detalle.
 	SWPK_Frescura::aviso( false ); ?>
@@ -120,6 +125,15 @@ $por_nivel[ SWPK_Riesgo::SIN_DATOS ] = 0;
 			<?php SWPK_Admin::boton_exportar( 'vulnerabilidades' ); ?>
 		</span>
 	<?php SWPK_Vista::cerrar_barra(); ?>
+
+	<?php
+	SWPK_Vista::caja_abrir(
+		'Todo lo que hay que parchar',
+		esc_html( SWPK_Vista::plural( count( $con_algo ), 'sitio con pendientes', 'sitios con pendientes' ) ),
+		'',
+		true
+	);
+	?>
 
 	<?php SWPK_Vista::paginador( $pagina, $paginas, count( $con_algo ), 'sitios con pendientes', 'sitio con pendientes' ); ?>
 
@@ -178,6 +192,8 @@ $por_nivel[ SWPK_Riesgo::SIN_DATOS ] = 0;
 	<?php if ( $en_pantalla ) : ?>
 		<?php SWPK_Vista::paginador( $pagina, $paginas, count( $con_algo ), 'sitios con pendientes', 'sitio con pendientes' ); ?>
 	<?php endif; ?>
+
+	<?php SWPK_Vista::caja_cerrar(); ?>
 
 	<p class="swpk-atribucion"><?php echo wp_kses_post( SWPK_Wordfence::atribucion() ); ?></p>
 </div>

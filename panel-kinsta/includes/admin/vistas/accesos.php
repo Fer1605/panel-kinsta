@@ -40,7 +40,12 @@ if ( '' !== $busca_acceso ) {
 $fallidos  = SWPK_Accesos::fallidos_recientes( 24 );
 ?>
 <div class="wrap">
-	<h1>Accesos al panel</h1>
+	<?php
+	SWPK_Vista::cabecera(
+		'Accesos al panel',
+		'Quién entró, cuándo, y desde dónde — también lo que no logró entrar.'
+	);
+	?>
 	<?php SWPK_Admin::mostrar_mensaje(); ?>
 
 	<p style="max-width:840px;color:#3c434a">
@@ -74,6 +79,13 @@ $fallidos  = SWPK_Accesos::fallidos_recientes( 24 );
 	// Antes esto eran siete botones en fila, uno por cada cosa que puede pasar.
 	// Ocupaban dos renglones, no se veía cuál estaba puesto y no había forma de
 	// buscar una dirección. Ahora es la misma barra que el resto del panel.
+	SWPK_Vista::caja_abrir(
+		'El registro',
+		esc_html( SWPK_Vista::plural( count( $registros ), 'registro', 'registros' ) ),
+		'',
+		true
+	);
+
 	SWPK_Vista::barra_de_filtros(
 		'panel-kinsta-accesos',
 		[
@@ -133,6 +145,7 @@ $fallidos  = SWPK_Accesos::fallidos_recientes( 24 );
 			</tbody>
 		</table>
 	<?php endif; ?>
+	<?php SWPK_Vista::caja_cerrar(); ?>
 
 	<p class="swpk-atribucion">
 		No se guarda ninguna contraseña, ni siquiera las de los intentos fallidos: un registro de

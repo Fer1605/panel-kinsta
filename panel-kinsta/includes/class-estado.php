@@ -52,7 +52,10 @@ class SWPK_Estado {
 
 	/** La caché es por persona: una asesora ve su cartera, no la de todos. */
 	private static function clave(): string {
-		return 'swpk_estado_' . get_current_user_id();
+		// El sufijo sube cuando cambia la FORMA de lo guardado. Sin eso, una
+		// caché de la versión anterior vuelve sin las claves nuevas y la
+		// pantalla se cae con un aviso de índice que no existe.
+		return 'swpk_estado_v2_' . get_current_user_id();
 	}
 
 	public static function olvidar(): void {
@@ -60,8 +63,8 @@ class SWPK_Estado {
 
 		// Se borran las de todo el mundo: una corrida cambia lo que ve cualquiera.
 		$wpdb->query(
-			"DELETE FROM {$wpdb->options} WHERE option_name LIKE '_transient_swpk_estado_%'
-			 OR option_name LIKE '_transient_timeout_swpk_estado_%'"
+			"DELETE FROM {$wpdb->options} WHERE option_name LIKE '_transient_swpk_estado%'
+			 OR option_name LIKE '_transient_timeout_swpk_estado%'"
 		);
 	}
 
@@ -89,9 +92,25 @@ class SWPK_Estado {
 		$sin_2fa   = 0;
 		$nuestros  = 0;
 
+		// Dos cuentas más, aprovechando que este recorrido ya pasa por todos
+		// los sitios y ya abre los hallazgos de cada uno. Calcularlas aparte
+		// sería recorrer 107 sitios dos veces para enseñar dos tarjetas.
+		$por_nivel = array_fill_keys( array_keys( SWPK_Riesgo::nombres() ), 0 );
+		$por_sev   = [
+			SWPK_Riesgo::CRITICO => 0,
+			SWPK_Riesgo::ALTO    => 0,
+			SWPK_Riesgo::MEDIO   => 0,
+			SWPK_Riesgo::BAJO    => 0,
+		];
+		$con_hallazgos = 0;
+
 		foreach ( $sitios as $s ) {
 			$sitio_id = (string) $s->sitio_id;
 			$nivel    = SWPK_Riesgo::nivel_del_sitio( $sitio_id );
+
+			if ( isset( $por_nivel[ $nivel ] ) ) {
+				++$por_nivel[ $nivel ];
+			}
 
 			if ( SWPK_Etiquetas::es_nuestro( $s->tag ) ) {
 				++$nuestros;
@@ -113,6 +132,7 @@ class SWPK_Estado {
 				'explicacion' => '',
 				'cuantos'     => 0,
 				'publicas'    => 0,
+				'por_sev'     => [],
 			];
 
 			if ( SWPK_Riesgo::SIN_DATOS === $nivel ) {
@@ -127,6 +147,15 @@ class SWPK_Estado {
 			}
 
 			$fila = self::resumir_sitio( $s, $nivel );
+
+			if ( $fila['cuantos'] > 0 ) {
+				++$con_hallazgos;
+			}
+			foreach ( $fila['por_sev'] as $sev => $cuantos ) {
+				if ( isset( $por_sev[ $sev ] ) ) {
+					$por_sev[ $sev ] += $cuantos;
+				}
+			}
 
 			// Qué va en "no puede esperar". El nivel solo no alcanza: casi todo
 			// lo que Kinsta marca como vulnerable sin publicar el detalle cae en
@@ -163,6 +192,10 @@ class SWPK_Estado {
 			'sin_2fa'   => $sin_2fa,
 			'nuestros'  => $nuestros,
 			'total'     => count( $sitios ),
+			'por_nivel' => $por_nivel,
+			'por_sev'   => $por_sev,
+			'hallazgos' => array_sum( $por_sev ),
+			'con_hallazgos' => $con_hallazgos,
 			'armado_en' => current_time( 'mysql' ),
 		];
 
@@ -185,8 +218,11 @@ class SWPK_Estado {
 		$hallazgos = SWPK_Riesgo::hallazgos( (string) $sitio->sitio_id );
 		$publicas  = 0;
 		$abierto   = null;
+		$por_sev   = [];
 
 		foreach ( $hallazgos as $h ) {
+			$por_sev[ $h['nivel'] ] = ( $por_sev[ $h['nivel'] ] ?? 0 ) + 1;
+
 			$v = $h['vulnerabilidades'][0] ?? null;
 			if ( ! $v ) {
 				continue;
@@ -233,6 +269,7 @@ class SWPK_Estado {
 			'explicacion' => $explicacion,
 			'cuantos'     => count( $hallazgos ),
 			'publicas'    => $publicas,
+			'por_sev'     => $por_sev,
 		];
 	}
 
@@ -263,6 +300,7 @@ class SWPK_Estado {
 				'explicacion' => (string) ( $e->motivo ?: 'No contesta.' ),
 				'cuantos'     => 0,
 				'publicas'    => 0,
+				'por_sev'     => [],
 				'desde'       => (string) $e->desde,
 			];
 		}

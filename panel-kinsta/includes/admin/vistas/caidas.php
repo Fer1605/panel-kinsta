@@ -66,7 +66,12 @@ $historial = array_filter(
 );
 ?>
 <div class="wrap">
-	<h1>Caídas</h1>
+	<?php
+	SWPK_Vista::cabecera(
+		'Caídas',
+		'El panel revisa cada sitio cada cinco minutos desde aquí, sin depender del hosting.'
+	);
+	?>
 	<?php SWPK_Admin::mostrar_mensaje(); ?>
 
 	<p style="max-width:840px;color:#3c434a">
@@ -117,6 +122,7 @@ $historial = array_filter(
 	</p>
 
 	<?php if ( $estados ) : ?>
+		<?php SWPK_Vista::caja_abrir( 'Cómo están ahora', esc_html( SWPK_Frescura::fmt( 'j M, H:i', current_time( 'mysql' ) ) ) ); ?>
 		<div class="swpk-tarjetas">
 			<div class="swpk-tarjeta">
 				<div class="swpk-n" style="color:<?php echo $abajo ? '#b32d2e' : '#008a20'; ?>"><?php echo (int) $abajo; ?></div>
@@ -135,10 +141,19 @@ $historial = array_filter(
 				<div class="swpk-r">Sitios vigilados</div>
 			</div>
 		</div>
-
-		<h2>Estado ahora</h2>
+		<?php SWPK_Vista::caja_cerrar(); ?>
 
 		<?php
+		// Las cuatro cifras de arriba cuentan SIEMPRE los 108, pase lo que pase
+		// con el filtro de abajo. Es a propósito: son el estado de la cartera,
+		// no el de la página que estás mirando.
+		SWPK_Vista::caja_abrir(
+			'Sitio por sitio',
+			esc_html( SWPK_Vista::plural( count( $filtrados ), 'sitio', 'sitios' ) ),
+			'',
+			true
+		);
+
 		SWPK_Vista::barra_de_filtros(
 			'panel-kinsta-caidas',
 			[
@@ -207,6 +222,7 @@ $historial = array_filter(
 		<?php if ( ! $en_pantalla ) : ?>
 			<div class="notice notice-info inline"><p>Ningún sitio coincide con ese filtro.</p></div>
 		<?php endif; ?>
+		<?php SWPK_Vista::caja_cerrar(); ?>
 	<?php else : ?>
 		<div class="notice notice-info"><p>
 			Todavía no hay sitios vigilados. El monitor usa los dominios del inventario: primero hay
@@ -214,7 +230,7 @@ $historial = array_filter(
 		</p></div>
 	<?php endif; ?>
 
-	<h2>Historial</h2>
+	<?php SWPK_Vista::caja_abrir( 'El historial', '', '', ! empty( $historial ) ); ?>
 	<?php if ( ! $historial ) : ?>
 		<p style="color:#50575e">
 			No se ha caído nada desde que el monitor está encendido. Cada caída y cada recuperación
@@ -247,4 +263,5 @@ $historial = array_filter(
 			</tbody>
 		</table>
 	<?php endif; ?>
+	<?php SWPK_Vista::caja_cerrar(); ?>
 </div>

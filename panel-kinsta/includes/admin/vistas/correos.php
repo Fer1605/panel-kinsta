@@ -35,7 +35,12 @@ foreach ( array_keys( SWPK_Plantillas::catalogo() ) as $clave ) {
 }
 ?>
 <div class="wrap">
-	<h1>Correos</h1>
+	<?php
+	SWPK_Vista::cabecera(
+		'Correos',
+		'Lo que el panel manda solo: qué sale, cuándo, a quién, y con qué palabras.'
+	);
+	?>
 	<?php SWPK_Admin::mostrar_mensaje(); ?>
 
 	<h2 class="nav-tab-wrapper">

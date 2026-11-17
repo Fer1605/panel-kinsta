@@ -39,6 +39,7 @@ $norma  = '' !== $editar ? SWPK_Normas::una( $editar ) : null;
 	encenderla la vuelve a meter, pero no al instante — se mide con el siguiente reporte de cada sitio.
 </p>
 
+<?php SWPK_Vista::caja_abrir( 'Qué revisamos en cada sitio', '', '', true ); ?>
 <table class="widefat striped" style="margin-top:10px">
 	<thead>
 		<tr>
@@ -123,8 +124,9 @@ $norma  = '' !== $editar ? SWPK_Normas::una( $editar ) : null;
 	<?php endforeach; ?>
 	</tbody>
 </table>
+<?php SWPK_Vista::caja_cerrar(); ?>
 
-<h2 style="margin-top:32px"><?php echo $norma ? 'Cambiar una norma' : 'Agregar una norma'; ?></h2>
+<?php SWPK_Vista::caja_abrir( $norma ? 'Cambiar una norma' : 'Agregar una norma' ); ?>
 
 <form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" style="max-width:720px">
 	<input type="hidden" name="action" value="swpk_guardar_norma">
@@ -261,3 +263,4 @@ $norma  = '' !== $editar ? SWPK_Normas::una( $editar ) : null;
 		<?php endif; ?>
 	</p>
 </form>
+<?php SWPK_Vista::caja_cerrar(); ?>

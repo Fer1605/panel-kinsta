@@ -113,6 +113,15 @@ arsort( $por_tipo );
 	<?php endif; ?>
 </p>
 
+<?php
+SWPK_Vista::caja_abrir(
+	'El historial',
+	esc_html( SWPK_Vista::plural( count( $movimientos ), 'movimiento', 'movimientos' ) ),
+	'',
+	true
+);
+?>
+
 <?php SWPK_Vista::paginador( $pagina, $paginas, count( $movimientos ), 'movimientos', 'movimiento' ); ?>
 
 <?php if ( ! $en_pantalla ) : ?>
@@ -159,6 +168,7 @@ arsort( $por_tipo );
 
 	<?php SWPK_Vista::paginador( $pagina, $paginas, count( $movimientos ), 'movimientos', 'movimiento' ); ?>
 <?php endif; ?>
+<?php SWPK_Vista::caja_cerrar(); ?>
 
 <p class="swpk-nota">
 	Los movimientos empiezan el día que el panel entró a producción. Kinsta no guarda un

@@ -26,7 +26,12 @@ usort( $llamadas, static fn( $a, $b ) => strcmp( (string) $b->ocurrio_en, (strin
 $llamadas = array_slice( $llamadas, 0, 25 );
 ?>
 <div class="wrap">
-	<h1>Conectarse al panel</h1>
+	<?php
+	SWPK_Vista::cabecera(
+		'Conectarse (API)',
+		'Para consultar el panel desde fuera, o desde Claude, sin entrar a WordPress.'
+	);
+	?>
 	<?php SWPK_Admin::mostrar_mensaje(); ?>
 
 	<p style="max-width:860px;color:#3c434a">
@@ -61,13 +66,15 @@ $llamadas = array_slice( $llamadas, 0, 25 );
 		</div>
 	<?php endif; ?>
 
-	<h2>1 · La dirección</h2>
+	<?php SWPK_Vista::caja_abrir( '1 · La dirección' ); ?>
 
 	<p>Todas las rutas salen de aquí:</p>
 
 	<p><code style="display:inline-block;padding:8px 12px;background:#f6f7f7;border:1px solid #dcdcde;font-size:14px"><?php echo esc_html( $base ); ?></code></p>
 
-	<h2>2 · La llave</h2>
+	<?php SWPK_Vista::caja_cerrar(); ?>
+
+	<?php SWPK_Vista::caja_abrir( '2 · La llave' ); ?>
 
 	<p style="max-width:860px;color:#3c434a">
 		Una llave es una cuenta que <strong>solo puede leer</strong>: consulta los sitios, las
@@ -313,7 +320,9 @@ $llamadas = array_slice( $llamadas, 0, 25 );
 		<p class="swpk-gris">Todavía no hay ninguna llave creada.</p>
 	<?php endif; ?>
 
-	<h2>3 · Las rutas</h2>
+	<?php SWPK_Vista::caja_cerrar(); ?>
+
+	<?php SWPK_Vista::caja_abrir( '3 · Las rutas' ); ?>
 
 	<p style="max-width:860px;color:#3c434a">
 		Cada una envuelve la misma función que alimenta su pantalla. No hay una sola consulta
@@ -353,7 +362,9 @@ $llamadas = array_slice( $llamadas, 0, 25 );
 		sin que nadie lo haya pedido.
 	</p>
 
-	<h2>4 · Probarlo</h2>
+	<?php SWPK_Vista::caja_cerrar(); ?>
+
+	<?php SWPK_Vista::caja_abrir( '4 · Probarlo' ); ?>
 
 	<p style="max-width:860px;color:#3c434a">
 		Desde fuera, con la llave de arriba y autenticación básica:
@@ -407,7 +418,9 @@ $llamadas = array_slice( $llamadas, 0, 25 );
 	}() );
 	</script>
 
-	<h2>5 · Conectar Claude Desktop</h2>
+	<?php SWPK_Vista::caja_cerrar(); ?>
+
+	<?php SWPK_Vista::caja_abrir( '5 · Conectar Claude Desktop' ); ?>
 
 	<p style="max-width:860px;color:#3c434a">
 		<strong>No hay nada que bajar ni que instalar.</strong> El panel habla MCP por su cuenta, así
@@ -483,7 +496,9 @@ $llamadas = array_slice( $llamadas, 0, 25 );
 		pregunta. Cada consulta queda escrita abajo, marcada como MCP.
 	</p>
 
-		<h2>6 · Lo que ya se consultó</h2>
+		<?php SWPK_Vista::caja_cerrar(); ?>
+
+		<?php SWPK_Vista::caja_abrir( '6 · Lo que ya se consultó' ); ?>
 
 	<p style="max-width:860px;color:#3c434a">
 		Cada llamada queda escrita, la que pasa y la que se rechaza. Hace falta porque una contraseña
@@ -525,4 +540,5 @@ $llamadas = array_slice( $llamadas, 0, 25 );
 		un botón. El día que haga falta escribir desde fuera será una decisión aparte, no un
 		descuido.
 	</p>
+	<?php SWPK_Vista::caja_cerrar(); ?>
 </div>

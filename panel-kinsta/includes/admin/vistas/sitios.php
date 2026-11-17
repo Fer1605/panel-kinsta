@@ -56,7 +56,12 @@ $volver = add_query_arg(
 );
 ?>
 <div class="wrap">
-	<h1>Sitios</h1>
+	<?php
+	SWPK_Vista::cabecera(
+		'Sitios',
+		'Los sitios de la cuenta, agrupados por cómo se actualizan.'
+	);
+	?>
 	<?php SWPK_Admin::mostrar_mensaje(); ?>
 	<?php SWPK_Frescura::aviso(); ?>
 	<?php SWPK_Admin::tira_de_perfil(); ?>
@@ -108,6 +113,16 @@ $volver = add_query_arg(
 	// El buscador se mudó aquí dentro: antes era un formulario aparte, y con
 	// dos formularios en pantalla buscar borraba la versión elegida y elegir
 	// una versión borraba lo buscado. Ahora los tres viajan juntos.
+	// La tarjeta se abre aquí y no antes: lo de arriba —el selector de grupo,
+	// la nota del cliente— es contexto de la pantalla, no contenido de la
+	// tabla. Dentro de la tarjeta va solo lo que la tabla filtra y pagina.
+	SWPK_Vista::caja_abrir(
+		'La cartera',
+		esc_html( SWPK_Vista::plural( count( $filtrados ), 'sitio', 'sitios' ) ),
+		'',
+		true
+	);
+
 	SWPK_Vista::barra_de_filtros(
 		'panel-kinsta-sitios',
 		$versiones['campos'],
@@ -115,7 +130,6 @@ $volver = add_query_arg(
 		$busqueda
 	);
 	?>
-	<?php SWPK_Vista::paginador( $pagina, $paginas, count( $filtrados ) ); ?>
 
 	<?php if ( ! $pagina_de_sitios ) : ?>
 		<div class="notice notice-info inline"><p>Ningún sitio coincide con ese filtro.</p></div>
@@ -242,4 +256,5 @@ $volver = add_query_arg(
 
 		<?php SWPK_Vista::paginador( $pagina, $paginas, count( $filtrados ) ); ?>
 	<?php endif; ?>
+	<?php SWPK_Vista::caja_cerrar(); ?>
 </div>

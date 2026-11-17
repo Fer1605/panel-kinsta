@@ -209,7 +209,7 @@ if ( '' !== $sev_pedida || '' !== $norma_pedida ) {
 ?>
 
 <?php if ( $con_fallas_todas ) : ?>
-	<h2 style="margin-top:28px">Lo que hay que arreglar</h2>
+	<?php SWPK_Vista::caja_abrir( 'Lo que hay que arreglar', '', '', false ); ?>
 	<p class="swpk-mudo" style="margin:-4px 0 10px">
 		Cada bloque es un problema encontrado. Debajo, los sitios que lo tienen.
 	</p>
@@ -333,6 +333,7 @@ if ( '' !== $sev_pedida || '' !== $norma_pedida ) {
 			<?php endif; ?>
 		</div>
 	<?php endforeach; ?>
+	<?php SWPK_Vista::caja_cerrar(); ?>
 <?php endif; ?>
 
 <?php
@@ -354,7 +355,7 @@ foreach ( $medibles as $f ) {
 ?>
 
 <?php if ( $huecos_reales ) : ?>
-	<h2 style="margin-top:28px">Lo que falta revisar</h2>
+	<?php SWPK_Vista::caja_abrir( 'Lo que falta revisar', '', '', true ); ?>
 	<p class="swpk-mudo" style="margin:-4px 0 12px;max-width:860px">
 		Esto no son problemas: es lo que el panel todavía no sabe de sitios que sí puede revisar. Un sitio
 		sin revisar puede estar perfecto o puede estar mal, y decir cualquiera de las dos cosas sería
@@ -392,10 +393,11 @@ foreach ( $medibles as $f ) {
 		<?php endforeach; ?>
 		</tbody>
 	</table>
+	<?php SWPK_Vista::caja_cerrar(); ?>
 <?php endif; ?>
 
 <?php if ( $medibles ) : ?>
-	<h2 style="margin-top:28px">Sitio por sitio</h2>
+	<?php SWPK_Vista::caja_abrir( 'Sitio por sitio', '', '', true ); ?>
 	<p class="swpk-mudo" style="margin:-4px 0 12px">
 		Los <?php echo (int) count( $medibles ); ?> que el panel puede revisar, con su cuenta.
 		<?php if ( $ciegos ) : ?>
@@ -501,10 +503,11 @@ foreach ( $medibles as $f ) {
 	</table>
 
 	<?php SWPK_Vista::paginador( $pag_med, $pags_med, count( $medibles_vis ), 'sitios revisables', 'sitio revisable' ); ?>
+	<?php SWPK_Vista::caja_cerrar(); ?>
 <?php endif; ?>
 
 <?php if ( $cumplidas && $medibles ) : ?>
-	<h2 style="margin-top:28px">Lo que está bien</h2>
+	<?php SWPK_Vista::caja_abrir( 'Lo que está bien', '', '', false ); ?>
 	<ul class="swpk-bien-lista">
 	<?php foreach ( $cumplidas as $r ) : ?>
 		<?php if ( $r['cumple'] < 1 ) { continue; } ?>
@@ -515,6 +518,7 @@ foreach ( $medibles as $f ) {
 		</li>
 	<?php endforeach; ?>
 	</ul>
+	<?php SWPK_Vista::caja_cerrar(); ?>
 <?php endif; ?>
 
 <p class="swpk-atribucion" style="margin-top:22px">

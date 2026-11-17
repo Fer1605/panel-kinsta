@@ -5,7 +5,12 @@ defined( 'ABSPATH' ) || exit;
 $a = SWPK_Ajustes::todos();
 ?>
 <div class="wrap">
-	<h1>Ajustes del panel</h1>
+	<?php
+	SWPK_Vista::cabecera(
+		'Ajustes del panel',
+		'La conexión con el hosting, cómo corre el panel y cómo se agrupan los sitios.'
+	);
+	?>
 	<?php SWPK_Admin::mostrar_mensaje(); ?>
 
 	<?php if ( SWPK_Ajustes::llaves_en_claro() ) : ?>
@@ -31,7 +36,7 @@ $a = SWPK_Ajustes::todos();
 		<input type="hidden" name="action" value="swpk_guardar_ajustes">
 		<?php wp_nonce_field( 'swpk_ajustes' ); ?>
 
-		<h2>Conexión</h2>
+		<?php SWPK_Vista::caja_abrir( 'La conexión con el hosting' ); ?>
 		<table class="form-table" role="presentation">
 			<tr>
 				<th scope="row"><label for="modo">Modo</label></th>
@@ -80,7 +85,9 @@ $a = SWPK_Ajustes::todos();
 			</tr>
 		</table>
 
-		<h2>Cómo se agrupan los sitios</h2>
+		<?php SWPK_Vista::caja_cerrar(); ?>
+
+		<?php SWPK_Vista::caja_abrir( 'Los grupos de sitios' ); ?>
 		<?php $etiquetas = SWPK_Etiquetas::descubrir(); ?>
 
 		<?php if ( ! $etiquetas ) : ?>
@@ -137,7 +144,9 @@ $a = SWPK_Ajustes::todos();
 			</p>
 		<?php endif; ?>
 
-		<h2>Correos</h2>
+		<?php SWPK_Vista::caja_cerrar(); ?>
+
+		<?php SWPK_Vista::caja_abrir( 'Los correos del cliente' ); ?>
 		<table class="form-table" role="presentation">
 			<tr>
 				<th scope="row"><label for="correo_ventas">Ventas</label></th>
@@ -161,17 +170,19 @@ $a = SWPK_Ajustes::todos();
 		</table>
 
 		<?php submit_button( 'Guardar ajustes' ); ?>
+		<?php SWPK_Vista::caja_cerrar(); ?>
 	</form>
 
-	<hr>
-	<h2>Probar la conexión</h2>
+	<?php SWPK_Vista::caja_abrir( 'Probar la conexión' ); ?>
 	<p>
 		<a class="button" href="<?php echo esc_url( wp_nonce_url( admin_url( 'admin-post.php?action=swpk_probar' ), 'swpk_probar' ) ); ?>">
 			Probar <?php echo esc_html( swpk_fuente()->nombre() ); ?>
 		</a>
 	</p>
 
-	<h2>Estado</h2>
+	<?php SWPK_Vista::caja_cerrar(); ?>
+
+	<?php SWPK_Vista::caja_abrir( 'Cómo corre', '', '', true ); ?>
 	<table class="widefat striped" style="max-width:720px">
 		<tbody>
 			<tr><td>Fuente de datos</td><td><strong><?php echo esc_html( swpk_fuente()->nombre() ); ?></strong></td></tr>
@@ -259,4 +270,5 @@ $a = SWPK_Ajustes::todos();
 			<tr><td>Versión del plugin</td><td><?php echo esc_html( SWPK_VERSION ); ?></td></tr>
 		</tbody>
 	</table>
+	<?php SWPK_Vista::caja_cerrar(); ?>
 </div>

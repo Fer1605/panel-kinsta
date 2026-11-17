@@ -35,7 +35,12 @@ $conteos_ordenes = SWPK_Ordenes::conteos();
 $en_camino       = $conteos_ordenes[ SWPK_Ordenes::PENDIENTE ] + $conteos_ordenes[ SWPK_Ordenes::ENTREGADA ];
 ?>
 <div class="wrap">
-	<h1>Seguridad</h1>
+	<?php
+	SWPK_Vista::cabecera(
+		'Seguridad',
+		'Las normas que cada sitio tiene que cumplir, y qué le falta a cada uno.'
+	);
+	?>
 	<?php
 	SWPK_Admin::mostrar_mensaje();
 	SWPK_Admin::aviso_demo();

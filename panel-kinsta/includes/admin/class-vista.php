@@ -139,6 +139,31 @@ class SWPK_Vista {
 	 * lee, y estas son las líneas que más se leen del panel: son las que
 	 * contestan "¿pasó algo hoy?".
 	 */
+	/**
+	 * Recorta un texto sin partir la última palabra.
+	 *
+	 * Los renglones de las tarjetas son de una línea y las explicaciones de
+	 * las vulnerabilidades son de tres. Cortar por carácter dejaba cosas como
+	 * «Permite dejar código escondido en el si…», que se lee peor que no
+	 * decir nada; cortando por palabra queda «…en el…» y se entiende.
+	 */
+	public static function recortar( string $texto, int $tope ): string {
+		$texto = trim( preg_replace( '/\s+/u', ' ', $texto ) ?? '' );
+
+		if ( mb_strlen( $texto ) <= $tope ) {
+			return $texto;
+		}
+
+		$corte = mb_substr( $texto, 0, $tope );
+		$hueco = mb_strrpos( $corte, ' ' );
+
+		if ( false !== $hueco && $hueco > $tope * 0.6 ) {
+			$corte = mb_substr( $corte, 0, $hueco );
+		}
+
+		return rtrim( $corte, " .,;:·-" ) . '…';
+	}
+
 	public static function plural( int $n, string $uno, string $varios ): string {
 		return 1 === $n ? '1 ' . $uno : number_format_i18n( $n ) . ' ' . $varios;
 	}
@@ -426,6 +451,358 @@ class SWPK_Vista {
 		}
 
 		return $vistos;
+	}
+
+	/* ──────────────────────────────────────────────────────────────────────
+	   La maqueta aprobada: cabecera, tarjetas y las piezas que van dentro.
+
+	   Esto se construyó después de que el jefe aprobara una maqueta estática y
+	   nosotros subiéramos solo la pintura. Aprobar la maqueta no la convierte
+	   en el plugin: cada pieza de aquí es una de las suyas, vuelta a hacer en
+	   PHP para que se alimente de los datos de verdad.
+
+	   Todo imprime en vez de devolver, como el resto de esta clase, porque las
+	   vistas son plantillas y no constructores de cadenas.
+	   ────────────────────────────────────────────────────────────────────── */
+
+	/**
+	 * La cabecera de la pantalla: título, una línea de contexto y, a la
+	 * derecha, lo que la pantalla quiera poner ahí (las pastillas de grupo,
+	 * normalmente).
+	 *
+	 * El h1 va aquí y no suelto porque WordPress le pone su propio margen y
+	 * entonces el título y las pastillas dejan de estar a la misma altura.
+	 */
+	public static function cabecera( string $titulo, string $sub = '', string $derecha = '' ): void {
+		?>
+		<div class="swpk-cabecera">
+			<div>
+				<h1><?php echo esc_html( $titulo ); ?></h1>
+				<?php if ( '' !== $sub ) : ?>
+					<div class="swpk-cabecera-sub"><?php echo wp_kses_post( $sub ); ?></div>
+				<?php endif; ?>
+			</div>
+			<?php if ( '' !== $derecha ) : ?>
+				<div class="swpk-pastillas"><?php echo wp_kses_post( $derecha ); ?></div>
+			<?php endif; ?>
+		</div>
+		<?php
+	}
+
+	/**
+	 * Las pastillas de la cabecera. Devuelve en vez de imprimir porque entran
+	 * como argumento de cabecera().
+	 *
+	 * Cada una es un enlace de verdad: el número no decora, dice a cuántos
+	 * sitios te lleva. Una pastilla que no lleva a ninguna parte es un
+	 * contador, que es justo lo que se pidió quitar.
+	 *
+	 * @param array<int,array<string,mixed>> $items texto, n, url y activa.
+	 */
+	public static function pastillas( array $items ): string {
+		$html = '';
+
+		foreach ( $items as $it ) {
+			$html .= sprintf(
+				'<a class="swpk-pastilla%s" href="%s">%s<span class="swpk-pastilla-n">%s</span></a>',
+				! empty( $it['activa'] ) ? ' swpk-pastilla-activa' : '',
+				esc_url( (string) $it['url'] ),
+				esc_html( (string) $it['texto'] ),
+				esc_html( (string) $it['n'] )
+			);
+		}
+
+		return $html;
+	}
+
+	public static function rejilla_abrir(): void {
+		echo '<div class="swpk-rejilla">';
+	}
+
+	public static function rejilla_cerrar(): void {
+		echo '</div>';
+	}
+
+	/**
+	 * Abrir una tarjeta.
+	 *
+	 * @param string $titulo   El de la cabecera, a la izquierda.
+	 * @param string $pie      Lo de la derecha: una fecha, o un enlace a la
+	 *                         pantalla donde está todo. Admite HTML.
+	 * @param string $ancho    Columnas de la rejilla: swpk-c4, swpk-c6, …
+	 *                         Vacío si la tarjeta no va dentro de una rejilla.
+	 * @param bool   $sin_aire Para lo que trae su propio relleno: tablas y
+	 *                         listas, que ya llevan el suyo y se vería doble.
+	 */
+	public static function caja_abrir( string $titulo, string $pie = '', string $ancho = '', bool $sin_aire = false ): void {
+		printf( '<section class="swpk-caja %s">', esc_attr( $ancho ) );
+
+		if ( '' !== $titulo ) {
+			printf(
+				'<div class="swpk-caja-cab"><h2>%s</h2>%s</div>',
+				esc_html( $titulo ),
+				'' !== $pie ? '<span class="swpk-pie-dato">' . wp_kses_post( $pie ) . '</span>' : ''
+			);
+		}
+
+		printf( '<div class="swpk-caja-cuerpo%s">', $sin_aire ? ' swpk-sin-aire' : '' );
+	}
+
+	public static function caja_cerrar(): void {
+		echo '</div></section>';
+	}
+
+	/**
+	 * Una lista dentro de una tarjeta: nombre, explicación debajo y un dato a
+	 * la derecha. Es el formato de «Lo que no puede esperar» y de «Novedades».
+	 *
+	 * @param array<int,array<string,mixed>> $filas nom, sub, dato y url.
+	 * @param string                         $vacio Qué decir si no hay nada.
+	 *                                              Una lista vacía sin frase se
+	 *                                              lee como «no cargó».
+	 */
+	public static function lista( array $filas, string $vacio = 'Nada por aquí.' ): void {
+		if ( ! $filas ) {
+			printf( '<p class="swpk-caja-vacia" style="padding:18px 20px;color:var(--swpk-apagado)">%s</p>', esc_html( $vacio ) );
+			return;
+		}
+
+		echo '<ul class="swpk-renglones">';
+
+		foreach ( $filas as $f ) {
+			$nom = esc_html( (string) $f['nom'] );
+			if ( ! empty( $f['url'] ) ) {
+				$nom = sprintf( '<a href="%s">%s</a>', esc_url( (string) $f['url'] ), $nom );
+			}
+
+			printf(
+				'<li><div><div class="swpk-renglon-nom">%s</div>%s</div><div class="swpk-renglon-dato">%s</div></li>',
+				$nom,
+				'' !== (string) ( $f['sub'] ?? '' )
+					? '<div class="swpk-renglon-sub">' . esc_html( (string) $f['sub'] ) . '</div>'
+					: '',
+				wp_kses_post( (string) ( $f['dato'] ?? '' ) )
+			);
+		}
+
+		echo '</ul>';
+	}
+
+	/**
+	 * La dona de la cartera, en SVG y sin una sola línea de JavaScript.
+	 *
+	 * Se dibuja con un círculo por trozo y el truco de siempre: la raya del
+	 * trazo mide lo que vale el trozo y el hueco mide el resto, y cada uno
+	 * empieza donde terminó el anterior. Sin librería de gráficas: son seis
+	 * círculos, y una librería para esto son 90 KB que cargan en cada pantalla.
+	 *
+	 * @param array<int,array<string,mixed>> $trozos n, color y texto.
+	 */
+	public static function dona( array $trozos, int $total, string $pie = 'sitios' ): void {
+		$radio  = 52.0;
+		$vuelta = 2 * M_PI * $radio;
+		$suma   = 0;
+
+		foreach ( $trozos as $t ) {
+			$suma += (int) $t['n'];
+		}
+
+		echo '<div class="swpk-dona">';
+		echo '<svg viewBox="0 0 140 140" width="140" height="140" role="img" aria-label="' .
+			esc_attr( sprintf( '%d %s', $total, $pie ) ) . '">';
+
+		printf(
+			'<circle cx="70" cy="70" r="%s" fill="none" stroke="#f0f1f6" stroke-width="16"/>',
+			esc_attr( (string) $radio )
+		);
+
+		$acumulado = 0.0;
+
+		foreach ( $trozos as $t ) {
+			$n = (int) $t['n'];
+			if ( $n <= 0 || $suma <= 0 ) {
+				continue;
+			}
+
+			$largo = $vuelta * $n / $suma;
+
+			printf(
+				'<circle cx="70" cy="70" r="%s" fill="none" stroke="%s" stroke-width="16"'
+				. ' stroke-dasharray="%s %s" stroke-dashoffset="%s" transform="rotate(-90 70 70)"/>',
+				esc_attr( (string) $radio ),
+				esc_attr( (string) $t['color'] ),
+				esc_attr( number_format( $largo, 2, '.', '' ) ),
+				esc_attr( number_format( $vuelta - $largo, 2, '.', '' ) ),
+				esc_attr( number_format( -$acumulado, 2, '.', '' ) )
+			);
+
+			$acumulado += $largo;
+		}
+
+		printf(
+			'<text x="70" y="66" text-anchor="middle" font-size="27" font-weight="700" fill="#1b1b2f">%d</text>'
+			. '<text x="70" y="85" text-anchor="middle" font-size="11" fill="#6b6f80">%s</text>',
+			$total,
+			esc_html( $pie )
+		);
+
+		echo '</svg>';
+		self::leyenda( $trozos );
+		echo '</div>';
+	}
+
+	/**
+	 * La leyenda: punto de color, qué es, y cuántos.
+	 *
+	 * Lleva la palabra además del color a propósito. Es una regla que viene del
+	 * jefe y no se toca: el color solo no le sirve a quien no distingue rojo de
+	 * verde, y esto se imprime y se manda por correo.
+	 *
+	 * @param array<int,array<string,mixed>> $trozos n, color y texto.
+	 */
+	public static function leyenda( array $trozos ): void {
+		echo '<ul class="swpk-claves">';
+
+		foreach ( $trozos as $t ) {
+			printf(
+				'<li><span class="swpk-punto" style="background:%s"></span>'
+				. '<span class="swpk-clave-t">%s</span><span class="swpk-clave-n">%d</span></li>',
+				esc_attr( (string) $t['color'] ),
+				esc_html( (string) $t['texto'] ),
+				(int) $t['n']
+			);
+		}
+
+		echo '</ul>';
+	}
+
+	/**
+	 * La barra segmentada: la misma información que la dona, en una línea.
+	 *
+	 * @param array<int,array<string,mixed>> $trozos n y color.
+	 */
+	public static function barra_apilada( array $trozos ): void {
+		$suma = 0;
+		foreach ( $trozos as $t ) {
+			$suma += (int) $t['n'];
+		}
+
+		if ( $suma <= 0 ) {
+			return;
+		}
+
+		echo '<div class="swpk-barra-apilada">';
+
+		foreach ( $trozos as $t ) {
+			if ( (int) $t['n'] <= 0 ) {
+				continue;
+			}
+			printf(
+				'<span style="background:%s;width:%s%%"></span>',
+				esc_attr( (string) $t['color'] ),
+				esc_attr( number_format( 100 * (int) $t['n'] / $suma, 2, '.', '' ) )
+			);
+		}
+
+		echo '</div>';
+	}
+
+	/**
+	 * La gráfica de línea, también en SVG y a mano.
+	 *
+	 * Con dos puntos o menos no se dibuja nada: una línea entre dos días no es
+	 * una tendencia, es una raya, y enseñarla como si lo fuera es presumir de
+	 * un dato que el panel todavía no tiene.
+	 *
+	 * @param array<int,array<string,mixed>> $puntos etq y n.
+	 */
+	public static function grafica( array $puntos ): void {
+		$cuantos = count( $puntos );
+
+		if ( $cuantos < 3 ) {
+			return;
+		}
+
+		$ancho  = 660.0;
+		$alto   = 124.0;
+		$margen = 26.0;
+		$techo  = 0;
+
+		foreach ( $puntos as $p ) {
+			$techo = max( $techo, (int) $p['n'] );
+		}
+
+		$techo = max( 1, $techo );
+		$paso  = ( $ancho - 2 * $margen ) / ( $cuantos - 1 );
+		$xy    = [];
+
+		foreach ( array_values( $puntos ) as $i => $p ) {
+			$xy[] = [
+				$margen + $paso * $i,
+				$alto - ( $alto - 14.0 ) * ( (int) $p['n'] ) / $techo,
+			];
+		}
+
+		// Curva suave: cada tramo es una cúbica con los tiradores a media
+		// distancia, que es lo que redondea la esquina sin inventarse valores
+		// entre un día y el siguiente.
+		$linea = sprintf( 'M%s,%s', number_format( $xy[0][0], 1, '.', '' ), number_format( $xy[0][1], 1, '.', '' ) );
+
+		for ( $i = 1; $i < count( $xy ); $i++ ) {
+			$medio  = ( $xy[ $i - 1 ][0] + $xy[ $i ][0] ) / 2;
+			$linea .= sprintf(
+				' C%s,%s %s,%s %s,%s',
+				number_format( $medio, 1, '.', '' ),
+				number_format( $xy[ $i - 1 ][1], 1, '.', '' ),
+				number_format( $medio, 1, '.', '' ),
+				number_format( $xy[ $i ][1], 1, '.', '' ),
+				number_format( $xy[ $i ][0], 1, '.', '' ),
+				number_format( $xy[ $i ][1], 1, '.', '' )
+			);
+		}
+
+		$relleno = $linea . sprintf(
+			' L%s,%s L%s,%s Z',
+			number_format( end( $xy )[0], 1, '.', '' ),
+			number_format( $alto, 1, '.', '' ),
+			number_format( $xy[0][0], 1, '.', '' ),
+			number_format( $alto, 1, '.', '' )
+		);
+
+		$id = 'swpk-deg-' . wp_rand( 1000, 9999 );
+
+		echo '<svg class="swpk-grafica" viewBox="0 0 660 150" preserveAspectRatio="none" style="height:150px" aria-hidden="true">';
+		printf(
+			'<defs><linearGradient id="%1$s" x1="0" y1="0" x2="0" y2="1">'
+			. '<stop offset="0%%" stop-color="var(--swpk-marca)" stop-opacity=".16"/>'
+			. '<stop offset="100%%" stop-color="var(--swpk-marca)" stop-opacity="0"/></linearGradient></defs>'
+			. '<path d="%2$s" fill="url(#%1$s)"/>'
+			. '<path d="%3$s" fill="none" stroke="var(--swpk-marca)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>',
+			esc_attr( $id ),
+			esc_attr( $relleno ),
+			esc_attr( $linea )
+		);
+
+		foreach ( array_values( $puntos ) as $i => $p ) {
+			printf(
+				'<circle cx="%s" cy="%s" r="3" fill="var(--swpk-marca)"><title>%s</title></circle>',
+				number_format( $xy[ $i ][0], 1, '.', '' ),
+				number_format( $xy[ $i ][1], 1, '.', '' ),
+				esc_html( sprintf( '%s: %d', (string) $p['etq'], (int) $p['n'] ) )
+			);
+		}
+
+		// Solo el primero, el de en medio y el último: con quince días, una
+		// etiqueta por punto se convierte en una mancha ilegible.
+		foreach ( [ 0, intdiv( $cuantos - 1, 2 ), $cuantos - 1 ] as $i ) {
+			printf(
+				'<text x="%s" y="144" text-anchor="middle" font-size="10" fill="#9598a8">%s</text>',
+				number_format( $xy[ $i ][0], 1, '.', '' ),
+				esc_html( (string) array_values( $puntos )[ $i ]['etq'] )
+			);
+		}
+
+		echo '</svg>';
 	}
 
 	public static function pagina_pedida(): int {

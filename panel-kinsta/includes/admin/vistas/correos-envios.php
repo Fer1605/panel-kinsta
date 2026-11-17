@@ -41,7 +41,7 @@ $accion = static fn( $a ) => wp_nonce_url( admin_url( 'admin-post.php?action=' .
 		</div>
 	<?php endif; ?>
 
-	<h2>El interruptor</h2>
+	<?php SWPK_Vista::caja_abrir( 'El interruptor', '', '', true ); ?>
 	<table class="widefat striped" style="max-width:760px">
 		<tbody>
 			<tr>
@@ -70,8 +70,9 @@ $accion = static fn( $a ) => wp_nonce_url( admin_url( 'admin-post.php?action=' .
 			</tr>
 		</tbody>
 	</table>
+	<?php SWPK_Vista::caja_cerrar(); ?>
 
-	<h2>Qué sale, cuándo y a quién</h2>
+	<?php SWPK_Vista::caja_abrir( 'Qué sale, cuándo y a quién', '', '', true ); ?>
 	<table class="widefat striped swpk-tabla" style="max-width:980px">
 		<thead>
 			<tr>
@@ -108,14 +109,15 @@ $accion = static fn( $a ) => wp_nonce_url( admin_url( 'admin-post.php?action=' .
 			</tr>
 		</tbody>
 	</table>
+	<?php SWPK_Vista::caja_cerrar(); ?>
 
-	<p style="color:#50575e;max-width:900px">
+	<p class="swpk-nota">
 		"Generarlo ahora" arma el correo con los datos de hoy y lo deja en la
 		<a href="<?php echo esc_url( admin_url( 'admin.php?page=panel-kinsta-bitacora' ) ); ?>">bitácora</a>,
 		donde se puede abrir y leer completo. En modo de prueba no sale a nadie.
 	</p>
 
-	<h2>Cosas que conviene revisar antes de abrir la llave</h2>
+	<?php SWPK_Vista::caja_abrir( 'Cosas que conviene revisar antes de abrir la llave', '', '', true ); ?>
 	<?php
 	$sin_asesora  = 0;
 	$sin_contacto = 0;
@@ -171,3 +173,5 @@ $accion = static fn( $a ) => wp_nonce_url( admin_url( 'admin-post.php?action=' .
 		<?php endforeach; ?>
 		</tbody>
 	</table>
+
+<?php SWPK_Vista::caja_cerrar(); ?>

@@ -511,3 +511,320 @@ body[class*="panel-kinsta"] .wrap .swpk-rango select:focus {
 }
 
 body[class*="panel-kinsta"] .wrap .swpk-rango .button { min-height: 34px; }
+
+
+/* ──────────────────────────────────────────────────────────────────────────
+   La rejilla de tarjetas.
+
+   Hasta aquí esta hoja solo repintaba el marcado que las pantallas ya
+   generaban. Eso arregló los colores pero no la forma: el jefe aprobó una
+   maqueta donde la información vive dentro de tarjetas blancas con título,
+   y una tabla suelta sobre el fondo gris no es eso por mucho que tenga los
+   bordes redondeados.
+
+   Lo de abajo es el sistema de esa maqueta, traído tal cual: cabecera de
+   pantalla, rejilla de doce columnas, tarjeta con su cabecera y su cuerpo,
+   y las cuatro piezas que van dentro —lista, cifra grande, barra segmentada
+   y leyenda—. Las medidas y los colores son los mismos; lo único que cambia
+   es el prefijo, para que nada de aquí pueda chocar con el escritorio de
+   WordPress.
+
+   La tarjeta se llama `.swpk-caja` y no `.swpk-tarjeta` a propósito: ese
+   nombre ya lo tenían las tarjetitas de cifra de Accesos y Caídas, y
+   reutilizarlo habría cambiado dos pantallas sin querer.
+   ────────────────────────────────────────────────────────────────────────── */
+
+/* ── La cabecera de la pantalla ─────────────────────────────────────────── */
+
+body[class*="panel-kinsta"] .swpk-cabecera {
+	display: flex;
+	align-items: flex-start;
+	justify-content: space-between;
+	gap: 20px;
+	flex-wrap: wrap;
+	margin: 0 0 20px;
+}
+
+body[class*="panel-kinsta"] .swpk-cabecera-sub {
+	color: var(--swpk-apagado);
+	font-size: 13px;
+	margin-top: 3px;
+}
+
+/* Las pastillas de grupo, a la derecha del título. Son enlaces a Sitios ya
+   filtrado: el número no es decoración, es a dónde lleva. */
+body[class*="panel-kinsta"] .swpk-pastillas {
+	display: flex;
+	gap: 8px;
+	flex-wrap: wrap;
+	align-items: center;
+}
+
+body[class*="panel-kinsta"] .swpk-pastilla {
+	display: inline-flex;
+	align-items: center;
+	gap: 7px;
+	padding: 7px 15px;
+	border: 1px solid var(--swpk-borde);
+	border-radius: 999px;
+	background: #fff;
+	color: var(--swpk-texto);
+	font-size: 12.5px;
+	font-weight: 500;
+	text-decoration: none;
+	white-space: nowrap;
+}
+
+body[class*="panel-kinsta"] .swpk-pastilla:hover {
+	border-color: var(--swpk-marca);
+	text-decoration: none;
+}
+
+body[class*="panel-kinsta"] .swpk-pastilla-n {
+	background: #f0f0f6;
+	border-radius: 999px;
+	padding: 0 7px;
+	font-size: 11px;
+	font-weight: 600;
+	color: var(--swpk-apagado);
+}
+
+body[class*="panel-kinsta"] .swpk-pastilla-activa {
+	border-color: var(--swpk-marca);
+	color: var(--swpk-marca);
+	font-weight: 600;
+}
+
+body[class*="panel-kinsta"] .swpk-pastilla-activa .swpk-pastilla-n {
+	background: var(--swpk-marca-suave);
+	color: var(--swpk-marca);
+}
+
+/* La pastilla es un enlace y el color del texto se lo pone la regla general
+   de enlaces. Aquí se gana porque va después y tiene más peso. */
+body[class*="panel-kinsta"] .wrap a.swpk-pastilla { color: var(--swpk-texto); }
+body[class*="panel-kinsta"] .wrap a.swpk-pastilla-activa { color: var(--swpk-marca); }
+
+/* ── La rejilla ─────────────────────────────────────────────────────────── */
+
+body[class*="panel-kinsta"] .swpk-rejilla {
+	display: grid;
+	gap: 18px;
+	grid-template-columns: repeat(12, 1fr);
+	margin: 0 0 18px;
+}
+
+body[class*="panel-kinsta"] .swpk-c3  { grid-column: span 3; }
+body[class*="panel-kinsta"] .swpk-c4  { grid-column: span 4; }
+body[class*="panel-kinsta"] .swpk-c5  { grid-column: span 5; }
+body[class*="panel-kinsta"] .swpk-c6  { grid-column: span 6; }
+body[class*="panel-kinsta"] .swpk-c7  { grid-column: span 7; }
+body[class*="panel-kinsta"] .swpk-c8  { grid-column: span 8; }
+body[class*="panel-kinsta"] .swpk-c9  { grid-column: span 9; }
+body[class*="panel-kinsta"] .swpk-c12 { grid-column: span 12; }
+
+/* El panel se abre dentro de WordPress, que ya se come 160 px de menú. Por
+   eso el corte es a 1180 y no a 1024: a esa anchura una tarjeta de cuatro
+   columnas ya no cabe sin partir las palabras. */
+@media (max-width: 1180px) {
+	body[class*="panel-kinsta"] .swpk-c3,
+	body[class*="panel-kinsta"] .swpk-c4,
+	body[class*="panel-kinsta"] .swpk-c5,
+	body[class*="panel-kinsta"] .swpk-c6,
+	body[class*="panel-kinsta"] .swpk-c7,
+	body[class*="panel-kinsta"] .swpk-c8,
+	body[class*="panel-kinsta"] .swpk-c9 {
+		grid-column: span 12;
+	}
+}
+
+/* ── La tarjeta ─────────────────────────────────────────────────────────── */
+
+body[class*="panel-kinsta"] .swpk-caja {
+	background: var(--swpk-tarjeta);
+	border: 1px solid var(--swpk-borde);
+	border-radius: var(--swpk-radio);
+	box-shadow: var(--swpk-sombra);
+	display: flex;
+	flex-direction: column;
+	overflow: hidden;
+	margin: 0 0 18px;
+}
+
+/* Dentro de la rejilla el margen lo pone el `gap`. */
+body[class*="panel-kinsta"] .swpk-rejilla > .swpk-caja { margin: 0; }
+
+body[class*="panel-kinsta"] .swpk-caja-cab {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 14px;
+	padding: 16px 20px;
+	border-bottom: 1px solid #f0f1f6;
+}
+
+body[class*="panel-kinsta"] .swpk-caja-cab h2,
+body[class*="panel-kinsta"] .swpk-caja-cab h3 {
+	margin: 0;
+	font-size: 15.5px;
+	font-weight: 700;
+	letter-spacing: -.2px;
+}
+
+body[class*="panel-kinsta"] .swpk-pie-dato {
+	color: var(--swpk-tenue);
+	font-size: 12px;
+	font-weight: 500;
+	white-space: nowrap;
+}
+
+body[class*="panel-kinsta"] .swpk-caja-cuerpo {
+	padding: 18px 20px;
+	flex: 1;
+}
+
+/* Para lo que trae su propio aire: tablas y listas, que ya llevan el suyo. */
+body[class*="panel-kinsta"] .swpk-caja-cuerpo.swpk-sin-aire { padding: 0; }
+
+body[class*="panel-kinsta"] .swpk-caja-cuerpo > p:first-child { margin-top: 0; }
+body[class*="panel-kinsta"] .swpk-caja-cuerpo > p:last-child { margin-bottom: 0; }
+
+/* Una tabla dentro de una tarjeta pierde su caja: dos cajas anidadas, con
+   sus dos bordes y sus dos sombras, se leen como un error de maquetación. */
+body[class*="panel-kinsta"] .swpk-caja table.widefat {
+	border: 0;
+	border-radius: 0;
+	box-shadow: none;
+	margin: 0;
+}
+
+/* Y el paginador deja de ser una caja para ser el pie de la tarjeta. */
+body[class*="panel-kinsta"] .swpk-caja .swpk-paginador {
+	border: 0;
+	border-top: 1px solid #f0f1f6;
+	border-radius: 0;
+	box-shadow: none;
+	background: #fbfcfe;
+	margin: 0;
+}
+
+/* Lo mismo la barra de filtros: va pegada a la tabla que filtra, dentro de
+   la tarjeta, para que se vea de quién es sin tener que deducirlo. */
+body[class*="panel-kinsta"] .swpk-caja .swpk-filtra,
+body[class*="panel-kinsta"] .swpk-caja .swpk-rango {
+	border: 0;
+	border-bottom: 1px solid #f0f1f6;
+	border-radius: 0;
+	box-shadow: none;
+	background: #fbfcfe;
+	margin: 0;
+	padding: 12px 20px;
+}
+
+/* ── Las piezas que van dentro ──────────────────────────────────────────── */
+
+body[class*="panel-kinsta"] .swpk-renglones {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+}
+
+body[class*="panel-kinsta"] .swpk-renglones li {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 14px;
+	padding: 13px 20px;
+	border-bottom: 1px solid #f3f4f9;
+}
+
+body[class*="panel-kinsta"] .swpk-renglones li:last-child { border-bottom: 0; }
+
+body[class*="panel-kinsta"] .swpk-renglon-nom { font-weight: 600; font-size: 13.5px; }
+
+body[class*="panel-kinsta"] .swpk-renglon-sub {
+	color: var(--swpk-apagado);
+	font-size: 12px;
+	margin-top: 1px;
+}
+
+body[class*="panel-kinsta"] .swpk-renglon-dato {
+	color: var(--swpk-apagado);
+	font-size: 12px;
+	white-space: nowrap;
+	text-align: right;
+}
+
+/* La cifra grande. Va en color de marca porque es un dato, no una alarma:
+   las alarmas se dicen con el rojo, que aquí significa otra cosa. */
+body[class*="panel-kinsta"] .swpk-cifron {
+	font-size: 40px;
+	font-weight: 700;
+	color: var(--swpk-marca);
+	line-height: 1.1;
+	letter-spacing: -1.2px;
+}
+
+body[class*="panel-kinsta"] .swpk-cifron-pie {
+	color: var(--swpk-apagado);
+	font-size: 12.5px;
+	margin-top: 2px;
+}
+
+body[class*="panel-kinsta"] .swpk-barra-apilada {
+	display: flex;
+	height: 10px;
+	border-radius: 999px;
+	overflow: hidden;
+	margin: 14px 0 16px;
+	background: #f0f1f6;
+}
+
+body[class*="panel-kinsta"] .swpk-barra-apilada span { display: block; height: 100%; }
+
+body[class*="panel-kinsta"] .swpk-claves {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+	display: grid;
+	gap: 9px;
+}
+
+body[class*="panel-kinsta"] .swpk-claves li {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	font-size: 13px;
+}
+
+body[class*="panel-kinsta"] .swpk-punto {
+	width: 10px;
+	height: 10px;
+	border-radius: 50%;
+	flex: 0 0 10px;
+}
+
+body[class*="panel-kinsta"] .swpk-claves .swpk-clave-t { flex: 1; color: var(--swpk-apagado); }
+
+body[class*="panel-kinsta"] .swpk-claves .swpk-clave-n {
+	font-weight: 700;
+	color: var(--swpk-texto);
+	font-variant-numeric: tabular-nums;
+}
+
+body[class*="panel-kinsta"] .swpk-grafica {
+	width: 100%;
+	height: auto;
+	display: block;
+}
+
+/* La dona y su leyenda, lado a lado hasta que no quepan. */
+body[class*="panel-kinsta"] .swpk-dona {
+	display: flex;
+	gap: 22px;
+	align-items: center;
+	flex-wrap: wrap;
+}
+
+body[class*="panel-kinsta"] .swpk-dona svg { flex: 0 0 140px; }
+body[class*="panel-kinsta"] .swpk-dona .swpk-claves { flex: 1; min-width: 170px; }
