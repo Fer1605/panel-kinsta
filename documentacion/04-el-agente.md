@@ -293,9 +293,26 @@ de opciones.
 
 1. Copiar o enlazar `agente-sitio/` en `wp-content/plugins/` y activarlo.
 2. En **Ajustes → Agente Solución Web**, poner la dirección del panel y la
-   clave de registro (sale de Ajustes, en el panel).
+   clave de registro. Las dos se copian del panel, en **Panel Kinsta →
+   Ajustes**, recuadro **Conectar los sitios**.
 3. Pulsar **Registrar**. El panel le entrega token y secreto.
 4. Comprobar que el sitio manda correo **antes** de encender la verificación en
    dos pasos.
 
 El reporte diario y el sondeo de órdenes quedan programados al activar.
+
+### La clave que no se veía
+
+Hasta la versión 0.2.1 del panel, el paso 2 era imposible de cumplir para quien
+no tuviera acceso a la base de datos. El panel **generaba** la clave de registro
+(`SWPK_Receptor::clave_registro()`) y no la mostraba en ninguna pantalla,
+mientras el agente decía «está en el panel, en Ajustes». La instrucción mandaba
+a un lugar vacío.
+
+No lo vio ninguna prueba porque las pruebas sacaban la clave con `wp eval`, que
+es justo lo que no puede hacer quien instala el agente. Salió cuando alguien
+preguntó qué había que pegar en esos dos campos.
+
+Lección, por si vuelve a pasar: **una instrucción que apunta a una pantalla hay
+que seguirla desde esa pantalla**, no desde la terminal. Si el camino de quien
+prueba no es el camino de quien usa, el hueco no se ve.

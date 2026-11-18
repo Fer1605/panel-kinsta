@@ -98,6 +98,56 @@ $a = SWPK_Ajustes::todos();
 	</form>
 
 	<?php
+	// ── Conectar los sitios ────────────────────────────────────────────────
+	//
+	// Esto estaba roto de la peor manera: el agente, dentro del sitio del
+	// cliente, dice «la clave está en el panel, en Ajustes» — y no estaba en
+	// ninguna pantalla. El panel la generaba y se la quedaba. La única forma
+	// de sacarla era un comando contra la base de datos, que es justo lo que
+	// no puede hacer quien va a instalar el agente.
+	//
+	// O sea: la instrucción mandaba a un lugar vacío, y sin esa clave no se
+	// puede conectar ni un sitio. Se descubrió porque alguien preguntó qué
+	// había que pegar en esos dos campos.
+	//
+	// Las dos cosas que hay que pegar van juntas aquí, en el orden en que se
+	// piden allá, para que sea copiar y pegar y no una búsqueda.
+	if ( SWPK_Perfiles::puede( SWPK_Perfiles::ADMINISTRAR ) ) :
+		SWPK_Vista::caja_abrir( 'Conectar los sitios', '', 'swpk-c6' );
+		?>
+		<p style="margin:0 0 14px">
+			En cada sitio, después de activar el plugin del agente, se abre
+			<strong>Ajustes → Agente Solución Web</strong> y se pegan estos dos datos.
+			Después se le da a <strong>Registrar este sitio</strong>.
+		</p>
+
+		<div class="swpk-par">
+			<span class="swpk-q">Dirección del panel</span>
+			<span class="swpk-v"><code class="swpk-mono"><?php echo esc_html( home_url() ); ?></code></span>
+		</div>
+
+		<div class="swpk-par">
+			<span class="swpk-q">Clave de registro</span>
+			<span class="swpk-v"><code class="swpk-mono"><?php echo esc_html( SWPK_Receptor::clave_registro() ); ?></code></span>
+		</div>
+
+		<p class="swpk-gris" style="font-size:12px;margin:10px 0 0">
+			La clave es la misma para todos los sitios y solo se usa en el momento de
+			registrarse. Al registrarse, el panel le entrega a ese sitio un secreto
+			propio, distinto en cada uno, y de ahí en adelante el sitio firma sus
+			reportes con el suyo. Por eso esta clave se puede cambiar sin desconectar
+			los sitios que ya estén andando, y por eso el secreto de un sitio no sirve
+			para hablar por otro.
+		</p>
+
+		<p class="swpk-gris" style="font-size:12px;margin:8px 0 0">
+			Trátala como una contraseña: con ella, cualquiera que sepa la dirección del
+			panel puede dar de alta un sitio y mandarle datos.
+		</p>
+		<?php
+		SWPK_Vista::caja_cerrar();
+	endif;
+
 	// «Cómo corre» es, en la maqueta, la lista de horarios: cada cuánto pasa
 	// cada cosa. Aquí tenía la tabla de estado del panel, que es otra cosa y
 	// se bajó a su propia tarjeta.

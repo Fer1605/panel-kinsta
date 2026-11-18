@@ -60,7 +60,7 @@ class SWA_Admin {
 						<td>
 							<input type="password" class="regular-text" name="clave_registro" id="clave_registro" value="" autocomplete="off"
 								placeholder="<?php echo '' !== $a['clave_registro'] ? '•••••••• (ya configurada)' : ''; ?>">
-							<p class="description">Está en el panel, en Ajustes. Solo se usa una vez: al registrarse, el panel le entrega a este sitio su propio secreto.</p>
+							<p class="description">En el panel: <strong>Panel Kinsta &rarr; Ajustes</strong>, en el recuadro <strong>Conectar los sitios</strong>. Ahí está también la dirección que va arriba.<br>Solo se usa en este momento: al registrarse, el panel le entrega a este sitio un secreto propio, distinto en cada sitio, y de ahí en adelante este sitio firma sus reportes con el suyo. Ese secreto no hay que copiarlo ni verlo nunca.</p>
 						</td>
 					</tr>
 					<tr>
