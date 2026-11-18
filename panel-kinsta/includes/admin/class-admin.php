@@ -22,6 +22,7 @@ class SWPK_Admin {
 		add_action( 'admin_post_swpk_guardar_ajustes', [ __CLASS__, 'accion_guardar_ajustes' ] );
 		add_action( 'admin_post_swpk_probar', [ __CLASS__, 'accion_probar' ] );
 		add_action( 'admin_post_swpk_sondear', [ __CLASS__, 'accion_sondear' ] );
+		add_action( 'admin_post_swpk_revisar', [ __CLASS__, 'accion_revisar' ] );
 		add_action( 'admin_post_swpk_asignar', [ __CLASS__, 'accion_asignar' ] );
 		add_action( 'admin_post_swpk_cifrar', [ __CLASS__, 'accion_cifrar' ] );
 		add_action( 'admin_post_swpk_crear_acceso', [ __CLASS__, 'accion_crear_acceso' ] );
@@ -501,6 +502,33 @@ class SWPK_Admin {
 			admin_url(
 				'admin.php?page=' . self::SLUG . '-caidas&swpk_msg=ok:' . rawurlencode(
 					sprintf( '%d sitios sondeados, %d sin responder, %d cambios de estado.', $r['sondeados'], $r['abajo'], $r['cambios'] )
+				)
+			)
+		);
+		exit;
+	}
+
+	/**
+	 * Lanzar la revisión de configuración a mano.
+	 *
+	 * No se corre aquí mismo: son unos ocho minutos para los 108 sitios y la
+	 * petición del navegador se cortaría mucho antes, dejando la revisión a
+	 * medias y sin que nadie se entere. Se encola para dentro de medio minuto y
+	 * se dice que va en camino, que es la verdad.
+	 */
+	public static function accion_revisar(): void {
+		if ( ! self::puede_administrar() ) {
+			wp_die( 'Sin permiso.' );
+		}
+		check_admin_referer( 'swpk_revisar' );
+
+		wp_schedule_single_event( time() + 30, SWPK_Sonda::HOOK );
+
+		wp_safe_redirect(
+			admin_url(
+				'admin.php?page=' . self::SLUG . '-ajustes&swpk_msg=ok:' . rawurlencode(
+					'La revisión de configuración quedó en cola. Tarda unos minutos en pasar por los 108 sitios; '
+					. 'los resultados van apareciendo en Seguridad conforme termina.'
 				)
 			)
 		);

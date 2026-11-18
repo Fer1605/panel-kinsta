@@ -4,50 +4,76 @@
  *
  * ─── Por qué hace falta esto ────────────────────────────────────────────────
  *
- * Hasta ahora todas las normas las medía el agente, desde dentro del sitio, y
- * el panel solo interpretaba su reporte (ver SWPK_Normas::medir). Eso está bien
- * para lo que únicamente se ve desde dentro —si el editor de código está
- * abierto, qué usuarios hay— pero es la fuente equivocada para tres cosas, y en
- * un caso daba un resultado falso en producción:
+ * Hasta el 18/11/2026 todas las normas las medía el agente, desde dentro del
+ * sitio, y el panel solo interpretaba su reporte (ver SWPK_Normas::medir). Eso
+ * está bien para lo que únicamente se ve desde dentro —si el editor de código
+ * está abierto, qué usuarios hay— pero es la fuente equivocada para todo lo que
+ * la pregunta es, literalmente, «qué ve un desconocido desde internet».
  *
- *   1. XML-RPC. El agente leía el filtro `xmlrpc_enabled` de WordPress, que
- *      dice si WordPress *serviría* XML-RPC. No dice nada de si la petición
- *      llega a WordPress. En Kinsta no llega: Nginx devuelve 403 antes de que
- *      PHP arranque. Comprobado el 18/11/2026 en 14 sitios de la cartera: 403
- *      en los 14. Así que el panel podía estar diciendo «XML-RPC abierto» de un
- *      sitio donde nadie puede entrar por ahí.
- *
- *   2. PHP en la carpeta de subidas. El agente sí hace una prueba de verdad
- *      —escribe un .php, lo pide, lo borra— pero en Kinsta la regla de Nginx
- *      devuelve 403, y el agente trataba cualquier respuesta que no fuera 2xx
- *      como «no se pudo comprobar». Un 403 ahí es el mejor resultado posible:
- *      el servidor se niega incluso a entregar el archivo. Mientras se contara
- *      como «no sé», la norma se quedaba en «sin dato» para siempre.
- *
- *   3. Los nombres de usuario. La norma «no existe un usuario admin» vale poco
- *      si el sitio publica los nombres en /wp-json/wp/v2/users. Medido: abierto
- *      en 13 de 14, y en varios aparece nuestra propia cuenta de mantenimiento.
+ * Y en un caso daba un resultado falso: el agente leía el filtro `xmlrpc_enabled`
+ * de WordPress, que dice si WordPress *serviría* XML-RPC. No dice si la petición
+ * le llega. En Kinsta no le llega —Nginx devuelve 403 antes de que PHP arranque—
+ * así que el panel podía marcar «XML-RPC abierto» en un sitio donde nadie puede
+ * entrar por ahí.
  *
  * ─── Lo que esto NO es ──────────────────────────────────────────────────────
  *
- * No es un escáner de vulnerabilidades ni una prueba de penetración. Son cuatro
- * peticiones sin credenciales a un sitio público: tres GET y un POST a
- * xmlrpc.php pidiendo la lista de métodos, que no cambia nada. Es lo mismo que
- * haría cualquiera desde un navegador. No se intenta entrar, no se prueban
- * contraseñas, no se toca nada del sitio.
+ * No es un escáner de vulnerabilidades ni una prueba de penetración. Son
+ * peticiones sin credenciales a un sitio público: GET en su mayoría, un POST a
+ * xmlrpc.php pidiendo la lista de métodos y un TRACE, ninguno de los cuales
+ * cambia nada. Es lo mismo que haría cualquiera desde un navegador. No se
+ * intenta entrar, no se prueban contraseñas, no se envía ningún formulario y no
+ * se toca nada del sitio. A install.php y a repair.php se les mira si pintan el
+ * formulario; nunca se les envía.
  *
- * ─── La regla que decide si esto sirve o es ruido ───────────────────────────
+ * ─── Las tres reglas que deciden si esto sirve o es ruido ───────────────────
  *
- * Nunca concluir por el código HTTP solo. Un 403 de Cloudflare y un «ese
- * archivo no existe» se parecen desde fuera, y muchos sitios contestan 200 con
- * la página de error del tema. Así que cada comprobación exige que el contenido
- * calce, y cuando no se puede distinguir, el resultado es «no se sabe» y no
- * «aprobado». Inventarse una buena noticia es peor que no tener el dato.
+ * 1. NUNCA concluir por el código HTTP solo. Muchos sitios contestan 200 con la
+ *    página de error del tema, así que un 200 no significa «ahí está». Cada
+ *    ruta trae el patrón que su contenido tiene que calzar, y si no calza es
+ *    «no está» aunque el código sea 200.
+ *
+ * 2. «Bloqueado» NO es «aprobado». Un 403 de Cloudflare y un «ese archivo no
+ *    existe» se parecen desde fuera. El .git puede estar ahí detrás de una
+ *    regla que alguien apague mañana. Por eso hay tres estados y no dos:
+ *    expuesto, ausente y bloqueado — y «bloqueado» se reporta como «no se sabe»,
+ *    no como que está bien.
+ *
+ * 3. Una sonda de control por sitio. Se pide una ruta que con certeza no existe
+ *    y se compara con la portada. Si el sitio contesta a la ruta inventada lo
+ *    mismo que a una real, sus resultados no sirven y se marcan como no
+ *    fiables en bloque, en vez de producir veinte hallazgos falsos.
+ *
+ * ─── Sobre no tumbar los sitios de los clientes ─────────────────────────────
+ *
+ * Son unas cuarenta peticiones por sitio y 108 sitios. Lanzadas sitio por sitio
+ * seguidas, la gestión de bots de Cloudflare empezaría a bloquear a media
+ * corrida y —esto es lo peligroso— todo lo que viniera después se vería como
+ * «bloqueado» sin que nada lo avisara. Por eso las peticiones van intercaladas:
+ * la lista se arma dando vueltas entre todos los sitios, así que dos peticiones
+ * seguidas al mismo sitio quedan separadas por las de los otros ciento siete.
+ * Con 108 sitios y 15 en paralelo, cada sitio recibe una petición cada varios
+ * segundos.
  */
 
 defined( 'ABSPATH' ) || exit;
 
 class SWPK_Sonda {
+
+	/**
+	 * La sonda corre sola, aparte de la corrida diaria.
+	 *
+	 * Medido: unas cuarenta peticiones por sitio, 4,4 segundos por sitio con
+	 * quince en paralelo. En los 108 son unos ocho minutos. Meter eso dentro de
+	 * SWPK_Sincronizador::correr() —que ya hace sus propias llamadas a Kinsta—
+	 * daría una tarea de cron lo bastante larga como para que el límite de
+	 * tiempo de PHP la mate a media corrida, y entonces se perderían las dos
+	 * cosas. Separadas, si una falla la otra sigue.
+	 *
+	 * Va a las 5:30, una hora antes del inventario, para que cuando alguien
+	 * abra el panel por la mañana las dos cosas estén frescas.
+	 */
+	public const HOOK = 'swpk_sonda_diaria';
 
 	/** Un transient por sitio. Vive 25 horas: hasta la corrida de mañana. */
 	private const CACHE = 'swpk_sonda_';
@@ -56,12 +82,213 @@ class SWPK_Sonda {
 	private const TIMEOUT      = 12;
 	private const CONCURRENCIA = 15;
 
+	/** Cuántos bytes del cuerpo hacen falta para ver si el contenido calza. */
+	private const TROZO = 24576;
+
 	/** El cuerpo del POST a xmlrpc.php. Pide la lista de métodos y nada más. */
 	private const XMLRPC_CUERPO = '<?xml version="1.0"?><methodCall><methodName>system.listMethods</methodName><params></params></methodCall>';
 
+	/** Un origen que no es de nadie, para ver si el sitio acepta a cualquiera. */
+	private const ORIGEN_AJENO = 'https://origen-que-no-existe.invalid';
+
+	public const EXPUESTO  = 'expuesto';
+	public const AUSENTE   = 'ausente';
+	public const BLOQUEADO = 'bloqueado';
+	public const PROTEGIDO = 'protegido';
+	public const NO_SE_PUDO = 'no_se_pudo';
+
 	/**
-	 * Lo que la sonda averiguó de un sitio, o un arreglo vacío si nunca se le
-	 * pasó o si ya caducó.
+	 * Las extensiones contra las que se compara un bloqueo.
+	 *
+	 * ─── Por qué existe esto ────────────────────────────────────────────────
+	 *
+	 * Al principio cualquier 403 se contaba como «bloqueado: no se sabe», y en
+	 * Kinsta eso dejaba las veintidós normas de esta sección en «sin dato» en
+	 * todos los sitios. Inservible.
+	 *
+	 * Midiendo se vio que hay dos cosas distintas detrás del mismo 403:
+	 *
+	 *   /wp-config.php.bak      403      /loquesea.php.bak    403
+	 *   /wp-content/debug.log   403      /loquesea.log        403
+	 *   /phpinfo.php            403      /loquesea.php        404
+	 *
+	 * En las dos primeras la plataforma se niega a servir ESE TIPO de archivo,
+	 * exista o no. Entonces da igual si el archivo está: nadie lo puede bajar.
+	 * Eso es protección de verdad y se cuenta como cumple, diciendo por qué.
+	 *
+	 * En la tercera, una dirección inexistente con la misma extensión contesta
+	 * 404 normal. O sea que el 403 fue para esa petición en concreto: nos retó
+	 * el cortafuegos. Ahí no se aprendió nada y se dice que no se sabe.
+	 *
+	 * Es la diferencia entre un bloque de normas que sirve y veintidós filas
+	 * que dicen «no sé».
+	 */
+	private const EXTENSIONES_DE_CONTROL = [ 'bak', 'save', 'old', 'tilde', 'txt', 'log', 'env', 'json', 'zip', 'sql', 'html', 'dir', 'dot' ];
+
+	/**
+	 * Las rutas que se piden, y qué tiene que traer el cuerpo para que cuente.
+	 *
+	 * El patrón es lo que separa un hallazgo de verdad de la página de error del
+	 * tema devuelta con código 200. Las rutas sin patrón se juzgan solo por el
+	 * código, y son las que no pueden dar un falso positivo por contenido.
+	 *
+	 * `{dominio}` se sustituye por el dominio sin puntos: los respaldos que
+	 * alguien deja en la raíz suelen llamarse como el sitio.
+	 *
+	 * @return array<string,array{rutas:array<int,string>,patron:string}>
+	 */
+	private static function rutas(): array {
+		return [
+			// ── Lo que delata la configuración ────────────────────────────
+			'config_respaldo' => [
+				'control' => [ 'bak', 'save', 'old', 'tilde', 'txt' ],
+				'rutas'  => [
+					'wp-config.php.bak',
+					'wp-config.php.save',
+					'wp-config.php.old',
+					'wp-config.php~',
+					'wp-config.txt',
+				],
+				'patron' => '/DB_PASSWORD|DB_NAME|<\?php/i',
+			],
+			'debug_log' => [
+				'control' => [ 'log', 'log' ],
+				'rutas'  => [ 'wp-content/debug.log', 'debug.log' ],
+				// El formato de fecha que escribe WordPress, o un error de PHP.
+				'patron' => '/\[\d{2}-\w{3}-\d{4}|PHP (Fatal|Warning|Notice|Parse|Deprecated)/i',
+			],
+			'delatores' => [
+				'control' => [ 'dot', 'dot', 'json', 'json', 'dot' ],
+				'rutas'  => [ '.git/config', '.env', 'composer.json', 'package.json', '.DS_Store' ],
+				'patron' => '/\[core\]|^\s*[A-Z_]{3,}=|"(require|dependencies|name)"\s*:|\x00\x00\x00\x01Bud1/i',
+			],
+			'volcados' => [
+				'control' => [ 'zip', 'sql', 'sql', 'zip', 'zip', 'sql' ],
+				'rutas'  => [ 'backup.zip', 'backup.sql', 'database.sql', 'site.zip', '{dominio}.zip', '{dominio}.sql' ],
+				'patron' => '/(DROP|CREATE|LOCK) TABLE|INSERT INTO|^PK\x03\x04/i',
+			],
+			'phpinfo' => [
+				'control' => [ 'php', 'php', 'php' ],
+				'rutas'  => [ 'phpinfo.php', 'info.php', 'adminer.php' ],
+				'patron' => '/phpinfo\(\)|PHP Version|Adminer|<title>phpinfo/i',
+			],
+			'restos_instalador' => [
+				'control' => [ 'php', 'txt', 'dir', 'php' ],
+				'rutas'  => [ 'installer.php', 'installer-log.txt', 'dup-installer/', 'emergency.php' ],
+				'patron' => '/Duplicator|DUPLICATOR|installer|emergency|password reset/i',
+			],
+
+			// ── Puertas de mantenimiento de WordPress ─────────────────────
+			//
+			// Se mira si pintan el formulario que SÍ hace algo; nunca se les
+			// envía nada.
+			//
+			// Aquí hubo un falso positivo y vale la pena dejarlo escrito. El
+			// primer patrón era `/<form|WordPress &rsaquo;|repair|...)/` y daba
+			// «expuesto» en todos los sitios probados. Resulta que las dos
+			// páginas contestan 200 aunque estén cerradas: install.php dice «Ya
+			// instalado» y repair.php dice «para permitir la reparación añade
+			// WP_ALLOW_REPAIR a wp-config.php». Las dos traen la palabra
+			// «repair» y un <form> de login, así que el patrón calzaba con la
+			// respuesta SEGURA.
+			//
+			// Lo que de verdad distingue una de otra son los nombres de los
+			// campos del formulario, que WordPress no traduce: `weblog_title`
+			// solo aparece cuando install.php pide los datos del sitio nuevo, y
+			// `repair=1` solo cuando repair.php ofrece los botones. Por eso el
+			// patrón mira atributos de HTML y no texto: el texto cambia con el
+			// idioma del sitio, y en la cartera hay sitios en español y en
+			// inglés.
+			'instalador' => [
+				'control' => [ 'php', 'php' ],
+				'rutas'  => [ 'wp-admin/install.php', 'wp-admin/maint/repair.php' ],
+				'patron' => '/weblog_title|name=["\']repair["\']|\?repair=1|famous five-minute/i',
+			],
+
+			// ── Listado de carpetas ───────────────────────────────────────
+			// Dos formas: la tabla de Apache y el <pre> de Nginx. Buscar solo
+			// la de Apache, como hace WPScan, se pierde la de Nginx — que es
+			// justo la que corre en Kinsta.
+			'listado' => [
+				// Aquí un 403 no es «no se sabe»: es la respuesta que se
+				// quiere. La pregunta no es si la carpeta existe —existe— sino
+				// si muestra lo que tiene dentro, y negarse es decir que no.
+				'bloqueo_es_bueno' => true,
+				'control' => [ 'dir', 'dir' ],
+				'rutas'  => [ 'wp-content/uploads/', 'wp-content/plugins/' ],
+				'patron' => '/<title>Index of |<h1>Index of |\[To Parent Directory\]|<pre><a href="\.\.\/">/i',
+			],
+
+			// ── Lo que solo revela la versión ─────────────────────────────
+			'readme' => [
+				'control' => [ 'html' ],
+				'rutas'  => [ 'readme.html' ],
+				'patron' => '/WordPress|Semantic Personal Publishing/i',
+			],
+		];
+	}
+
+	public static function init(): void {
+		add_action( self::HOOK, [ __CLASS__, 'correr' ] );
+
+		// Y se programa aquí además de en la activación, para que los paneles
+		// que ya estaban instalados antes de que esto existiera también la
+		// tengan. programar() ya comprueba si está puesta.
+		self::programar();
+	}
+
+	public static function programar(): void {
+		if ( ! wp_next_scheduled( self::HOOK ) ) {
+			wp_schedule_event( SWPK_Frescura::cuando( 'tomorrow 05:30' ), 'daily', self::HOOK );
+		}
+	}
+
+	public static function desprogramar(): void {
+		$ts = wp_next_scheduled( self::HOOK );
+		if ( $ts ) {
+			wp_unschedule_event( $ts, self::HOOK );
+		}
+	}
+
+	/**
+	 * Sondear la cartera y medir lo que de ahí sale.
+	 *
+	 * Las dos cosas van juntas a propósito: estas normas no las contesta el
+	 * agente, así que si no se midieran aquí se quedarían en «sin dato» para
+	 * siempre en los sitios sin agente — que hoy son todos.
+	 *
+	 * @return array<string,mixed>
+	 */
+	public static function correr(): array {
+		$resumen = self::sondear_todos();
+
+		$medidos = 0;
+
+		foreach ( SWPK_Inventario::todos() as $sitio ) {
+			$cuales = SWPK_Normas::COMPROBADORES_DE_SONDA;
+
+			// La prueba de PHP en subidas la contesta mejor el agente. Desde
+			// aquí solo se mide donde no hay agente, para no pisar lo bueno
+			// con lo parcial.
+			if ( ! (int) $sitio->cobertura_agente ) {
+				$cuales[] = SWPK_Normas::COMPROBADOR_DE_AMBOS;
+			}
+
+			SWPK_Normas::medir( (string) $sitio->sitio_id, [], $cuales );
+			++$medidos;
+		}
+
+		$resumen['medidos'] = $medidos;
+
+		update_option( 'swpk_ultima_sonda', [ 'cuando' => current_time( 'mysql' ) ] + $resumen, false );
+
+		SWPK_Estado::olvidar();
+
+		return $resumen;
+	}
+
+	/**
+	 * Lo que la sonda averiguó de un sitio, o vacío si nunca se le pasó.
 	 *
 	 * @return array<string,mixed>
 	 */
@@ -105,7 +332,7 @@ class SWPK_Sonda {
 	/**
 	 * Sondea toda la cartera.
 	 *
-	 * @return array{sondeados:int,xmlrpc_abierto:int,usuarios_expuestos:int}
+	 * @return array<string,int>
 	 */
 	public static function sondear_todos(): array {
 		$objetivos = [];
@@ -119,30 +346,30 @@ class SWPK_Sonda {
 
 		$r = self::sondear( $objetivos );
 
-		$resumen = [ 'sondeados' => count( $r ), 'xmlrpc_abierto' => 0, 'usuarios_expuestos' => 0 ];
+		$resumen = [
+			'sondeados'      => count( $r ),
+			'rutas_no_fiables' => 0,
+			'expuestos'      => 0,
+		];
 
 		foreach ( $r as $uno ) {
-			if ( 'responde' === ( $uno['xmlrpc'] ?? '' ) ) {
-				++$resumen['xmlrpc_abierto'];
+			if ( empty( $uno['rutas_fiables'] ) ) {
+				++$resumen['rutas_no_fiables'];
+				continue;
 			}
-			if ( (int) ( $uno['usuarios_rest'] ?? 0 ) > 0 ) {
-				++$resumen['usuarios_expuestos'];
+			foreach ( (array) ( $uno['rutas'] ?? [] ) as $estado ) {
+				if ( self::EXPUESTO === $estado ) {
+					++$resumen['expuestos'];
+					break;
+				}
 			}
 		}
-
-		update_option(
-			'swpk_ultima_sonda',
-			[ 'cuando' => current_time( 'mysql' ) ] + $resumen,
-			false
-		);
 
 		return $resumen;
 	}
 
 	/**
-	 * El motor. Arma todas las peticiones de todos los sitios y las lanza en
-	 * paralelo, igual que SWPK_Monitor::sondear() — cuatro por sitio y 108
-	 * sitios es demasiado para hacerlo en fila.
+	 * El motor.
 	 *
 	 * Nota de auditoría: esto habla con los sitios públicos de los clientes,
 	 * nunca con la API de Kinsta. Las peticiones a Kinsta salen únicamente de
@@ -156,39 +383,77 @@ class SWPK_Sonda {
 			return [];
 		}
 
-		// Un nombre al azar por corrida: así la respuesta no puede venir de una
-		// caché de una corrida anterior.
+		// Un nombre al azar por corrida: así ninguna respuesta puede venir de
+		// la caché de una corrida anterior.
 		$azar = wp_generate_password( 10, false, false );
 
-		$peticiones = [];
-
-		foreach ( $objetivos as $sitio_id => $dominio ) {
-			$base = self::base( (string) $dominio );
-
-			$peticiones[] = [ 'sitio' => (string) $sitio_id, 'que' => 'xmlrpc', 'url' => $base . 'xmlrpc.php', 'post' => self::XMLRPC_CUERPO ];
-			$peticiones[] = [ 'sitio' => (string) $sitio_id, 'que' => 'usuarios_rest', 'url' => $base . 'wp-json/wp/v2/users', 'post' => null ];
-			$peticiones[] = [ 'sitio' => (string) $sitio_id, 'que' => 'uploads_php', 'url' => $base . 'wp-content/uploads/swpk-' . $azar . '.php', 'post' => null ];
-			$peticiones[] = [ 'sitio' => (string) $sitio_id, 'que' => 'uploads_txt', 'url' => $base . 'wp-content/uploads/swpk-' . $azar . '.txt', 'post' => null ];
-		}
-
-		$crudo = self::lanzar( $peticiones );
-
-		// Agrupar por sitio y traducir a veredictos.
 		$por_sitio = [];
 
+		foreach ( $objetivos as $sitio_id => $dominio ) {
+			$por_sitio[ (string) $sitio_id ] = self::plan( (string) $sitio_id, (string) $dominio, $azar );
+		}
+
+		$crudo = self::lanzar( self::intercalar( $por_sitio ) );
+
+		$agrupado = [];
 		foreach ( $crudo as $fila ) {
-			$por_sitio[ $fila['sitio'] ][ $fila['que'] ] = $fila;
+			$agrupado[ $fila['sitio'] ][ $fila['que'] ] = $fila;
+		}
+
+		// Segunda pasada, solo para lo que quedó sin explicar.
+		//
+		// Un 403 que el control de la extensión no explica puede seguir siendo
+		// una regla de la plataforma, pero keyeada por NOMBRE de archivo.
+		// Comprobado: composer.json contesta 403 incluso dentro de una carpeta
+		// que no existe, mientras que una dirección .json inventada contesta
+		// 404. O sea que la regla mira el nombre.
+		//
+		// Para distinguirlo se pide la MISMA ruta colgando de una carpeta
+		// inventada. Si también viene bloqueada, es regla general y el archivo
+		// no lo puede bajar nadie. Va en una segunda pasada porque solo hace
+		// falta para las pocas rutas que quedaron en duda, y pedirla para
+		// todas sería duplicar la corrida entera.
+		$segunda = [];
+
+		foreach ( $agrupado as $sitio_id => $partes ) {
+			$base = self::base( (string) ( $objetivos[ $sitio_id ] ?? '' ) );
+
+			foreach ( self::rutas() as $grupo => $def ) {
+				foreach ( $def['rutas'] as $i => $ruta ) {
+					if ( ! empty( $def['bloqueo_es_bueno'] ) ) {
+						continue;
+					}
+
+					$clave = 'ruta:' . $grupo . ':' . $i;
+
+					if ( self::BLOQUEADO !== self::clasificar( $partes[ $clave ] ?? [], $def['patron'] ) ) {
+						continue;
+					}
+
+					if ( self::control_bloqueado( $partes, (string) ( $def['control'][ $i ] ?? '' ) ) ) {
+						continue; // ya lo explicó la extensión
+					}
+
+					$segunda[] = [
+						'sitio' => (string) $sitio_id,
+						'que'   => 'ctrln:' . $grupo . ':' . $i,
+						'url'   => $base . 'swpk-control-' . $azar . '/' . str_replace( '{dominio}', 'x', $ruta ),
+						'post'  => null,
+					];
+				}
+			}
+		}
+
+		if ( $segunda ) {
+			foreach ( self::lanzar( self::intercalar_plano( $segunda ) ) as $fila ) {
+				$agrupado[ $fila['sitio'] ][ $fila['que'] ] = $fila;
+			}
 		}
 
 		$salida = [];
 
-		foreach ( $por_sitio as $sitio_id => $partes ) {
-			$uno = [
-				'cuando'        => current_time( 'mysql' ),
-				'xmlrpc'        => self::leer_xmlrpc( $partes['xmlrpc'] ?? [] ),
-				'usuarios_rest' => self::leer_usuarios( $partes['usuarios_rest'] ?? [] ),
-				'uploads_regla' => self::leer_uploads( $partes['uploads_php'] ?? [], $partes['uploads_txt'] ?? [] ),
-			];
+		foreach ( $agrupado as $sitio_id => $partes ) {
+			$uno = self::interpretar( $partes, (string) ( $objetivos[ $sitio_id ] ?? '' ) );
 
 			set_transient( self::CACHE . $sitio_id, $uno, self::VIDA );
 			$salida[ $sitio_id ] = $uno;
@@ -197,12 +462,154 @@ class SWPK_Sonda {
 		return $salida;
 	}
 
-	private static function base( string $dominio ): string {
-		if ( str_starts_with( $dominio, 'http://' ) || str_starts_with( $dominio, 'https://' ) ) {
-			return trailingslashit( $dominio );
+	/**
+	 * Todas las peticiones de un sitio.
+	 *
+	 * @return array<int,array<string,mixed>>
+	 */
+	private static function plan( string $sitio_id, string $dominio, string $azar ): array {
+		$base  = self::base( $dominio );
+		$plano = preg_replace( '/[^a-z0-9]/i', '', self::anfitrion( $dominio ) ) ?: 'sitio';
+
+		$p = [];
+
+		$pon = static function ( string $que, string $url, array $extra = [] ) use ( &$p, $sitio_id ): void {
+			$p[] = array_merge( [ 'sitio' => $sitio_id, 'que' => $que, 'url' => $url ], $extra );
+		};
+
+		// La sonda de control: dos rutas que con certeza no existen. Si el
+		// sitio contesta a estas como si existieran, todo lo demás sobra.
+		$pon( 'control', $base . 'swpk-control-' . $azar );
+		$pon( 'control_php', $base . 'swpk-control-' . $azar . '.php' );
+
+		// La portada, con sus cabeceras y su certificado.
+		$pon( 'portada', $base, [ 'seguir' => true, 'cert' => true ] );
+
+		// CORS: la misma portada, pero diciendo que venimos de otro sitio.
+		$pon( 'cors', $base, [ 'origen' => self::ORIGEN_AJENO ] );
+
+		// El otro anfitrión: si el sitio es www, el pelado, y al revés.
+		$otro = self::otro_anfitrion( $dominio );
+		if ( '' !== $otro ) {
+			$pon( 'canonico', 'https://' . $otro . '/' );
 		}
 
-		return 'https://' . trailingslashit( $dominio );
+		$pon( 'trace', $base, [ 'metodo' => 'TRACE' ] );
+		$pon( 'robots', $base . 'robots.txt' );
+		$pon( 'xmlrpc', $base . 'xmlrpc.php', [ 'post' => self::XMLRPC_CUERPO ] );
+		$pon( 'usuarios_rest', $base . 'wp-json/wp/v2/users' );
+		$pon( 'autor', $base . '?author=1' );
+		$pon( 'uploads_php', $base . 'wp-content/uploads/swpk-' . $azar . '.php' );
+		$pon( 'uploads_txt', $base . 'wp-content/uploads/swpk-' . $azar . '.txt' );
+
+		// Un control por cada extensión que se va a pedir, para poder decir si
+		// un 403 es «la plataforma no sirve este tipo de archivo» o «nos
+		// bloquearon a nosotros». Ver EXTENSIONES_DE_CONTROL.
+		foreach ( self::EXTENSIONES_DE_CONTROL as $ext ) {
+			$pon( 'ctrl:' . $ext, $base . self::ruta_de_control( $azar, $ext ) );
+		}
+
+		foreach ( self::rutas() as $grupo => $def ) {
+			foreach ( $def['rutas'] as $i => $ruta ) {
+				$pon( 'ruta:' . $grupo . ':' . $i, $base . str_replace( '{dominio}', $plano, $ruta ) );
+			}
+		}
+
+		return $p;
+	}
+
+	/**
+	 * Mezcla las peticiones dando vueltas entre los sitios.
+	 *
+	 * Es lo que evita que un sitio reciba cuarenta peticiones seguidas y la
+	 * gestión de bots empiece a cortarlas a media corrida.
+	 *
+	 * @param array<string,array<int,array<string,mixed>>> $por_sitio
+	 * @return array<int,array<string,mixed>>
+	 */
+	private static function intercalar( array $por_sitio ): array {
+		$salida = [];
+		$largo  = 0;
+
+		foreach ( $por_sitio as $lista ) {
+			$largo = max( $largo, count( $lista ) );
+		}
+
+		for ( $i = 0; $i < $largo; $i++ ) {
+			foreach ( $por_sitio as $lista ) {
+				if ( isset( $lista[ $i ] ) ) {
+					$salida[] = $lista[ $i ];
+				}
+			}
+		}
+
+		return $salida;
+	}
+
+	/** El nombre inventado que se pide para cada extensión. */
+	private static function ruta_de_control( string $azar, string $ext ): string {
+		$base = 'swpk-control-' . $azar;
+
+		return match ( $ext ) {
+			'tilde' => $base . '.php~',
+			'dir'   => $base . '/',
+			// Nginx niega los archivos que empiezan con punto, y eso no tiene
+			// que ver con la extensión: .git/config, .env y .DS_Store caen por
+			// el punto, no por lo que vaya después.
+			'dot'   => '.' . $base,
+			default => $base . '.' . $ext,
+		};
+	}
+
+	/**
+	 * Lo mismo que intercalar(), para una lista que ya viene plana.
+	 *
+	 * @param array<int,array<string,mixed>> $lista
+	 * @return array<int,array<string,mixed>>
+	 */
+	private static function intercalar_plano( array $lista ): array {
+		$por_sitio = [];
+
+		foreach ( $lista as $p ) {
+			$por_sitio[ $p['sitio'] ][] = $p;
+		}
+
+		return self::intercalar( $por_sitio );
+	}
+
+	private static function anfitrion( string $dominio ): string {
+		$d = preg_replace( '#^https?://#i', '', trim( $dominio ) );
+
+		return strtolower( trim( (string) strtok( (string) $d, '/' ) ) );
+	}
+
+	private static function base( string $dominio ): string {
+		return 'https://' . trailingslashit( self::anfitrion( $dominio ) );
+	}
+
+	/**
+	 * El mismo sitio con www, o sin www si ya lo trae.
+	 *
+	 * Aquí había una suposición que no aguantó los datos: se pedía el otro
+	 * nombre solo si el dominio tenía un punto, para no inventar
+	 * «www.panel.ejemplo.com». Pero media cartera es de Guatemala y usa
+	 * «.com.gt» y «.org.gt», que tienen dos puntos siendo dominios normales.
+	 * Comprobado: www.care.org.gt, www.worldvision.org.gt y www.unispice.com
+	 * contestan 301, o sea que el otro nombre existe y la norma se estaba
+	 * saltando en todos ellos.
+	 *
+	 * Así que no se adivina: se pide siempre. Si el nombre no existe, la
+	 * petición falla y eso se lee como «el sitio responde por un solo nombre»,
+	 * que es la respuesta correcta. Cuesta una petición por sitio.
+	 */
+	private static function otro_anfitrion( string $dominio ): string {
+		$h = self::anfitrion( $dominio );
+
+		if ( '' === $h || filter_var( $h, FILTER_VALIDATE_IP ) ) {
+			return '';
+		}
+
+		return str_starts_with( $h, 'www.' ) ? substr( $h, 4 ) : 'www.' . $h;
 	}
 
 	/**
@@ -213,34 +620,62 @@ class SWPK_Sonda {
 		$hechas = [];
 
 		foreach ( array_chunk( $peticiones, self::CONCURRENCIA ) as $tanda ) {
-			$multi  = curl_multi_init();
-			$mangos = [];
+			// Cada tanda vuelve a pedir tiempo. Sin esto, una corrida de ocho
+			// minutos muere a la mitad en cualquier servidor con el límite por
+			// omisión, y lo peor es que moriría en silencio.
+			if ( function_exists( 'set_time_limit' ) ) {
+				@set_time_limit( 60 ); // phpcs:ignore WordPress.PHP.NoSilencedErrors
+			}
+
+			$multi      = curl_multi_init();
+			$mangos     = [];
+			$cabeceras  = [];
 
 			foreach ( $tanda as $i => $p ) {
 				$ch = curl_init();
 
+				$cabeceras[ $i ] = '';
+
 				$opciones = [
 					CURLOPT_URL            => $p['url'],
 					CURLOPT_RETURNTRANSFER => true,
-					// Sin seguir redirecciones: un 301 a la portada es un dato,
-					// y seguirlo convertiría «no existe» en «200 con HTML».
-					CURLOPT_FOLLOWLOCATION => false,
+					// Por omisión no se siguen redirecciones: un 301 a la
+					// portada es un dato, y seguirlo convertiría «no existe»
+					// en «200 con HTML».
+					CURLOPT_FOLLOWLOCATION => ! empty( $p['seguir'] ),
+					CURLOPT_MAXREDIRS      => 5,
 					CURLOPT_TIMEOUT        => self::TIMEOUT,
 					CURLOPT_CONNECTTIMEOUT => 8,
 					CURLOPT_SSL_VERIFYPEER => true,
 					CURLOPT_USERAGENT      => 'PanelKinsta/' . SWPK_VERSION . ' (revision de configuracion)',
-					// 24 KB alcanzan para ver si el cuerpo calza. Nadie necesita
-					// bajarse la lista entera de usuarios de un sitio.
-					CURLOPT_RANGE          => '0-24576',
+					CURLOPT_HEADERFUNCTION => static function ( $ch, $linea ) use ( &$cabeceras, $i ) {
+						$cabeceras[ $i ] .= $linea;
+
+						return strlen( $linea );
+					},
 				];
 
-				if ( null !== $p['post'] ) {
+				if ( ! empty( $p['cert'] ) ) {
+					$opciones[ CURLOPT_CERTINFO ] = true;
+				}
+
+				if ( ! empty( $p['origen'] ) ) {
+					$opciones[ CURLOPT_HTTPHEADER ] = [ 'Origin: ' . $p['origen'] ];
+				}
+
+				if ( ! empty( $p['metodo'] ) ) {
+					$opciones[ CURLOPT_CUSTOMREQUEST ] = $p['metodo'];
+					$opciones[ CURLOPT_NOBODY ]        = false;
+				}
+
+				if ( ! empty( $p['post'] ) ) {
 					$opciones[ CURLOPT_POST ]       = true;
 					$opciones[ CURLOPT_POSTFIELDS ] = $p['post'];
 					$opciones[ CURLOPT_HTTPHEADER ] = [ 'Content-Type: text/xml' ];
-					// Un POST con Range no tiene sentido y algunos servidores
-					// lo rechazan.
-					unset( $opciones[ CURLOPT_RANGE ] );
+				} else {
+					// Un Range en un POST no tiene sentido y algunos
+					// servidores lo rechazan.
+					$opciones[ CURLOPT_RANGE ] = '0-' . self::TROZO;
 				}
 
 				curl_setopt_array( $ch, $opciones );
@@ -265,11 +700,14 @@ class SWPK_Sonda {
 
 			foreach ( $mangos as $i => $ch ) {
 				$hechas[] = [
-					'sitio'  => $tanda[ $i ]['sitio'],
-					'que'    => $tanda[ $i ]['que'],
-					'codigo' => (int) curl_getinfo( $ch, CURLINFO_RESPONSE_CODE ),
-					'cuerpo' => (string) curl_multi_getcontent( $ch ),
-					'error'  => $errores[ spl_object_id( $ch ) ] ?? (int) curl_errno( $ch ),
+					'sitio'     => $tanda[ $i ]['sitio'],
+					'que'       => $tanda[ $i ]['que'],
+					'codigo'    => (int) curl_getinfo( $ch, CURLINFO_RESPONSE_CODE ),
+					'cuerpo'    => (string) curl_multi_getcontent( $ch ),
+					'cabeceras' => (string) ( $cabeceras[ $i ] ?? '' ),
+					'url_final' => (string) curl_getinfo( $ch, CURLINFO_EFFECTIVE_URL ),
+					'cert'      => empty( $tanda[ $i ]['cert'] ) ? [] : (array) ( curl_getinfo( $ch, CURLINFO_CERTINFO ) ?: [] ),
+					'error'     => $errores[ spl_object_id( $ch ) ] ?? (int) curl_errno( $ch ),
 				];
 
 				curl_multi_remove_handle( $multi, $ch );
@@ -280,6 +718,208 @@ class SWPK_Sonda {
 		}
 
 		return $hechas;
+	}
+
+	// ─────────────────────────────────────────────────────────────────────────
+	// Leer lo que contestaron
+	// ─────────────────────────────────────────────────────────────────────────
+
+	/**
+	 * @param array<string,array<string,mixed>> $p
+	 * @return array<string,mixed>
+	 */
+	private static function interpretar( array $p, string $dominio ): array {
+		// La sonda de control invalida las comprobaciones que preguntan «¿está
+		// este archivo?», porque en un sitio que contesta 200 a cualquier
+		// dirección ese «200» no significa nada. No invalida las demás: las
+		// cabeceras de la portada, el certificado y las direcciones que SÍ
+		// existen —xmlrpc.php, la lista de usuarios— se siguen leyendo bien.
+		// Tirar todo sería tan deshonesto como dar por buenos los hallazgos.
+		$uno = [
+			'cuando'        => current_time( 'mysql' ),
+			'rutas_fiables' => self::control_sano( $p['control'] ?? [], $p['control_php'] ?? [] ),
+		];
+
+		$uno['xmlrpc']        = self::leer_xmlrpc( $p['xmlrpc'] ?? [] );
+		$uno['usuarios_rest'] = self::leer_usuarios( $p['usuarios_rest'] ?? [] );
+		$uno['uploads_regla'] = self::leer_uploads( $p['uploads_php'] ?? [], $p['uploads_txt'] ?? [] );
+		$uno['autor']         = self::leer_autor( $p['autor'] ?? [] );
+		$uno['trace']         = self::leer_trace( $p['trace'] ?? [] );
+		$uno['robots']        = self::leer_robots( $p['robots'] ?? [] );
+		$uno['canonico']      = self::leer_canonico( $p['portada'] ?? [], $p['canonico'] ?? null );
+		$uno['cors']          = self::leer_cors( $p['cors'] ?? [] );
+		$uno['cabeceras']     = self::leer_cabeceras( $p['portada'] ?? [] );
+		$uno['mixto']         = self::leer_mixto( $p['portada'] ?? [], $dominio );
+		$uno['certificado']   = self::leer_certificado( $p['portada'] ?? [] );
+		$uno['rutas']         = $uno['rutas_fiables'] ? self::leer_rutas( $p ) : [];
+
+		return $uno;
+	}
+
+	/**
+	 * ¿Se puede confiar en lo que contesta este sitio?
+	 *
+	 * Se pidieron dos rutas inventadas. Si alguna contesta 200 con un cuerpo
+	 * de verdad, el sitio devuelve algo para cualquier dirección y entonces
+	 * ningún «200» de los demás significa nada.
+	 */
+	private static function control_sano( array $a, array $b ): bool {
+		foreach ( [ $a, $b ] as $c ) {
+			if ( ! $c ) {
+				return false;
+			}
+
+			// Un error de red en el control: no se puede afirmar nada del resto.
+			if ( $c['error'] ) {
+				return false;
+			}
+
+			if ( in_array( (int) $c['codigo'], [ 200, 206 ], true ) && strlen( (string) $c['cuerpo'] ) > 512 ) {
+				return false;
+			}
+		}
+
+		return true;
+	}
+
+	/** ¿Es una pantalla de bloqueo del borde y no una respuesta del sitio? */
+	private static function lo_corto_el_borde( array $r ): bool {
+		$cab = strtolower( (string) ( $r['cabeceras'] ?? '' ) );
+		$cue = (string) ( $r['cuerpo'] ?? '' );
+
+		if ( ! str_contains( $cab, 'cf-ray' ) && ! str_contains( $cab, 'cf-mitigated' ) ) {
+			return false;
+		}
+
+		// «Just a moment…» es la pantalla de reto, no una de bloqueo, y la
+		// diferencia importa: un reto lo pasa cualquier navegador de verdad.
+		// O sea que un archivo detrás de un reto NO está protegido de una
+		// persona, solo de nuestro sondeo. Por eso cuenta como «no se sabe» y
+		// nunca como protegido.
+		return (bool) preg_match(
+			'/you have been blocked|attention required|just a moment|enable javascript and cookies|error code\s*:?\s*10\d\d|cloudflare to restrict access/i',
+			$cue
+		);
+	}
+
+	/**
+	 * Clasifica una respuesta en expuesto / ausente / bloqueado / no se pudo.
+	 *
+	 * El patrón es lo que hace esto utilizable: sin él, cualquier sitio que
+	 * conteste su página de error con código 200 se vería como si tuviera
+	 * todos los archivos del mundo.
+	 */
+	private static function clasificar( array $r, string $patron ): string {
+		if ( ! $r || $r['error'] ) {
+			return self::NO_SE_PUDO;
+		}
+
+		if ( self::lo_corto_el_borde( $r ) ) {
+			return self::BLOQUEADO;
+		}
+
+		$codigo = (int) $r['codigo'];
+
+		if ( in_array( $codigo, [ 401, 403, 451 ], true ) ) {
+			return self::BLOQUEADO;
+		}
+
+		if ( ! in_array( $codigo, [ 200, 206 ], true ) ) {
+			return self::AUSENTE;
+		}
+
+		$cuerpo = (string) $r['cuerpo'];
+
+		if ( '' === $patron ) {
+			return '' !== trim( $cuerpo ) ? self::EXPUESTO : self::AUSENTE;
+		}
+
+		// 200 pero el contenido no es lo que debería: es la página de error del
+		// tema, o una redirección servida como 200.
+		return preg_match( $patron, $cuerpo ) ? self::EXPUESTO : self::AUSENTE;
+	}
+
+	/**
+	 * El veredicto de cada grupo de rutas.
+	 *
+	 * Un grupo está expuesto si cualquiera de sus rutas lo está. Si ninguna lo
+	 * está pero alguna quedó bloqueada, el grupo queda bloqueado: no se sabe.
+	 *
+	 * @param array<string,array<string,mixed>> $p
+	 * @return array<string,string>
+	 */
+	private static function leer_rutas( array $p ): array {
+		$salida = [];
+
+		foreach ( self::rutas() as $grupo => $def ) {
+			$estados = [];
+
+			foreach ( array_keys( $def['rutas'] ) as $i ) {
+				$estado = self::clasificar( $p[ 'ruta:' . $grupo . ':' . $i ] ?? [], $def['patron'] );
+
+				// Un 403 puede ser la plataforma negándose a servir ese tipo de
+				// archivo —y entonces da igual si está, porque nadie lo baja— o
+				// el cortafuegos cortando nuestra petición, y entonces no se
+				// aprendió nada. Lo dice el control de la misma extensión.
+				if ( self::BLOQUEADO === $estado ) {
+					$explicado = ! empty( $def['bloqueo_es_bueno'] )
+						|| self::control_bloqueado( $p, (string) ( $def['control'][ $i ] ?? '' ) )
+						|| self::bloqueado_por_nombre( $p[ 'ctrln:' . $grupo . ':' . $i ] ?? [] );
+
+					if ( $explicado ) {
+						$estado = self::PROTEGIDO;
+					}
+				}
+
+				$estados[] = $estado;
+			}
+
+			// Lo peor manda: un archivo expuesto pesa más que cuatro ausentes,
+			// y «no se sabe» pesa más que «protegido».
+			foreach ( [ self::EXPUESTO, self::BLOQUEADO, self::PROTEGIDO, self::AUSENTE ] as $peor ) {
+				if ( in_array( $peor, $estados, true ) ) {
+					$salida[ $grupo ] = $peor;
+					continue 2;
+				}
+			}
+
+			$salida[ $grupo ] = self::NO_SE_PUDO;
+		}
+
+		return $salida;
+	}
+
+	/** ¿La misma ruta bajo una carpeta inventada también vino bloqueada? */
+	private static function bloqueado_por_nombre( array $r ): bool {
+		if ( ! $r || $r['error'] || self::lo_corto_el_borde( $r ) ) {
+			return false;
+		}
+
+		return in_array( (int) $r['codigo'], [ 401, 403, 451 ], true );
+	}
+
+	/**
+	 * ¿La dirección inventada con esta misma extensión también vino bloqueada?
+	 *
+	 * Si sí, el servidor no sirve ese tipo de archivo exista o no: es una regla
+	 * de la plataforma y no una pista sobre este archivo en concreto.
+	 */
+	private static function control_bloqueado( array $p, string $ext ): bool {
+		if ( '' === $ext ) {
+			return false;
+		}
+
+		$r = 'php' === $ext ? ( $p['control_php'] ?? [] ) : ( $p[ 'ctrl:' . $ext ] ?? [] );
+
+		if ( ! $r || $r['error'] ) {
+			return false;
+		}
+
+		if ( self::lo_corto_el_borde( $r ) ) {
+			return false; // al control también lo retaron: no prueba nada
+		}
+
+		return in_array( (int) $r['codigo'], [ 401, 403, 451 ], true );
 	}
 
 	/**
@@ -313,8 +953,6 @@ class SWPK_Sonda {
 			return 'bloqueado';
 		}
 
-		// Llegó a WordPress. Si contestó con una falla, la puerta está cerrada
-		// desde dentro; si contestó la lista, está abierta.
 		return str_contains( $cuerpo, 'faultCode' ) ? 'rechaza' : 'responde';
 	}
 
@@ -331,7 +969,7 @@ class SWPK_Sonda {
 			return null;
 		}
 
-		if ( 200 !== (int) $p['codigo'] ) {
+		if ( ! in_array( (int) $p['codigo'], [ 200, 206 ], true ) ) {
 			return 0;
 		}
 
@@ -353,13 +991,207 @@ class SWPK_Sonda {
 	}
 
 	/**
-	 * ¿El servidor tiene una regla que no deja servir .php en /uploads?
+	 * ¿/?author=1 redirige a /author/<nombre>/ y así revela el nombre?
 	 *
-	 * Se piden dos archivos que no existen, uno .php y uno .txt, con el mismo
-	 * nombre al azar. Si el .php da 403 y el .txt no, hay una regla que mira la
-	 * extensión. Si los dos dan lo mismo, no hay regla y lo único que protege
-	 * la carpeta es que PHP no esté configurado para ejecutar ahí — y eso solo
-	 * lo prueba el agente, escribiendo un archivo de verdad.
+	 * Se devuelve si lo revela, no el nombre.
+	 *
+	 * @return bool|null null si no se pudo averiguar
+	 */
+	private static function leer_autor( array $p ): ?bool {
+		if ( ! $p || $p['error'] ) {
+			return null;
+		}
+
+		$codigo = (int) $p['codigo'];
+
+		if ( ! in_array( $codigo, [ 301, 302, 307, 308 ], true ) ) {
+			return false;
+		}
+
+		return (bool) preg_match( '#^location:\s*\S*/author/[^/\s]+#im', (string) $p['cabeceras'] );
+	}
+
+	/** @return bool|null */
+	private static function leer_trace( array $p ): ?bool {
+		if ( ! $p || $p['error'] ) {
+			return null;
+		}
+
+		// Un TRACE atendido contesta 200 y repite la petición en el cuerpo.
+		return 200 === (int) $p['codigo'] && str_contains( strtolower( (string) $p['cuerpo'] ), 'trace /' );
+	}
+
+	/**
+	 * ¿El sitio le pide a los buscadores que no lo indexen?
+	 *
+	 * @return bool|null true si pide no ser indexado
+	 */
+	private static function leer_robots( array $p ): ?bool {
+		if ( ! $p || $p['error'] ) {
+			return null;
+		}
+
+		if ( ! in_array( (int) $p['codigo'], [ 200, 206 ], true ) ) {
+			return false;
+		}
+
+		return (bool) preg_match( '/^\s*Disallow:\s*\/\s*$/im', (string) $p['cuerpo'] );
+	}
+
+	/**
+	 * ¿Hay un solo anfitrión canónico?
+	 *
+	 *   'canonico'   uno sirve y el otro redirige hacia él.
+	 *   'duplicado'  los dos contestan 200: contenido duplicado, y las cookies
+	 *                y el HSTS quedan repartidos entre dos nombres.
+	 *   'solo_uno'   el otro nombre no existe. No es un problema.
+	 *   'no_se_pudo' no se pudo averiguar.
+	 */
+	private static function leer_canonico( array $portada, ?array $otro ): string {
+		if ( ! $portada || $portada['error'] ) {
+			return 'no_se_pudo';
+		}
+
+		if ( null === $otro || ! $otro ) {
+			return 'solo_uno';
+		}
+
+		// Error de red o de certificado al pedir el otro nombre: casi siempre
+		// es que no existe, que es lo que queremos.
+		if ( $otro['error'] ) {
+			return 'solo_uno';
+		}
+
+		$codigo = (int) $otro['codigo'];
+
+		if ( in_array( $codigo, [ 301, 302, 307, 308 ], true ) ) {
+			return 'canonico';
+		}
+
+		if ( in_array( $codigo, [ 200, 206 ], true ) ) {
+			return 'duplicado';
+		}
+
+		return 'solo_uno';
+	}
+
+	/**
+	 * ¿El sitio acepta peticiones con credenciales desde cualquier origen?
+	 *
+	 * Es la penalización más grande que pone Mozilla Observatory, y con razón:
+	 * abre los datos de quien esté con la sesión iniciada a cualquier página
+	 * que la víctima visite. Pero solo cuenta si viene junto con el permiso de
+	 * credenciales — un `*` a secas en contenido público no es un problema.
+	 *
+	 * @return bool|null
+	 */
+	private static function leer_cors( array $p ): ?bool {
+		if ( ! $p || $p['error'] ) {
+			return null;
+		}
+
+		$cab = self::cabeceras( $p );
+
+		$permitido   = strtolower( trim( $cab['access-control-allow-origin'] ?? '' ) );
+		$credenciales = strtolower( trim( $cab['access-control-allow-credentials'] ?? '' ) );
+
+		if ( '' === $permitido ) {
+			return false;
+		}
+
+		$abierto = '*' === $permitido || str_contains( $permitido, 'origen-que-no-existe.invalid' );
+
+		return $abierto && 'true' === $credenciales;
+	}
+
+	/**
+	 * Las cabeceras de seguridad de la portada.
+	 *
+	 * @return array<string,mixed>
+	 */
+	private static function leer_cabeceras( array $p ): array {
+		if ( ! $p || $p['error'] ) {
+			return [];
+		}
+
+		$cab = self::cabeceras( $p );
+		$csp = strtolower( $cab['content-security-policy'] ?? '' );
+
+		$hsts     = $cab['strict-transport-security'] ?? '';
+		$max_age  = 0;
+		if ( preg_match( '/max-age\s*=\s*(\d+)/i', $hsts, $m ) ) {
+			$max_age = (int) $m[1];
+		}
+
+		return [
+			'hsts_max_age' => $max_age,
+			'marco'        => '' !== ( $cab['x-frame-options'] ?? '' ) || str_contains( $csp, 'frame-ancestors' ),
+			'referrer'     => strtolower( trim( $cab['referrer-policy'] ?? '' ) ),
+			'csp'          => $csp,
+			'permissions'  => '' !== ( $cab['permissions-policy'] ?? '' ),
+			'xss_obsoleta' => isset( $cab['x-xss-protection'] ) && '0' !== trim( $cab['x-xss-protection'] ),
+		];
+	}
+
+	/**
+	 * ¿La portada carga recursos por http:// dentro de una página https?
+	 *
+	 * Solo cuentan los recursos —script, img, link, iframe—, no los enlaces:
+	 * un <a href="http://..."> a otro sitio no es contenido mixto.
+	 *
+	 * @return int|null cuántos encontró
+	 */
+	private static function leer_mixto( array $p, string $dominio ): ?int {
+		if ( ! $p || $p['error'] || ! in_array( (int) $p['codigo'], [ 200, 206 ], true ) ) {
+			return null;
+		}
+
+		$cuerpo = (string) $p['cuerpo'];
+		$n      = 0;
+
+		if ( preg_match_all( '/<(script|img|iframe|link|source|video|audio)\b[^>]*\b(src|href)\s*=\s*["\']http:\/\/[^"\']+/i', $cuerpo, $m ) ) {
+			$n = count( $m[0] );
+		}
+
+		return $n;
+	}
+
+	/**
+	 * El certificado: a cuántos días vence, y si cubre el nombre pedido.
+	 *
+	 * @return array<string,mixed>
+	 */
+	private static function leer_certificado( array $p ): array {
+		if ( ! $p ) {
+			return [ 'ok' => null ];
+		}
+
+		// Un error de certificado hace fallar la petición entera, y eso es
+		// precisamente el hallazgo.
+		$errores_de_cert = [ 51, 60, 83 ]; // peer failed verification, CA, issuer check
+
+		if ( $p['error'] ) {
+			return in_array( (int) $p['error'], $errores_de_cert, true )
+				? [ 'ok' => false, 'motivo' => 'El certificado no es válido para este sitio.' ]
+				: [ 'ok' => null ];
+		}
+
+		$cert = (array) ( $p['cert'] ?? [] );
+
+		if ( ! $cert || empty( $cert[0]['Expire date'] ) ) {
+			return [ 'ok' => true, 'dias' => null ];
+		}
+
+		$vence = strtotime( (string) $cert[0]['Expire date'] );
+
+		return [
+			'ok'   => true,
+			'dias' => $vence ? (int) floor( ( $vence - time() ) / DAY_IN_SECONDS ) : null,
+		];
+	}
+
+	/**
+	 * ¿Se ejecuta PHP en la carpeta de subidas?
 	 *
 	 *   'bloquea'    hay regla: ni siquiera entrega el archivo.
 	 *   'sin_regla'  no hay regla por extensión.
@@ -382,5 +1214,35 @@ class SWPK_Sonda {
 		}
 
 		return 'no_se_pudo';
+	}
+
+	/**
+	 * Las cabeceras del último tramo, en minúsculas.
+	 *
+	 * Importa que sea el último: con redirecciones seguidas vienen varios
+	 * bloques pegados, y las que valen son las de la página que se ve.
+	 *
+	 * @return array<string,string>
+	 */
+	private static function cabeceras( array $p ): array {
+		$crudo = (string) ( $p['cabeceras'] ?? '' );
+
+		// Cada bloque empieza con una línea de estado.
+		$bloques = preg_split( '/\r?\n\r?\n/', trim( $crudo ) ) ?: [];
+		$ultimo  = (string) end( $bloques );
+
+		$salida = [];
+
+		foreach ( preg_split( '/\r?\n/', $ultimo ) ?: [] as $linea ) {
+			if ( ! str_contains( $linea, ':' ) ) {
+				continue;
+			}
+
+			[ $k, $v ] = explode( ':', $linea, 2 );
+
+			$salida[ strtolower( trim( $k ) ) ] = trim( $v );
+		}
+
+		return $salida;
 	}
 }

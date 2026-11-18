@@ -101,9 +101,11 @@ register_activation_hook( __FILE__, [ 'SWPK_Normas', 'sembrar' ] );
 register_activation_hook( __FILE__, [ 'SWPK_Perfiles', 'crear_roles' ] );
 register_activation_hook( __FILE__, [ 'SWPK_Sincronizador', 'programar' ] );
 register_activation_hook( __FILE__, [ 'SWPK_Monitor', 'programar' ] );
+register_activation_hook( __FILE__, [ 'SWPK_Sonda', 'programar' ] );
 register_activation_hook( __FILE__, [ 'SWPK_Correos', 'programar' ] );
 register_deactivation_hook( __FILE__, [ 'SWPK_Sincronizador', 'desprogramar' ] );
 register_deactivation_hook( __FILE__, [ 'SWPK_Monitor', 'desprogramar' ] );
+register_deactivation_hook( __FILE__, [ 'SWPK_Sonda', 'desprogramar' ] );
 register_deactivation_hook( __FILE__, [ 'SWPK_Correos', 'desprogramar' ] );
 
 add_action(
@@ -115,6 +117,7 @@ add_action(
 		SWPK_Api::init();
 		SWPK_Mcp::init();
 		SWPK_Monitor::init();
+		SWPK_Sonda::init();
 		SWPK_Correos::init();
 		SWPK_Exportar::init();
 		SWPK_Accesos::init();

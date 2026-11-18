@@ -58,7 +58,7 @@ class SWPK_Normas {
 	public const OPCION_SEMBRADO = 'swpk_normas_sembradas';
 
 	/** Cada vez que cambie el catálogo de fábrica, este número sube. */
-	public const VERSION_CATALOGO = 4;
+	public const VERSION_CATALOGO = 5;
 
 	/**
 	 * Los comprobadores que contesta la sonda del panel, no el agente.
@@ -69,8 +69,35 @@ class SWPK_Normas {
 	 * ve desde fuera.
 	 */
 	public const COMPROBADORES_DE_SONDA = [
+		// Lo que el agente no puede contestar bien desde dentro.
 		'xmlrpc_cerrado',
 		'usuarios_enumerables',
+		'autor_enumerable',
+
+		// Archivos que no deberían estar donde se pueden bajar.
+		'ruta_config_respaldo',
+		'ruta_debug_log',
+		'ruta_volcados',
+		'ruta_phpinfo',
+		'ruta_restos_instalador',
+		'ruta_instalador',
+		'ruta_delatores',
+		'ruta_listado',
+		'ruta_readme',
+
+		// Cómo viaja y cómo se enmarca.
+		'certificado',
+		'cors',
+		'hsts',
+		'marco',
+		'mixto',
+		'canonico',
+		'csp',
+		'referrer',
+		'permissions',
+		'xss_obsoleta',
+		'trace',
+		'indexable',
 	];
 
 	/**
@@ -209,6 +236,260 @@ class SWPK_Normas {
 				'severidad'   => 'media',
 				'arreglable'  => 0,
 				'orden'       => 75,
+			],
+			// ── Lo que se ve desde fuera: archivos que no deberían estar ──
+			//
+			// Todas las mide SWPK_Sonda con una petición sin credenciales, y
+			// todas exigen que el CONTENIDO calce, no solo el código HTTP.
+			// Un 200 con la página de error del tema no es un hallazgo.
+			'config_respaldo' => [
+				'nombre'      => 'No hay copias de wp-config.php accesibles',
+				'problema'    => 'Hay una copia de wp-config.php que se puede descargar',
+				'porque'      => 'Ese archivo tiene la contraseña de la base de datos y las llaves de las '
+					. 'sesiones. El servidor sabe no servir el original, pero una copia llamada '
+					. '«wp-config.php.bak» ya no es un .php: es un archivo de texto, y lo entrega entero a '
+					. 'quien lo pida. Suelen quedar de una edición apurada.',
+				'comprobador' => 'ruta_config_respaldo',
+				'severidad'   => 'alta',
+				'arreglable'  => 0,
+				'orden'       => 110,
+			],
+			'debug_log' => [
+				'nombre'      => 'El registro de errores no es accesible',
+				'problema'    => 'El registro de errores se puede leer desde internet',
+				'porque'      => 'Cuando se deja el modo de depuración encendido, WordPress escribe los '
+					. 'errores en wp-content/debug.log. Ahí salen rutas del servidor, consultas a la base de '
+					. 'datos y a veces llaves de API. Es un archivo de texto en una carpeta pública.',
+				'comprobador' => 'ruta_debug_log',
+				'severidad'   => 'alta',
+				'arreglable'  => 0,
+				'orden'       => 115,
+			],
+			'volcados' => [
+				'nombre'      => 'No hay respaldos descargables en la raíz',
+				'problema'    => 'Hay un respaldo del sitio o de la base que se puede descargar',
+				'porque'      => 'Un backup.zip o un database.sql en la raíz entrega el sitio entero —y con '
+					. 'él todos los datos de los clientes— a quien adivine el nombre. Y los nombres son '
+					. 'siempre los mismos.',
+				'comprobador' => 'ruta_volcados',
+				'severidad'   => 'alta',
+				'arreglable'  => 0,
+				'orden'       => 120,
+			],
+			'phpinfo' => [
+				'nombre'      => 'No hay páginas de diagnóstico expuestas',
+				'problema'    => 'Hay una página de diagnóstico accesible',
+				'porque'      => 'Un phpinfo.php o un adminer.php dejados de una revisión publican la '
+					. 'configuración entera del servidor: rutas, versiones, extensiones y variables de '
+					. 'entorno. Adminer además es una puerta directa a la base de datos.',
+				'comprobador' => 'ruta_phpinfo',
+				'severidad'   => 'alta',
+				'arreglable'  => 0,
+				'orden'       => 125,
+			],
+			'restos_instalador' => [
+				'nombre'      => 'No quedaron restos de una migración',
+				'problema'    => 'Quedaron archivos de una migración',
+				'porque'      => 'Los plugins que mudan sitios dejan un installer.php y su registro. Si se '
+					. 'olvidan ahí, cualquiera puede volver a correr la instalación sobre el sitio que ya '
+					. 'está puesto. Es una de las formas más viejas de quedarse con un WordPress.',
+				'comprobador' => 'ruta_restos_instalador',
+				'severidad'   => 'alta',
+				'arreglable'  => 0,
+				'orden'       => 130,
+			],
+			'instalador_abierto' => [
+				'nombre'      => 'Las páginas de instalación y reparación no se pueden usar',
+				'problema'    => 'La página de instalación o la de reparación responde',
+				'porque'      => 'install.php y repair.php son las dos puertas de mantenimiento de '
+					. 'WordPress. La de reparación funciona SIN iniciar sesión si está habilitada en la '
+					. 'configuración, y da acceso a la base de datos. El panel solo mira si pintan el '
+					. 'formulario; nunca les envía nada.',
+				'comprobador' => 'ruta_instalador',
+				'severidad'   => 'alta',
+				'arreglable'  => 0,
+				'orden'       => 135,
+			],
+			'delatores' => [
+				'nombre'      => 'No hay archivos de desarrollo publicados',
+				'problema'    => 'Hay archivos de desarrollo accesibles',
+				'porque'      => 'Un .git deja bajar el historial entero del código. Un .env trae las '
+					. 'contraseñas. Un composer.json o un package.json dicen la versión exacta de cada '
+					. 'dependencia, que es lo que alguien necesita para buscar cuál tiene una falla '
+					. 'publicada.',
+				'comprobador' => 'ruta_delatores',
+				'severidad'   => 'alta',
+				'arreglable'  => 0,
+				'orden'       => 140,
+			],
+			'listado_de_carpetas' => [
+				'nombre'      => 'Las carpetas no listan su contenido',
+				'problema'    => 'Una carpeta lista su contenido',
+				'porque'      => 'Si al pedir una carpeta el servidor muestra la lista de archivos, no hace '
+					. 'falta adivinar ningún nombre: ahí está todo lo que subió la gente por los '
+					. 'formularios. No es control de acceso, es comodidad para buscar.',
+				'comprobador' => 'ruta_listado',
+				'severidad'   => 'media',
+				'arreglable'  => 0,
+				'orden'       => 145,
+			],
+			'autor_enumerable' => [
+				'nombre'      => 'No se puede averiguar un nombre de usuario por la dirección',
+				'problema'    => 'La dirección /?author=1 revela un nombre de usuario',
+				'porque'      => 'Pidiendo /?author=1 el sitio redirige a /author/nombre-real/ y ahí queda el '
+					. 'nombre de la cuenta. Es la otra mitad de la norma de arriba: cerrar solo la lista de '
+					. 'usuarios y dejar esto abierto no cierra nada.',
+				'comprobador' => 'autor_enumerable',
+				'severidad'   => 'media',
+				'arreglable'  => 0,
+				'orden'       => 76,
+			],
+			'readme_expuesto' => [
+				'nombre'      => 'El readme de WordPress no está accesible',
+				'problema'    => 'El readme de WordPress se puede leer',
+				'porque'      => 'Dice la versión de WordPress sin tener que deducirla. WordPress lo vuelve '
+					. 'a crear en cada actualización, así que borrarlo no es definitivo — por eso está como '
+					. 'baja: molesta, no abre nada.',
+				'comprobador' => 'ruta_readme',
+				'severidad'   => 'baja',
+				'arreglable'  => 0,
+				'orden'       => 150,
+			],
+			'trace_habilitado' => [
+				'nombre'      => 'El método TRACE está deshabilitado',
+				'problema'    => 'El método TRACE responde',
+				'porque'      => 'TRACE hace que el servidor repita la petición tal cual, cabeceras '
+					. 'incluidas. Ningún sitio lo necesita y es una ayuda para robar cookies.',
+				'comprobador' => 'trace',
+				'severidad'   => 'baja',
+				'arreglable'  => 0,
+				'orden'       => 155,
+			],
+			'sitio_indexable' => [
+				'nombre'      => 'El sitio deja que los buscadores lo indexen',
+				'problema'    => 'El sitio le pide a los buscadores que no lo indexen',
+				'porque'      => 'Un sitio vivo que pide no ser indexado casi siempre es un descuido: se '
+					. 'quedó el ajuste de cuando estaba en construcción, y el cliente no aparece en Google '
+					. 'sin saber por qué.',
+				'comprobador' => 'indexable',
+				'severidad'   => 'baja',
+				'arreglable'  => 0,
+				'orden'       => 160,
+			],
+
+			// ── Lo que se ve desde fuera: cómo viaja y cómo se enmarca ────
+			'certificado' => [
+				'nombre'      => 'El certificado es válido y no está por vencer',
+				'problema'    => 'El certificado tiene un problema',
+				'porque'      => 'Si el certificado no es válido para el nombre que se pidió, el navegador '
+					. 'planta una pantalla roja antes de dejar entrar. Kinsta los renueva solo, así que un '
+					. 'fallo aquí casi siempre es un dominio que se agregó sin su nombre.',
+				'comprobador' => 'certificado',
+				'severidad'   => 'alta',
+				'arreglable'  => 0,
+				'orden'       => 200,
+			],
+			'cors_abierto' => [
+				'nombre'      => 'El sitio no se abre a cualquier origen con credenciales',
+				'problema'    => 'El sitio acepta peticiones con credenciales desde cualquier origen',
+				'porque'      => 'Con esa combinación, cualquier página que visite alguien con la sesión '
+					. 'iniciada en el sitio puede leer sus datos. Solo cuenta cuando van las dos cosas '
+					. 'juntas: permitir cualquier origen Y permitir credenciales. Un permiso abierto a '
+					. 'secas, en contenido público, no es un problema.',
+				'comprobador' => 'cors',
+				'severidad'   => 'alta',
+				'arreglable'  => 0,
+				'orden'       => 205,
+			],
+			'hsts' => [
+				'nombre'      => 'El sitio exige HTTPS en las siguientes visitas',
+				'problema'    => 'El sitio no exige HTTPS en las siguientes visitas',
+				'porque'      => 'Redirigir a HTTPS no alcanza: la primera petición ya salió en claro. Esta '
+					. 'cabecera le dice al navegador que la próxima vez vaya directo a HTTPS sin preguntar. '
+					. 'Varía de verdad entre sitios, no es algo que ponga la plataforma.',
+				'comprobador' => 'hsts',
+				'severidad'   => 'alta',
+				'arreglable'  => 0,
+				'orden'       => 210,
+			],
+			'bloqueo_de_marco' => [
+				'nombre'      => 'El sitio no se puede meter dentro de otra página',
+				'problema'    => 'El sitio se puede meter dentro de otra página',
+				'porque'      => 'Sin esto, alguien puede cargar el sitio invisible dentro del suyo y hacer '
+					. 'que la gente haga clic en botones que no ve. Se cierra con una cabecera y no rompe '
+					. 'nada mientras el sitio no se embeba a sí mismo.',
+				'comprobador' => 'marco',
+				'severidad'   => 'alta',
+				'arreglable'  => 0,
+				'orden'       => 215,
+			],
+			'contenido_mixto' => [
+				'nombre'      => 'La portada no carga recursos sin cifrar',
+				'problema'    => 'La portada carga recursos por http://',
+				'porque'      => 'Una página segura que carga una imagen o un script por http deja de ser '
+					. 'segura para esa parte: se puede interceptar y cambiar por el camino. Solo se cuentan '
+					. 'los recursos, no los enlaces a otros sitios.',
+				'comprobador' => 'mixto',
+				'severidad'   => 'media',
+				'arreglable'  => 0,
+				'orden'       => 220,
+			],
+			'dominio_canonico' => [
+				'nombre'      => 'El sitio responde por un solo nombre',
+				'problema'    => 'El sitio responde igual con www y sin www',
+				'porque'      => 'Si los dos nombres contestan 200, Google ve dos sitios con el mismo '
+					. 'contenido, las cookies quedan repartidas y la exigencia de HTTPS se aplica a un '
+					. 'nombre y no al otro. Uno tiene que redirigir al otro.',
+				'comprobador' => 'canonico',
+				'severidad'   => 'media',
+				'arreglable'  => 0,
+				'orden'       => 225,
+			],
+			'csp' => [
+				'nombre'      => 'Hay una política de contenido con lo mínimo',
+				'problema'    => 'No hay política de contenido, o no trae lo mínimo',
+				'porque'      => 'Es lo que limita de dónde puede cargar código la página. En un sitio hecho '
+					. 'con Elementor no se puede exigir la versión estricta, así que esta norma pide solo '
+					. 'las dos piezas que no rompen nada: que no se puedan cargar objetos y que nadie pueda '
+					. 'cambiar la dirección base de la página. Medir solo que la cabecera «exista» sería '
+					. 'engañarnos: una política con todo permitido no protege de nada.',
+				'comprobador' => 'csp',
+				'severidad'   => 'media',
+				'arreglable'  => 0,
+				'orden'       => 230,
+			],
+			'referrer_policy' => [
+				'nombre'      => 'El sitio no filtra a dónde venía la gente',
+				'problema'    => 'El sitio manda la dirección completa a otros sitios',
+				'porque'      => 'Sin esta cabecera, cada vez que alguien hace clic hacia otro sitio, el '
+					. 'otro sitio recibe la dirección exacta de donde venía — con lo que lleve en la '
+					. 'dirección.',
+				'comprobador' => 'referrer',
+				'severidad'   => 'baja',
+				'arreglable'  => 0,
+				'orden'       => 235,
+			],
+			'permissions_policy' => [
+				'nombre'      => 'El sitio declara qué funciones del navegador no usa',
+				'problema'    => 'El sitio no declara qué funciones del navegador no usa',
+				'porque'      => 'Apaga de antemano cámara, micrófono y ubicación para todo lo que cargue la '
+					. 'página, incluidos los scripts de terceros. Va como baja a propósito: no hay un valor '
+					. 'acordado y una lista demasiado estricta rompe los videos y los mapas embebidos.',
+				'comprobador' => 'permissions',
+				'severidad'   => 'baja',
+				'arreglable'  => 0,
+				'orden'       => 240,
+			],
+			'xss_obsoleta' => [
+				'nombre'      => 'No se manda la cabecera X-XSS-Protection',
+				'problema'    => 'Se manda la cabecera X-XSS-Protection',
+				'porque'      => 'Es una cabecera retirada. Los navegadores la ignoran o, peor, el filtro '
+					. 'que encendía llegó a abrir fallas propias. Muchas guías viejas todavía la piden; hoy '
+					. 'lo correcto es no mandarla. Si se manda, que sea en cero.',
+				'comprobador' => 'xss_obsoleta',
+				'severidad'   => 'baja',
+				'arreglable'  => 0,
+				'orden'       => 245,
 			],
 			'formularios_honeypot' => [
 				'nombre'      => 'Los formularios tienen honeypot o captcha',
@@ -920,6 +1201,465 @@ class SWPK_Normas {
 		}
 
 		return [ 'estado' => self::CUMPLE, 'detalle' => 'Ninguna cuenta tiene un nombre de los que se prueban primero.' ];
+	}
+
+	// ─────────────────────────────────────────────────────────────────────────
+	// Los comprobadores que contesta la sonda
+	//
+	// Todos empiezan por lo mismo: ¿hay sondeo, y es fiable? Si el sitio
+	// contestó a una dirección inventada como si existiera, sus respuestas no
+	// valen y se dice así, en vez de producir veinte hallazgos falsos.
+	// ─────────────────────────────────────────────────────────────────────────
+
+	/**
+	 * Lo que la sonda dejó de este sitio, o un motivo por el que no sirve.
+	 *
+	 * @return array{0:array<string,mixed>,1:?array{estado:string,detalle:string}}
+	 */
+	private static function sonda( ?object $sitio ): array {
+		$s = SWPK_Sonda::de( (string) ( $sitio->sitio_id ?? '' ) );
+
+		if ( ! $s ) {
+			return [ [], [ 'estado' => self::SIN_DATO, 'detalle' => 'Todavía no se ha podido sondear este sitio desde fuera.' ] ];
+		}
+
+		return [ $s, null ];
+	}
+
+	/**
+	 * El veredicto de un grupo de rutas.
+	 *
+	 * «Bloqueado» no es «aprobado»: puede haber una regla del borde tapando un
+	 * archivo que sigue ahí, y esa regla alguien la puede quitar mañana.
+	 *
+	 * @return array{estado:string,detalle:string}
+	 */
+	private static function de_ruta( ?object $sitio, string $grupo, string $mal, string $bien ): array {
+		[ $s, $pero ] = self::sonda( $sitio );
+
+		if ( $pero ) {
+			return $pero;
+		}
+
+		// La sonda de control frena ESTAS y solo estas: en un sitio que
+		// contesta 200 a cualquier dirección, «el archivo está ahí» no se
+		// puede afirmar. Las cabeceras y el certificado se siguen midiendo.
+		if ( empty( $s['rutas_fiables'] ) ) {
+			return [
+				'estado'  => self::SIN_DATO,
+				'detalle' => 'El sitio contesta a direcciones que no existen como si existieran, así que no se puede '
+					. 'distinguir un archivo que está de uno que no. Mientras siga así, buscar archivos desde fuera '
+					. 'no sirve en este sitio.',
+			];
+		}
+
+		$estado = (string) ( $s['rutas'][ $grupo ] ?? '' );
+
+		if ( SWPK_Sonda::EXPUESTO === $estado ) {
+			return [ 'estado' => self::FALLA, 'detalle' => $mal ];
+		}
+
+		if ( SWPK_Sonda::AUSENTE === $estado ) {
+			return [ 'estado' => self::CUMPLE, 'detalle' => $bien ];
+		}
+
+		// La plataforma no sirve ese tipo de archivo, exista o no: se comprobó
+		// pidiendo una dirección inventada con la misma extensión y también
+		// vino bloqueada. Entonces da igual si el archivo está — nadie lo
+		// puede bajar — y eso sí es protección.
+		if ( SWPK_Sonda::PROTEGIDO === $estado ) {
+			return [
+				'estado'  => self::CUMPLE,
+				'detalle' => 'El servidor no entrega archivos de ese tipo a nadie, exista el archivo o no. Comprobado '
+					. 'pidiendo una dirección inventada con la misma extensión: también la rechaza.',
+			];
+		}
+
+		if ( SWPK_Sonda::BLOQUEADO === $estado ) {
+			return [
+				'estado'  => self::SIN_DATO,
+				'detalle' => 'El cortafuegos cortó o retó nuestra petición, y no es una regla que aplique a todos: una '
+					. 'dirección inventada parecida sí contesta. Así que no se puede saber si el archivo está ahí — y '
+					. 'un reto no protege de una persona con un navegador, solo de un sondeo como este.',
+			];
+		}
+
+		return [ 'estado' => self::SIN_DATO, 'detalle' => 'No se pudo comprobar desde fuera.' ];
+	}
+
+	private static function comprobar_ruta_config_respaldo( array $r, ?object $sitio ): array {
+		return self::de_ruta(
+			$sitio,
+			'config_respaldo',
+			'Se puede descargar una copia de wp-config.php. Ahí va la contraseña de la base de datos.',
+			'No se encontró ninguna copia de wp-config.php accesible.'
+		);
+	}
+
+	private static function comprobar_ruta_debug_log( array $r, ?object $sitio ): array {
+		return self::de_ruta(
+			$sitio,
+			'debug_log',
+			'El registro de errores se puede leer desde internet. Ahí salen rutas del servidor y consultas a la base.',
+			'El registro de errores no es accesible.'
+		);
+	}
+
+	private static function comprobar_ruta_volcados( array $r, ?object $sitio ): array {
+		return self::de_ruta(
+			$sitio,
+			'volcados',
+			'Hay un respaldo del sitio o de la base que se puede descargar entero.',
+			'No se encontró ningún respaldo descargable en la raíz.'
+		);
+	}
+
+	private static function comprobar_ruta_phpinfo( array $r, ?object $sitio ): array {
+		return self::de_ruta(
+			$sitio,
+			'phpinfo',
+			'Hay una página de diagnóstico accesible: publica la configuración del servidor.',
+			'No se encontró ninguna página de diagnóstico.'
+		);
+	}
+
+	private static function comprobar_ruta_restos_instalador( array $r, ?object $sitio ): array {
+		return self::de_ruta(
+			$sitio,
+			'restos_instalador',
+			'Quedaron archivos de una migración. Con ellos se puede volver a instalar encima del sitio.',
+			'No quedaron restos de ninguna migración.'
+		);
+	}
+
+	private static function comprobar_ruta_instalador( array $r, ?object $sitio ): array {
+		return self::de_ruta(
+			$sitio,
+			'instalador',
+			'La página de instalación o la de reparación contesta con su formulario.',
+			'Ni la instalación ni la reparación responden.'
+		);
+	}
+
+	private static function comprobar_ruta_delatores( array $r, ?object $sitio ): array {
+		return self::de_ruta(
+			$sitio,
+			'delatores',
+			'Hay archivos de desarrollo publicados (.git, .env o las listas de dependencias).',
+			'No hay archivos de desarrollo publicados.'
+		);
+	}
+
+	private static function comprobar_ruta_listado( array $r, ?object $sitio ): array {
+		return self::de_ruta(
+			$sitio,
+			'listado',
+			'Una carpeta muestra la lista de los archivos que tiene dentro.',
+			'Las carpetas no listan su contenido.'
+		);
+	}
+
+	private static function comprobar_ruta_readme( array $r, ?object $sitio ): array {
+		return self::de_ruta(
+			$sitio,
+			'readme',
+			'El readme de WordPress se puede leer: dice la versión exacta. WordPress lo vuelve a crear en cada actualización.',
+			'El readme de WordPress no está accesible.'
+		);
+	}
+
+	private static function comprobar_autor_enumerable( array $r, ?object $sitio ): array {
+		[ $s, $pero ] = self::sonda( $sitio );
+
+		if ( $pero ) {
+			return $pero;
+		}
+
+		$v = $s['autor'] ?? null;
+
+		if ( null === $v ) {
+			return [ 'estado' => self::SIN_DATO, 'detalle' => 'No se pudo comprobar desde fuera.' ];
+		}
+
+		return $v
+			? [ 'estado' => self::FALLA, 'detalle' => 'Pidiendo /?author=1 el sitio redirige a la página del autor y deja ver el nombre de la cuenta.' ]
+			: [ 'estado' => self::CUMPLE, 'detalle' => 'La dirección /?author=1 no revela ningún nombre de cuenta.' ];
+	}
+
+	private static function comprobar_trace( array $r, ?object $sitio ): array {
+		[ $s, $pero ] = self::sonda( $sitio );
+
+		if ( $pero ) {
+			return $pero;
+		}
+
+		$v = $s['trace'] ?? null;
+
+		if ( null === $v ) {
+			return [ 'estado' => self::SIN_DATO, 'detalle' => 'No se pudo comprobar desde fuera.' ];
+		}
+
+		return $v
+			? [ 'estado' => self::FALLA, 'detalle' => 'El servidor atiende TRACE y repite la petición entera, cabeceras incluidas.' ]
+			: [ 'estado' => self::CUMPLE, 'detalle' => 'El servidor no atiende TRACE.' ];
+	}
+
+	private static function comprobar_indexable( array $r, ?object $sitio ): array {
+		[ $s, $pero ] = self::sonda( $sitio );
+
+		if ( $pero ) {
+			return $pero;
+		}
+
+		$v = $s['robots'] ?? null;
+
+		if ( null === $v ) {
+			return [ 'estado' => self::SIN_DATO, 'detalle' => 'No se pudo leer robots.txt.' ];
+		}
+
+		return $v
+			? [ 'estado' => self::FALLA, 'detalle' => 'El robots.txt le pide a los buscadores que no indexen nada. En un sitio vivo casi siempre es un ajuste que se quedó de cuando estaba en construcción.' ]
+			: [ 'estado' => self::CUMPLE, 'detalle' => 'El sitio deja que los buscadores lo indexen.' ];
+	}
+
+	private static function comprobar_certificado( array $r, ?object $sitio ): array {
+		[ $s, $pero ] = self::sonda( $sitio );
+
+		if ( $pero ) {
+			return $pero;
+		}
+
+		$c  = (array) ( $s['certificado'] ?? [] );
+		$ok = $c['ok'] ?? null;
+
+		if ( null === $ok ) {
+			return [ 'estado' => self::SIN_DATO, 'detalle' => 'No se pudo revisar el certificado.' ];
+		}
+
+		if ( ! $ok ) {
+			return [ 'estado' => self::FALLA, 'detalle' => (string) ( $c['motivo'] ?? 'El certificado no es válido para este sitio.' ) ];
+		}
+
+		$dias = $c['dias'] ?? null;
+
+		if ( null !== $dias && $dias < 15 ) {
+			return [
+				'estado'  => self::FALLA,
+				'detalle' => $dias < 0
+					? 'El certificado está vencido.'
+					: sprintf( 'El certificado vence en %d día(s). Kinsta los renueva solo, así que vale la pena mirarlo.', $dias ),
+			];
+		}
+
+		return [
+			'estado'  => self::CUMPLE,
+			'detalle' => null === $dias
+				? 'El certificado es válido para este sitio.'
+				: sprintf( 'Válido, y le quedan %d días.', $dias ),
+		];
+	}
+
+	private static function comprobar_cors( array $r, ?object $sitio ): array {
+		[ $s, $pero ] = self::sonda( $sitio );
+
+		if ( $pero ) {
+			return $pero;
+		}
+
+		$v = $s['cors'] ?? null;
+
+		if ( null === $v ) {
+			return [ 'estado' => self::SIN_DATO, 'detalle' => 'No se pudo comprobar desde fuera.' ];
+		}
+
+		return $v
+			? [ 'estado' => self::FALLA, 'detalle' => 'El sitio acepta peticiones con credenciales desde cualquier origen. Cualquier página que visite alguien con la sesión abierta puede leer sus datos.' ]
+			: [ 'estado' => self::CUMPLE, 'detalle' => 'No se abre a orígenes ajenos con credenciales.' ];
+	}
+
+	private static function comprobar_hsts( array $r, ?object $sitio ): array {
+		[ $s, $pero ] = self::sonda( $sitio );
+
+		if ( $pero ) {
+			return $pero;
+		}
+
+		if ( ! isset( $s['cabeceras']['hsts_max_age'] ) ) {
+			return [ 'estado' => self::SIN_DATO, 'detalle' => 'No se pudieron leer las cabeceras de la portada.' ];
+		}
+
+		$edad = (int) $s['cabeceras']['hsts_max_age'];
+
+		if ( 0 === $edad ) {
+			return [ 'estado' => self::FALLA, 'detalle' => 'El sitio no manda la cabecera. La primera visita de cada persona sigue saliendo sin cifrar.' ];
+		}
+
+		if ( $edad < YEAR_IN_SECONDS ) {
+			return [
+				'estado'  => self::FALLA,
+				'detalle' => sprintf( 'La manda, pero solo por %d día(s). Lo recomendado es un año o más.', (int) floor( $edad / DAY_IN_SECONDS ) ),
+			];
+		}
+
+		return [
+			'estado'  => self::CUMPLE,
+			'detalle' => sprintf( 'Exige HTTPS durante %d día(s).', (int) floor( $edad / DAY_IN_SECONDS ) ),
+		];
+	}
+
+	private static function comprobar_marco( array $r, ?object $sitio ): array {
+		[ $s, $pero ] = self::sonda( $sitio );
+
+		if ( $pero ) {
+			return $pero;
+		}
+
+		if ( ! isset( $s['cabeceras']['marco'] ) ) {
+			return [ 'estado' => self::SIN_DATO, 'detalle' => 'No se pudieron leer las cabeceras de la portada.' ];
+		}
+
+		return $s['cabeceras']['marco']
+			? [ 'estado' => self::CUMPLE, 'detalle' => 'El sitio no se deja meter dentro de otra página.' ]
+			: [ 'estado' => self::FALLA, 'detalle' => 'Cualquiera puede cargar el sitio dentro del suyo, invisible, y hacer que la gente haga clic en lo que no ve.' ];
+	}
+
+	private static function comprobar_mixto( array $r, ?object $sitio ): array {
+		[ $s, $pero ] = self::sonda( $sitio );
+
+		if ( $pero ) {
+			return $pero;
+		}
+
+		$n = $s['mixto'] ?? null;
+
+		if ( null === $n ) {
+			return [ 'estado' => self::SIN_DATO, 'detalle' => 'No se pudo leer la portada.' ];
+		}
+
+		return $n > 0
+			? [ 'estado' => self::FALLA, 'detalle' => sprintf( 'La portada carga %d recurso(s) por http://. Esa parte se puede interceptar y cambiar por el camino.', (int) $n ) ]
+			: [ 'estado' => self::CUMPLE, 'detalle' => 'Todo lo que carga la portada va cifrado.' ];
+	}
+
+	private static function comprobar_canonico( array $r, ?object $sitio ): array {
+		[ $s, $pero ] = self::sonda( $sitio );
+
+		if ( $pero ) {
+			return $pero;
+		}
+
+		return match ( (string) ( $s['canonico'] ?? '' ) ) {
+			'canonico'  => [ 'estado' => self::CUMPLE, 'detalle' => 'Un nombre sirve el sitio y el otro redirige hacia él.' ],
+			'solo_uno'  => [ 'estado' => self::CUMPLE, 'detalle' => 'El sitio responde por un solo nombre.' ],
+			'duplicado' => [ 'estado' => self::FALLA, 'detalle' => 'Con www y sin www contestan los dos. Google ve dos sitios iguales, y la exigencia de HTTPS se aplica a un nombre y no al otro.' ],
+			default     => [ 'estado' => self::SIN_DATO, 'detalle' => 'No se pudo comprobar desde fuera.' ],
+		};
+	}
+
+	/**
+	 * La política de contenido, midiendo lo que importa y no que exista.
+	 *
+	 * Una política que existe pero lo permite todo pasaría una comprobación de
+	 * presencia sin proteger de nada. Y exigir la versión estricta en un sitio
+	 * de Elementor sería pedir algo imposible. Así que se piden las dos piezas
+	 * que no rompen nada.
+	 */
+	private static function comprobar_csp( array $r, ?object $sitio ): array {
+		[ $s, $pero ] = self::sonda( $sitio );
+
+		if ( $pero ) {
+			return $pero;
+		}
+
+		if ( ! isset( $s['cabeceras']['csp'] ) ) {
+			return [ 'estado' => self::SIN_DATO, 'detalle' => 'No se pudieron leer las cabeceras de la portada.' ];
+		}
+
+		$csp = (string) $s['cabeceras']['csp'];
+
+		if ( '' === trim( $csp ) ) {
+			return [ 'estado' => self::FALLA, 'detalle' => 'No hay política de contenido.' ];
+		}
+
+		$faltan = [];
+
+		if ( ! preg_match( "/object-src\s+'none'/", $csp ) ) {
+			$faltan[] = 'no permitir objetos';
+		}
+
+		if ( ! preg_match( "/base-uri\s+'(none|self)'/", $csp ) ) {
+			$faltan[] = 'fijar la dirección base';
+		}
+
+		if ( $faltan ) {
+			return [
+				'estado'  => self::FALLA,
+				'detalle' => sprintf( 'Hay política, pero le falta %s. Una política que lo permite todo no protege de nada.', implode( ' y ', $faltan ) ),
+			];
+		}
+
+		return [ 'estado' => self::CUMPLE, 'detalle' => 'Hay política de contenido con lo mínimo que se le pide.' ];
+	}
+
+	private static function comprobar_referrer( array $r, ?object $sitio ): array {
+		[ $s, $pero ] = self::sonda( $sitio );
+
+		if ( $pero ) {
+			return $pero;
+		}
+
+		if ( ! isset( $s['cabeceras']['referrer'] ) ) {
+			return [ 'estado' => self::SIN_DATO, 'detalle' => 'No se pudieron leer las cabeceras de la portada.' ];
+		}
+
+		$v = (string) $s['cabeceras']['referrer'];
+
+		$buenos = [ 'no-referrer', 'same-origin', 'strict-origin', 'strict-origin-when-cross-origin' ];
+
+		foreach ( $buenos as $b ) {
+			if ( str_contains( $v, $b ) ) {
+				return [ 'estado' => self::CUMPLE, 'detalle' => sprintf( 'Filtra a dónde venía la gente (%s).', $v ) ];
+			}
+		}
+
+		return [
+			'estado'  => self::FALLA,
+			'detalle' => '' === $v
+				? 'No manda la cabecera: cada sitio al que alguien haga clic recibe la dirección completa de donde venía.'
+				: sprintf( 'La manda con un valor que no protege (%s).', $v ),
+		];
+	}
+
+	private static function comprobar_permissions( array $r, ?object $sitio ): array {
+		[ $s, $pero ] = self::sonda( $sitio );
+
+		if ( $pero ) {
+			return $pero;
+		}
+
+		if ( ! isset( $s['cabeceras']['permissions'] ) ) {
+			return [ 'estado' => self::SIN_DATO, 'detalle' => 'No se pudieron leer las cabeceras de la portada.' ];
+		}
+
+		return $s['cabeceras']['permissions']
+			? [ 'estado' => self::CUMPLE, 'detalle' => 'Declara qué funciones del navegador no usa.' ]
+			: [ 'estado' => self::FALLA, 'detalle' => 'No declara nada, así que cámara, micrófono y ubicación quedan disponibles para todo lo que cargue la página.' ];
+	}
+
+	private static function comprobar_xss_obsoleta( array $r, ?object $sitio ): array {
+		[ $s, $pero ] = self::sonda( $sitio );
+
+		if ( $pero ) {
+			return $pero;
+		}
+
+		if ( ! isset( $s['cabeceras']['xss_obsoleta'] ) ) {
+			return [ 'estado' => self::SIN_DATO, 'detalle' => 'No se pudieron leer las cabeceras de la portada.' ];
+		}
+
+		return $s['cabeceras']['xss_obsoleta']
+			? [ 'estado' => self::FALLA, 'detalle' => 'Manda una cabecera retirada. Los navegadores la ignoran, y el filtro que encendía llegó a abrir fallas propias.' ]
+			: [ 'estado' => self::CUMPLE, 'detalle' => 'No manda la cabecera retirada.' ];
 	}
 
 	private static function comprobar_wp_al_dia( array $r, ?object $sitio ): array {

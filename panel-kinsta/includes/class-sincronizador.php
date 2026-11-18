@@ -112,30 +112,10 @@ class SWPK_Sincronizador {
 		// «en camino» algo que ya no va a llegar nunca.
 		$resumen['ordenes_caducadas'] = SWPK_Ordenes::caducar();
 
-		// La sonda: lo que se puede saber de cada sitio sin entrar en él.
-		//
-		// Va aquí y no en el sondeo de cada cinco minutos porque mide
-		// configuración, que no cambia sola. Son cuatro peticiones por sitio y
-		// una vez al día.
-		//
-		// Y hay que medir sus normas en el mismo momento, porque estas no las
-		// contesta el agente: si se esperara al reporte diario del agente, en
-		// los sitios que no lo tienen —que hoy son todos— se quedarían en «sin
-		// dato» para siempre.
-		$resumen['sonda'] = SWPK_Sonda::sondear_todos();
-
-		foreach ( SWPK_Inventario::todos() as $sitio ) {
-			$cuales = SWPK_Normas::COMPROBADORES_DE_SONDA;
-
-			// La prueba de PHP en subidas la contesta mejor el agente. Desde
-			// aquí solo se mide donde no hay agente, para no pisar lo bueno con
-			// lo parcial.
-			if ( ! (int) $sitio->cobertura_agente ) {
-				$cuales[] = SWPK_Normas::COMPROBADOR_DE_AMBOS;
-			}
-
-			SWPK_Normas::medir( (string) $sitio->sitio_id, [], $cuales );
-		}
+		// La sonda de configuración NO va aquí: corre sola a las 5:30, porque
+		// son unos ocho minutos y juntarla con esto daría una tarea lo bastante
+		// larga como para que el límite de tiempo de PHP mate las dos. Ver
+		// SWPK_Sonda::HOOK.
 
 		$resumen['fin'] = current_time( 'mysql' );
 
