@@ -117,6 +117,46 @@ class SWPK_Eventos {
 		return true;
 	}
 
+	/**
+	 * Quita de una lista los que son el mismo cambio repetido.
+	 *
+	 * registrar() ya lo impide al escribir —ver la guarda de arriba— pero en la
+	 * base quedan filas de antes de que esa guarda existiera, y un reporte que
+	 * enseña dos veces la misma línea se lee como roto aunque el dato de abajo
+	 * esté bien. La clave es exactamente la misma que usa la guarda: tipo,
+	 * sitio, módulo y día.
+	 *
+	 * Las caídas no traen módulo y pasan enteras, a propósito: un sitio puede
+	 * caerse y reponerse varias veces el mismo día y cada vez es noticia.
+	 *
+	 * @param array<int,object> $eventos
+	 * @return array<int,object>
+	 */
+	public static function sin_repetidos( array $eventos ): array {
+		$vistos = [];
+		$salida = [];
+
+		foreach ( $eventos as $e ) {
+			$slug = (string) ( $e->slug ?? '' );
+
+			if ( '' === $slug ) {
+				$salida[] = $e;
+				continue;
+			}
+
+			$clave = $e->tipo . '|' . $e->sitio_id . '|' . $slug . '|' . substr( (string) $e->ocurrio_en, 0, 10 );
+
+			if ( isset( $vistos[ $clave ] ) ) {
+				continue;
+			}
+
+			$vistos[ $clave ] = true;
+			$salida[]         = $e;
+		}
+
+		return $salida;
+	}
+
 	/** ¿Ya está anotado hoy este mismo cambio, en este mismo módulo? */
 	private static function ya_anotado( string $tipo, string $sitio_id, string $slug ): bool {
 		global $wpdb;

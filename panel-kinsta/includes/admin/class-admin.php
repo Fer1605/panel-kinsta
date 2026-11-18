@@ -845,9 +845,10 @@ class SWPK_Admin {
 
 		self::volver_a_correos(
 			sprintf(
-				'Resumen de la semana del %s al %s: %d aviso(s). Resultado del envío: %s.',
+				'Resumen de la semana del %s al %s: %d movimiento(s) en los sitios y %d aviso(s) enviados. Resultado del envío: %s.',
 				$r['desde'],
 				$r['hasta'],
+				$r['movimientos'],
 				$r['avisos'],
 				$r['resultado']
 			)

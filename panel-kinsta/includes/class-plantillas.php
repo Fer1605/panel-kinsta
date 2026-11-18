@@ -79,17 +79,20 @@ class SWPK_Plantillas {
 			'resumen' => [
 				'nombre' => 'Resumen semanal de lo enviado',
 				'quien'  => 'A soporte, cada domingo: todo lo que el panel notificó durante la semana.',
-				'titulo' => 'Lo que notificamos esta semana',
-				'asunto' => 'Resumen semanal: {{cuantos}} avisos enviados',
-				'cuerpo' => "Esto es todo lo que el panel notificó entre el {{desde}} y el {{hasta}}.\n\n"
+				'titulo' => 'La semana en el panel',
+				'asunto' => 'Resumen de la semana: {{movimientos}} movimientos y {{cuantos}} avisos',
+				'cuerpo' => "Esta es la semana del {{desde}} al {{hasta}}.\n\n"
+					. "{{movimiento}}\n\n"
 					. "{{tabla}}\n\n"
-					. 'Queda guardado en la Bitácora del panel, con el contenido completo de cada correo y '
-					. 'la fecha exacta en que salió.',
+					. 'Todo esto queda guardado en el panel: los movimientos en Movimientos y los avisos en '
+					. 'la Bitácora, con el contenido completo de cada correo y la fecha exacta en que salió.',
 				'marcas' => [
-					'{{cuantos}}' => 'Cuántos avisos salieron en la semana',
-					'{{desde}}'   => 'El lunes de la semana',
-					'{{hasta}}'   => 'El domingo de la semana',
-					'{{tabla}}'   => 'EL BLOQUE: el desglose por tipo de aviso y el detalle de cada uno.',
+					'{{cuantos}}'    => 'Cuántos avisos salieron en la semana',
+					'{{movimientos}}' => 'Cuántos movimientos hubo en los sitios',
+					'{{desde}}'      => 'El primer día de la semana',
+					'{{hasta}}'      => 'El último día de la semana',
+					'{{movimiento}}' => 'EL BLOQUE: qué pasó en los sitios durante la semana.',
+					'{{tabla}}'      => 'EL BLOQUE: el desglose de lo que se avisó, y cada aviso uno por uno.',
 				],
 			],
 			'mensual' => [
@@ -430,7 +433,7 @@ class SWPK_Plantillas {
 	 *
 	 * @param array<int,object> $filas lo que salió en la semana
 	 */
-	public static function resumen_semanal( array $filas, string $desde, string $hasta ): string {
+	public static function resumen_semanal( array $filas, string $desde, string $hasta, array $eventos = [] ): string {
 		$nombres = SWPK_Bitacora::tipos();
 
 		// Agrupar por tipo para el encabezado, y listar el detalle debajo.
@@ -441,18 +444,20 @@ class SWPK_Plantillas {
 			$por_tipo[ $t ] = ( $por_tipo[ $t ] ?? 0 ) + 1;
 		}
 
-		$html = '';
+		$html = self::movimiento_de_la_semana( $eventos );
 
 		if ( ! $filas ) {
-			$html .= '<div style="background:#f0f6fc;border-left:4px solid #2271b1;padding:14px 16px;margin:0 0 18px">'
-				. '<strong>Esta semana no hubo nada que notificar.</strong><br>'
+			$html .= '<p style="margin:0 0 10px;font-weight:600">Lo que avisamos</p>'
+				. '<div style="background:#f0f6fc;border-left:4px solid #2271b1;padding:14px 16px;margin:0 0 18px">'
+				. '<strong>Esta semana no salió ningún aviso.</strong><br>'
 				. 'No es que el panel no haya corrido: corrió, revisó la cartera y no encontró nada que ameritara '
-				. 'un aviso. Este correo sale igual para que quede constancia de eso.'
+				. 'avisarle a nadie. Este correo sale igual para que quede constancia de eso.'
 				. '</div>';
 
 			return self::envolver( self::catalogo()['resumen']['titulo'], $html );
 		}
 
+		$html .= '<p style="margin:0 0 10px;font-weight:600">Lo que avisamos</p>';
 		$html .= '<table role="presentation" style="width:100%;border-collapse:collapse;margin:0 0 20px">';
 
 		foreach ( $por_tipo as $tipo => $cuantos ) {
@@ -488,6 +493,116 @@ class SWPK_Plantillas {
 		}
 
 		return self::envolver( self::catalogo()['resumen']['titulo'], $html );
+	}
+
+	/**
+	 * Qué pasó en los sitios durante la semana.
+	 *
+	 * ─── Por qué esto va aparte de «lo que avisamos» ────────────────────
+	 *
+	 * Porque son dos preguntas distintas y el jefe pidió las dos, contándolas:
+	 *
+	 *   «me gustaría que se mande un resumen de LO QUE SE ENVIÓ (...) Eso sería
+	 *    UNA. DOS: necesitaría de que aparte de ese resumen semanal de todo eso,
+	 *    DE LO QUE SE VIO EN LA SEMANA, ver que se le mande un resumen; en ese
+	 *    resumen se le puede indicar: de esto no se obtuvo ningún movimiento,
+	 *    no ha pasado nada»                                        [05:12-05:50]
+	 *
+	 * «Lo que se envió» contesta ¿avisamos?, y sirve para cubrirse. «Lo que se
+	 * vio» contesta ¿qué pasó?, y sirve para que alguien se dé cuenta de algo
+	 * antes de que llame el cliente. Un sitio puede haber cambiado de versión
+	 * cinco veces sin que eso generara un solo correo.
+	 *
+	 * Van en el MISMO correo y no en dos: dos correos el mismo domingo a la
+	 * misma hora se leen como ruido, y él lo contó como una sola cosa de dos
+	 * mitades.
+	 *
+	 * @param array<int,object> $eventos
+	 */
+	private static function movimiento_de_la_semana( array $eventos ): string {
+		$html = '<p style="margin:0 0 10px;font-weight:600">Lo que pasó en los sitios</p>';
+
+		if ( ! $eventos ) {
+			return $html
+				. '<div style="background:#f0f6fc;border-left:4px solid #2271b1;padding:14px 16px;margin:0 0 22px">'
+				. '<strong>Ningún movimiento esta semana.</strong><br>'
+				. 'Nada se actualizó, nada se instaló, nada se cayó y nadie cambió de rol en ningún sitio '
+				. 'de la cartera.'
+				. '</div>';
+		}
+
+		$etiquetas = SWPK_Eventos::etiquetas();
+
+		$por_tipo = [];
+		$sitios   = [];
+		$graves   = [];
+
+		// Llegan ya sin repetidos: lo hace SWPK_Eventos::sin_repetidos() antes
+		// de entrar, para que el asunto del correo cuente lo mismo que el
+		// cuerpo. Si se hiciera aquí, el asunto diría 302 y la lista 171.
+		foreach ( $eventos as $e ) {
+			$tipo = (string) $e->tipo;
+
+			$por_tipo[ $tipo ] = ( $por_tipo[ $tipo ] ?? 0 ) + 1;
+
+			if ( '' !== (string) $e->sitio_id ) {
+				$sitios[ (string) $e->sitio_id ] = true;
+			}
+
+			// Lo que no es rutina se nombra uno por uno: ahí está lo que hay
+			// que mirar, y perderlo entre doscientas actualizaciones de plugin
+			// sería exactamente lo contrario de lo que se pidió.
+			if ( ! SWPK_Eventos::es_rutinario( $tipo ) ) {
+				$graves[] = $e;
+			}
+		}
+
+		arsort( $por_tipo );
+
+		$html .= sprintf(
+			'<p style="margin:0 0 12px;color:#50575e">%s en %s.</p>',
+			esc_html( SWPK_Vista::plural( (int) array_sum( $por_tipo ), 'movimiento', 'movimientos' ) ),
+			esc_html( SWPK_Vista::plural( count( $sitios ), 'sitio', 'sitios' ) )
+		);
+
+		$html .= '<table role="presentation" style="width:100%;border-collapse:collapse;margin:0 0 18px">';
+
+		foreach ( $por_tipo as $tipo => $cuantos ) {
+			$html .= sprintf(
+				'<tr><td style="padding:7px 0;border-bottom:1px solid #e6e7eb">%s</td>'
+				. '<td style="padding:7px 0;border-bottom:1px solid #e6e7eb;text-align:right;font-weight:600">%d</td></tr>',
+				esc_html( $etiquetas[ $tipo ] ?? $tipo ),
+				(int) $cuantos
+			);
+		}
+
+		$html .= '</table>';
+
+		if ( $graves ) {
+			$html .= '<p style="margin:0 0 8px;font-weight:600;color:#d63638">Lo que no es rutina</p>';
+			$html .= '<table role="presentation" style="width:100%;border-collapse:collapse;font-size:13px;margin:0 0 22px">';
+
+			foreach ( array_slice( $graves, 0, 25 ) as $e ) {
+				$sitio = '' !== (string) $e->sitio_id ? SWPK_Inventario::obtener( (string) $e->sitio_id ) : null;
+
+				$html .= sprintf(
+					'<tr><td style="padding:6px 10px 6px 0;border-bottom:1px solid #f0f0f1;white-space:nowrap;color:#50575e">%s</td>'
+					. '<td style="padding:6px 10px 6px 0;border-bottom:1px solid #f0f0f1">%s</td>'
+					. '<td style="padding:6px 0;border-bottom:1px solid #f0f0f1">%s</td></tr>',
+					esc_html( wp_date( 'j/n', strtotime( (string) $e->ocurrio_en ) ) ),
+					esc_html( (string) ( $sitio->nombre_visible ?? '—' ) ),
+					esc_html( (string) $e->titulo )
+				);
+			}
+
+			$html .= '</table>';
+
+			if ( count( $graves ) > 25 ) {
+				$html .= sprintf( '<p style="color:#50575e;font-size:13px;margin:-14px 0 22px">Y %d más, en Movimientos.</p>', count( $graves ) - 25 );
+			}
+		}
+
+		return $html;
 	}
 
 	/**

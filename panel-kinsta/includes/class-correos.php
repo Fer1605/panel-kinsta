@@ -288,18 +288,37 @@ class SWPK_Correos {
 			array_filter( $filas, static fn( $f ) => SWPK_Bitacora::RESUMEN !== $f->tipo )
 		);
 
-		$cuerpo = SWPK_Plantillas::resumen_semanal( $filas, $desde, $hasta );
+		// La otra mitad: lo que PASÓ, que no es lo mismo que lo que avisamos.
+		// Un sitio puede haber cambiado de versión cinco veces sin generar un
+		// solo correo.
+		$eventos = SWPK_Eventos::sin_repetidos( SWPK_Eventos::entre( $desde, $hasta ) );
+
+		$cuerpo = SWPK_Plantillas::resumen_semanal( $filas, $desde, $hasta, $eventos );
 
 		$r = self::despachar(
 			SWPK_Bitacora::RESUMEN,
 			self::destinatarios_soporte(),
-			SWPK_Plantillas::asunto( 'resumen', [ '{{cuantos}}' => (string) count( $filas ) ] ),
+			SWPK_Plantillas::asunto(
+				'resumen',
+				[
+					'{{cuantos}}'     => (string) count( $filas ),
+					'{{movimientos}}' => (string) count( $eventos ),
+					'{{desde}}'       => $desde,
+					'{{hasta}}'       => $hasta,
+				]
+			),
 			$cuerpo
 		);
 
 		update_option( 'swpk_ultimo_resumen', current_time( 'mysql' ), false );
 
-		return [ 'avisos' => count( $filas ), 'desde' => $desde, 'hasta' => $hasta, 'resultado' => $r ];
+		return [
+			'avisos'     => count( $filas ),
+			'movimientos' => count( $eventos ),
+			'desde'      => $desde,
+			'hasta'      => $hasta,
+			'resultado'  => $r,
+		];
 	}
 
 	/** Resumen diario a soporte: qué cambió ayer. */
