@@ -112,6 +112,31 @@ class SWPK_Sincronizador {
 		// «en camino» algo que ya no va a llegar nunca.
 		$resumen['ordenes_caducadas'] = SWPK_Ordenes::caducar();
 
+		// La sonda: lo que se puede saber de cada sitio sin entrar en él.
+		//
+		// Va aquí y no en el sondeo de cada cinco minutos porque mide
+		// configuración, que no cambia sola. Son cuatro peticiones por sitio y
+		// una vez al día.
+		//
+		// Y hay que medir sus normas en el mismo momento, porque estas no las
+		// contesta el agente: si se esperara al reporte diario del agente, en
+		// los sitios que no lo tienen —que hoy son todos— se quedarían en «sin
+		// dato» para siempre.
+		$resumen['sonda'] = SWPK_Sonda::sondear_todos();
+
+		foreach ( SWPK_Inventario::todos() as $sitio ) {
+			$cuales = SWPK_Normas::COMPROBADORES_DE_SONDA;
+
+			// La prueba de PHP en subidas la contesta mejor el agente. Desde
+			// aquí solo se mide donde no hay agente, para no pisar lo bueno con
+			// lo parcial.
+			if ( ! (int) $sitio->cobertura_agente ) {
+				$cuales[] = SWPK_Normas::COMPROBADOR_DE_AMBOS;
+			}
+
+			SWPK_Normas::medir( (string) $sitio->sitio_id, [], $cuales );
+		}
+
 		$resumen['fin'] = current_time( 'mysql' );
 
 		update_option( 'swpk_ultima_corrida', $resumen, false );
@@ -175,10 +200,22 @@ class SWPK_Sincronizador {
 		// en un sitio al que nadie había tocado. Es el mismo error que el panel
 		// ya evita en la corrida diaria, y aquí lo había reintroducido.
 		if ( ! $modulos ) {
+			// La sonda sí corre: no depende de que Kinsta haya escaneado el
+			// sitio, y es la mitad del dato que la ficha puede mostrar igual.
+			$sondeo = (string) ( SWPK_Monitor::sondear_uno( $sitio_id, (string) $sitio->dominio )['estado'] ?? '' );
+
+			SWPK_Sonda::sondear_uno( $sitio_id, (string) $sitio->dominio );
+
+			$cuales = SWPK_Normas::COMPROBADORES_DE_SONDA;
+			if ( ! (int) $sitio->cobertura_agente ) {
+				$cuales[] = SWPK_Normas::COMPROBADOR_DE_AMBOS;
+			}
+			SWPK_Normas::medir( $sitio_id, [], $cuales );
+
 			return [
 				'modulos'   => 0,
 				'eventos'   => 0,
-				'sondeo'    => (string) ( SWPK_Monitor::sondear_uno( $sitio_id, (string) $sitio->dominio )['estado'] ?? '' ),
+				'sondeo'    => $sondeo,
 				'sin_datos' => true,
 			];
 		}
@@ -231,6 +268,17 @@ class SWPK_Sincronizador {
 		// "cómo está este sitio".
 		$r      = SWPK_Monitor::sondear_uno( $sitio_id, (string) $sitio->dominio );
 		$sondeo = (string) ( $r['estado'] ?? '' );
+
+		// La sonda de configuración también, para que el botón de «analizar
+		// este sitio ahora» refresque de verdad todo lo que la ficha muestra y
+		// no solo el inventario.
+		SWPK_Sonda::sondear_uno( $sitio_id, (string) $sitio->dominio );
+
+		$cuales = SWPK_Normas::COMPROBADORES_DE_SONDA;
+		if ( ! (int) $sitio->cobertura_agente ) {
+			$cuales[] = SWPK_Normas::COMPROBADOR_DE_AMBOS;
+		}
+		SWPK_Normas::medir( $sitio_id, [], $cuales );
 
 		SWPK_Estado::olvidar();
 

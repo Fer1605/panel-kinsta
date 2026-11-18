@@ -41,7 +41,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'SWA_VERSION', '0.1.0' );
+define( 'SWA_VERSION', '0.2.0' );
 define( 'SWA_RUTA', plugin_dir_path( __FILE__ ) );
 define( 'SWA_ARCHIVO', __FILE__ );
 

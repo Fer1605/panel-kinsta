@@ -23,6 +23,20 @@
  *
  * El archivo de prueba no hace nada: imprime una palabra. Vive segundos, tiene
  * nombre al azar y se borra incluso si la petición falla.
+ *
+ * ─── Lo que se corrigió el 18/11/2026 ──────────────────────────────────────
+ *
+ * La prueba estaba bien hecha pero mal interpretada. Cualquier respuesta que no
+ * fuera 2xx se reportaba como «no se pudo comprobar», y en Kinsta lo que pasa
+ * es un 403: tiene una regla de Nginx que no sirve archivos .php de la carpeta
+ * de subidas. Se midió desde fuera contra 14 sitios de la cartera y 13
+ * devolvieron 403 para un .php inexistente mientras devolvían 404 o 302 para un
+ * .txt con el mismo nombre — o sea, la regla existe y mira la extensión.
+ *
+ * Un 403 ahí es la MEJOR noticia posible: el servidor no entrega el archivo ni
+ * para leerlo, que protege más que devolverlo como texto. Mientras contara como
+ * «no sé», el panel dejaba esa norma en «sin dato» para siempre en los 108
+ * sitios. Ahora son cuatro respuestas y no tres, y la nueva es «rechazado».
  */
 
 defined( 'ABSPATH' ) || exit;
@@ -63,7 +77,7 @@ class SWA_Normas {
 		$uploads = get_transient( self::CACHE_UPLOADS );
 
 		if ( false !== $uploads ) {
-			$normas['php_en_uploads'] = 'no_se_pudo' === $uploads ? 'no_se_pudo' : (bool) $uploads;
+			$normas['php_en_uploads'] = (string) $uploads;
 		} elseif ( $incluir_uploads ) {
 			$normas['php_en_uploads'] = self::php_en_uploads();
 		}
@@ -90,16 +104,25 @@ class SWA_Normas {
 	/**
 	 * ¿Se ejecuta PHP en la carpeta de subidas?
 	 *
-	 * @return bool|string true si se ejecuta (mal), false si no (bien),
-	 *                     'no_se_pudo' si la prueba no se pudo hacer.
+	 * Cuatro respuestas, y la tercera es la que faltaba:
+	 *
+	 *   'ejecuta'    el servidor lo ejecutó. Mal.
+	 *   'texto'      el servidor lo devolvió como texto. Bien.
+	 *   'rechazado'  el servidor se niega a entregarlo. Mejor todavía: no se
+	 *                puede ni leer.
+	 *   'no_se_pudo' la prueba no se pudo hacer.
+	 *
+	 * Antes un 403 caía en 'no_se_pudo', y en Kinsta un 403 es justo lo que
+	 * pasa: tiene una regla de Nginx que no sirve archivos .php de la carpeta
+	 * de subidas. Comprobado el 18/11/2026 contra 14 sitios de la cartera, 403
+	 * en 13. Así que la mejor noticia posible se estaba reportando como «no
+	 * sé», y la norma se quedaba sin veredicto para siempre.
 	 */
-	public static function php_en_uploads(): bool|string {
+	public static function php_en_uploads(): string {
 		$subidas = wp_get_upload_dir();
 
 		if ( ! empty( $subidas['error'] ) || empty( $subidas['basedir'] ) || empty( $subidas['baseurl'] ) ) {
-			set_transient( self::CACHE_UPLOADS, 'no_se_pudo', HOUR_IN_SECONDS );
-
-			return 'no_se_pudo';
+			return self::recordar( 'no_se_pudo' );
 		}
 
 		$nombre = 'swa-prueba-' . wp_generate_password( 12, false, false ) . '.php';
@@ -111,9 +134,7 @@ class SWA_Normas {
 		$escrito = @file_put_contents( $ruta, "<?php echo '" . self::SENAL . "';\n" );
 
 		if ( false === $escrito ) {
-			set_transient( self::CACHE_UPLOADS, 'no_se_pudo', HOUR_IN_SECONDS );
-
-			return 'no_se_pudo';
+			return self::recordar( 'no_se_pudo' );
 		}
 
 		$respuesta = wp_remote_get(
@@ -131,28 +152,46 @@ class SWA_Normas {
 		@unlink( $ruta );
 
 		if ( is_wp_error( $respuesta ) ) {
-			set_transient( self::CACHE_UPLOADS, 'no_se_pudo', HOUR_IN_SECONDS );
-
-			return 'no_se_pudo';
+			return self::recordar( 'no_se_pudo' );
 		}
 
 		$codigo = (int) wp_remote_retrieve_response_code( $respuesta );
 		$cuerpo = (string) wp_remote_retrieve_body( $respuesta );
 
-		// Un 403 o un 404 tampoco es «no se ejecuta»: es que no se pudo
-		// comprobar, porque el servidor ni sirvió el archivo. Decirlo como
-		// bueno sería inventarse una buena noticia.
-		if ( $codigo < 200 || $codigo >= 300 ) {
-			set_transient( self::CACHE_UPLOADS, 'no_se_pudo', 12 * HOUR_IN_SECONDS );
-
-			return 'no_se_pudo';
+		// El archivo existe: lo acabamos de escribir. Así que un 403 o un 404
+		// no es «no se pudo comprobar», es el servidor negándose a entregarlo,
+		// que es exactamente lo que queremos que pase.
+		if ( in_array( $codigo, [ 401, 403, 404, 405, 410, 451 ], true ) ) {
+			return self::recordar( 'rechazado' );
 		}
 
-		$ejecuta = str_contains( $cuerpo, self::SENAL ) && ! str_contains( $cuerpo, '<?php' );
+		if ( $codigo < 200 || $codigo >= 300 ) {
+			return self::recordar( 'no_se_pudo' );
+		}
 
-		set_transient( self::CACHE_UPLOADS, $ejecuta ? 1 : 0, 12 * HOUR_IN_SECONDS );
+		if ( str_contains( $cuerpo, '<?php' ) ) {
+			// Vino el código fuente: no se ejecutó.
+			return self::recordar( 'texto' );
+		}
 
-		return $ejecuta;
+		if ( str_contains( $cuerpo, self::SENAL ) ) {
+			return self::recordar( 'ejecuta' );
+		}
+
+		// 200 pero el cuerpo no es ni la señal ni el código. Puede ser una
+		// página de bloqueo, una redirección servida como 200 o una caché
+		// intermedia. No se sabe, y no se inventa.
+		return self::recordar( 'no_se_pudo' );
+	}
+
+	private static function recordar( string $estado ): string {
+		set_transient(
+			self::CACHE_UPLOADS,
+			$estado,
+			'no_se_pudo' === $estado ? HOUR_IN_SECONDS : 12 * HOUR_IN_SECONDS
+		);
+
+		return $estado;
 	}
 
 	/** Para el botón de «probar ahora» del escritorio del agente. */

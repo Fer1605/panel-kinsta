@@ -58,7 +58,30 @@ class SWPK_Normas {
 	public const OPCION_SEMBRADO = 'swpk_normas_sembradas';
 
 	/** Cada vez que cambie el catálogo de fábrica, este número sube. */
-	public const VERSION_CATALOGO = 3;
+	public const VERSION_CATALOGO = 4;
+
+	/**
+	 * Los comprobadores que contesta la sonda del panel, no el agente.
+	 *
+	 * Estos dos se miden siempre en la corrida diaria, porque el agente no los
+	 * puede contestar bien: XML-RPC porque desde dentro no se ve si la petición
+	 * llega, y los nombres de usuario porque la pregunta es justamente qué se
+	 * ve desde fuera.
+	 */
+	public const COMPROBADORES_DE_SONDA = [
+		'xmlrpc_cerrado',
+		'usuarios_enumerables',
+	];
+
+	/**
+	 * El que tiene dos fuentes y hay que decidir cuál manda.
+	 *
+	 * La prueba del agente es la buena —escribe un archivo y mira qué pasa— y
+	 * la sonda solo puede decir si el servidor tiene una regla por extensión.
+	 * Así que esta se mide desde la sonda ÚNICAMENTE en los sitios sin agente;
+	 * si no, la corrida diaria pisaría el veredicto bueno con el parcial.
+	 */
+	public const COMPROBADOR_DE_AMBOS = 'php_en_uploads';
 
 	public static function init(): void {
 		add_action( 'plugins_loaded', [ __CLASS__, 'sembrar' ], 20 );
@@ -144,7 +167,9 @@ class SWPK_Normas {
 				'problema'    => 'XML-RPC está abierto',
 				'porque'      => 'Es una puerta vieja de WordPress que casi ningún sitio usa hoy. Por ahí se '
 					. 'pueden probar cientos de contraseñas de un solo golpe, y el sitio lo ve como un intento, '
-					. 'no como cientos — así que ni se entera de que lo están atacando.',
+					. 'no como cientos — así que ni se entera de que lo están atacando. Se mide desde fuera, '
+					. 'porque lo que importa no es si WordPress lo tiene habilitado sino si la petición le llega: '
+					. 'en Kinsta el servidor la corta antes.',
 				'comprobador' => 'xmlrpc_cerrado',
 				'severidad'   => 'media',
 				'arreglable'  => 1,
@@ -161,16 +186,29 @@ class SWPK_Normas {
 				'orden'       => 60,
 			],
 			'sin_usuario_admin' => [
-				'nombre'      => 'No existe un usuario llamado «admin»',
-				'problema'    => 'Existe un usuario llamado «admin»',
+				'nombre'      => 'Ninguna cuenta tiene un nombre adivinable',
+				'problema'    => 'Hay una cuenta con un nombre de los que se prueban primero',
 				'porque'      => 'Para entrar a WordPress hacen falta dos datos: el nombre de usuario y la '
-					. 'contraseña. Un ataque automático tiene que adivinar los dos — pero «admin» es el primer '
-					. 'nombre que prueba siempre. Si ese usuario existe, ya no adivina nada: solo le queda la '
-					. 'contraseña. Es media cerradura regalada.',
+					. 'contraseña. Un ataque automático tiene que adivinar los dos — pero «admin», '
+					. '«administrator» y «webmaster» son los primeros que prueba siempre. Si una cuenta se llama '
+					. 'así, ya no adivina nada: solo le queda la contraseña. Es media cerradura regalada.',
 				'comprobador' => 'sin_usuario_admin',
 				'severidad'   => 'media',
 				'arreglable'  => 0,
 				'orden'       => 70,
+			],
+			'usuarios_enumerables' => [
+				'nombre'      => 'El sitio no publica sus nombres de usuario',
+				'problema'    => 'El sitio publica sus nombres de usuario',
+				'porque'      => 'WordPress trae una dirección —/wp-json/wp/v2/users— que entrega la lista de '
+					. 'nombres de usuario sin pedir contraseña. No es una falla del sitio: WordPress no considera '
+					. 'privados los nombres de usuario, y así viene de fábrica. Pero mientras esté abierta, la '
+					. 'norma de arriba no sirve de mucho: da igual cómo se llame la cuenta si el sitio publica el '
+					. 'nombre. Se cierra con una línea de código en el tema.',
+				'comprobador' => 'usuarios_enumerables',
+				'severidad'   => 'media',
+				'arreglable'  => 0,
+				'orden'       => 75,
 			],
 			'formularios_honeypot' => [
 				'nombre'      => 'Los formularios tienen honeypot o captcha',
@@ -411,21 +449,33 @@ class SWPK_Normas {
 	/**
 	 * Mide todas las normas activas contra un reporte que acaba de llegar.
 	 *
-	 * Se llama desde el receptor, con el reporte en la mano. No va a buscar
-	 * nada afuera: todo lo que necesita viene en el reporte o ya está en el
-	 * panel. Un sitio que no reporta no se mide — y eso se ve, porque su fila
-	 * del tablero queda en «sin dato» con la fecha de la última vez.
+	 * Se llama desde el receptor, con el reporte en la mano. No sale a internet:
+	 * lo que no viene en el reporte lo busca en lo que la sonda del panel ya
+	 * dejó guardado (ver SWPK_Sonda). Un sitio que no reporta no se mide — y
+	 * eso se ve, porque su fila del tablero queda en «sin dato» con la fecha de
+	 * la última vez.
+	 *
+	 * `$solo` limita la medición a ciertos comprobadores. Hace falta porque hay
+	 * normas que no las contesta el agente sino la sonda, y esas se miden en la
+	 * corrida diaria, sin reporte en la mano. Sin este filtro, medir con el
+	 * reporte vacío escribiría «sin dato» encima de lo que el agente había
+	 * contestado bien ayer.
 	 *
 	 * @param array<string,mixed> $reporte
+	 * @param array<int,string>   $solo    comprobadores a medir; vacío = todos
 	 * @return array<string,string> clave de norma => veredicto
 	 */
-	public static function medir( string $sitio_id, array $reporte ): array {
+	public static function medir( string $sitio_id, array $reporte, array $solo = [] ): array {
 		$sitio = '' !== $sitio_id ? SWPK_Inventario::obtener( $sitio_id ) : null;
 		$tag   = $sitio ? (string) $sitio->tag : SWPK_Etiquetas::SIN;
 
 		$veredictos = [];
 
 		foreach ( self::activas() as $norma ) {
+			if ( $solo && ! in_array( (string) $norma->comprobador, $solo, true ) ) {
+				continue;
+			}
+
 			if ( ! self::aplica( $norma, $tag ) ) {
 				self::anotar( $sitio_id, (string) $norma->clave, self::NO_APLICA, 'Esta norma no aplica a este grupo de sitios.' );
 				$veredictos[ (string) $norma->clave ] = self::NO_APLICA;
@@ -634,32 +684,163 @@ class SWPK_Normas {
 			: [ 'estado' => self::CUMPLE, 'detalle' => 'El editor de código está deshabilitado.' ];
 	}
 
+	/**
+	 * ¿Se ejecuta PHP en la carpeta de subidas?
+	 *
+	 * Hay dos fuentes y se usan en este orden:
+	 *
+	 *   1. El agente, que hace la prueba de verdad: escribe un .php, lo pide y
+	 *      lo borra. Es la única que distingue «el servidor lo devolvió como
+	 *      texto» de «el servidor lo ejecutó».
+	 *   2. La sonda del panel, que pide un .php que no existe y lo compara con
+	 *      un .txt que tampoco existe. Si el .php da 403 y el .txt no, hay una
+	 *      regla por extensión y el archivo no se entrega ni para leerlo. Sirve
+	 *      cuando no hay agente, que hoy es en todos los sitios.
+	 *
+	 * El arreglo que había que hacer está en el estado «rechazado». El agente
+	 * trataba cualquier respuesta que no fuera 2xx como «no se pudo comprobar»,
+	 * y en Kinsta la regla de Nginx devuelve 403: medido el 18/11/2026, 13 de 14
+	 * sitios de la cartera. Un 403 ahí es el MEJOR resultado posible —el
+	 * servidor se niega incluso a entregar el archivo— y mientras contara como
+	 * «no sé», esta norma se quedaba en «sin dato» para siempre en los 108.
+	 */
 	private static function comprobar_php_en_uploads( array $r, ?object $sitio ): array {
 		$v = $r['normas']['php_en_uploads'] ?? null;
 
-		if ( null === $v ) {
-			return [ 'estado' => self::SIN_DATO, 'detalle' => 'Hace falta una versión del agente que haga esta prueba.' ];
+		// Los agentes viejos mandan true/false. Se traducen para no perder su
+		// dato cuando todavía no se han actualizado.
+		if ( true === $v ) {
+			$v = 'ejecuta';
+		} elseif ( false === $v ) {
+			$v = 'texto';
+		}
+
+		if ( 'ejecuta' === $v ) {
+			return [
+				'estado'  => self::FALLA,
+				'detalle' => 'Probado con un archivo real: un PHP subido a la carpeta de subidas SÍ se ejecuta. En Kinsta esto se cierra pidiéndoselo a soporte; no es algo que el sitio pueda arreglar solo.',
+			];
+		}
+
+		if ( 'texto' === $v ) {
+			return [ 'estado' => self::CUMPLE, 'detalle' => 'Probado con un archivo real: el servidor lo devolvió como texto, no lo ejecutó.' ];
+		}
+
+		if ( 'rechazado' === $v ) {
+			return [
+				'estado'  => self::CUMPLE,
+				'detalle' => 'Probado con un archivo real: el servidor se niega a entregarlo. Protege más que devolverlo como texto, porque no se puede ni leer.',
+			];
+		}
+
+		// Sin dato del agente —o con «no se pudo»— queda la sonda.
+		$regla = (string) ( SWPK_Sonda::de( (string) ( $sitio->sitio_id ?? '' ) )['uploads_regla'] ?? '' );
+
+		if ( 'bloquea' === $regla ) {
+			return [
+				'estado'  => self::CUMPLE,
+				'detalle' => 'El servidor tiene una regla que no entrega archivos .php de la carpeta de subidas. Comprobado desde fuera, sin agente.',
+			];
+		}
+
+		if ( 'sin_regla' === $regla ) {
+			return [
+				'estado'  => self::SIN_DATO,
+				'detalle' => 'El servidor no tiene una regla por extensión en la carpeta de subidas. Puede seguir estando bien —que PHP no esté configurado para ejecutar ahí— pero eso solo lo prueba el agente, escribiendo un archivo de verdad.',
+			];
 		}
 
 		if ( 'no_se_pudo' === $v ) {
-			// Decirlo y no esconderlo: no poder escribir el archivo de prueba
-			// no es una buena noticia ni una mala, es no saber.
-			return [ 'estado' => self::SIN_DATO, 'detalle' => 'No se pudo hacer la prueba: el agente no logró escribir el archivo temporal.' ];
+			return [ 'estado' => self::SIN_DATO, 'detalle' => 'El agente intentó la prueba y no pudo completarla, y la sonda tampoco pudo averiguarlo desde fuera.' ];
 		}
 
-		return $v
-			? [ 'estado' => self::FALLA, 'detalle' => 'Un archivo PHP subido a la carpeta de subidas SÍ se ejecuta. En Kinsta esto se cierra pidiéndoselo a soporte; no es algo que el sitio pueda arreglar solo.' ]
-			: [ 'estado' => self::CUMPLE, 'detalle' => 'Probado con un archivo real: el servidor lo devolvió como texto, no lo ejecutó.' ];
+		return [ 'estado' => self::SIN_DATO, 'detalle' => 'Hace falta el agente para probarlo, o un sondeo desde fuera.' ];
 	}
 
+	/**
+	 * ¿Está cerrado XML-RPC?
+	 *
+	 * Esto lo contesta la sonda desde fuera, no el agente desde dentro, y el
+	 * motivo es un falso positivo que estuvo en producción: el agente leía el
+	 * filtro `xmlrpc_enabled` de WordPress, que dice si WordPress *serviría*
+	 * XML-RPC si le llegara la petición. En Kinsta no le llega — Nginx devuelve
+	 * 403 antes de que PHP arranque — así que el panel podía estar marcando
+	 * «abierto» una puerta por la que nadie puede pasar.
+	 *
+	 * Lo que importa es si se puede entrar, y eso solo se ve desde fuera. El
+	 * dato del agente se sigue usando, pero para explicar, no para decidir.
+	 */
 	private static function comprobar_xmlrpc_cerrado( array $r, ?object $sitio ): array {
-		if ( ! isset( $r['xmlrpc_abierto'] ) ) {
-			return [ 'estado' => self::SIN_DATO, 'detalle' => 'El agente no reportó este dato.' ];
+		$sonda  = SWPK_Sonda::de( (string) ( $sitio->sitio_id ?? '' ) );
+		$fuera  = (string) ( $sonda['xmlrpc'] ?? '' );
+		$dentro = isset( $r['xmlrpc_abierto'] ) ? (bool) $r['xmlrpc_abierto'] : null;
+
+		if ( 'bloqueado' === $fuera ) {
+			return [
+				'estado'  => self::CUMPLE,
+				'detalle' => null === $dentro || ! $dentro
+					? 'El servidor no deja llegar la petición a WordPress.'
+					: 'El servidor no deja llegar la petición a WordPress, aunque WordPress lo tenga habilitado por dentro. Nadie puede entrar por ahí.',
+			];
 		}
 
-		return empty( $r['xmlrpc_abierto'] )
-			? [ 'estado' => self::CUMPLE, 'detalle' => 'XML-RPC está cerrado.' ]
-			: [ 'estado' => self::FALLA, 'detalle' => 'XML-RPC está abierto.' ];
+		if ( 'rechaza' === $fuera ) {
+			return [ 'estado' => self::CUMPLE, 'detalle' => 'La petición llega a WordPress y WordPress la rechaza.' ];
+		}
+
+		if ( 'responde' === $fuera ) {
+			return [
+				'estado'  => self::FALLA,
+				'detalle' => 'XML-RPC contesta desde internet: se puede probar cientos de contraseñas de un golpe y el sitio lo ve como un solo intento.',
+			];
+		}
+
+		// Sin sonda no se afirma nada. Antes aquí se contestaba con el dato del
+		// agente, y es justo lo que daba el resultado falso.
+		if ( null === $dentro ) {
+			return [ 'estado' => self::SIN_DATO, 'detalle' => 'Todavía no se ha podido sondear este sitio desde fuera.' ];
+		}
+
+		return [
+			'estado'  => self::SIN_DATO,
+			'detalle' => $dentro
+				? 'WordPress lo tiene habilitado por dentro, pero no se pudo comprobar desde fuera si el servidor deja pasar la petición. Sin eso no se puede decir si está abierto.'
+				: 'WordPress lo tiene deshabilitado por dentro, pero falta comprobarlo desde fuera.',
+		];
+	}
+
+	/**
+	 * ¿El sitio publica los nombres de usuario?
+	 *
+	 * WordPress no considera esto una vulnerabilidad: su política dice que los
+	 * nombres de usuario no son información privada y que su enumeración está
+	 * fuera de alcance. Así que esto se reporta por lo que es —divulgación que
+	 * hace más eficiente un ataque de contraseñas— y no como una falla grave.
+	 *
+	 * Importa por una razón concreta: mientras esté abierto, la norma de «no
+	 * existe un usuario admin» vale poco. Da igual cómo se llame la cuenta si
+	 * el sitio publica el nombre.
+	 */
+	private static function comprobar_usuarios_enumerables( array $r, ?object $sitio ): array {
+		$sonda = SWPK_Sonda::de( (string) ( $sitio->sitio_id ?? '' ) );
+
+		if ( ! array_key_exists( 'usuarios_rest', $sonda ) || null === $sonda['usuarios_rest'] ) {
+			return [ 'estado' => self::SIN_DATO, 'detalle' => 'Todavía no se ha podido sondear este sitio desde fuera.' ];
+		}
+
+		$n = (int) $sonda['usuarios_rest'];
+
+		if ( 0 === $n ) {
+			return [ 'estado' => self::CUMPLE, 'detalle' => 'La lista de usuarios no se puede leer sin iniciar sesión.' ];
+		}
+
+		return [
+			'estado'  => self::FALLA,
+			'detalle' => sprintf(
+				'El sitio publica %s en /wp-json/wp/v2/users, sin pedir contraseña. Para entrar hacen falta dos datos —el nombre y la contraseña— y esto regala el primero.',
+				1 === $n ? 'un nombre de usuario' : sprintf( '%d nombres de usuario', $n )
+			),
+		];
 	}
 
 	private static function comprobar_registro_cerrado( array $r, ?object $sitio ): array {
@@ -672,6 +853,35 @@ class SWPK_Normas {
 			: [ 'estado' => self::FALLA, 'detalle' => 'Cualquiera puede registrarse en el sitio.' ];
 	}
 
+	/**
+	 * Los nombres que un ataque automático prueba antes que cualquier otro.
+	 *
+	 * Antes esto miraba solo «admin», que es demasiado estrecho: «administrator»
+	 * y «webmaster» se adivinan igual de rápido. En la cartera hay cuentas
+	 * llamadas «webmaster» hoy.
+	 */
+	private const NOMBRES_ADIVINABLES = [
+		'admin',
+		'administrator',
+		'administrador',
+		'root',
+		'webmaster',
+		'wpadmin',
+		'wp-admin',
+		'usuario',
+		'user',
+		'test',
+		'demo',
+	];
+
+	/**
+	 * ¿Hay un usuario con un nombre adivinable?
+	 *
+	 * Y una advertencia honesta en el detalle: esta norma se apoya en que el
+	 * nombre de usuario sea un dato que el atacante no tiene. Si el sitio lo
+	 * publica —ver `usuarios_enumerables`— cumplir esta norma no sirve de gran
+	 * cosa, y el panel tiene que decirlo en vez de dar una tranquilidad falsa.
+	 */
 	private static function comprobar_sin_usuario_admin( array $r, ?object $sitio ): array {
 		$usuarios = (array) ( $r['usuarios'] ?? [] );
 
@@ -679,16 +889,37 @@ class SWPK_Normas {
 			return [ 'estado' => self::SIN_DATO, 'detalle' => 'El agente no reportó usuarios.' ];
 		}
 
+		$malos = [];
+
 		foreach ( $usuarios as $u ) {
-			if ( 'admin' === strtolower( (string) ( $u['login'] ?? '' ) ) ) {
-				return [
-					'estado'  => self::FALLA,
-					'detalle' => 'Existe un usuario llamado «admin». Cambiarle el nombre hay que hacerlo a mano: lo que esté escrito a su nombre se queda apuntando a él.',
-				];
+			$login = strtolower( trim( (string) ( $u['login'] ?? '' ) ) );
+
+			if ( '' !== $login && in_array( $login, self::NOMBRES_ADIVINABLES, true ) ) {
+				$malos[] = $login;
 			}
 		}
 
-		return [ 'estado' => self::CUMPLE, 'detalle' => 'No hay ningún usuario con ese nombre.' ];
+		if ( $malos ) {
+			return [
+				'estado'  => self::FALLA,
+				'detalle' => sprintf(
+					'Existe %s con un nombre de los que se prueban primero: %s. Cambiarlo hay que hacerlo a mano: lo que esté escrito a su nombre se queda apuntando a él.',
+					1 === count( $malos ) ? 'una cuenta' : 'más de una cuenta',
+					implode( ', ', array_map( static fn( $m ) => '«' . $m . '»', array_unique( $malos ) ) )
+				),
+			];
+		}
+
+		$expuestos = SWPK_Sonda::de( (string) ( $sitio->sitio_id ?? '' ) )['usuarios_rest'] ?? null;
+
+		if ( null !== $expuestos && (int) $expuestos > 0 ) {
+			return [
+				'estado'  => self::CUMPLE,
+				'detalle' => 'Ninguna cuenta tiene un nombre adivinable — pero el sitio publica sus nombres de usuario, así que no hay nada que adivinar. Vale poco mientras eso siga abierto.',
+			];
+		}
+
+		return [ 'estado' => self::CUMPLE, 'detalle' => 'Ninguna cuenta tiene un nombre de los que se prueban primero.' ];
 	}
 
 	private static function comprobar_wp_al_dia( array $r, ?object $sitio ): array {

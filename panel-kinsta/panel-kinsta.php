@@ -50,6 +50,7 @@ require_once SWPK_RUTA . 'includes/class-bitacora.php';
 require_once SWPK_RUTA . 'includes/class-plantillas.php';
 require_once SWPK_RUTA . 'includes/class-correos.php';
 require_once SWPK_RUTA . 'includes/class-usuarios.php';
+require_once SWPK_RUTA . 'includes/class-sonda.php';
 require_once SWPK_RUTA . 'includes/class-normas.php';
 require_once SWPK_RUTA . 'includes/class-ordenes.php';
 require_once SWPK_RUTA . 'includes/class-receptor.php';
