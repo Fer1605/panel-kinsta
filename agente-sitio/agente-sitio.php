@@ -3,7 +3,7 @@
  * Plugin Name:       Agente Solución Web
  * Plugin URI:        https://github.com/Fer1605/panel-kinsta
  * Description:       Reporta al Panel Kinsta quién tiene acceso de administrador a este sitio y activa la verificación en dos pasos por correo. No envía contenido ni datos de la base.
- * Version:           0.1.0
+ * Version:           0.6.0
  * Requires at least: 6.4
  * Requires PHP:      8.1
  * Author:            Solución Web
