@@ -107,3 +107,24 @@ rol o se borra.
 
 Así que la cadencia no es una sola: es diaria para lo que cambia despacio y de
 minutos o segundos para lo que no puede esperar.
+
+## De qué reloj van estas horas
+
+**Del WordPress donde esté instalado el panel**, no del hosting. Todo el panel
+usa `current_time()`, `wp_timezone()` y `wp_date()`, así que funciona igual esté
+alojado donde esté — y eso importa, porque el panel va a vivir en un WordPress
+que no está en el mismo sitio que los sitios que vigila.
+
+La consecuencia hay que tenerla clara: **si la zona horaria de ese WordPress
+está mal, todas las horas de este archivo están mal con ella**, y nada lo
+delataría. Por eso la pantalla de Ajustes enseña la zona y la hora que el panel
+cree que es ahora mismo. Si esa hora no coincide con el reloj de quien la mira,
+el problema está ahí y no en las tareas.
+
+Se ajusta en Ajustes → Generales de WordPress, no en el panel.
+
+Hay una trampa relacionada ya resuelta y documentada en `SWPK_Frescura::cuando()`:
+`strtotime('tomorrow 06:30')` calcula en UTC, porque WordPress le fija UTC a
+PHP. Programar con eso dejaba la corrida de las 6:30 agendada a las 12:30 de la
+noche, y los correos con ella. Por eso las horas se calculan con
+`DateTimeImmutable` y `wp_timezone()`, y no con `strtotime` a secas.

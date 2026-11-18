@@ -430,20 +430,24 @@ class SWPK_Monitor {
 			return;
 		}
 
+		// El texto sale de la plantilla editable, no de aquí.
+		//
+		// Estaba escrito a mano en este archivo, y eso lo dejaba fuera de la
+		// pantalla de Plantillas: era el único correo que el panel manda y que
+		// nadie podía cambiar sin tocar código. Los avisos de caída son los que
+		// más se leen a deshoras, así que conviene poder ajustarles el tono.
+		$marcas = [
+			'{{sitio}}'  => esc_html( $nombre ),
+			'{{url}}'    => esc_html( (string) $r['url'] ),
+			'{{cuando}}' => esc_html( SWPK_Frescura::fmt( 'j \d\e F, H:i', current_time( 'mysql' ) ) ),
+			'{{motivo}}' => esc_html( (string) $r['motivo'] ),
+		];
+
 		SWPK_Bitacora::enviar(
 			SWPK_Bitacora::CAIDA,
 			$soporte,
-			sprintf( '[Caído] %s', $nombre ),
-			sprintf(
-				'<p><strong>%s no está respondiendo.</strong></p>'
-				. '<p>Dirección: <a href="%s">%s</a><br>Detectado: %s<br>Qué pasó: %s</p>'
-				. '<p>El monitor revisa cada cinco minutos. Cuando vuelva, les llega otro correo con cuánto estuvo caído.</p>',
-				esc_html( $nombre ),
-				esc_url( (string) $r['url'] ),
-				esc_html( (string) $r['url'] ),
-				esc_html( SWPK_Frescura::fmt( 'j \d\e F, H:i', current_time( 'mysql' ) ) ),
-				esc_html( (string) $r['motivo'] )
-			),
+			SWPK_Plantillas::asunto( 'caida', [ '{{sitio}}' => $nombre ] ),
+			SWPK_Plantillas::caida( $marcas ),
 			$sitio_id
 		);
 	}
@@ -467,15 +471,16 @@ class SWPK_Monitor {
 			return;
 		}
 
+		$marcas = [
+			'{{sitio}}'  => esc_html( $nombre ),
+			'{{cuanto}}' => esc_html( $cuanto ),
+		];
+
 		SWPK_Bitacora::enviar(
 			SWPK_Bitacora::CAIDA,
 			$soporte,
-			sprintf( '[Repuesto] %s', $nombre ),
-			sprintf(
-				'<p><strong>%s volvió a responder.</strong></p><p>Estuvo caído %s.</p>',
-				esc_html( $nombre ),
-				esc_html( $cuanto )
-			),
+			SWPK_Plantillas::asunto( 'repuesto', [ '{{sitio}}' => $nombre ] ),
+			SWPK_Plantillas::repuesto( $marcas ),
 			$sitio_id
 		);
 	}

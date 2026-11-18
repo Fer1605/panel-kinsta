@@ -95,6 +95,36 @@ class SWPK_Plantillas {
 					'{{tabla}}'      => 'EL BLOQUE: el desglose de lo que se avisó, y cada aviso uno por uno.',
 				],
 			],
+			'caida' => [
+				'nombre' => 'Aviso de caída',
+				'quien'  => 'A soporte, en el momento: un sitio dejó de responder.',
+				'titulo' => 'Un sitio no está respondiendo',
+				'asunto' => '[Caído] {{sitio}}',
+				'cuerpo' => "{{sitio}} no está respondiendo.\n\n"
+					. "Dirección: {{url}}\n"
+					. "Detectado: {{cuando}}\n"
+					. "Qué pasó: {{motivo}}\n\n"
+					. 'El monitor revisa cada cinco minutos. Cuando vuelva, les llega otro correo con cuánto estuvo caído.',
+				'marcas' => [
+					'{{sitio}}'  => 'El nombre del sitio',
+					'{{url}}'    => 'La dirección que se sondeó',
+					'{{cuando}}' => 'Cuándo se detectó',
+					'{{motivo}}' => 'Qué contestó el servidor, en palabras: «el dominio no resuelve», «rechazó la conexión»…',
+				],
+			],
+			'repuesto' => [
+				'nombre' => 'Aviso de recuperación',
+				'quien'  => 'A soporte, en el momento: un sitio que estaba caído volvió.',
+				'titulo' => 'Un sitio volvió a responder',
+				'asunto' => '[Repuesto] {{sitio}}',
+				'cuerpo' => "{{sitio}} volvió a responder.\n\n"
+					. "Estuvo caído {{cuanto}}.\n\n"
+					. 'Queda anotado en Caídas, con la hora exacta en que dejó de responder y la hora en que volvió.',
+				'marcas' => [
+					'{{sitio}}'  => 'El nombre del sitio',
+					'{{cuanto}}' => 'Cuánto tiempo estuvo caído, ya en palabras: «12 minutos», «2 horas»',
+				],
+			],
 			'mensual' => [
 				'nombre' => 'Mensual a los clientes',
 				'quien'  => 'A los administradores de cada sitio nuestro, el día 1. Sin una palabra técnica.',
@@ -407,6 +437,32 @@ class SWPK_Plantillas {
 				[ '{{cuantos}}' => '<strong>' . count( $eventos ) . '</strong>' ],
 				[ '{{cambios}}' => $tabla ]
 			)
+		);
+	}
+
+	/**
+	 * El aviso de que un sitio se cayó.
+	 *
+	 * Lo arma aquí y no en el monitor por lo mismo que los otros cinco: el
+	 * monitor sabe sondear, no sabe redactar. Y porque `obtener()` devuelve
+	 * solo el par editable —asunto y cuerpo—, no el título del marco; pedirle
+	 * el título desde fuera devuelve null y revienta justo cuando un sitio se
+	 * cae, que es el peor momento posible para un error.
+	 *
+	 * @param array<string,string> $marcas ya escapadas
+	 */
+	public static function caida( array $marcas ): string {
+		return self::envolver(
+			self::catalogo()['caida']['titulo'],
+			self::cuerpo( 'caida', $marcas )
+		);
+	}
+
+	/** El aviso de que un sitio volvió. */
+	public static function repuesto( array $marcas ): string {
+		return self::envolver(
+			self::catalogo()['repuesto']['titulo'],
+			self::cuerpo( 'repuesto', $marcas )
 		);
 	}
 

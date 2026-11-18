@@ -12,7 +12,7 @@ del panel y quedarse con otra, se queda esta.
 
 ---
 
-## Los cuatro correos
+## Los seis correos
 
 `class-correos.php` decide cuándo sale cada uno y a quién.
 
@@ -181,3 +181,36 @@ puestos. Dos detalles que parecen menores y no lo son:
    archivo que alguien usa y uno que reenvía preguntando qué pasó.
 2. **La frescura va dentro del archivo.** Un Excel que alguien abre en marzo
    tiene que decir de cuándo son sus datos.
+
+## Los dos que faltaban: caída y recuperación
+
+Los avisos de que un sitio se cayó y de que volvió **tenían el texto escrito a
+mano dentro de `SWPK_Monitor`**. Eran los únicos dos correos que el panel manda
+y que nadie podía cambiar sin tocar código — y son justo los que más se leen a
+deshoras, así que conviene poder ajustarles el tono.
+
+Ahora son plantillas editables como las demás, con sus marcas:
+
+| Plantilla | Marcas |
+|---|---|
+| `caida` | `{{sitio}}` `{{url}}` `{{cuando}}` `{{motivo}}` |
+| `repuesto` | `{{sitio}}` `{{cuanto}}` |
+
+### Una trampa al moverlos
+
+`SWPK_Plantillas::obtener()` devuelve **solo el par editable** —asunto y
+cuerpo—, no el título del marco. Pedirle `['titulo']` desde fuera devuelve null
+y revienta.
+
+Al mover estos dos correos pasó exactamente eso, y el error habría saltado
+justo cuando un sitio se cae: el peor momento posible. Por eso el armado vive
+en la clase de plantillas (`SWPK_Plantillas::caida()` y `::repuesto()`), como
+el de los otros cuatro, y no en quien manda el correo. **Quien sondea sabe
+sondear; no sabe redactar.**
+
+### Una constante que no servía
+
+`SWPK_Bitacora::DOS_FA` estaba declarada y aparecía en el filtro de la bitácora,
+pero no la escribía nadie: cero filas en la base y ninguna referencia en el
+código. Se quitó. Un filtro con una opción que nunca tiene resultados hace dudar
+de todo el resto de la pantalla.

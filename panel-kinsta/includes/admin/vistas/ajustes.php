@@ -126,6 +126,29 @@ $a = SWPK_Ajustes::todos();
 	// su cuenta. Si no, el reloj se dispara con la primera visita DESPUÉS de la
 	// hora — y en un panel al que entran dos personas, eso puede ser horas más
 	// tarde. Decirlo aquí es la diferencia entre una hora y una intención.
+	// De qué reloj van estas horas.
+	//
+	// El panel saca la hora de WordPress —`current_time()`, `wp_timezone()`—
+	// y no del hosting, a propósito: así funciona igual esté donde esté
+	// instalado. Pero eso significa que si la zona horaria de ESTE WordPress
+	// está mal, todas las horas de arriba están mal con ella, y nada lo
+	// delata. Por eso se enseña, con la hora que el panel cree que es ahora
+	// mismo: si no coincide con el reloj de quien lo mira, ahí está el
+	// problema y no en el panel.
+	$zona = wp_timezone_string();
+
+	printf(
+		'<div class="swpk-par" style="margin-top:14px"><span class="swpk-q">Reloj que usa el panel</span>'
+		. '<span class="swpk-v">%s — ahora son las %s</span></div>',
+		esc_html( $zona ?: 'sin configurar' ),
+		esc_html( wp_date( 'H:i' ) )
+	);
+
+	printf(
+		'<p class="swpk-gris" style="font-size:12px;margin:6px 0 0">Es la zona horaria de este WordPress (Ajustes → Generales), no la del hosting. Si esa hora no es la correcta, todo lo de arriba corre a destiempo. <a href="%s">Cambiarla</a>.</p>',
+		esc_url( admin_url( 'options-general.php#timezone_string' ) )
+	);
+
 	$cron_real = defined( 'DISABLE_WP_CRON' ) && DISABLE_WP_CRON;
 
 	printf(
