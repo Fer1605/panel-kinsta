@@ -113,6 +113,50 @@ desactivó el agente, se delata solo. Eso vive en `SWPK_Receptor::callados()`.
 
 ---
 
+## La sonda: lo que ve un desconocido desde internet
+
+`SWPK_Sonda`, cada día a las 5:30. Son unas cuarenta peticiones sin credenciales
+por sitio —GET en su mayoría, un POST a `xmlrpc.php` pidiendo la lista de
+métodos y un TRACE, ninguno de los cuales cambia nada— y de ahí salen 24 normas.
+
+No es un escáner de vulnerabilidades ni una prueba de penetración: es lo mismo
+que haría cualquiera desde un navegador. No se intenta entrar, no se prueban
+contraseñas, no se envía ningún formulario.
+
+**Las peticiones van intercaladas entre todos los sitios, no sitio por sitio.**
+Esto no es un detalle de rendimiento: lanzadas en bloque, la gestión de bots del
+hosting empezaría a cortar a media corrida, y lo peligroso es que todo lo que
+viniera después se vería como «bloqueado» sin que nada lo avisara. Intercaladas,
+cada sitio recibe una petición cada varios segundos.
+
+Medido: 4,4 segundos por sitio con quince en paralelo, unos ocho minutos para
+los 108.
+
+Las tres reglas que la hacen utilizable —no concluir por el código HTTP, no
+confundir «bloqueado» con «aprobado», y la sonda de control por sitio— están
+explicadas en [06 · Normas de seguridad](06-normas-de-seguridad.md).
+
+## La revisión de la plataforma: lo que el hosting sabe
+
+`SWPK_Revision`, cada día a las 4:30. Trece lecturas por sitio de cosas que solo
+el hosting sabe: protección contra bots, respaldos, HTTPS forzado, cuentas SFTP
+extra, reglas de redirección, IP denegadas, visitas, códigos de respuesta y el
+registro de accesos.
+
+Vive aparte de `SWPK_Fuente` a propósito. La fuente es la abstracción que
+permite que mañana haya otro proveedor sin tocar nada de lo que está encima;
+estos trece endpoints son de un proveedor concreto, y meterlos en la interfaz
+obligaría al siguiente a implementar trece métodos que no tiene. Se apaga sola
+cuando la fuente no es la que corresponde.
+
+Medido contra la cuenta real: 13,9 segundos por sitio, unos 25 minutos para los
+108. No se puede apurar: el límite del proveedor son 120 peticiones por minuto y
+`SWPK_Http` se guarda en 100.
+
+**Por qué cada una tiene su propio horario y no van dentro de la corrida
+diaria:** dos tareas largas pegadas es una tarea que el límite de tiempo de PHP
+mata a la mitad, y entonces se pierden las dos.
+
 ## El monitor: ¿responde o no?
 
 `SWPK_Monitor` sondea cada cinco minutos. El panel vigila por su cuenta en vez

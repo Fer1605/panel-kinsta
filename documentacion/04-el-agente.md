@@ -166,6 +166,59 @@ Detalles que importan:
 
 ---
 
+## Lo que el agente mide y nadie más puede
+
+Cuatro clases, todas con caché de doce horas y todas fuera del reporte liviano
+de cada cinco minutos. De aquí salen 36 de las 73 normas.
+
+**`SWA_Formularios` — los archivos que sube la gente.** Es el caso que el jefe
+contó con el ejemplo del CV. Para probar que un archivo se baja hay que saber
+cómo se llama, y adivinarlo desde fuera sería andar pescando el currículum de
+alguien. El agente está dentro: ve la carpeta, agarra el archivo más reciente,
+lo traduce a dirección pública y la pide sin sesión.
+
+**El nombre del archivo no sale del sitio.** No viaja al panel, no se escribe en
+la bitácora, no se guarda. Se manda el sí o el no.
+
+De aquí sale también el hallazgo del `.htaccess` inerte: Contact Form 7, Gravity
+Forms y WPForms escriben uno en su carpeta de subidas para cerrarla, y en un
+servidor Nginx ese archivo no se lee. Los tres plugins creen que están
+protegidos y no lo están.
+
+**`SWA_Fondo` — configuración, permisos e integridad.** Las constantes de
+`wp-config.php`, los permisos de cada rol, los archivos del núcleo contra las
+sumas oficiales de WordPress.org, los plugins que el repositorio cerró, los
+drop-ins y las tareas programadas huérfanas.
+
+Dos cosas que solo se ven aquí:
+
+- Un plugin **cerrado** por WordPress.org por un problema de seguridad sigue
+  apareciendo como «al día» en el escritorio del sitio, y Site Health no dice
+  nada. Hay que preguntarlo expresamente.
+- Las ocho llaves de sesión se mandan como **un hash de las ocho juntas**, nunca
+  las llaves. El panel los compara entre sitios, y así se descubre que un sitio
+  se clonó de otro — que es cuando una sesión robada en uno sirve en el otro.
+
+**`SWA_Tienda` — si el sitio vende de verdad.** Ver
+[13 · Qué es cada sitio](13-que-es-cada-sitio.md).
+
+**`SWA_Silencio` — que WordPress se calle.** Pedido literal del jefe: «no debe
+notificar doble correo (...) deben llegar los del sistema, solo los del panel».
+Calla los cuatro avisos de rutina —plugin, tema y núcleo actualizados, y «hay
+una versión nueva»— y **no calla ninguno que avise de un problema**: el del
+núcleo distingue éxito de fallo y solo se calla el éxito. Callar un fallo
+convertiría «no duplicamos correos» en «nadie se entera de nada».
+
+Es un ajuste encendido de fábrica, no una constante, porque el panel tiene que
+poder decir en el reporte si está puesto y porque un cliente que sí quiera los
+avisos de WordPress debe poder quedarse como está.
+
+### Dos guardas contra hacer lento el reporte
+
+`SWA_Formularios` mira como mucho 200 archivos buscando una muestra y 5000
+buscando PHP sueltos. Una carpeta de subidas con años encima no debe hacer que
+el reporte tarde un minuto.
+
 ## Las órdenes: seis verbos y nada más
 
 `SWA_Ordenes` recoge lo que el panel dejó pendiente y lo ejecuta. La lista de

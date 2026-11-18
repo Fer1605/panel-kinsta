@@ -12,7 +12,7 @@ del panel y quedarse con otra, se queda esta.
 
 ---
 
-## Los tres correos
+## Los cuatro correos
 
 `class-correos.php` decide cuándo sale cada uno y a quién.
 
@@ -57,6 +57,50 @@ Si agregas un tipo de hallazgo, su texto va aquí, no en la plantilla ni en la
 vista.
 
 ---
+
+## El cuarto: el resumen de los domingos
+
+El jefe pidió dos cosas y las contó:
+
+> «me gustaría que se mande un resumen de **lo que se envió** (...) Eso sería
+> **una**. **Dos:** necesitaría de que aparte de ese resumen semanal de todo
+> eso, **de lo que se vio en la semana**, ver que se le mande un resumen; en ese
+> resumen se le puede indicar: de esto no se obtuvo ningún movimiento, no ha
+> pasado nada.»
+
+Son dos preguntas distintas y van en el mismo correo, en dos mitades:
+
+- **Lo que pasó en los sitios** contesta *¿qué pasó?*, y sirve para que alguien
+  se dé cuenta de algo antes de que llame el cliente. Un sitio puede haber
+  cambiado de versión cinco veces sin generar un solo correo.
+- **Lo que avisamos** contesta *¿avisamos?*, y sirve para cubrirse, que es lo
+  que él repitió toda la reunión.
+
+En el mismo correo y no en dos: dos correos el mismo domingo a la misma hora se
+leen como ruido, y él lo contó como una cosa de dos mitades.
+
+La primera mitad agrupa los movimientos por tipo y debajo nombra uno por uno
+**lo que no es rutina**. Esa separación importa: perder una vulnerabilidad
+detectada entre doscientas actualizaciones de plugin sería exactamente lo
+contrario de lo que se pidió.
+
+### Sale igual cuando no pasó nada, y eso no es un descuido
+
+Es el pedido. Un domingo sin correo no significaría «no pasó nada», significaría
+«no sé si el panel corrió» — y poder distinguir las dos cosas es justo para lo
+que sirve el panel. Las dos mitades tienen su propio texto para el caso vacío.
+
+### El de-duplicado, y dónde vive
+
+Los movimientos se de-duplican antes de contarlos:
+`SWPK_Eventos::sin_repetidos()`. La clave es la misma que usa la guarda de
+`registrar()`: tipo, sitio, módulo y día. Las caídas pasan enteras a propósito,
+porque un sitio puede caerse y reponerse varias veces el mismo día y cada vez es
+noticia.
+
+**Vive en `SWPK_Eventos` y no en la plantilla por una razón concreta:** cuando
+lo hacía la plantilla, el asunto del correo decía 302 y la lista enseñaba 171.
+El asunto y el cuerpo tienen que contar lo mismo.
 
 ## El interruptor: modo de prueba
 

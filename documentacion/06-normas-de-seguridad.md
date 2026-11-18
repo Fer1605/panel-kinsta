@@ -34,60 +34,128 @@ actualizaciones **no** son esto. *«eso no es tema de seguridad.»*
 
 ---
 
-## Las diez normas de fábrica
+## Las 73 normas
 
-Viven en `SWPK_Normas::catalogo()`. Se siembran en la tabla al activar y al
-subir `VERSION_CATALOGO`. **Se apagan, no se borran**: si se borraran, la
-siguiente siembra las devolvería y parecería que el panel no obedece.
+Arrancaron siendo diez, todas medidas por el agente. Hoy son **73**, y lo que
+cambió no es solo el número: cambió **quién las mide**, y eso es lo que decide
+cuáles funcionan sin instalar nada.
 
-| Clave | Gravedad | ¿Arreglable? | Qué comprueba |
-|---|---|---|---|
-| `dos_pasos_activa` | alta | sí | La verificación en dos pasos está activa y exigida a administradores |
-| `admins_dos_pasos` | alta | sí | Ningún administrador sin configurarla |
-| `editor_codigo` | alta | sí | No se puede escribir código desde el escritorio |
-| `php_en_uploads` | alta | **no** | El servidor no ejecuta PHP en la carpeta de subidas |
-| `xmlrpc_cerrado` | media | sí | XML-RPC está cerrado |
-| `registro_cerrado` | media | sí | Nadie puede crearse una cuenta |
-| `sin_usuario_admin` | media | **no** | No existe un usuario llamado «admin» |
-| `formularios_honeypot` | media | **no** | Declarativa: alguien la marca a mano |
-| `wp_al_dia` | media | **no** | WordPress en una versión con soporte |
-| `php_soportado` | media | **no** | PHP en una versión con soporte |
+| Quién mide | Normas | ¿Necesita el agente? |
+|---|---|---|
+| El agente, dentro del sitio | 36 | sí |
+| La sonda externa del panel | 24 | no |
+| La API de la plataforma | 10 | no |
+| El inventario ya guardado | 3 | no |
 
-Las que no son arreglables no lo son por una razón, no por pereza:
+**37 de las 73 funcionan sin instalar nada en ningún sitio.** Las otras 36 son
+las que solo se ven desde dentro — y son también las más graves.
 
-- **`php_en_uploads`** es una regla del servidor, no del sitio. En Kinsta se
-  cierra pidiéndoselo a soporte.
-- **`sin_usuario_admin`**: cambiarle el nombre a un usuario rompe lo que esté
-  escrito a su nombre.
-- **`wp_al_dia` y `php_soportado`**: actualizar es otra conversación, y el jefe
-  dijo expresamente que las actualizaciones no son tema de esta lista.
-- **`formularios_honeypot`**: no hay forma genérica de comprobarlo. Ver abajo.
+Por gravedad: 40 altas, 26 medias, 7 bajas. Ocho se miden solo en tiendas.
 
-### Las dos que hubo que reescribirle al jefe
+### Las cuatro fuentes, y por qué cada norma está donde está
 
-**1. El `.htaccess` no existe en Kinsta.** Kinsta corre Nginx, no Apache, y su
-propia documentación dice que los sitios alojados ahí no tienen ese archivo.
-Las reglas se ponen desde MyKinsta o pidiéndoselas a soporte, y Kinsta avisa
-que no traduce reglas de Apache por uno.
+**El inventario** (`inv_*`). Tres normas que salen de la foto diaria de plugins
+y de la tabla de sitios, que la corrida ya guarda. Volver a pedirlas al hosting
+serían 108 peticiones para traer lo que está en la base. Son los plugins en
+versión con falla conocida, los instalados pero apagados, y el estado del sitio.
 
-Lo que él quiere conseguir con eso —que no se ejecute PHP en `/uploads`— **sí
-se puede comprobar**, y es más honesto comprobarlo por su efecto que por el
-archivo: en vez de «¿existe la regla?», **«¿se ejecuta o no?»**. Eso se mide
-igual en Nginx, en Apache y en Pantheon. El cómo, en [04](04-el-agente.md).
+**La sonda externa** (`SWPK_Sonda`). Veinticuatro normas que preguntan,
+literalmente, qué ve un desconocido desde internet: archivos que no deberían
+estar donde se pueden bajar, y cómo viaja y cómo se enmarca la página. Son unas
+cuarenta peticiones sin credenciales por sitio, una vez al día a las 5:30.
 
-**2. El honeypot no tiene forma genérica de comprobarse.** Depende del plugin
-de formularios de cada sitio: Elementor Forms, WPForms, CF7, uno a mano. Se
-consideraron tres salidas:
+**La plataforma** (`SWPK_Revision`, `rev_*`). Diez normas que hay que pedirle al
+hosting: protección de bots, respaldos, HTTPS forzado, tráfico, errores,
+registros. Trece lecturas por sitio, a las 4:30, y unos 25 minutos para los 108
+porque el límite de peticiones por minuto no se puede apurar.
 
-- Comprobar solo los plugins de formularios que de verdad usamos, uno por uno.
-- Convertirla en declarativa: alguien marca «revisado» y queda con fecha y nombre.
-- Que el agente inyecte el honeypot él mismo. **Descartada**: es lo más
-  invasivo y puede romper formularios ajenos.
+**El agente** (`SWA_Formularios`, `SWA_Fondo`, `SWA_Tienda`). Treinta y seis
+normas que no se pueden medir de ninguna otra forma: los archivos que sube la
+gente por un formulario, las constantes de `wp-config.php`, los permisos de cada
+rol, los archivos del núcleo contra las sumas oficiales, los plugins que
+WordPress.org cerró, y todo lo de las tiendas.
 
-Está implementada la segunda. La recomendación sigue siendo pasar a la primera
-para los dos o tres plugins que cubran la mayoría de los sitios.
+### Las tres reglas que hacen que esto sirva y no sea ruido
 
----
+Están en el código de la sonda y conviene no deshacerlas:
+
+**1. Nunca concluir por el código HTTP solo.** Muchos sitios contestan 200 con
+la página de error del tema. Cada ruta trae el patrón que su contenido tiene que
+calzar, y si no calza es «no está» aunque el código sea 200.
+
+**2. «Bloqueado» no es «aprobado».** Un 403 del cortafuegos y un «ese archivo no
+existe» se parecen desde fuera. El `.git` puede estar ahí detrás de una regla
+que alguien apague mañana. Por eso hay cuatro estados y no dos.
+
+**3. Una sonda de control por sitio.** Se pide una dirección que con certeza no
+existe. Si el sitio contesta a esa como si existiera, sus comprobaciones de
+archivos no valen y se marcan así en bloque, en vez de producir veinte hallazgos
+falsos. En la cartera hay un sitio que contesta 200 con 15 KB de HTML a
+cualquier dirección.
+
+### Un 403 son tres cosas distintas
+
+Esto decidió si el bloque de exposición servía o no. Al principio cualquier 403
+se contaba como «no se sabe», y en la plataforma eso dejaba las veintidós normas
+en «sin dato» en todos los sitios. Midiendo se vio que hay tres cosas detrás:
+
+```
+/wp-config.php.bak     403     /loquesea.php.bak           403   regla por extensión
+/composer.json         403     /carpeta-inventada/…json    403   regla por nombre
+/phpinfo.php           403     «Just a moment…»                  reto al sondeo
+```
+
+Las dos primeras son la plataforma negándose a servir **ese tipo de archivo**,
+exista o no: nadie lo puede bajar, y eso sí es protección. La tercera es un reto
+que cualquier navegador de verdad pasa — o sea que el archivo **no** está
+protegido de una persona, solo del sondeo. Esa queda en «no se sabe».
+
+Se distinguen con un control por extensión en la primera pasada y, solo para lo
+que queda sin explicar, un segundo control con el mismo nombre bajo una carpeta
+inventada.
+
+### Por qué 16 normas y no 45 en el bloque del agente
+
+La investigación sacó cuarenta y cinco comprobaciones medibles dentro del sitio:
+dieciocho constantes de `wp-config.php`, nueve de usuarios, catorce de
+integridad, cuatro de registro. Están todas, pero agrupadas en dieciséis normas
+que significan algo.
+
+Una pantalla con cuarenta y cinco filas por sitio, en 108 sitios, no la mira
+nadie — y **una norma que nadie mira es peor que ninguna**, porque da la
+impresión de que se está revisando. Cuando una falla, el detalle dice cuál de
+las comprobaciones de dentro fue.
+
+### Lo que deliberadamente NO se marca como incumplimiento
+
+Marcar todo es la forma más rápida de que nadie mire el tablero. Estas se miden
+y no se marcan, cada una con su motivo escrito en el código:
+
+| Qué | Por qué no |
+|---|---|
+| Rastreadores de IA desbloqueados | Vienen así de fábrica y no se distingue una decisión de un descuido. Serían 108 filas rojas por algo que no es seguridad |
+| `unfiltered_html` en el rol Editor | Lo trae WordPress de fábrica. Acusaría a los 108 de una decisión que no tomó nadie |
+| Retención de datos sin configurar en tiendas | Es una decisión legítima: hay deberes contables que obligan a guardar. Lo que sí falla es tenerla puesta con la tarea muerta |
+| Pago sin cuenta en WooCommerce | Es el valor por omisión, etiquetado «recomendado» por el propio WooCommerce |
+| `WP_DEBUG` encendido a secas | Con la pantalla apagada y el registro fuera de la raíz es defendible. Lo que se marca es que un error salga a la vista |
+| Un rol por omisión alto con el registro cerrado | Nadie se puede registrar, así que no hay por dónde entrar |
+
+Y veintiuna comprobaciones más se descartaron con el motivo escrito en
+`NORMAS-catalogo.md`: el prefijo de tabla distinto de `wp_` (no está en ningún
+estándar), la cabecera `X-XSS-Protection` (obsoleta: si se manda, en cero), los
+permisos de archivo (los gestiona el hosting), el prefijo `__Host-` en las
+cookies (WordPress no lo hace, fallaría igual en los 108).
+
+### Dos ejes, y no hay que revolverlos
+
+Una norma puede limitarse por dos cosas distintas:
+
+- **`aplica_a`** — las etiquetas del contrato de mantenimiento: desarrollo, auto
+  update, no auto update.
+- **`aplica_tipo`** — qué hace el sitio: tienda, cotizador, informativo.
+
+Son independientes. Un sitio puede ser `auto_update` **y** tienda a la vez. Ver
+[13 · Qué es cada sitio](13-que-es-cada-sitio.md).
 
 ## Dos textos por norma, y hacen falta los dos
 

@@ -251,3 +251,29 @@ studio wp eval 'global $wpdb; print_r( $wpdb->get_results( "SELECT * FROM " . SW
 
 `studio wp db query` **no funciona** en estas instalaciones: no encuentra el
 binario de mysql. Usa `wp eval` con `$wpdb`.
+
+## Lo que se agregó en la versión 12
+
+**`sitios.tipo_sitio`** y **`sitios.tipo_motivo`** — qué es cada sitio (tienda,
+cotizador, informativo o sin datos) y **por qué** quedó ahí. El motivo es lo que
+hace la clasificación discutible sin tener que rehacerla.
+
+Ojo con `tipo_motivo`: son 191 caracteres y `SWPK_Tipos::clasificar()` recorta
+antes de escribir. No es prudencia de más — con MySQL en modo estricto un valor
+más largo **rechaza el UPDATE entero, en silencio**, y ya pasó: veintiún sitios
+se quedaron sin clasificar mientras la función devolvía el valor correcto.
+
+**`normas.aplica_tipo`** — a qué tipos de sitio aplica una norma. Vacío quiere
+decir todos. Es un eje **independiente** de `aplica_a`, que son las etiquetas
+del contrato de mantenimiento: un sitio puede ser `auto_update` y tienda a la
+vez.
+
+### Lo que NO está en una tabla, y por qué
+
+Tres lecturas diarias viven en transients de 25 horas y no en tablas:
+`swpk_sonda_*`, `swpk_revision_*` y `swpk_tienda_*`.
+
+El motivo es que son **fotos del día**, no historial. Si la sonda deja de correr
+o el agente deja de reportar, el dato caduca solo en vez de quedarse en una
+tabla mintiendo con una fecha vieja. Lo que sí es historial —los eventos, la
+bitácora, el cumplimiento— sí tiene tabla.

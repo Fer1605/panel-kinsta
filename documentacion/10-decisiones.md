@@ -312,3 +312,49 @@ por tu cuenta.
 4. **Pantheon.** Ver [12](12-pantheon.md).
 5. **El agente no está instalado en ningún sitio.** Es la dependencia que
    bloquea la mitad de lo que el panel sabe hacer.
+
+## 12. Una norma que nadie mira es peor que ninguna
+
+La investigación sacó cuarenta y cinco comprobaciones medibles dentro del sitio.
+Están todas, agrupadas en dieciséis normas que significan algo.
+
+El motivo no es pereza: una pantalla con cuarenta y cinco filas por sitio, en
+108 sitios, no la mira nadie — y entonces el panel da la impresión de que se
+está revisando algo que en la práctica nadie revisa. Cuando una norma falla, el
+detalle dice cuál de las comprobaciones de dentro fue.
+
+La misma idea gobierna qué se marca como incumplimiento y qué no. Seis cosas se
+miden y deliberadamente **no** se marcan, cada una con su motivo escrito en el
+código, porque marcarlas daría filas rojas en los 108 sitios por decisiones que
+no tomó nadie o que son legítimas. Están listadas en
+[06 · Normas de seguridad](06-normas-de-seguridad.md).
+
+**Si alguien quiere agregar una norma, la pregunta no es «¿se puede medir?» sino
+«¿alguien va a hacer algo distinto por verla?».**
+
+## 13. «Bloqueado» no es «aprobado»
+
+Cuando la sonda pide un archivo y el cortafuegos corta la petición, no se
+aprendió nada: el archivo puede estar ahí detrás de una regla que alguien apague
+mañana. Eso se reporta como «no se sabe», nunca como que está bien.
+
+La excepción, y está medida: si una dirección inventada con la misma extensión
+—o con el mismo nombre bajo una carpeta que no existe— también viene bloqueada,
+entonces la plataforma no sirve ese tipo de archivo a nadie, y eso sí protege.
+
+Es la misma regla que la número 3 de esta lista, aplicada a lo que se ve desde
+fuera. Y es la que decidió si el bloque de exposición servía: sin distinguir los
+tres tipos de 403, las veintidós normas habrían quedado en «sin dato» en todos
+los sitios.
+
+## 14. Lo que cuesta dinero se dice, no se promete
+
+Fijar la hora de las actualizaciones del hosting es posible, pero con un
+complemento de pago por sitio. El escaneo de vulnerabilidades no es posible de
+ninguna manera.
+
+Se decidió no contratar nada, así que la respuesta honesta es «se puede ordenar
+solo esto, solo pagando, y esto otro no se puede ni pagando». Lo escrito en
+[14 · Cadencia y lo que cuesta](14-cadencia-y-lo-que-cuesta.md) está para que
+nadie tenga que volver a averiguarlo, y para que nadie prometa una hora fija que
+el panel no puede cumplir.

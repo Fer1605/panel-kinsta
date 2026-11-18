@@ -35,13 +35,15 @@ Si solo vas a leer tres, que sean estos, en este orden:
 | 03 | [De dónde salen los datos](03-de-donde-salen-los-datos.md) | Kinsta, Wordfence, el agente, el modo de prueba, y la frescura |
 | 04 | [El agente](04-el-agente.md) | El plugin que vive en cada sitio: qué reporta, qué hace y qué no |
 | 05 | [Las pantallas](05-las-pantallas.md) | Cada pantalla, qué pregunta contesta y qué deliberadamente no hace |
-| 06 | [Normas de seguridad](06-normas-de-seguridad.md) | La lista, el tablero, las órdenes y el reseteo masivo |
+| 06 | [Normas de seguridad](06-normas-de-seguridad.md) | **Las 73 normas**, quién mide cada una, y lo que deliberadamente no se marca |
 | 07 | [La API y el MCP](07-la-api-y-el-mcp.md) | Las rutas, cómo se autentica y cómo se conecta Claude Desktop |
 | 08 | [Permisos y llaves](08-permisos-y-llaves.md) | Perfiles, recorte por sitio, llaves de consulta, dos pasos |
 | 09 | [Avisos y bitácora](09-avisos-y-bitacora.md) | Los correos automáticos y la evidencia de lo que se notificó |
 | 10 | [Las decisiones](10-decisiones.md) | Lo que no es obvio, y por qué está así |
 | 11 | [Cómo trabajar en esto](11-como-trabajar-en-esto.md) | Convenciones, cómo agregar cosas, cómo probar |
 | 12 | [Pantheon](12-pantheon.md) | El plan para que el panel lea sitios que no están en Kinsta |
+| 13 | [Qué es cada sitio](13-que-es-cada-sitio.md) | Tienda, cotizador o informativo: las tres capas y los dos agujeros de la regla simple |
+| 14 | [Cadencia y lo que cuesta](14-cadencia-y-lo-que-cuesta.md) | Cada cuánto pasa cada cosa, qué se puede programar y qué exige pagar |
 
 ## Las cuatro reglas que no se tocan
 
