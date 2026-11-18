@@ -58,7 +58,7 @@ class SWPK_Normas {
 	public const OPCION_SEMBRADO = 'swpk_normas_sembradas';
 
 	/** Cada vez que cambie el catálogo de fábrica, este número sube. */
-	public const VERSION_CATALOGO = 6;
+	public const VERSION_CATALOGO = 7;
 
 	/**
 	 * Los comprobadores que contesta la sonda del panel, no el agente.
@@ -666,13 +666,57 @@ class SWPK_Normas {
 				'arreglable'  => 0,
 				'orden'       => 295,
 			],
+			// ── Los archivos que sube la gente por un formulario ─────────
+			//
+			// Es lo que el jefe pidió con el ejemplo del CV, y lo mide el
+			// agente desde dentro: para probar que un archivo se baja hay que
+			// saber cómo se llama, y adivinarlo desde fuera sería andar
+			// pescando el currículum de alguien. El agente lo prueba adentro y
+			// manda solo el sí o el no — el nombre del archivo no sale del
+			// sitio.
+			'subidas_publicas' => [
+				'nombre'      => 'Los archivos subidos por formulario no se bajan sin permiso',
+				'problema'    => 'Un archivo subido por formulario se baja sin permiso',
+				'porque'      => 'Es el error más caro y el más común: se hace un formulario que pide subir un '
+					. 'CV, el archivo cae en una carpeta pública, y queda a la vista de cualquiera que dé con la '
+					. 'dirección. Ahí van nombres, teléfonos, direcciones y a veces números de documento.',
+				'comprobador' => 'form_publicos',
+				'severidad'   => 'alta',
+				'arreglable'  => 0,
+				'orden'       => 20,
+			],
+			'htaccess_inerte' => [
+				'nombre'      => 'Ningún plugin confía en una protección que aquí no funciona',
+				'problema'    => 'Un plugin dejó una protección que en este servidor no hace nada',
+				'porque'      => 'Contact Form 7, Gravity Forms y WPForms escriben un archivo .htaccess en su '
+					. 'carpeta de subidas para cerrarla. Funciona en Apache. Este servidor corre Nginx y ni '
+					. 'siquiera lee ese archivo, así que la carpeta queda abierta mientras el plugin cree que la '
+					. 'cerró. Lo único que protege los archivos es lo difícil que sea adivinar su dirección.',
+				'comprobador' => 'form_htaccess',
+				'severidad'   => 'alta',
+				'arreglable'  => 0,
+				'orden'       => 22,
+			],
+			'php_en_subidas_archivos' => [
+				'nombre'      => 'No hay archivos PHP en la carpeta de subidas',
+				'problema'    => 'Hay archivos PHP en la carpeta de subidas',
+				'porque'      => 'Ahí solo deberían caer imágenes y documentos. Un archivo PHP en esa carpeta no '
+					. 'llegó subiendo una foto: o alguien lo puso, o entró por una falla de subida. Es la señal '
+					. 'más directa de que algo pasó.',
+				'comprobador' => 'form_php_sueltos',
+				'severidad'   => 'alta',
+				'arreglable'  => 0,
+				'orden'       => 24,
+			],
 			'formularios_honeypot' => [
 				'nombre'      => 'Los formularios tienen honeypot o captcha',
 				'problema'    => 'Los formularios no tienen honeypot ni captcha',
 				'porque'      => 'Sin eso, los formularios se llenan de spam automático y el correo del cliente '
-					. 'se vuelve inservible. Esta se marca a mano: no hay forma de comprobarla igual en todos los '
-					. 'plugins de formularios.',
-				'comprobador' => 'declarativa',
+					. 'se vuelve inservible. La mide el agente leyendo los ajustes globales de cada plugin de '
+					. 'formularios, que es donde viven el captcha y el honeypot en casi todos. No se mira '
+					. 'formulario por formulario a propósito: en Fluent Forms y en Contact Form 7 el ajuste es '
+					. 'global, y mirar cada formulario diría «este no tiene» cuando sí.',
+				'comprobador' => 'form_antispam',
 				'severidad'   => 'media',
 				'arreglable'  => 0,
 				'orden'       => 80,
@@ -1835,6 +1879,137 @@ class SWPK_Normas {
 		return $s['cabeceras']['xss_obsoleta']
 			? [ 'estado' => self::FALLA, 'detalle' => 'Manda una cabecera retirada. Los navegadores la ignoran, y el filtro que encendía llegó a abrir fallas propias.' ]
 			: [ 'estado' => self::CUMPLE, 'detalle' => 'No manda la cabecera retirada.' ];
+	}
+
+	// ─────────────────────────────────────────────────────────────────────────
+	// Los archivos que sube la gente por un formulario
+	//
+	// Todo esto lo mide el agente dentro del sitio y llega en su reporte. El
+	// panel nunca ve el nombre de un archivo subido, solo las cuentas.
+	// ─────────────────────────────────────────────────────────────────────────
+
+	/**
+	 * @return array{0:array<string,mixed>,1:?array{estado:string,detalle:string}}
+	 */
+	private static function formularios( array $r ): array {
+		$f = (array) ( $r['formularios'] ?? [] );
+
+		if ( ! $f ) {
+			return [ [], [ 'estado' => self::SIN_DATO, 'detalle' => 'Hace falta el agente instalado en el sitio para poder revisar esto desde dentro.' ] ];
+		}
+
+		if ( ! empty( $f['error'] ) ) {
+			return [ $f, [ 'estado' => self::SIN_DATO, 'detalle' => 'El agente no pudo leer la carpeta de subidas.' ] ];
+		}
+
+		if ( ! isset( $f['plugins'] ) ) {
+			return [ $f, [ 'estado' => self::SIN_DATO, 'detalle' => 'Hace falta una versión del agente que revise los formularios.' ] ];
+		}
+
+		return [ $f, null ];
+	}
+
+	private static function comprobar_form_publicos( array $r, ?object $sitio ): array {
+		[ $f, $pero ] = self::formularios( $r );
+		if ( $pero ) {
+			return $pero;
+		}
+
+		if ( ! $f['plugins'] ) {
+			return [ 'estado' => self::NO_APLICA, 'detalle' => 'Este sitio no tiene ningún plugin de formularios con subida de archivos.' ];
+		}
+
+		$malos = (array) ( $f['publicos'] ?? [] );
+
+		if ( $malos ) {
+			return [
+				'estado'  => self::FALLA,
+				'detalle' => sprintf(
+					'Se probó con un archivo de verdad y se bajó sin pedir nada: %s. Lo que esté ahí lo puede ver cualquiera que dé con la dirección.',
+					implode( ', ', $malos )
+				),
+			];
+		}
+
+		if ( 0 === (int) ( $f['revisados'] ?? 0 ) ) {
+			return [
+				'estado'  => self::SIN_DATO,
+				'detalle' => 'Hay plugins de formularios pero todavía nadie ha subido nada, así que no hay con qué probar.',
+			];
+		}
+
+		return [
+			'estado'  => self::CUMPLE,
+			'detalle' => sprintf( 'Se probó con un archivo real de %s y el servidor no lo entregó.', SWPK_Vista::plural( (int) $f['revisados'], 'carpeta', 'carpetas' ) ),
+		];
+	}
+
+	private static function comprobar_form_htaccess( array $r, ?object $sitio ): array {
+		[ $f, $pero ] = self::formularios( $r );
+		if ( $pero ) {
+			return $pero;
+		}
+
+		$malos = (array) ( $f['htaccess_inerte'] ?? [] );
+
+		if ( ! $malos ) {
+			return [ 'estado' => self::CUMPLE, 'detalle' => 'Ningún plugin está confiando en una protección que este servidor no lee.' ];
+		}
+
+		return [
+			'estado'  => self::FALLA,
+			'detalle' => sprintf(
+				'%s dejó un .htaccess en su carpeta de subidas para cerrarla, y este servidor no lee .htaccess. El plugin cree que la cerró; está abierta.',
+				implode( ', ', $malos )
+			),
+		];
+	}
+
+	private static function comprobar_form_php_sueltos( array $r, ?object $sitio ): array {
+		[ $f, $pero ] = self::formularios( $r );
+		if ( $pero ) {
+			return $pero;
+		}
+
+		$n = (int) ( $f['php_en_subidas'] ?? 0 );
+
+		return 0 === $n
+			? [ 'estado' => self::CUMPLE, 'detalle' => 'No hay ningún archivo PHP en la carpeta de subidas.' ]
+			: [
+				'estado'  => self::FALLA,
+				'detalle' => sprintf(
+					'Hay %d archivo(s) PHP en la carpeta de subidas. Ahí solo deberían caer imágenes y documentos: eso no llegó subiendo una foto.',
+					$n
+				),
+			];
+	}
+
+	private static function comprobar_form_antispam( array $r, ?object $sitio ): array {
+		[ $f, $pero ] = self::formularios( $r );
+		if ( $pero ) {
+			return $pero;
+		}
+
+		$a   = (array) ( $f['antispam'] ?? [] );
+		$con = (array) ( $a['con'] ?? [] );
+		$sin = (array) ( $a['sin'] ?? [] );
+
+		if ( ! $con && ! $sin ) {
+			return [ 'estado' => self::NO_APLICA, 'detalle' => 'Este sitio no tiene ningún plugin de formularios de los que el panel sabe leer.' ];
+		}
+
+		if ( ! $sin ) {
+			return [ 'estado' => self::CUMPLE, 'detalle' => sprintf( 'Con captcha u honeypot: %s.', implode( ', ', $con ) ) ];
+		}
+
+		return [
+			'estado'  => self::FALLA,
+			'detalle' => sprintf(
+				'Sin captcha ni honeypot: %s.%s',
+				implode( ', ', $sin ),
+				$con ? sprintf( ' (Sí lo tienen: %s.)', implode( ', ', $con ) ) : ''
+			),
+		];
 	}
 
 	// ─────────────────────────────────────────────────────────────────────────

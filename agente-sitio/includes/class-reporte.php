@@ -135,6 +135,10 @@ class SWA_Reporte {
 			// Lo del audio de normas de seguridad. Son cosas que solo se saben
 			// estando dentro del sitio: el panel no las puede ver desde fuera.
 			'normas'        => SWA_Normas::medir(),
+			// Los archivos que sube la gente por un formulario. Solo cuentas y
+			// sí/no: el nombre de un archivo subido no sale del sitio. Ver
+			// SWA_Formularios.
+			'formularios'   => SWA_Formularios::medir( ! $liviano ),
 			// Quién cerró el editor importa tanto como que esté cerrado: si lo
 			// cerró el agente, se abre de nuevo al desactivar el plugin.
 			'editor_codigo_por' => ( defined( 'DISALLOW_FILE_MODS' ) && DISALLOW_FILE_MODS ) || ( defined( 'DISALLOW_FILE_EDIT' ) && DISALLOW_FILE_EDIT && ! SWA_Ajustes::obtener( 'cerrar_editor' ) )
