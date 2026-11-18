@@ -42,22 +42,24 @@ cuáles funcionan sin instalar nada.
 
 | Quién mide | Normas | ¿Necesita el agente? |
 |---|---|---|
-| El agente, dentro del sitio | 36 | sí |
+| El agente, dentro del sitio | 33 | sí |
 | La sonda externa del panel | 24 | no |
 | La API de la plataforma | 10 | no |
-| El inventario ya guardado | 3 | no |
+| El inventario ya guardado | 5 | no |
+| Las dos vías a la vez (`php_en_uploads`) | 1 | mejor con él |
 
-**37 de las 73 funcionan sin instalar nada en ningún sitio.** Las otras 36 son
+**40 de las 73 funcionan sin instalar nada en ningún sitio.** Las otras 33 son
 las que solo se ven desde dentro — y son también las más graves.
 
 Por gravedad: 40 altas, 26 medias, 7 bajas. Ocho se miden solo en tiendas.
 
 ### Las cuatro fuentes, y por qué cada norma está donde está
 
-**El inventario** (`inv_*`). Tres normas que salen de la foto diaria de plugins
-y de la tabla de sitios, que la corrida ya guarda. Volver a pedirlas al hosting
-serían 108 peticiones para traer lo que está en la base. Son los plugins en
-versión con falla conocida, los instalados pero apagados, y el estado del sitio.
+**El inventario** (`inv_*`, `wp_al_dia`, `php_soportado`). Cinco normas que
+salen de la foto diaria de plugins y de la tabla de sitios, que la corrida ya
+guarda. Volver a pedirlas al hosting serían 108 peticiones para traer lo que
+está en la base. Son los plugins en versión con falla conocida, los instalados
+pero apagados, el estado del sitio, y las versiones de WordPress y de PHP.
 
 **La sonda externa** (`SWPK_Sonda`). Veinticuatro normas que preguntan,
 literalmente, qué ve un desconocido desde internet: archivos que no deberían

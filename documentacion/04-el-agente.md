@@ -168,8 +168,24 @@ Detalles que importan:
 
 ## Lo que el agente mide y nadie más puede
 
-Cuatro clases, todas con caché de doce horas y todas fuera del reporte liviano
-de cada cinco minutos. De aquí salen 36 de las 73 normas.
+**33 de las 73 normas solo se pueden medir con el agente instalado.** El resto
+—40— sale de la API de Kinsta (15) y de mirar el sitio desde fuera (25), y
+funciona sin que haya nada instalado en los sitios. Comprobado contando los
+comprobadores del catálogo contra `COMPROBADORES_DE_SONDA`,
+`COMPROBADORES_DE_INVENTARIO` y `COMPROBADORES_DE_REVISION`; lo que no está en
+ninguna de las tres listas lo contesta el agente.
+
+Las 33, por grupo:
+
+| Grupo | Normas | De dónde salen |
+|---|---|---|
+| Cuentas y accesos | 5 | `SWA_Normas`, el reporte de usuarios y el estado de la verificación en dos pasos |
+| Formularios y archivos subidos | 4 | `SWA_Formularios` |
+| Configuración, permisos e integridad | 16 | `SWA_Fondo` |
+| Tienda | 8 | `SWA_Tienda` — y solo aplican si el sitio vende |
+
+Las tres clases de abajo tienen caché de doce horas y quedan fuera del reporte
+liviano de cada cinco minutos.
 
 **`SWA_Formularios` — los archivos que sube la gente.** Es el caso que el jefe
 contó con el ejemplo del CV. Para probar que un archivo se baja hay que saber

@@ -31,8 +31,9 @@ vendor/
 # Guía de pruebas: tiene contraseñas de los sitios locales
 PRUEBAS.md
 
-# Exportaciones del documento del jefe
+# Exportaciones de los documentos del jefe
 *.pdf
+*.docx
 
 # Copias del panel empaquetadas para mandar a alguien
 *.zip
