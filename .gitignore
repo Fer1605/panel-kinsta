@@ -36,3 +36,7 @@ PRUEBAS.md
 
 # Copias del panel empaquetadas para mandar a alguien
 *.zip
+
+# Notas de reunión: transcripciones, nombres de clientes y de personas
+REUNION-*.md
+*.mov
