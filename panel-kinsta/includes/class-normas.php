@@ -58,7 +58,7 @@ class SWPK_Normas {
 	public const OPCION_SEMBRADO = 'swpk_normas_sembradas';
 
 	/** Cada vez que cambie el catálogo de fábrica, este número sube. */
-	public const VERSION_CATALOGO = 8;
+	public const VERSION_CATALOGO = 9;
 
 	/**
 	 * Los comprobadores que contesta la sonda del panel, no el agente.
@@ -898,6 +898,110 @@ class SWPK_Normas {
 				'arreglable'  => 0,
 				'orden'       => 60,
 			],
+			// ── Solo para las tiendas ────────────────────────────────────
+			//
+			// `aplica_tipo` es el eje nuevo: estas no se miden en un sitio
+			// informativo ni en un cotizador. Un sitio sin clasificar SÍ las
+			// recibe, porque librarlo por no saber qué es sería esconder el
+			// hueco en vez de verlo.
+			'tienda_api_cerrada' => [
+				'nombre'      => 'Los pedidos y los clientes no se leen sin permiso',
+				'problema'    => 'Los pedidos o los clientes se leen sin permiso',
+				'porque'      => 'WooCommerce publica direcciones que devuelven pedidos y clientes, y tienen que '
+					. 'pedir credenciales. Si alguna contesta sin pedirlas, se está entregando el nombre, el '
+					. 'correo, el teléfono y la dirección de cada persona que compró.',
+				'comprobador' => 'tienda_api',
+				'severidad'   => 'alta',
+				'arreglable'  => 0,
+				'aplica_tipo' => 'tienda,cotizador',
+				'orden'       => 300,
+			],
+			'tienda_logs_cerrados' => [
+				'nombre'      => 'Los registros de la tienda no se pueden descargar',
+				'problema'    => 'Los registros de la tienda se pueden descargar',
+				'porque'      => 'WooCommerce guarda ahí lo que le contestan las pasarelas, y cuando alguien '
+					. 'enciende la depuración de una pasarela eso incluye el contenido de las peticiones. El '
+					. 'nombre del archivo lleva un hash — pero ese hash se calcula con una de las llaves de '
+					. 'wp-config.php, y si esa llave no está puesta, WooCommerce usa una palabra que está '
+					. 'escrita en su código público. Entonces el nombre se puede deducir.',
+				'comprobador' => 'tienda_logs',
+				'severidad'   => 'alta',
+				'arreglable'  => 0,
+				'aplica_tipo' => 'tienda,cotizador',
+				'orden'       => 302,
+			],
+			'tienda_descargas_protegidas' => [
+				'nombre'      => 'Los archivos que se venden no se bajan sin comprar',
+				'problema'    => 'Los archivos que se venden se pueden bajar sin comprar',
+				'porque'      => 'WooCommerce tiene tres formas de entregar un archivo comprado y una de ellas '
+					. 'es redirigir a la dirección real. Su propia documentación lo dice: cualquiera con esa '
+					. 'dirección accede al archivo, haya comprado o no.',
+				'comprobador' => 'tienda_descargas',
+				'severidad'   => 'alta',
+				'arreglable'  => 0,
+				'aplica_tipo' => 'tienda',
+				'orden'       => 304,
+			],
+			'tienda_pedido_invitado' => [
+				'nombre'      => 'Un pedido de invitado pide el correo antes de mostrarse',
+				'problema'    => 'Un pedido de invitado se muestra sin pedir el correo',
+				'porque'      => 'Quien compra sin cuenta recibe un enlace a su pedido. WooCommerce pide el '
+					. 'correo antes de enseñarlo, salvo que algo lo haya desactivado — y entonces cualquiera con '
+					. 'el enlace ve los datos de esa persona.',
+				'comprobador' => 'tienda_invitados',
+				'severidad'   => 'alta',
+				'arreglable'  => 0,
+				'aplica_tipo' => 'tienda',
+				'orden'       => 306,
+			],
+			'tienda_sin_datos_de_tarjeta' => [
+				'nombre'      => 'No se encontraron números de tarjeta guardados',
+				'problema'    => 'Hay números de tarjeta guardados en texto plano',
+				'porque'      => 'WooCommerce no guarda tarjetas por diseño, así que si aparece una es un '
+					. 'accidente: una pasarela que volcó su depuración en el pedido, o alguien del equipo que '
+					. 'pegó el número en una nota al tomar un pedido por teléfono. Tenerlas guardadas cambia por '
+					. 'completo las obligaciones del cliente con su banco.',
+				'comprobador' => 'tienda_tarjetas',
+				'severidad'   => 'alta',
+				'arreglable'  => 0,
+				'aplica_tipo' => 'tienda',
+				'orden'       => 308,
+			],
+			'tienda_webhooks_cifrados' => [
+				'nombre'      => 'Los avisos automáticos de la tienda van cifrados',
+				'problema'    => 'Hay avisos automáticos de la tienda que van sin cifrar',
+				'porque'      => 'Los webhooks mandan el pedido entero —con los datos de quien compró— cada vez '
+					. 'que pasa algo. Si la dirección es http y no https, eso viaja en claro.',
+				'comprobador' => 'tienda_webhooks',
+				'severidad'   => 'alta',
+				'arreglable'  => 0,
+				'aplica_tipo' => 'tienda,cotizador',
+				'orden'       => 310,
+			],
+			'tienda_limpieza_viva' => [
+				'nombre'      => 'La limpieza de datos personales funciona',
+				'problema'    => 'La limpieza de datos personales está configurada pero no corre',
+				'porque'      => 'WooCommerce puede borrar o anonimizar pedidos viejos solo. Dejarlo sin '
+					. 'configurar es una decisión legítima —hay deberes contables— pero configurarlo y que la '
+					. 'tarea esté muerta es peor que no tenerlo: nadie va a volver a mirarlo porque en la '
+					. 'pantalla dice que está puesto.',
+				'comprobador' => 'tienda_limpieza',
+				'severidad'   => 'media',
+				'arreglable'  => 0,
+				'aplica_tipo' => 'tienda',
+				'orden'       => 312,
+			],
+			'tienda_pasarela_en_vivo' => [
+				'nombre'      => 'Las pasarelas de pago están en modo real',
+				'problema'    => 'Hay una pasarela de pago en modo de pruebas',
+				'porque'      => 'Una pasarela que se quedó en pruebas acepta pedidos que nunca cobran. No es un '
+					. 'problema de seguridad: es dinero que no entró y que nadie notó hasta el cierre del mes.',
+				'comprobador' => 'tienda_modo',
+				'severidad'   => 'media',
+				'arreglable'  => 0,
+				'aplica_tipo' => 'tienda',
+				'orden'       => 314,
+			],
 			'formularios_honeypot' => [
 				'nombre'      => 'Los formularios tienen honeypot o captcha',
 				'problema'    => 'Los formularios no tienen honeypot ni captcha',
@@ -955,6 +1059,7 @@ class SWPK_Normas {
 				'severidad'   => $n['severidad'],
 				'arreglable'  => (int) $n['arreglable'],
 				'orden'       => (int) $n['orden'],
+				'aplica_tipo' => (string) ( $n['aplica_tipo'] ?? '' ),
 				'de_fabrica'  => 1,
 			];
 
@@ -1158,11 +1263,21 @@ class SWPK_Normas {
 	public static function medir( string $sitio_id, array $reporte, array $solo = [] ): array {
 		$sitio = '' !== $sitio_id ? SWPK_Inventario::obtener( $sitio_id ) : null;
 		$tag   = $sitio ? (string) $sitio->tag : SWPK_Etiquetas::SIN;
+		$tipo  = $sitio ? (string) ( $sitio->tipo_sitio ?: SWPK_Tipos::SIN_DATO ) : SWPK_Tipos::SIN_DATO;
 
 		$veredictos = [];
 
 		foreach ( self::activas() as $norma ) {
 			if ( $solo && ! in_array( (string) $norma->comprobador, $solo, true ) ) {
+				continue;
+			}
+
+			// Dos ejes distintos: la etiqueta es el contrato de mantenimiento
+			// y el tipo es qué hace el sitio. Un sitio puede ser auto_update Y
+			// tienda a la vez, así que se miran por separado.
+			if ( ! SWPK_Tipos::aplica( $norma, $tipo ) ) {
+				self::anotar( $sitio_id, (string) $norma->clave, self::NO_APLICA, 'Esta norma solo aplica a las tiendas, y este sitio no lo es.' );
+				$veredictos[ (string) $norma->clave ] = self::NO_APLICA;
 				continue;
 			}
 
@@ -2069,6 +2184,237 @@ class SWPK_Normas {
 		return $s['cabeceras']['xss_obsoleta']
 			? [ 'estado' => self::FALLA, 'detalle' => 'Manda una cabecera retirada. Los navegadores la ignoran, y el filtro que encendía llegó a abrir fallas propias.' ]
 			: [ 'estado' => self::CUMPLE, 'detalle' => 'No manda la cabecera retirada.' ];
+	}
+
+	// ─────────────────────────────────────────────────────────────────────────
+	// Solo para las tiendas
+	// ─────────────────────────────────────────────────────────────────────────
+
+	/**
+	 * @return array{0:array<string,mixed>,1:?array{estado:string,detalle:string}}
+	 */
+	private static function tienda( array $r, ?object $sitio ): array {
+		$t = (array) ( $r['tienda'] ?? [] );
+
+		if ( ! $t ) {
+			$t = SWPK_Tienda::de( (string) ( $sitio->sitio_id ?? '' ) );
+		}
+
+		if ( ! $t ) {
+			return [ [], [ 'estado' => self::SIN_DATO, 'detalle' => 'Hace falta el agente instalado para poder revisar la tienda desde dentro.' ] ];
+		}
+
+		if ( empty( $t['woo_activo'] ) ) {
+			return [ $t, [ 'estado' => self::NO_APLICA, 'detalle' => 'Este sitio no tiene WooCommerce activo.' ] ];
+		}
+
+		return [ $t, null ];
+	}
+
+	/** Las dos rutas de WooCommerce que no deben contestar sin credenciales. */
+	private static function comprobar_tienda_api( array $r, ?object $sitio ): array {
+		$s = SWPK_Sonda::de( (string) ( $sitio->sitio_id ?? '' ) );
+
+		if ( ! isset( $s['tienda_api'] ) ) {
+			return [ 'estado' => self::SIN_DATO, 'detalle' => 'Todavía no se ha sondeado este sitio desde fuera.' ];
+		}
+
+		$abiertas = (array) $s['tienda_api'];
+
+		return ! $abiertas
+			? [ 'estado' => self::CUMPLE, 'detalle' => 'Ni los pedidos ni los clientes se leen sin credenciales.' ]
+			: [
+				'estado'  => self::FALLA,
+				'detalle' => sprintf( 'Contesta sin pedir credenciales: %s. Ahí van los datos de quien compró.', implode( ', ', $abiertas ) ),
+			];
+	}
+
+	private static function comprobar_tienda_logs( array $r, ?object $sitio ): array {
+		$s        = SWPK_Sonda::de( (string) ( $sitio->sitio_id ?? '' ) );
+		$abierto  = $s['tienda_logs'] ?? null;
+
+		[ $t, $pero ] = self::tienda( $r, $sitio );
+
+		if ( true === $abierto ) {
+			return [ 'estado' => self::FALLA, 'detalle' => 'La carpeta de registros de la tienda se puede listar desde internet.' ];
+		}
+
+		if ( $pero ) {
+			return null === $abierto ? $pero : [ 'estado' => self::CUMPLE, 'detalle' => 'La carpeta de registros no se puede listar.' ];
+		}
+
+		// La otra mitad: sin la llave, el nombre de cada archivo de registro se
+		// puede deducir, y entonces da igual que la carpeta no se liste.
+		$c = (array) ( $r['fondo']['constantes'] ?? [] );
+
+		if ( isset( $c['llaves_faltan'] ) ) {
+			$sin_sal = in_array( 'AUTH_SALT', (array) $c['llaves_faltan'], true )
+				|| in_array( 'AUTH_SALT', (array) ( $c['llaves_ejemplo'] ?? [] ), true );
+
+			if ( $sin_sal ) {
+				return [
+					'estado'  => self::FALLA,
+					'detalle' => 'La llave con la que WooCommerce disimula el nombre de sus archivos de registro no está puesta, así que usa la palabra que trae su código público: los nombres se pueden deducir y los archivos bajar.',
+				];
+			}
+		}
+
+		return [ 'estado' => self::CUMPLE, 'detalle' => 'La carpeta no se lista y los nombres de los archivos no se pueden deducir.' ];
+	}
+
+	private static function comprobar_tienda_descargas( array $r, ?object $sitio ): array {
+		[ $t, $pero ] = self::tienda( $r, $sitio );
+		if ( $pero ) {
+			return $pero;
+		}
+
+		$d = (array) ( $t['descargas'] ?? [] );
+
+		if ( ! $d ) {
+			return [ 'estado' => self::SIN_DATO, 'detalle' => 'El agente no reportó cómo se entregan las descargas.' ];
+		}
+
+		$malos = [];
+
+		if ( 'redirect' === ( $d['metodo'] ?? '' ) ) {
+			$malos[] = 'el método de entrega es «redirección», que según la propia documentación de WooCommerce deja el archivo a la vista de cualquiera con la dirección';
+		}
+
+		if ( ! empty( $d['respaldo'] ) ) {
+			$malos[] = 'está activo el respaldo por redirección, que WooCommerce etiqueta como inseguro';
+		}
+
+		return $malos
+			? [ 'estado' => self::FALLA, 'detalle' => ucfirst( implode( '; ', $malos ) ) . '.' ]
+			: [ 'estado' => self::CUMPLE, 'detalle' => sprintf( 'Los archivos se entregan por «%s», que no expone la dirección real.', (string) ( $d['metodo'] ?? '' ) ) ];
+	}
+
+	private static function comprobar_tienda_invitados( array $r, ?object $sitio ): array {
+		[ $t, $pero ] = self::tienda( $r, $sitio );
+		if ( $pero ) {
+			return $pero;
+		}
+
+		$i = (array) ( $t['invitados'] ?? [] );
+
+		if ( ! $i ) {
+			return [ 'estado' => self::SIN_DATO, 'detalle' => 'El agente no reportó este dato.' ];
+		}
+
+		if ( empty( $i['sin_cuenta'] ) ) {
+			return [ 'estado' => self::CUMPLE, 'detalle' => 'No se puede comprar sin cuenta, así que no hay pedidos de invitado.' ];
+		}
+
+		if ( empty( $i['exige_correo'] ) ) {
+			return [ 'estado' => self::FALLA, 'detalle' => 'Algo desactivó la verificación por correo: cualquiera con el enlace de un pedido ve los datos de quien compró.' ];
+		}
+
+		$gracia = (int) ( $i['gracia'] ?? 0 );
+
+		if ( $gracia > DAY_IN_SECONDS ) {
+			return [ 'estado' => self::FALLA, 'detalle' => sprintf( 'Pide el correo, pero con un margen de %d horas en las que no lo pide. Lo normal son diez minutos.', (int) round( $gracia / HOUR_IN_SECONDS ) ) ];
+		}
+
+		return [ 'estado' => self::CUMPLE, 'detalle' => 'Pide el correo antes de enseñar un pedido de invitado.' ];
+	}
+
+	/**
+	 * Números de tarjeta guardados.
+	 *
+	 * El detalle dice el límite SIEMPRE, también cuando sale limpio. Un
+	 * resultado limpio significa «no se encontró ninguno donde se buscó, el día
+	 * que se buscó», y nunca «no se guardan datos de tarjeta». La diferencia
+	 * importa si alguien enseña esto como garantía.
+	 */
+	private static function comprobar_tienda_tarjetas( array $r, ?object $sitio ): array {
+		[ $t, $pero ] = self::tienda( $r, $sitio );
+		if ( $pero ) {
+			return $pero;
+		}
+
+		$c = (array) ( $t['tarjetas'] ?? [] );
+
+		if ( ! isset( $c['encontrados'] ) ) {
+			return [ 'estado' => self::SIN_DATO, 'detalle' => 'El agente no hizo esta búsqueda.' ];
+		}
+
+		$n = (int) $c['encontrados'];
+		$p = (int) ( $c['de_prueba'] ?? 0 );
+
+		if ( $n > 0 ) {
+			return [
+				'estado'  => self::FALLA,
+				'detalle' => sprintf(
+					'Se encontraron %d número(s) de tarjeta en texto plano, en: %s. No se guardó ninguno; solo la cuenta.',
+					$n,
+					implode( ', ', (array) ( $c['donde'] ?? [] ) )
+				),
+			];
+		}
+
+		$nota = $p > 0 ? sprintf( ' Sí hay %d número(s) de prueba, que no son de nadie pero conviene limpiar.', $p ) : '';
+
+		return [
+			'estado'  => self::CUMPLE,
+			'detalle' => 'No se encontró ninguno en las notas de pedido ni en el meta de pedido, hoy. Eso no es lo mismo que «no se guardan datos de tarjeta»: solo que no había donde se buscó.' . $nota,
+		];
+	}
+
+	private static function comprobar_tienda_webhooks( array $r, ?object $sitio ): array {
+		[ $t, $pero ] = self::tienda( $r, $sitio );
+		if ( $pero ) {
+			return $pero;
+		}
+
+		$n = $t['webhooks_sin_cifrar'] ?? null;
+
+		if ( null === $n ) {
+			return [ 'estado' => self::SIN_DATO, 'detalle' => 'El agente no reportó los webhooks.' ];
+		}
+
+		return 0 === (int) $n
+			? [ 'estado' => self::CUMPLE, 'detalle' => 'Ningún aviso automático sale sin cifrar.' ]
+			: [ 'estado' => self::FALLA, 'detalle' => sprintf( '%d aviso(s) automático(s) mandan el pedido entero por http, sin cifrar.', (int) $n ) ];
+	}
+
+	private static function comprobar_tienda_limpieza( array $r, ?object $sitio ): array {
+		[ $t, $pero ] = self::tienda( $r, $sitio );
+		if ( $pero ) {
+			return $pero;
+		}
+
+		$l = (array) ( $t['limpieza'] ?? [] );
+
+		if ( ! $l ) {
+			return [ 'estado' => self::SIN_DATO, 'detalle' => 'El agente no reportó este dato.' ];
+		}
+
+		// No configurarla es una decisión legítima: hay deberes contables que
+		// obligan a guardar. Lo que no se sostiene es tenerla puesta y muerta.
+		if ( empty( $l['configurada'] ) ) {
+			return [ 'estado' => self::CUMPLE, 'detalle' => 'No hay limpieza automática configurada. Es una decisión válida: hay deberes contables que obligan a guardar los pedidos.' ];
+		}
+
+		return empty( $l['cron_vivo'] )
+			? [ 'estado' => self::FALLA, 'detalle' => 'La limpieza está configurada pero su tarea programada no existe: no está corriendo, y en la pantalla de la tienda parece que sí.' ]
+			: [ 'estado' => self::CUMPLE, 'detalle' => 'La limpieza está configurada y su tarea está viva.' ];
+	}
+
+	private static function comprobar_tienda_modo( array $r, ?object $sitio ): array {
+		[ $t, $pero ] = self::tienda( $r, $sitio );
+		if ( $pero ) {
+			return $pero;
+		}
+
+		$prueba = (array) ( $t['en_prueba'] ?? [] );
+
+		if ( ! isset( $t['pasarelas_encendidas'] ) ) {
+			return [ 'estado' => self::SIN_DATO, 'detalle' => 'El agente no reportó las pasarelas.' ];
+		}
+
+		return ! $prueba
+			? [ 'estado' => self::CUMPLE, 'detalle' => sprintf( '%s en modo real.', ucfirst( SWPK_Vista::plural( count( (array) $t['pasarelas_encendidas'] ), 'pasarela encendida', 'pasarelas encendidas' ) ) ) ]
+			: [ 'estado' => self::FALLA, 'detalle' => sprintf( 'En modo de pruebas: %s. Acepta pedidos que no cobran.', implode( ', ', $prueba ) ) ];
 	}
 
 	// ─────────────────────────────────────────────────────────────────────────

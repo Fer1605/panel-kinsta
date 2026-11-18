@@ -33,7 +33,7 @@ defined( 'ABSPATH' ) || exit;
 
 class SWPK_Tablas {
 
-	public const VERSION = 11;
+	public const VERSION = 12;
 
 	public static function tabla( string $nombre ): string {
 		global $wpdb;
@@ -70,6 +70,8 @@ class SWPK_Tablas {
 				asesora_id BIGINT UNSIGNED NOT NULL DEFAULT 0,
 				contacto_cliente VARCHAR(191) NOT NULL DEFAULT '',
 				cobertura_agente TINYINT(1) NOT NULL DEFAULT 0,
+				tipo_sitio VARCHAR(16) NOT NULL DEFAULT 'sin_dato',
+				tipo_motivo VARCHAR(191) NOT NULL DEFAULT '',
 				tiene_2fa TINYINT(1) NOT NULL DEFAULT 0,
 				plugin_2fa VARCHAR(191) NOT NULL DEFAULT '',
 				estado_2fa VARCHAR(32) NOT NULL DEFAULT 'sin_2fa',
@@ -261,6 +263,7 @@ class SWPK_Tablas {
 				porque TEXT NULL,
 				comprobador VARCHAR(64) NOT NULL DEFAULT '',
 				aplica_a VARCHAR(191) NOT NULL DEFAULT '',
+				aplica_tipo VARCHAR(64) NOT NULL DEFAULT '',
 				severidad VARCHAR(16) NOT NULL DEFAULT 'media',
 				arreglable TINYINT(1) NOT NULL DEFAULT 0,
 				activa TINYINT(1) NOT NULL DEFAULT 1,

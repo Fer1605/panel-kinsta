@@ -509,6 +509,12 @@ class SWPK_Sonda {
 			$pon( 'ctrl:' . $ext, $base . self::ruta_de_control( $azar, $ext ) );
 		}
 
+		// Las de la tienda. Se piden siempre: cuestan tres peticiones y en un
+		// sitio sin WooCommerce contestan 404, que es la respuesta correcta.
+		$pon( 'wc_pedidos', $base . 'wp-json/wc/v3/orders' );
+		$pon( 'wc_clientes', $base . 'wp-json/wc/v3/customers' );
+		$pon( 'wc_logs', $base . 'wp-content/uploads/wc-logs/' );
+
 		foreach ( self::rutas() as $grupo => $def ) {
 			foreach ( $def['rutas'] as $i => $ruta ) {
 				$pon( 'ruta:' . $grupo . ':' . $i, $base . str_replace( '{dominio}', $plano, $ruta ) );
@@ -752,6 +758,8 @@ class SWPK_Sonda {
 		$uno['mixto']         = self::leer_mixto( $p['portada'] ?? [], $dominio );
 		$uno['certificado']   = self::leer_certificado( $p['portada'] ?? [] );
 		$uno['rutas']         = $uno['rutas_fiables'] ? self::leer_rutas( $p ) : [];
+		$uno['tienda_api']    = self::leer_wc_api( $p );
+		$uno['tienda_logs']   = self::leer_wc_logs( $p['wc_logs'] ?? [] );
 
 		return $uno;
 	}
@@ -920,6 +928,49 @@ class SWPK_Sonda {
 		}
 
 		return in_array( (int) $r['codigo'], [ 401, 403, 451 ], true );
+	}
+
+	/**
+	 * Las rutas de WooCommerce que entregan pedidos y clientes.
+	 *
+	 * Tienen que pedir credenciales. Un 401 o un 403 es lo correcto; un 404 es
+	 * que no hay WooCommerce. Lo que no puede pasar es un 200 con datos.
+	 *
+	 * @return array<int,string>
+	 */
+	private static function leer_wc_api( array $p ): array {
+		$abiertas = [];
+
+		foreach ( [ 'wc_pedidos' => 'los pedidos', 'wc_clientes' => 'los clientes' ] as $clave => $que ) {
+			$r = $p[ $clave ] ?? [];
+
+			if ( ! $r || $r['error'] || ! in_array( (int) $r['codigo'], [ 200, 206 ], true ) ) {
+				continue;
+			}
+
+			// Un 200 tiene que traer un arreglo JSON para ser un hallazgo: el
+			// 200 con la página de error del tema no entrega nada.
+			$datos = json_decode( (string) $r['cuerpo'], true );
+
+			if ( is_array( $datos ) && $datos && isset( $datos[0] ) ) {
+				$abiertas[] = $que;
+			}
+		}
+
+		return $abiertas;
+	}
+
+	/** ¿La carpeta de registros de WooCommerce lista lo que tiene dentro? */
+	private static function leer_wc_logs( array $r ): ?bool {
+		if ( ! $r || $r['error'] ) {
+			return null;
+		}
+
+		if ( ! in_array( (int) $r['codigo'], [ 200, 206 ], true ) ) {
+			return false;
+		}
+
+		return (bool) preg_match( '/<title>Index of |<h1>Index of |<pre><a href="\.\.\/">/i', (string) $r['cuerpo'] );
 	}
 
 	/**

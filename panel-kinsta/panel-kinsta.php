@@ -52,6 +52,8 @@ require_once SWPK_RUTA . 'includes/class-correos.php';
 require_once SWPK_RUTA . 'includes/class-usuarios.php';
 require_once SWPK_RUTA . 'includes/class-sonda.php';
 require_once SWPK_RUTA . 'includes/class-revision.php';
+require_once SWPK_RUTA . 'includes/class-tienda.php';
+require_once SWPK_RUTA . 'includes/class-tipos.php';
 require_once SWPK_RUTA . 'includes/class-normas.php';
 require_once SWPK_RUTA . 'includes/class-ordenes.php';
 require_once SWPK_RUTA . 'includes/class-receptor.php';

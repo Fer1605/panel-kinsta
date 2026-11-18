@@ -142,6 +142,9 @@ class SWA_Reporte {
 			// Configuración, permisos e integridad. Lento de calcular, así que
 			// va en caché de doce horas y solo se rehace en el reporte diario.
 			'fondo'         => SWA_Fondo::medir( ! $liviano ),
+			// Si este sitio vende de verdad, y cómo está montado el cobro.
+			// Vacío cuando no hay WooCommerce. Ver SWA_Tienda.
+			'tienda'        => SWA_Tienda::medir( ! $liviano ),
 			// Quién cerró el editor importa tanto como que esté cerrado: si lo
 			// cerró el agente, se abre de nuevo al desactivar el plugin.
 			'editor_codigo_por' => ( defined( 'DISALLOW_FILE_MODS' ) && DISALLOW_FILE_MODS ) || ( defined( 'DISALLOW_FILE_EDIT' ) && DISALLOW_FILE_EDIT && ! SWA_Ajustes::obtener( 'cerrar_editor' ) )

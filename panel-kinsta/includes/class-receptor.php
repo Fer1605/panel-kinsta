@@ -209,6 +209,13 @@ class SWPK_Receptor {
 
 		// Las normas se miden con el reporte en la mano, no después: lo que
 		// hace falta para medirlas es justo lo que acaba de llegar.
+		// Lo de la tienda se guarda ANTES de medir, porque de ahí sale el tipo
+		// de sitio y el tipo decide qué normas aplican.
+		if ( ! $liviano && '' !== $sitio_id && ! empty( $datos['tienda'] ) ) {
+			SWPK_Tienda::guardar( $sitio_id, (array) $datos['tienda'] );
+			SWPK_Tipos::clasificar( $sitio_id );
+		}
+
 		$normas = ( ! $liviano && '' !== $sitio_id ) ? SWPK_Normas::medir( $sitio_id, $datos ) : [];
 
 		// Un agente que no se puede emparejar con ningún sitio del inventario

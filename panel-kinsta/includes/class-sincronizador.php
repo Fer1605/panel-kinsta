@@ -112,6 +112,12 @@ class SWPK_Sincronizador {
 		// «en camino» algo que ya no va a llegar nunca.
 		$resumen['ordenes_caducadas'] = SWPK_Ordenes::caducar();
 
+		// Con la foto de plugins recién guardada se puede decir qué es cada
+		// sitio: tienda, cotizador o informativo. Sin agente la respuesta es
+		// parcial —no se ven las pasarelas del núcleo de WooCommerce— y por eso
+		// cada sitio guarda también POR QUÉ quedó donde quedó.
+		$resumen['tipos'] = SWPK_Tipos::clasificar_todos();
+
 		// La sonda de configuración NO va aquí: corre sola a las 5:30, porque
 		// son unos ocho minutos y juntarla con esto daría una tarea lo bastante
 		// larga como para que el límite de tiempo de PHP mate las dos. Ver
