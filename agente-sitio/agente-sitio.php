@@ -41,7 +41,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'SWA_VERSION', '0.3.0' );
+define( 'SWA_VERSION', '0.4.0' );
 define( 'SWA_RUTA', plugin_dir_path( __FILE__ ) );
 define( 'SWA_ARCHIVO', __FILE__ );
 
@@ -50,6 +50,7 @@ require_once SWA_RUTA . 'includes/class-firma.php';
 require_once SWA_RUTA . 'includes/class-correo.php';
 require_once SWA_RUTA . 'includes/class-normas.php';
 require_once SWA_RUTA . 'includes/class-formularios.php';
+require_once SWA_RUTA . 'includes/class-fondo.php';
 require_once SWA_RUTA . 'includes/class-ordenes.php';
 require_once SWA_RUTA . 'includes/class-reporte.php';
 require_once SWA_RUTA . 'includes/class-vigilante.php';

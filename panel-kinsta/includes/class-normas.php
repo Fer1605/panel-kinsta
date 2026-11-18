@@ -58,7 +58,7 @@ class SWPK_Normas {
 	public const OPCION_SEMBRADO = 'swpk_normas_sembradas';
 
 	/** Cada vez que cambie el catálogo de fábrica, este número sube. */
-	public const VERSION_CATALOGO = 7;
+	public const VERSION_CATALOGO = 8;
 
 	/**
 	 * Los comprobadores que contesta la sonda del panel, no el agente.
@@ -707,6 +707,196 @@ class SWPK_Normas {
 				'severidad'   => 'alta',
 				'arreglable'  => 0,
 				'orden'       => 24,
+			],
+			// ── Lo que solo se ve estando dentro ─────────────────────────
+			//
+			// La investigación sacó cuarenta y cinco comprobaciones posibles
+			// aquí: dieciocho constantes de wp-config, nueve de usuarios,
+			// catorce de integridad y cuatro de registro. Están todas, pero
+			// agrupadas en dieciséis normas que significan algo. Cuarenta y
+			// cinco filas por sitio, en 108 sitios, no las mira nadie — y una
+			// norma que nadie mira es peor que ninguna, porque da la impresión
+			// de que se está revisando. Cuando una falla, el detalle dice cuál
+			// de las comprobaciones de dentro fue.
+			'llaves_unicas' => [
+				'nombre'      => 'Las llaves de sesión son propias de este sitio',
+				'problema'    => 'Las llaves de sesión faltan, son las de ejemplo o se repiten en otro sitio',
+				'porque'      => 'Son las ocho frases con las que WordPress firma las sesiones. Si son las que '
+					. 'vienen de ejemplo, cualquiera que sepa eso puede fabricarse una sesión de administrador. '
+					. 'Y si dos sitios nuestros tienen las mismas, una sesión robada en uno sirve en el otro — '
+					. 'que es lo que pasa cuando un sitio se clona de otro para arrancar rápido.',
+				'comprobador' => 'fondo_llaves',
+				'severidad'   => 'alta',
+				'arreglable'  => 0,
+				'orden'       => 30,
+			],
+			'modo_depuracion' => [
+				'nombre'      => 'El modo de depuración está apagado',
+				'problema'    => 'El modo de depuración está encendido',
+				'porque'      => 'Con esto encendido, los errores de PHP salen impresos en la página o se '
+					. 'escriben en un archivo dentro de la carpeta pública. En los dos casos se publican rutas '
+					. 'del servidor, consultas a la base de datos y a veces llaves. Se enciende para arreglar '
+					. 'algo un día y se olvida.',
+				'comprobador' => 'fondo_depuracion',
+				'severidad'   => 'alta',
+				'arreglable'  => 0,
+				'orden'       => 32,
+			],
+			'puertas_de_mantenimiento' => [
+				'nombre'      => 'Las puertas de mantenimiento están cerradas',
+				'problema'    => 'Hay una puerta de mantenimiento abierta',
+				'porque'      => 'Dos constantes de wp-config.php abren cosas que no deberían estar abiertas '
+					. 'nunca en un sitio vivo: una deja usar la página de reparación de la base de datos SIN '
+					. 'iniciar sesión, y la otra apaga el filtro que impide subir cualquier tipo de archivo.',
+				'comprobador' => 'fondo_puertas',
+				'severidad'   => 'alta',
+				'arreglable'  => 0,
+				'orden'       => 34,
+			],
+			'actualizaciones_automaticas' => [
+				'nombre'      => 'Las actualizaciones automáticas del núcleo están encendidas',
+				'problema'    => 'Las actualizaciones automáticas del núcleo están apagadas',
+				'porque'      => 'Las de seguridad de WordPress llegan solas si nadie las apaga. Apagarlas deja '
+					. 'el sitio esperando a que una persona se acuerde, y es el camino más corto a una versión '
+					. 'con una falla publicada.',
+				'comprobador' => 'fondo_actualizaciones',
+				'severidad'   => 'alta',
+				'arreglable'  => 0,
+				'orden'       => 36,
+			],
+			'admin_por_https' => [
+				'nombre'      => 'El escritorio se sirve solo por HTTPS',
+				'problema'    => 'El escritorio puede servirse sin cifrar',
+				'porque'      => 'Es una línea en wp-config.php que obliga a que la administración vaya cifrada '
+					. 'siempre. Sin ella, en una red cualquiera la contraseña de un administrador puede viajar '
+					. 'en claro.',
+				'comprobador' => 'fondo_admin_https',
+				'severidad'   => 'alta',
+				'arreglable'  => 0,
+				'orden'       => 38,
+			],
+			'credenciales_en_config' => [
+				'nombre'      => 'No hay contraseñas guardadas en wp-config.php',
+				'problema'    => 'Hay contraseñas guardadas en wp-config.php',
+				'porque'      => 'Las credenciales de FTP que WordPress deja guardar ahí quedan en texto plano '
+					. 'en un archivo que, si alguna vez se copia mal o se respalda a la carpeta pública, las '
+					. 'entrega enteras.',
+				'comprobador' => 'fondo_credenciales',
+				'severidad'   => 'alta',
+				'arreglable'  => 0,
+				'orden'       => 40,
+			],
+			'roles_sin_permisos_de_mas' => [
+				'nombre'      => 'Ningún rol tiene permisos que no le tocan',
+				'problema'    => 'Hay un rol con permisos que no le tocan',
+				'porque'      => 'Un rol de editor o de autor al que alguien le agregó «instalar plugins» o '
+					. '«editar usuarios» es un administrador con otro nombre. Suele pasarse para resolver algo '
+					. 'puntual y quedarse puesto para siempre.',
+				'comprobador' => 'fondo_permisos',
+				'severidad'   => 'alta',
+				'arreglable'  => 0,
+				'orden'       => 42,
+			],
+			'rol_por_omision' => [
+				'nombre'      => 'Quien se registre entra con el rol más bajo',
+				'problema'    => 'Quien se registre entra con un rol con privilegios',
+				'porque'      => 'Si el registro está abierto y el rol por omisión no es el más bajo, cualquiera '
+					. 'que se cree una cuenta entra con permisos. Las dos cosas por separado se pueden defender; '
+					. 'juntas, no.',
+				'comprobador' => 'fondo_rol_omision',
+				'severidad'   => 'alta',
+				'arreglable'  => 0,
+				'orden'       => 44,
+			],
+			'administradores_contados' => [
+				'nombre'      => 'La cantidad de administradores está controlada',
+				'problema'    => 'Hay más administradores de los esperados',
+				'porque'      => 'Cada administrador puede cambiarlo todo y apagar lo que sea. No es que estén '
+					. 'mal: es que hay que saber cuántos son y que cada uno siga haciendo falta.',
+				'comprobador' => 'fondo_administradores',
+				'severidad'   => 'media',
+				'arreglable'  => 0,
+				'orden'       => 46,
+			],
+			'claves_de_aplicacion' => [
+				'nombre'      => 'Las contraseñas de aplicación están contadas',
+				'problema'    => 'Hay contraseñas de aplicación sin revisar',
+				'porque'      => 'Son llaves que entran al sitio por la API SIN pasar por la verificación en dos '
+					. 'pasos. No son malas —el propio panel usa una— pero una que quedó de un trabajo viejo es '
+					. 'una puerta abierta que nadie vigila.',
+				'comprobador' => 'fondo_claves_app',
+				'severidad'   => 'media',
+				'arreglable'  => 0,
+				'orden'       => 48,
+			],
+			'nucleo_sin_tocar' => [
+				'nombre'      => 'Los archivos de WordPress no están modificados',
+				'problema'    => 'Hay archivos de WordPress modificados o faltantes',
+				'porque'      => 'Se comparan los archivos del núcleo contra las sumas oficiales de WordPress.org, '
+					. 'una por una. Un archivo del núcleo cambiado no lo cambió una actualización: lo cambió '
+					. 'alguien. Es la respuesta al caso de un sitio que el hosting mandó revisar por infección y '
+					. 'donde ellos no encontraron nada.',
+				'comprobador' => 'fondo_nucleo',
+				'severidad'   => 'alta',
+				'arreglable'  => 0,
+				'orden'       => 50,
+			],
+			'plugins_cerrados' => [
+				'nombre'      => 'Ningún plugin fue cerrado por WordPress.org',
+				'problema'    => 'Hay un plugin que WordPress.org cerró',
+				'porque'      => 'Cuando WordPress.org cierra un plugin por un problema de seguridad, el sitio '
+					. 'NO se entera: en el escritorio sigue apareciendo «al día» y Site Health no dice nada. Es '
+					. 'un hueco que no ve nadie salvo que se pregunte expresamente, y eso es lo que hace esta '
+					. 'norma.',
+				'comprobador' => 'fondo_cerrados',
+				'severidad'   => 'alta',
+				'arreglable'  => 0,
+				'orden'       => 52,
+			],
+			'plugins_abandonados' => [
+				'nombre'      => 'Ningún plugin lleva años sin actualizarse',
+				'problema'    => 'Hay plugins que llevan años sin actualizarse',
+				'porque'      => 'Un plugin sin una versión en dos años no es necesariamente inseguro, pero sí es '
+					. 'uno al que nadie le va a arreglar la próxima falla. El umbral de dos años es criterio '
+					. 'nuestro: Patchstack se niega a dar un número y dice que un proyecto con comunidad activa '
+					. 'y sin versión en un año puede estar bien.',
+				'comprobador' => 'fondo_abandonados',
+				'severidad'   => 'alta',
+				'arreglable'  => 0,
+				'orden'       => 54,
+			],
+			'drop_ins_esperados' => [
+				'nombre'      => 'No hay archivos que se cargan antes que WordPress',
+				'problema'    => 'Hay archivos que se cargan antes que WordPress',
+				'porque'      => 'WordPress carga un puñado de archivos especiales antes que nada, si están. '
+					. 'Algunos los pone la caché y son normales; otros no los puso nadie que debiera. Como '
+					. 'corren antes que todo lo demás, nada de lo que venga después los puede frenar.',
+				'comprobador' => 'fondo_dropins',
+				'severidad'   => 'alta',
+				'arreglable'  => 0,
+				'orden'       => 56,
+			],
+			'tareas_programadas' => [
+				'nombre'      => 'No hay tareas programadas sin dueño',
+				'problema'    => 'Hay tareas programadas sin dueño',
+				'porque'      => 'Una tarea cuyo gancho no reconoce ningún plugin instalado casi siempre quedó '
+					. 'de uno que se borró, y es inofensiva. Pero es también la forma más discreta de dejar algo '
+					. 'corriendo en un sitio, así que conviene que una persona las mire.',
+				'comprobador' => 'fondo_tareas',
+				'severidad'   => 'media',
+				'arreglable'  => 0,
+				'orden'       => 58,
+			],
+			'registro_de_accesos' => [
+				'nombre'      => 'El sitio guarda quién entró y qué tocó',
+				'problema'    => 'El sitio no guarda quién entró y qué tocó',
+				'porque'      => 'El registro de la plataforma y el del sitio no son lo mismo: el de Kinsta no '
+					. 've que alguien activó un plugin desde el escritorio. Sin un registro dentro del sitio, '
+					. 'cuando pase algo no va a haber forma de saber quién ni cuándo.',
+				'comprobador' => 'fondo_registro',
+				'severidad'   => 'media',
+				'arreglable'  => 0,
+				'orden'       => 60,
 			],
 			'formularios_honeypot' => [
 				'nombre'      => 'Los formularios tienen honeypot o captcha',
@@ -1879,6 +2069,405 @@ class SWPK_Normas {
 		return $s['cabeceras']['xss_obsoleta']
 			? [ 'estado' => self::FALLA, 'detalle' => 'Manda una cabecera retirada. Los navegadores la ignoran, y el filtro que encendía llegó a abrir fallas propias.' ]
 			: [ 'estado' => self::CUMPLE, 'detalle' => 'No manda la cabecera retirada.' ];
+	}
+
+	// ─────────────────────────────────────────────────────────────────────────
+	// Configuración, permisos e integridad: lo que solo se ve desde dentro
+	// ─────────────────────────────────────────────────────────────────────────
+
+	/** Dónde el panel recuerda la huella de las llaves de cada sitio. */
+	private const OPCION_HUELLAS = 'swpk_huellas_de_llaves';
+
+	/**
+	 * @return array{0:array<string,mixed>,1:?array{estado:string,detalle:string}}
+	 */
+	private static function fondo( array $r, string $parte ): array {
+		$f = (array) ( $r['fondo'] ?? [] );
+
+		if ( ! $f ) {
+			return [ [], [ 'estado' => self::SIN_DATO, 'detalle' => 'Hace falta el agente instalado en el sitio para poder revisar esto desde dentro.' ] ];
+		}
+
+		if ( ! isset( $f[ $parte ] ) ) {
+			return [ $f, [ 'estado' => self::SIN_DATO, 'detalle' => 'Hace falta una versión del agente que reporte este dato.' ] ];
+		}
+
+		return [ (array) $f[ $parte ], null ];
+	}
+
+	/**
+	 * Las ocho llaves de sesión.
+	 *
+	 * Tres cosas distintas, y la tercera es la que no se puede ver mirando un
+	 * solo sitio: que dos sitios nuestros tengan las mismas. El agente manda un
+	 * hash de las ocho juntas —nunca las llaves— y el panel los compara entre
+	 * sí. Es como se descubre una plantilla clonada.
+	 */
+	private static function comprobar_fondo_llaves( array $r, ?object $sitio ): array {
+		[ $c, $pero ] = self::fondo( $r, 'constantes' );
+		if ( $pero ) {
+			return $pero;
+		}
+
+		$faltan  = (array) ( $c['llaves_faltan'] ?? [] );
+		$ejemplo = (array) ( $c['llaves_ejemplo'] ?? [] );
+		$huella  = (string) ( $c['llaves_huella'] ?? '' );
+		$yo      = (string) ( $sitio->sitio_id ?? '' );
+
+		if ( $faltan ) {
+			return [ 'estado' => self::FALLA, 'detalle' => sprintf( 'Faltan %d de las 8 llaves de sesión.', count( $faltan ) ) ];
+		}
+
+		if ( $ejemplo ) {
+			return [
+				'estado'  => self::FALLA,
+				'detalle' => sprintf( '%d de las 8 llaves siguen siendo las de ejemplo que trae WordPress. Están publicadas: cualquiera que lo sepa puede fabricarse una sesión.', count( $ejemplo ) ),
+			];
+		}
+
+		// Guardar la huella y mirar si alguien más tiene la misma.
+		$repetido = '';
+
+		if ( '' !== $huella && '' !== $yo ) {
+			$todas = (array) get_option( self::OPCION_HUELLAS, [] );
+
+			foreach ( $todas as $otro_id => $otra ) {
+				if ( (string) $otro_id !== $yo && (string) $otra === $huella ) {
+					$otro     = SWPK_Inventario::obtener( (string) $otro_id );
+					$repetido = (string) ( $otro->nombre_visible ?? $otro_id );
+					break;
+				}
+			}
+
+			$todas[ $yo ] = $huella;
+			update_option( self::OPCION_HUELLAS, $todas, false );
+		}
+
+		if ( '' !== $repetido ) {
+			return [
+				'estado'  => self::FALLA,
+				'detalle' => sprintf( 'Las ocho llaves son idénticas a las de «%s». Una sesión robada en uno de los dos sirve en el otro. Pasa cuando un sitio se clona de otro para arrancar.', $repetido ),
+			];
+		}
+
+		return [ 'estado' => self::CUMPLE, 'detalle' => 'Las ocho llaves están puestas, no son las de ejemplo y no se repiten en ningún otro sitio de la cartera.' ];
+	}
+
+	private static function comprobar_fondo_depuracion( array $r, ?object $sitio ): array {
+		[ $c, $pero ] = self::fondo( $r, 'constantes' );
+		if ( $pero ) {
+			return $pero;
+		}
+
+		$d     = (array) ( $c['depuracion'] ?? [] );
+		$malos = [];
+
+		// Lo que de verdad importa es si un error sale a la vista o queda
+		// escrito en la carpeta pública. WP_DEBUG encendido con la pantalla
+		// apagada y el registro fuera de la raíz es defendible, así que no se
+		// marca por sí solo.
+		if ( ! empty( $d['wp_debug'] ) && ! empty( $d['wp_debug_display'] ) ) {
+			$malos[] = 'los errores se imprimen en la página';
+		}
+
+		if ( ! empty( $d['display_errors'] ) ) {
+			$malos[] = 'PHP tiene activado mostrar errores';
+		}
+
+		if ( ! empty( $d['wp_debug'] ) && ! empty( $d['wp_debug_log'] ) ) {
+			$malos[] = 'los errores se escriben en un archivo dentro de la carpeta pública';
+		}
+
+		if ( ! empty( $d['entorno'] ) && 'production' !== $d['entorno'] && 'local' !== $d['entorno'] ) {
+			$malos[] = sprintf( 'el sitio se declara de tipo «%s»', $d['entorno'] );
+		}
+
+		return $malos
+			? [ 'estado' => self::FALLA, 'detalle' => ucfirst( implode( '; ', $malos ) ) . '.' ]
+			: [ 'estado' => self::CUMPLE, 'detalle' => 'Ningún error de PHP sale a la vista ni queda escrito donde se pueda leer.' ];
+	}
+
+	private static function comprobar_fondo_puertas( array $r, ?object $sitio ): array {
+		[ $c, $pero ] = self::fondo( $r, 'constantes' );
+		if ( $pero ) {
+			return $pero;
+		}
+
+		$p     = (array) ( $c['puertas'] ?? [] );
+		$malos = [];
+
+		if ( ! empty( $p['reparacion'] ) ) {
+			$malos[] = 'la página de reparación de la base de datos se puede usar SIN iniciar sesión';
+		}
+
+		if ( ! empty( $p['subidas_sin_filtro'] ) ) {
+			$malos[] = 'está apagado el filtro que impide subir cualquier tipo de archivo';
+		}
+
+		return $malos
+			? [ 'estado' => self::FALLA, 'detalle' => ucfirst( implode( '; ', $malos ) ) . '.' ]
+			: [ 'estado' => self::CUMPLE, 'detalle' => 'Las dos puertas de mantenimiento están cerradas.' ];
+	}
+
+	private static function comprobar_fondo_actualizaciones( array $r, ?object $sitio ): array {
+		[ $c, $pero ] = self::fondo( $r, 'constantes' );
+		if ( $pero ) {
+			return $pero;
+		}
+
+		$a = (array) ( $c['actualizaciones'] ?? [] );
+
+		if ( ! empty( $a['apagadas'] ) ) {
+			return [ 'estado' => self::FALLA, 'detalle' => 'Las actualizaciones automáticas están apagadas del todo en wp-config.php.' ];
+		}
+
+		if ( false === ( $a['nucleo'] ?? 'minor' ) ) {
+			return [ 'estado' => self::FALLA, 'detalle' => 'Las actualizaciones automáticas del núcleo están apagadas.' ];
+		}
+
+		// Esta constante no es un fallo por sí misma, pero pelea con lo que
+		// acabamos de aprobar: apaga instalar y actualizar desde el escritorio.
+		if ( ! empty( $a['sin_tocar'] ) ) {
+			return [
+				'estado'  => self::CUMPLE,
+				'detalle' => 'Las del núcleo están encendidas. Ojo: también está puesta la constante que bloquea instalar y actualizar desde el escritorio, así que los plugins hay que actualizarlos por otra vía.',
+			];
+		}
+
+		return [
+			'estado'  => self::CUMPLE,
+			'detalle' => sprintf( 'Encendidas (%s).', is_bool( $a['nucleo'] ?? null ) ? 'todas' : (string) ( $a['nucleo'] ?? 'minor' ) ),
+		];
+	}
+
+	private static function comprobar_fondo_admin_https( array $r, ?object $sitio ): array {
+		[ $c, $pero ] = self::fondo( $r, 'constantes' );
+		if ( $pero ) {
+			return $pero;
+		}
+
+		return ! empty( $c['admin_https'] )
+			? [ 'estado' => self::CUMPLE, 'detalle' => 'El escritorio está obligado a ir por HTTPS.' ]
+			: [ 'estado' => self::FALLA, 'detalle' => 'Falta la línea de wp-config.php que obliga al escritorio a ir cifrado.' ];
+	}
+
+	private static function comprobar_fondo_credenciales( array $r, ?object $sitio ): array {
+		[ $c, $pero ] = self::fondo( $r, 'constantes' );
+		if ( $pero ) {
+			return $pero;
+		}
+
+		$cr = (array) ( $c['credenciales'] ?? [] );
+
+		return ! $cr
+			? [ 'estado' => self::CUMPLE, 'detalle' => 'No hay credenciales guardadas en wp-config.php.' ]
+			: [ 'estado' => self::FALLA, 'detalle' => sprintf( 'Hay %d credencial(es) de FTP guardadas en texto plano en wp-config.php.', count( $cr ) ) ];
+	}
+
+	private static function comprobar_fondo_permisos( array $r, ?object $sitio ): array {
+		[ $u, $pero ] = self::fondo( $r, 'usuarios' );
+		if ( $pero ) {
+			return $pero;
+		}
+
+		$de_mas = (array) ( $u['permisos_de_mas'] ?? [] );
+
+		return ! $de_mas
+			? [ 'estado' => self::CUMPLE, 'detalle' => 'Ningún rol por debajo de administrador tiene permisos de más.' ]
+			: [
+				'estado'  => self::FALLA,
+				'detalle' => sprintf( 'Permisos que no le tocan a ese rol: %s.', implode( ', ', array_slice( $de_mas, 0, 6 ) ) ),
+			];
+	}
+
+	private static function comprobar_fondo_rol_omision( array $r, ?object $sitio ): array {
+		[ $u, $pero ] = self::fondo( $r, 'usuarios' );
+		if ( $pero ) {
+			return $pero;
+		}
+
+		$rol    = (string) ( $u['rol_por_omision'] ?? 'subscriber' );
+		$abierto = ! empty( $r['normas']['registro_abierto'] );
+
+		if ( 'subscriber' === $rol ) {
+			return [ 'estado' => self::CUMPLE, 'detalle' => 'Quien se registre entra como suscriptor, que es el rol más bajo.' ];
+		}
+
+		// Un rol alto con el registro cerrado no es un agujero: nadie se puede
+		// registrar. Se dice, pero no se marca como incumplimiento.
+		if ( ! $abierto ) {
+			return [
+				'estado'  => self::CUMPLE,
+				'detalle' => sprintf( 'El rol por omisión es «%s», que no es el más bajo — pero el registro está cerrado, así que nadie entra por ahí.', $rol ),
+			];
+		}
+
+		return [
+			'estado'  => self::FALLA,
+			'detalle' => sprintf( 'El registro está abierto Y quien se registre entra como «%s». Las dos cosas juntas dejan que cualquiera se cree una cuenta con permisos.', $rol ),
+		];
+	}
+
+	private static function comprobar_fondo_administradores( array $r, ?object $sitio ): array {
+		[ $u, $pero ] = self::fondo( $r, 'usuarios' );
+		if ( $pero ) {
+			return $pero;
+		}
+
+		$n    = (int) ( $u['administradores'] ?? 0 );
+		$tope = (int) apply_filters( 'swpk_tope_administradores', 5 );
+
+		return $n <= $tope
+			? [ 'estado' => self::CUMPLE, 'detalle' => sprintf( '%d administrador(es).', $n ) ]
+			: [ 'estado' => self::FALLA, 'detalle' => sprintf( '%d administradores, y lo acordado son %d o menos. Cada uno puede cambiarlo todo.', $n, $tope ) ];
+	}
+
+	private static function comprobar_fondo_claves_app( array $r, ?object $sitio ): array {
+		[ $u, $pero ] = self::fondo( $r, 'usuarios' );
+		if ( $pero ) {
+			return $pero;
+		}
+
+		$n = (int) ( $u['claves_de_app'] ?? 0 );
+
+		return 0 === $n
+			? [ 'estado' => self::CUMPLE, 'detalle' => 'No hay ninguna contraseña de aplicación.' ]
+			: [
+				'estado'  => self::FALLA,
+				'detalle' => sprintf( 'Hay %d contraseña(s) de aplicación. Entran por la API sin pasar por la verificación en dos pasos; hay que confirmar que todas siguen haciendo falta.', $n ),
+			];
+	}
+
+	private static function comprobar_fondo_nucleo( array $r, ?object $sitio ): array {
+		[ $i, $pero ] = self::fondo( $r, 'integridad' );
+		if ( $pero ) {
+			return $pero;
+		}
+
+		$n = (array) ( $i['nucleo'] ?? [] );
+
+		if ( null === ( $n['ok'] ?? null ) ) {
+			return [ 'estado' => self::SIN_DATO, 'detalle' => (string) ( $n['motivo'] ?? 'No se pudieron comparar los archivos del núcleo.' ) ];
+		}
+
+		$cuantos = (int) ( $n['cuantos'] ?? 0 );
+
+		if ( 0 === $cuantos ) {
+			return [ 'estado' => self::CUMPLE, 'detalle' => sprintf( 'Los %d archivos del núcleo coinciden con los oficiales de WordPress %s.', (int) ( $n['revisados'] ?? 0 ), (string) ( $n['version'] ?? '' ) ) ];
+		}
+
+		$lista = array_merge( (array) ( $n['cambiados'] ?? [] ), (array) ( $n['faltantes'] ?? [] ) );
+
+		return [
+			'estado'  => self::FALLA,
+			'detalle' => sprintf(
+				'%d archivo(s) del núcleo no coinciden con los oficiales: %s%s. Una actualización no los cambia; los cambió alguien.',
+				$cuantos,
+				implode( ', ', array_slice( $lista, 0, 5 ) ),
+				count( $lista ) > 5 ? '…' : ''
+			),
+		];
+	}
+
+	private static function comprobar_fondo_cerrados( array $r, ?object $sitio ): array {
+		[ $i, $pero ] = self::fondo( $r, 'integridad' );
+		if ( $pero ) {
+			return $pero;
+		}
+
+		$c      = (array) ( $i['cerrados'] ?? [] );
+		$malos  = (array) ( $c['cerrados'] ?? [] );
+
+		return ! $malos
+			? [ 'estado' => self::CUMPLE, 'detalle' => sprintf( 'Ninguno de los %d plugins revisados está cerrado en el repositorio.', (int) ( $c['revisados'] ?? 0 ) ) ]
+			: [
+				'estado'  => self::FALLA,
+				'detalle' => sprintf( 'WordPress.org cerró %s. En el escritorio del sitio siguen apareciendo «al día».', implode( ', ', $malos ) ),
+			];
+	}
+
+	private static function comprobar_fondo_abandonados( array $r, ?object $sitio ): array {
+		[ $i, $pero ] = self::fondo( $r, 'integridad' );
+		if ( $pero ) {
+			return $pero;
+		}
+
+		$c      = (array) ( $i['cerrados'] ?? [] );
+		$viejos = (array) ( $c['viejos'] ?? [] );
+		$sin    = (int) ( $c['sin_repo'] ?? 0 );
+
+		$nota = $sin > 0
+			? sprintf( ' (%d de pago o a medida, que no están en el repositorio y no se pueden revisar así.)', $sin )
+			: '';
+
+		return ! $viejos
+			? [ 'estado' => self::CUMPLE, 'detalle' => 'Ningún plugin lleva más de dos años sin una versión nueva.' . $nota ]
+			: [
+				'estado'  => self::FALLA,
+				'detalle' => sprintf( 'Más de dos años sin actualizarse: %s.%s', implode( ', ', array_slice( $viejos, 0, 6 ) ), $nota ),
+			];
+	}
+
+	private static function comprobar_fondo_dropins( array $r, ?object $sitio ): array {
+		[ $i, $pero ] = self::fondo( $r, 'integridad' );
+		if ( $pero ) {
+			return $pero;
+		}
+
+		$hay = (array) ( $i['drop_ins'] ?? [] );
+
+		// Los de caché los pone el hosting o un plugin de caché y son
+		// normales. Marcarlos daría una alarma en casi todos los sitios.
+		$normales = [ 'advanced-cache.php', 'object-cache.php', 'db.php' ];
+		$raros    = array_values( array_diff( $hay, $normales ) );
+
+		if ( ! $raros ) {
+			return [
+				'estado'  => self::CUMPLE,
+				'detalle' => $hay
+					? sprintf( 'Solo los de caché, que son normales: %s.', implode( ', ', $hay ) )
+					: 'No hay ninguno.',
+			];
+		}
+
+		return [
+			'estado'  => self::FALLA,
+			'detalle' => sprintf( 'Hay archivos que se cargan antes que WordPress y no son de caché: %s.', implode( ', ', $raros ) ),
+		];
+	}
+
+	private static function comprobar_fondo_tareas( array $r, ?object $sitio ): array {
+		[ $i, $pero ] = self::fondo( $r, 'integridad' );
+		if ( $pero ) {
+			return $pero;
+		}
+
+		$t = (array) ( $i['tareas'] ?? [] );
+		$n = (int) ( $t['cuantas'] ?? 0 );
+
+		return 0 === $n
+			? [ 'estado' => self::CUMPLE, 'detalle' => sprintf( 'Las %d tareas programadas tienen dueño.', (int) ( $t['total'] ?? 0 ) ) ]
+			: [
+				'estado'  => self::FALLA,
+				'detalle' => sprintf(
+					'%d tarea(s) programada(s) cuyo gancho no reconoce ningún plugin instalado: %s. Casi siempre quedaron de un plugin que se borró, pero conviene mirarlas.',
+					$n,
+					implode( ', ', (array) ( $t['huerfanas'] ?? [] ) )
+				),
+			];
+	}
+
+	private static function comprobar_fondo_registro( array $r, ?object $sitio ): array {
+		[ $g, $pero ] = self::fondo( $r, 'registro' );
+		if ( $pero ) {
+			return $pero;
+		}
+
+		$hay = (array) ( $g['plugins'] ?? [] );
+
+		return $hay
+			? [ 'estado' => self::CUMPLE, 'detalle' => sprintf( 'Guarda el rastro con %s.', implode( ', ', $hay ) ) ]
+			: [ 'estado' => self::FALLA, 'detalle' => 'No hay nada instalado que guarde quién entró y qué tocó. El registro de la plataforma no ve lo que pasa dentro de WordPress.' ];
 	}
 
 	// ─────────────────────────────────────────────────────────────────────────

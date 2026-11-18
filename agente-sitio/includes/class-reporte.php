@@ -139,6 +139,9 @@ class SWA_Reporte {
 			// sí/no: el nombre de un archivo subido no sale del sitio. Ver
 			// SWA_Formularios.
 			'formularios'   => SWA_Formularios::medir( ! $liviano ),
+			// Configuración, permisos e integridad. Lento de calcular, así que
+			// va en caché de doce horas y solo se rehace en el reporte diario.
+			'fondo'         => SWA_Fondo::medir( ! $liviano ),
 			// Quién cerró el editor importa tanto como que esté cerrado: si lo
 			// cerró el agente, se abre de nuevo al desactivar el plugin.
 			'editor_codigo_por' => ( defined( 'DISALLOW_FILE_MODS' ) && DISALLOW_FILE_MODS ) || ( defined( 'DISALLOW_FILE_EDIT' ) && DISALLOW_FILE_EDIT && ! SWA_Ajustes::obtener( 'cerrar_editor' ) )
