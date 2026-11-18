@@ -51,6 +51,7 @@ require_once SWPK_RUTA . 'includes/class-plantillas.php';
 require_once SWPK_RUTA . 'includes/class-correos.php';
 require_once SWPK_RUTA . 'includes/class-usuarios.php';
 require_once SWPK_RUTA . 'includes/class-sonda.php';
+require_once SWPK_RUTA . 'includes/class-revision.php';
 require_once SWPK_RUTA . 'includes/class-normas.php';
 require_once SWPK_RUTA . 'includes/class-ordenes.php';
 require_once SWPK_RUTA . 'includes/class-receptor.php';
@@ -102,10 +103,12 @@ register_activation_hook( __FILE__, [ 'SWPK_Perfiles', 'crear_roles' ] );
 register_activation_hook( __FILE__, [ 'SWPK_Sincronizador', 'programar' ] );
 register_activation_hook( __FILE__, [ 'SWPK_Monitor', 'programar' ] );
 register_activation_hook( __FILE__, [ 'SWPK_Sonda', 'programar' ] );
+register_activation_hook( __FILE__, [ 'SWPK_Revision', 'programar' ] );
 register_activation_hook( __FILE__, [ 'SWPK_Correos', 'programar' ] );
 register_deactivation_hook( __FILE__, [ 'SWPK_Sincronizador', 'desprogramar' ] );
 register_deactivation_hook( __FILE__, [ 'SWPK_Monitor', 'desprogramar' ] );
 register_deactivation_hook( __FILE__, [ 'SWPK_Sonda', 'desprogramar' ] );
+register_deactivation_hook( __FILE__, [ 'SWPK_Revision', 'desprogramar' ] );
 register_deactivation_hook( __FILE__, [ 'SWPK_Correos', 'desprogramar' ] );
 
 add_action(
@@ -118,6 +121,7 @@ add_action(
 		SWPK_Mcp::init();
 		SWPK_Monitor::init();
 		SWPK_Sonda::init();
+		SWPK_Revision::init();
 		SWPK_Correos::init();
 		SWPK_Exportar::init();
 		SWPK_Accesos::init();

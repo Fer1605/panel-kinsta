@@ -58,7 +58,7 @@ class SWPK_Normas {
 	public const OPCION_SEMBRADO = 'swpk_normas_sembradas';
 
 	/** Cada vez que cambie el catálogo de fábrica, este número sube. */
-	public const VERSION_CATALOGO = 5;
+	public const VERSION_CATALOGO = 6;
 
 	/**
 	 * Los comprobadores que contesta la sonda del panel, no el agente.
@@ -109,6 +109,33 @@ class SWPK_Normas {
 	 * si no, la corrida diaria pisaría el veredicto bueno con el parcial.
 	 */
 	public const COMPROBADOR_DE_AMBOS = 'php_en_uploads';
+
+	/**
+	 * Lo que sale del inventario que la corrida diaria ya guardó.
+	 *
+	 * Cero peticiones: todo esto está en `swpk_fotos` y en `swpk_sitios`.
+	 */
+	public const COMPROBADORES_DE_INVENTARIO = [
+		'inv_vulnerables',
+		'inv_inactivos',
+		'inv_estado',
+		'wp_al_dia',
+		'php_soportado',
+	];
+
+	/** Lo que hay que pedirle a la plataforma. Ver SWPK_Revision. */
+	public const COMPROBADORES_DE_REVISION = [
+		'rev_https',
+		'rev_respaldo',
+		'rev_trafico',
+		'rev_errores',
+		'rev_logins',
+		'rev_bots',
+		'rev_excepciones',
+		'rev_sftp',
+		'rev_redirecciones',
+		'rev_ia',
+	];
 
 	public static function init(): void {
 		add_action( 'plugins_loaded', [ __CLASS__, 'sembrar' ], 20 );
@@ -490,6 +517,154 @@ class SWPK_Normas {
 				'severidad'   => 'baja',
 				'arreglable'  => 0,
 				'orden'       => 245,
+			],
+			// ── Lo que ya está en el inventario, sin pedir nada ───────────
+			//
+			// Estas tres salen de la foto diaria de plugins y del inventario de
+			// sitios, que la corrida ya guarda. Volver a pedirlas a Kinsta
+			// serían 108 peticiones para traer lo que está en la base.
+			'sin_vulnerables' => [
+				'nombre'      => 'Ningún plugin o tema en versión con falla conocida',
+				'problema'    => 'Hay plugins o temas en una versión con falla conocida',
+				'porque'      => 'No es que pueda pasar algo: es que ya está publicado qué falla, dónde y cómo. '
+					. 'Kinsta marca cada plugin contra la base de vulnerabilidades, así que esto no hay que '
+					. 'deducirlo. Es la categoría con más incidencia del OWASP Top 10 de 2025.',
+				'comprobador' => 'inv_vulnerables',
+				'severidad'   => 'alta',
+				'arreglable'  => 0,
+				'orden'       => 12,
+			],
+			'sin_inactivos' => [
+				'nombre'      => 'No hay plugins instalados pero apagados',
+				'problema'    => 'Hay plugins instalados pero apagados',
+				'porque'      => 'Un plugin apagado sigue con sus archivos en el servidor, y esos archivos se '
+					. 'pueden pedir desde internet igual que los de uno encendido. Apagarlo no lo quita de en '
+					. 'medio: hay que borrarlo. Y como está apagado, nadie se acuerda de actualizarlo.',
+				'comprobador' => 'inv_inactivos',
+				'severidad'   => 'media',
+				'arreglable'  => 0,
+				'orden'       => 14,
+			],
+			'sitio_sano' => [
+				'nombre'      => 'El sitio no está bloqueado en la plataforma',
+				'problema'    => 'El sitio está bloqueado o en un estado raro',
+				'porque'      => 'Kinsta puede bloquear un sitio por falta de pago, por abuso de recursos o '
+					. 'porque detectó algo. Si pasa, el panel tiene que decirlo antes de que lo diga el cliente.',
+				'comprobador' => 'inv_estado',
+				'severidad'   => 'alta',
+				'arreglable'  => 0,
+				'orden'       => 16,
+			],
+
+			// ── Lo que hay que pedirle a la plataforma ────────────────────
+			'https_forzado' => [
+				'nombre'      => 'La plataforma fuerza HTTPS',
+				'problema'    => 'La plataforma no fuerza HTTPS',
+				'porque'      => 'Que el sitio redirija a HTTPS por su cuenta no es lo mismo que el servidor lo '
+					. 'exija. Lo segundo no se puede desactivar desde dentro de WordPress ni romper con un '
+					. 'plugin.',
+				'comprobador' => 'rev_https',
+				'severidad'   => 'alta',
+				'arreglable'  => 0,
+				'orden'       => 250,
+			],
+			'respaldo_reciente' => [
+				'nombre'      => 'Hay un respaldo de las últimas 48 horas',
+				'problema'    => 'No hay un respaldo reciente',
+				'porque'      => 'Es lo único que convierte un desastre en un mal rato. Kinsta respalda a diario '
+					. 'y guarda dos semanas; si el último es de hace más de dos días, algo se rompió en ese '
+					. 'proceso y nadie se enteró.',
+				'comprobador' => 'rev_respaldo',
+				'severidad'   => 'alta',
+				'arreglable'  => 0,
+				'orden'       => 255,
+			],
+			'trafico_normal' => [
+				'nombre'      => 'El tráfico está dentro de lo normal de este sitio',
+				'problema'    => 'El tráfico se salió de lo normal de este sitio',
+				'porque'      => 'Un pico puede ser una pauta publicitaria o puede ser un ataque, y de las dos '
+					. 'maneras hay que verlo. La comparación no es contra un número fijo sino contra lo que ESE '
+					. 'sitio hace normalmente: la mediana de los treinta días anteriores. Se usa la mediana y no '
+					. 'el promedio porque un día de pico arrastra el promedio y entonces el siguiente ya no se '
+					. 'nota.',
+				'comprobador' => 'rev_trafico',
+				'severidad'   => 'media',
+				'arreglable'  => 0,
+				'orden'       => 260,
+			],
+			'errores_servidor' => [
+				'nombre'      => 'El sitio no está devolviendo errores de servidor',
+				'problema'    => 'El sitio está devolviendo errores de servidor',
+				'porque'      => 'Un goteo de errores 500 es un sitio que a ratos no funciona, y el cliente lo '
+					. 'nota antes que nosotros si nadie lo mira.',
+				'comprobador' => 'rev_errores',
+				'severidad'   => 'media',
+				'arreglable'  => 0,
+				'orden'       => 265,
+			],
+			'oleada_de_login' => [
+				'nombre'      => 'No hay una oleada de intentos de entrada',
+				'problema'    => 'Hay una oleada de intentos de entrada',
+				'porque'      => 'Alguien probando contraseñas en serie deja rastro en el registro de accesos. '
+					. 'Que aparezca no significa que hayan entrado; significa que lo están intentando y que vale '
+					. 'la pena mirar las cuentas de ese sitio.',
+				'comprobador' => 'rev_logins',
+				'severidad'   => 'media',
+				'arreglable'  => 0,
+				'orden'       => 270,
+			],
+			'proteccion_bots' => [
+				'nombre'      => 'La protección contra bots está encendida',
+				'problema'    => 'La protección contra bots está apagada',
+				'porque'      => 'Kinsta filtra tráfico automático en su borde, antes de que llegue al sitio. '
+					. 'Viene encendida en el nivel básico; si está apagada, alguien la apagó.',
+				'comprobador' => 'rev_bots',
+				'severidad'   => 'media',
+				'arreglable'  => 0,
+				'orden'       => 275,
+			],
+			'excepciones_bots' => [
+				'nombre'      => 'No hay excepciones abiertas en la protección contra bots',
+				'problema'    => 'Hay excepciones en la protección contra bots',
+				'porque'      => 'Una excepción apaga la protección para lo que diga la regla. Suelen ponerse '
+					. 'para arreglar algo un día y quedarse ahí para siempre. No es que estén mal: es que hay '
+					. 'que saber que están y revisarlas.',
+				'comprobador' => 'rev_excepciones',
+				'severidad'   => 'media',
+				'arreglable'  => 0,
+				'orden'       => 280,
+			],
+			'sftp_adicional' => [
+				'nombre'      => 'No hay cuentas SFTP extra sin revisar',
+				'problema'    => 'Hay cuentas SFTP extra',
+				'porque'      => 'Cada cuenta extra es alguien más que puede escribir archivos en el sitio. '
+					. 'Suelen crearse para un proveedor externo y nadie las borra cuando el trabajo termina.',
+				'comprobador' => 'rev_sftp',
+				'severidad'   => 'media',
+				'arreglable'  => 0,
+				'orden'       => 285,
+			],
+			'reglas_redireccion' => [
+				'nombre'      => 'Las redirecciones de la plataforma están revisadas',
+				'problema'    => 'Hay redirecciones en la plataforma sin revisar',
+				'porque'      => 'Las redirecciones del servidor no se ven desde WordPress: alguien las pone en '
+					. 'el panel de Kinsta y ahí quedan. Una mal hecha manda visitas a otro sitio sin que nada en '
+					. 'el WordPress lo delate.',
+				'comprobador' => 'rev_redirecciones',
+				'severidad'   => 'media',
+				'arreglable'  => 0,
+				'orden'       => 290,
+			],
+			'rastreadores_ia' => [
+				'nombre'      => 'La política de rastreadores de IA está decidida',
+				'problema'    => 'No se ha decidido qué hacer con los rastreadores de IA',
+				'porque'      => 'Kinsta puede bloquear los robots que recogen contenido para entrenar modelos. '
+					. 'No es seguridad, es una decisión del cliente sobre su contenido — por eso va como baja. '
+													. 'Pero conviene que esté tomada a propósito y no por omisión.',
+				'comprobador' => 'rev_ia',
+				'severidad'   => 'baja',
+				'arreglable'  => 0,
+				'orden'       => 295,
 			],
 			'formularios_honeypot' => [
 				'nombre'      => 'Los formularios tienen honeypot o captcha',
@@ -1662,28 +1837,413 @@ class SWPK_Normas {
 			: [ 'estado' => self::CUMPLE, 'detalle' => 'No manda la cabecera retirada.' ];
 	}
 
+	// ─────────────────────────────────────────────────────────────────────────
+	// Los comprobadores que leen el inventario que ya está guardado
+	// ─────────────────────────────────────────────────────────────────────────
+
+	/**
+	 * La foto de plugins más reciente de un sitio.
+	 *
+	 * @return array<int,object>
+	 */
+	private static function foto( string $sitio_id ): array {
+		if ( '' === $sitio_id ) {
+			return [];
+		}
+
+		global $wpdb;
+		$tabla = SWPK_Tablas::tabla( 'fotos' );
+
+		$fecha = $wpdb->get_var( $wpdb->prepare( "SELECT MAX(fecha) FROM {$tabla} WHERE sitio_id = %s", $sitio_id ) );
+
+		if ( ! $fecha ) {
+			return [];
+		}
+
+		return $wpdb->get_results(
+			$wpdb->prepare( "SELECT * FROM {$tabla} WHERE sitio_id = %s AND fecha = %s", $sitio_id, $fecha )
+		) ?: [];
+	}
+
+	private static function comprobar_inv_vulnerables( array $r, ?object $sitio ): array {
+		$filas = self::foto( (string) ( $sitio->sitio_id ?? '' ) );
+
+		if ( ! $filas ) {
+			return [ 'estado' => self::SIN_DATO, 'detalle' => sprintf( '%s todavía no ha escaneado este sitio.', SWPK_Admin::proveedor() ) ];
+		}
+
+		$malos = [];
+
+		foreach ( $filas as $f ) {
+			if ( (int) $f->es_vulnerable ) {
+				$malos[] = (string) ( $f->titulo ?: $f->slug );
+			}
+		}
+
+		if ( ! $malos ) {
+			return [ 'estado' => self::CUMPLE, 'detalle' => sprintf( 'Ninguno de los %d módulos está en una versión marcada.', count( $filas ) ) ];
+		}
+
+		return [
+			'estado'  => self::FALLA,
+			'detalle' => sprintf(
+				'%s en una versión con falla conocida: %s%s.',
+				SWPK_Vista::plural( count( $malos ), 'módulo', 'módulos' ),
+				implode( ', ', array_slice( $malos, 0, 6 ) ),
+				count( $malos ) > 6 ? '…' : ''
+			),
+		];
+	}
+
+	private static function comprobar_inv_inactivos( array $r, ?object $sitio ): array {
+		$filas = self::foto( (string) ( $sitio->sitio_id ?? '' ) );
+
+		if ( ! $filas ) {
+			return [ 'estado' => self::SIN_DATO, 'detalle' => sprintf( '%s todavía no ha escaneado este sitio.', SWPK_Admin::proveedor() ) ];
+		}
+
+		$apagados = [];
+
+		foreach ( $filas as $f ) {
+			// Los mu-plugins de la plataforma salen siempre como inactivos y no
+			// son nuestros ni se pueden borrar. Contarlos sería ruido fijo.
+			if ( (int) $f->activo || str_starts_with( (string) $f->slug, 'kinsta-' ) ) {
+				continue;
+			}
+
+			$apagados[] = (string) ( $f->titulo ?: $f->slug );
+		}
+
+		if ( ! $apagados ) {
+			return [ 'estado' => self::CUMPLE, 'detalle' => 'No hay nada instalado que esté apagado.' ];
+		}
+
+		return [
+			'estado'  => self::FALLA,
+			'detalle' => sprintf(
+				'%s instalado(s) pero apagado(s): %s%s. Los archivos siguen ahí y se pueden pedir desde internet.',
+				SWPK_Vista::plural( count( $apagados ), 'módulo', 'módulos' ),
+				implode( ', ', array_slice( $apagados, 0, 6 ) ),
+				count( $apagados ) > 6 ? '…' : ''
+			),
+		];
+	}
+
+	private static function comprobar_inv_estado( array $r, ?object $sitio ): array {
+		$estado = strtolower( trim( (string) ( $sitio->estado ?? '' ) ) );
+
+		if ( '' === $estado ) {
+			return [ 'estado' => self::SIN_DATO, 'detalle' => 'El inventario no trae el estado de este sitio.' ];
+		}
+
+		$buenos = [ 'live', 'active', 'ok', 'running' ];
+
+		return in_array( $estado, $buenos, true )
+			? [ 'estado' => self::CUMPLE, 'detalle' => sprintf( 'El sitio está en estado «%s».', $estado ) ]
+			: [ 'estado' => self::FALLA, 'detalle' => sprintf( 'El sitio está en estado «%s» en la plataforma.', $estado ) ];
+	}
+
+	// ─────────────────────────────────────────────────────────────────────────
+	// Los comprobadores que leen la revisión de la plataforma
+	// ─────────────────────────────────────────────────────────────────────────
+
+	/**
+	 * @return array{0:array<string,mixed>,1:?array{estado:string,detalle:string}}
+	 */
+	private static function revision( ?object $sitio ): array {
+		if ( ! class_exists( 'SWPK_Revision' ) || ! SWPK_Revision::disponible() ) {
+			return [ [], [ 'estado' => self::SIN_DATO, 'detalle' => 'Esto solo se puede leer con la llave de la plataforma, y ahora mismo el panel está con los datos de prueba.' ] ];
+		}
+
+		$v = SWPK_Revision::de( (string) ( $sitio->sitio_id ?? '' ) );
+
+		if ( ! $v ) {
+			return [ [], [ 'estado' => self::SIN_DATO, 'detalle' => 'Todavía no se ha revisado este sitio contra la plataforma.' ] ];
+		}
+
+		return [ $v, null ];
+	}
+
+	private static function comprobar_rev_https( array $r, ?object $sitio ): array {
+		[ $v, $pero ] = self::revision( $sitio );
+		if ( $pero ) {
+			return $pero;
+		}
+
+		$x = $v['https'] ?? null;
+
+		if ( null === $x || '' === $x ) {
+			return [ 'estado' => self::SIN_DATO, 'detalle' => 'La plataforma no contestó este dato.' ];
+		}
+
+		return str_starts_with( (string) $x, 'ENABLED' )
+			? [ 'estado' => self::CUMPLE, 'detalle' => 'La plataforma fuerza HTTPS.' ]
+			: [ 'estado' => self::FALLA, 'detalle' => sprintf( 'La plataforma no lo fuerza (está en «%s»).', $x ) ];
+	}
+
+	private static function comprobar_rev_respaldo( array $r, ?object $sitio ): array {
+		[ $v, $pero ] = self::revision( $sitio );
+		if ( $pero ) {
+			return $pero;
+		}
+
+		$horas = $v['respaldo']['horas'] ?? null;
+
+		if ( null === $horas ) {
+			return [ 'estado' => self::SIN_DATO, 'detalle' => 'No se pudo leer la lista de respaldos.' ];
+		}
+
+		if ( $horas > 48 ) {
+			return [ 'estado' => self::FALLA, 'detalle' => sprintf( 'El respaldo más reciente es de hace %d horas.', (int) $horas ) ];
+		}
+
+		return [
+			'estado'  => self::CUMPLE,
+			'detalle' => sprintf( 'El último respaldo es de hace %d hora(s); hay %d guardados.', (int) $horas, (int) ( $v['respaldo']['cuantos'] ?? 0 ) ),
+		];
+	}
+
+	/**
+	 * El pico de tráfico, contra la línea base del propio sitio.
+	 *
+	 * El detalle dice las dos cifras a propósito. Un pico no es ni bueno ni
+	 * malo: puede ser una pauta publicitaria o puede ser un ataque, y lo que el
+	 * panel tiene que hacer es que alguien lo mire, no decidir cuál es.
+	 */
+	private static function comprobar_rev_trafico( array $r, ?object $sitio ): array {
+		[ $v, $pero ] = self::revision( $sitio );
+		if ( $pero ) {
+			return $pero;
+		}
+
+		$t = (array) ( $v['trafico'] ?? [] );
+
+		if ( ! empty( $t['pocos_datos'] ) ) {
+			return [ 'estado' => self::SIN_DATO, 'detalle' => 'Todavía no hay suficientes días de historial para saber qué es normal en este sitio.' ];
+		}
+
+		if ( null === ( $t['veces'] ?? null ) ) {
+			return [ 'estado' => self::SIN_DATO, 'detalle' => 'No se pudo leer la analítica de visitas.' ];
+		}
+
+		$veces = (float) $t['veces'];
+		$tope  = (float) ( $t['tope'] ?? 3 );
+
+		if ( $veces >= $tope ) {
+			return [
+				'estado'  => self::FALLA,
+				'detalle' => sprintf(
+					'Ayer tuvo %d visitas y lo normal en este sitio son %d: %sx lo de siempre. Puede ser una pauta o puede ser tráfico dirigido — hay que mirarlo.',
+					(int) $t['hoy'],
+					(int) $t['base'],
+					$veces
+				),
+			];
+		}
+
+		return [
+			'estado'  => self::CUMPLE,
+			'detalle' => sprintf( '%d visitas ayer, contra %d que es lo normal en este sitio.', (int) $t['hoy'], (int) $t['base'] ),
+		];
+	}
+
+	private static function comprobar_rev_errores( array $r, ?object $sitio ): array {
+		[ $v, $pero ] = self::revision( $sitio );
+		if ( $pero ) {
+			return $pero;
+		}
+
+		$e = (array) ( $v['errores'] ?? [] );
+
+		if ( null === ( $e['por_hora'] ?? null ) ) {
+			return [ 'estado' => self::SIN_DATO, 'detalle' => 'No se pudo leer el desglose de respuestas.' ];
+		}
+
+		$por_hora = (int) $e['por_hora'];
+
+		return $por_hora >= (int) ( $e['tope'] ?? 20 )
+			? [ 'estado' => self::FALLA, 'detalle' => sprintf( '%d errores de servidor por hora en las últimas 24 (%d en total).', $por_hora, (int) ( $e['total'] ?? 0 ) ) ]
+			: [
+				'estado'  => self::CUMPLE,
+				'detalle' => 0 === $por_hora
+					? 'Ningún error de servidor en las últimas 24 horas.'
+					// El total va aunque esté por debajo del tope: «unos 14 por
+					// hora» suena a nada y son 358 al día. Que se vea el número.
+					: sprintf( 'Unos %d por hora, %d en 24 horas. Por debajo del tope, pero no es cero.', $por_hora, (int) ( $e['total'] ?? 0 ) ),
+			];
+	}
+
+	/**
+	 * La oleada de intentos de entrada.
+	 *
+	 * El detalle dice explícitamente que un número bajo no prueba nada. El
+	 * borde de Kinsta absorbe parte del ataque antes de que el origen lo vea, y
+	 * solo se leen las últimas 2000 líneas. Si no se dijera, alguien va a leer
+	 * «0» como «estamos tranquilos», que no es lo mismo.
+	 */
+	private static function comprobar_rev_logins( array $r, ?object $sitio ): array {
+		[ $v, $pero ] = self::revision( $sitio );
+		if ( $pero ) {
+			return $pero;
+		}
+
+		$l = (array) ( $v['logins'] ?? [] );
+
+		if ( null === ( $l['cuantos'] ?? null ) ) {
+			return [ 'estado' => self::SIN_DATO, 'detalle' => 'No se pudo leer el registro de accesos.' ];
+		}
+
+		$n = (int) $l['cuantos'];
+
+		if ( $n >= (int) ( $l['tope'] ?? 50 ) ) {
+			return [
+				'estado'  => self::FALLA,
+				'detalle' => sprintf( '%d intentos de entrada en las últimas %d líneas del registro. No significa que hayan entrado; significa que lo están intentando.', $n, (int) ( $l['lineas'] ?? 0 ) ),
+			];
+		}
+
+		return [
+			'estado'  => self::CUMPLE,
+			'detalle' => sprintf( '%d intentos en las últimas %d líneas. Ojo: el borde corta parte del ataque antes de que el registro lo vea, así que un número bajo no prueba que no haya.', $n, (int) ( $l['lineas'] ?? 0 ) ),
+		];
+	}
+
+	private static function comprobar_rev_bots( array $r, ?object $sitio ): array {
+		[ $v, $pero ] = self::revision( $sitio );
+		if ( $pero ) {
+			return $pero;
+		}
+
+		$n = $v['bots_nivel'] ?? null;
+
+		if ( null === $n || '' === $n ) {
+			return [ 'estado' => self::SIN_DATO, 'detalle' => 'La plataforma no contestó el nivel de protección.' ];
+		}
+
+		$nombres = [
+			'block-malicious-traffic' => 'bloquea el tráfico malicioso',
+			'block-automations'       => 'bloquea las automatizaciones',
+			'challenge-bots'          => 'reta a los bots',
+			'challenge-everyone'      => 'reta a todo el mundo',
+		];
+
+		return isset( $nombres[ $n ] )
+			? [ 'estado' => self::CUMPLE, 'detalle' => sprintf( 'Encendida: %s.', $nombres[ $n ] ) ]
+			: [ 'estado' => self::FALLA, 'detalle' => sprintf( 'En un nivel que el panel no reconoce («%s»). Hay que mirarlo en la plataforma.', $n ) ];
+	}
+
+	private static function comprobar_rev_excepciones( array $r, ?object $sitio ): array {
+		[ $v, $pero ] = self::revision( $sitio );
+		if ( $pero ) {
+			return $pero;
+		}
+
+		$n = $v['bots_excep'] ?? null;
+
+		if ( null === $n ) {
+			return [ 'estado' => self::SIN_DATO, 'detalle' => 'La plataforma no contestó las excepciones.' ];
+		}
+
+		return 0 === (int) $n
+			? [ 'estado' => self::CUMPLE, 'detalle' => 'No hay ninguna excepción puesta.' ]
+			: [ 'estado' => self::FALLA, 'detalle' => sprintf( 'Hay %d excepción(es). Cada una apaga la protección para lo que diga su regla; conviene revisar si todavía hacen falta.', (int) $n ) ];
+	}
+
+	private static function comprobar_rev_sftp( array $r, ?object $sitio ): array {
+		[ $v, $pero ] = self::revision( $sitio );
+		if ( $pero ) {
+			return $pero;
+		}
+
+		$n = $v['sftp_extra'] ?? null;
+
+		if ( null === $n ) {
+			return [ 'estado' => self::SIN_DATO, 'detalle' => 'La plataforma no contestó las cuentas SFTP.' ];
+		}
+
+		return 0 === (int) $n
+			? [ 'estado' => self::CUMPLE, 'detalle' => 'No hay cuentas SFTP extra.' ]
+			: [ 'estado' => self::FALLA, 'detalle' => sprintf( 'Hay %d cuenta(s) SFTP extra. Cada una puede escribir archivos en el sitio.', (int) $n ) ];
+	}
+
+	private static function comprobar_rev_redirecciones( array $r, ?object $sitio ): array {
+		[ $v, $pero ] = self::revision( $sitio );
+		if ( $pero ) {
+			return $pero;
+		}
+
+		$n = $v['redirecciones'] ?? null;
+
+		if ( null === $n ) {
+			return [ 'estado' => self::SIN_DATO, 'detalle' => 'La plataforma no contestó las reglas de redirección.' ];
+		}
+
+		return 0 === (int) $n
+			? [ 'estado' => self::CUMPLE, 'detalle' => 'No hay redirecciones puestas en la plataforma.' ]
+			: [ 'estado' => self::FALLA, 'detalle' => sprintf( 'Hay %d redirección(es) en la plataforma. No se ven desde WordPress, así que hay que revisarlas en el panel de la plataforma.', (int) $n ) ];
+	}
+
+	private static function comprobar_rev_ia( array $r, ?object $sitio ): array {
+		[ $v, $pero ] = self::revision( $sitio );
+		if ( $pero ) {
+			return $pero;
+		}
+
+		$x = $v['bots_ia'] ?? null;
+
+		if ( null === $x || '' === $x ) {
+			return [ 'estado' => self::SIN_DATO, 'detalle' => 'La plataforma no contestó este dato.' ];
+		}
+
+		// Apagado es el valor de fábrica, y desde fuera no se puede distinguir
+		// «alguien decidió dejarlo abierto» de «nadie lo ha mirado nunca».
+		// Marcarlo como incumplimiento daría 108 filas rojas por una decisión
+		// que no es de seguridad — justo el ruido que hace que nadie mire el
+		// tablero. Así que se dice que está sin decidir, que es la verdad.
+		return 'enabled' === $x
+			? [ 'estado' => self::CUMPLE, 'detalle' => 'Los rastreadores de IA están bloqueados.' ]
+			: [ 'estado' => self::SIN_DATO, 'detalle' => 'Los rastreadores de IA pueden recoger el contenido del sitio. Viene así de fábrica, y desde aquí no se puede saber si alguien lo decidió o si nadie lo ha mirado. Es una decisión del cliente.' ];
+	}
+
 	private static function comprobar_wp_al_dia( array $r, ?object $sitio ): array {
+		// Primero el agente, que es el dato de dentro. Si no hay —y hoy no hay
+		// en ningún sitio— sirve el del inventario, que Kinsta da para 107 de
+		// los 108. Antes esta norma se quedaba en «sin dato» en toda la cartera
+		// esperando un agente que no está instalado.
 		$aqui = (string) ( $r['wp'] ?? '' );
+		$de   = 'el agente';
 
 		if ( '' === $aqui ) {
-			return [ 'estado' => self::SIN_DATO, 'detalle' => 'El agente no reportó la versión de WordPress.' ];
+			$aqui = (string) ( $sitio->version_wp ?? '' );
+			$de   = SWPK_Admin::proveedor();
+		}
+
+		if ( '' === $aqui ) {
+			return [ 'estado' => self::SIN_DATO, 'detalle' => 'No hay versión de WordPress, ni del agente ni del inventario.' ];
 		}
 
 		$minima = (string) apply_filters( 'swpk_wp_minima', '6.4' );
 
 		return version_compare( $aqui, $minima, '>=' )
-			? [ 'estado' => self::CUMPLE, 'detalle' => sprintf( 'WordPress %s.', $aqui ) ]
+			? [ 'estado' => self::CUMPLE, 'detalle' => sprintf( 'WordPress %s, según %s.', $aqui, $de ) ]
 			: [
 				'estado'  => self::FALLA,
-				'detalle' => sprintf( 'WordPress %s, y lo mínimo con soporte es %s.', $aqui, $minima ),
+				'detalle' => sprintf( 'WordPress %s, y lo mínimo con soporte es %s. Según %s.', $aqui, $minima, $de ),
 			];
 	}
 
 	private static function comprobar_php_soportado( array $r, ?object $sitio ): array {
 		$aqui = (string) ( $r['php'] ?? '' );
+		$de   = 'el agente';
 
 		if ( '' === $aqui ) {
-			return [ 'estado' => self::SIN_DATO, 'detalle' => 'El agente no reportó la versión de PHP.' ];
+			// El inventario la guarda como «php8.3»; aquí hace falta el número.
+			$aqui = ltrim( (string) ( $sitio->version_php ?? '' ), 'phpPHP' );
+			$de   = SWPK_Admin::proveedor();
+		}
+
+		if ( '' === $aqui ) {
+			return [ 'estado' => self::SIN_DATO, 'detalle' => 'No hay versión de PHP, ni del agente ni del inventario.' ];
 		}
 
 		// Se queda en el código y en un filtro, no en la base de datos: cuando
@@ -1692,10 +2252,10 @@ class SWPK_Normas {
 		$minima = (string) apply_filters( 'swpk_php_minima', '8.1' );
 
 		return version_compare( $aqui, $minima, '>=' )
-			? [ 'estado' => self::CUMPLE, 'detalle' => sprintf( 'PHP %s.', $aqui ) ]
+			? [ 'estado' => self::CUMPLE, 'detalle' => sprintf( 'PHP %s, según %s.', $aqui, $de ) ]
 			: [
 				'estado'  => self::FALLA,
-				'detalle' => sprintf( 'PHP %s, que ya no recibe parches. Lo mínimo con soporte es %s.', $aqui, $minima ),
+				'detalle' => sprintf( 'PHP %s, que ya no recibe parches. Lo mínimo con soporte es %s. Según %s.', $aqui, $minima, $de ),
 			];
 	}
 

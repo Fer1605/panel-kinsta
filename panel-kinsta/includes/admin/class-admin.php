@@ -23,6 +23,7 @@ class SWPK_Admin {
 		add_action( 'admin_post_swpk_probar', [ __CLASS__, 'accion_probar' ] );
 		add_action( 'admin_post_swpk_sondear', [ __CLASS__, 'accion_sondear' ] );
 		add_action( 'admin_post_swpk_revisar', [ __CLASS__, 'accion_revisar' ] );
+		add_action( 'admin_post_swpk_plataforma', [ __CLASS__, 'accion_plataforma' ] );
 		add_action( 'admin_post_swpk_asignar', [ __CLASS__, 'accion_asignar' ] );
 		add_action( 'admin_post_swpk_cifrar', [ __CLASS__, 'accion_cifrar' ] );
 		add_action( 'admin_post_swpk_crear_acceso', [ __CLASS__, 'accion_crear_acceso' ] );
@@ -529,6 +530,39 @@ class SWPK_Admin {
 				'admin.php?page=' . self::SLUG . '-ajustes&swpk_msg=ok:' . rawurlencode(
 					'La revisión de configuración quedó en cola. Tarda unos minutos en pasar por los 108 sitios; '
 					. 'los resultados van apareciendo en Seguridad conforme termina.'
+				)
+			)
+		);
+		exit;
+	}
+
+	/**
+	 * Leer la plataforma a mano.
+	 *
+	 * Igual que la revisión de configuración, se encola: son unos 25 minutos
+	 * para los 108 sitios y el límite de peticiones por minuto de Kinsta no se
+	 * puede apurar.
+	 */
+	public static function accion_plataforma(): void {
+		if ( ! self::puede_administrar() ) {
+			wp_die( 'Sin permiso.' );
+		}
+		check_admin_referer( 'swpk_plataforma' );
+
+		if ( ! SWPK_Revision::disponible() ) {
+			wp_safe_redirect(
+				admin_url( 'admin.php?page=' . self::SLUG . '-ajustes&swpk_msg=error:' . rawurlencode( 'Esto necesita la llave de la plataforma; el panel está con los datos de prueba.' ) )
+			);
+			exit;
+		}
+
+		wp_schedule_single_event( time() + 30, SWPK_Revision::HOOK );
+
+		wp_safe_redirect(
+			admin_url(
+				'admin.php?page=' . self::SLUG . '-ajustes&swpk_msg=ok:' . rawurlencode(
+					'La lectura de la plataforma quedó en cola. Tarda unos 25 minutos en pasar por los 108 sitios, '
+					. 'porque el límite de peticiones por minuto no se puede apurar.'
 				)
 			)
 		);

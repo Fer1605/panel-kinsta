@@ -108,6 +108,7 @@ $a = SWPK_Ajustes::todos();
 		'Lista de vulnerabilidades'       => 'cada día, una vez',
 		'Sondeo de caídas'                => 'cada 5 minutos',
 		'Revisión de configuración'       => 'cada día, 5:30',
+		'Lectura de la plataforma'        => 'cada día, 4:30',
 		'Reporte de los sitios con plugin' => 'cada día, 5:00',
 	];
 
@@ -125,6 +126,7 @@ $a = SWPK_Ajustes::todos();
 			<a class="button button-primary" href="<?php echo esc_url( wp_nonce_url( admin_url( 'admin-post.php?action=swpk_correr' ), 'swpk_correr' ) ); ?>">Correr ahora</a>
 			<a class="button" href="<?php echo esc_url( wp_nonce_url( admin_url( 'admin-post.php?action=swpk_sondear' ), 'swpk_sondear' ) ); ?>" style="margin-left:6px">Sondear ahora</a>
 			<a class="button" href="<?php echo esc_url( wp_nonce_url( admin_url( 'admin-post.php?action=swpk_revisar' ), 'swpk_revisar' ) ); ?>" style="margin-left:6px">Revisar configuración</a>
+			<a class="button" href="<?php echo esc_url( wp_nonce_url( admin_url( 'admin-post.php?action=swpk_plataforma' ), 'swpk_plataforma' ) ); ?>" style="margin-left:6px">Leer la plataforma</a>
 		</p>
 	<?php endif; ?>
 	<?php SWPK_Vista::caja_cerrar(); ?>
