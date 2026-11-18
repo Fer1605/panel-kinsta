@@ -34,6 +34,7 @@ class SWPK_Admin {
 		add_action( 'admin_post_swpk_correo_semanal', [ __CLASS__, 'accion_correo_semanal' ] );
 		add_action( 'admin_post_swpk_correo_diario', [ __CLASS__, 'accion_correo_diario' ] );
 		add_action( 'admin_post_swpk_correo_mensual', [ __CLASS__, 'accion_correo_mensual' ] );
+		add_action( 'admin_post_swpk_correo_resumen', [ __CLASS__, 'accion_correo_resumen' ] );
 		add_action( 'admin_post_swpk_quitar_acceso', [ __CLASS__, 'accion_quitar_acceso' ] );
 		add_action( 'admin_post_swpk_crear_llave', [ __CLASS__, 'accion_crear_llave' ] );
 		add_action( 'admin_post_swpk_revocar_llave', [ __CLASS__, 'accion_revocar_llave' ] );
@@ -831,6 +832,25 @@ class SWPK_Admin {
 			$r['eventos']
 				? sprintf( 'Resumen generado con %d cambios. Está en la bitácora.', $r['eventos'] )
 				: 'No hubo cambios en las últimas 24 horas, así que no hay nada que contar.'
+		);
+	}
+
+	public static function accion_correo_resumen(): void {
+		if ( ! self::puede_administrar() ) {
+			wp_die( 'Sin permiso.' );
+		}
+		check_admin_referer( 'swpk_correo_resumen' );
+
+		$r = SWPK_Correos::resumen_semanal();
+
+		self::volver_a_correos(
+			sprintf(
+				'Resumen de la semana del %s al %s: %d aviso(s). Resultado del envío: %s.',
+				$r['desde'],
+				$r['hasta'],
+				$r['avisos'],
+				$r['resultado']
+			)
 		);
 	}
 

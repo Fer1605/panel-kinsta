@@ -31,6 +31,16 @@ class SWPK_Correos {
 	public const HOOK_DIARIO  = 'swpk_correo_diario';
 	public const HOOK_MENSUAL = 'swpk_correo_mensual';
 
+	/**
+	 * El resumen de los domingos.
+	 *
+	 * Es un correo distinto del semanal a las asesoras, aunque los dos sean
+	 * semanales: aquel va a cada asesora con SUS sitios pendientes, y este va a
+	 * soporte con TODO lo que el panel notificó. El jefe pidió el segundo
+	 * expresamente y con día: «al final de semana, un domingo».
+	 */
+	public const HOOK_RESUMEN = 'swpk_correo_resumen';
+
 	public const MODO_PRUEBA = 'prueba';
 	public const MODO_REAL   = 'real';
 
@@ -39,6 +49,7 @@ class SWPK_Correos {
 		add_action( self::HOOK_SEMANAL, [ __CLASS__, 'semanal_asesoras' ] );
 		add_action( self::HOOK_DIARIO, [ __CLASS__, 'diario_soporte' ] );
 		add_action( self::HOOK_MENSUAL, [ __CLASS__, 'mensual_clientes' ] );
+		add_action( self::HOOK_RESUMEN, [ __CLASS__, 'resumen_semanal' ] );
 	}
 
 	public static function programar(): void {
@@ -52,13 +63,19 @@ class SWPK_Correos {
 			wp_schedule_event( SWPK_Frescura::cuando( 'tomorrow 07:30' ), 'daily', self::HOOK_DIARIO );
 		}
 
+		if ( ! wp_next_scheduled( self::HOOK_RESUMEN ) ) {
+			// Domingo a las 18:00: la semana ya terminó y todavía es hora de
+			// que alguien lo lea antes del lunes.
+			wp_schedule_event( SWPK_Frescura::cuando( 'next sunday 18:00' ), 'weekly', self::HOOK_RESUMEN );
+		}
+
 		if ( ! wp_next_scheduled( self::HOOK_MENSUAL ) ) {
 			wp_schedule_event( SWPK_Frescura::cuando( 'first day of next month 08:00' ), 'monthly', self::HOOK_MENSUAL );
 		}
 	}
 
 	public static function desprogramar(): void {
-		foreach ( [ self::HOOK_SEMANAL, self::HOOK_DIARIO, self::HOOK_MENSUAL ] as $hook ) {
+		foreach ( [ self::HOOK_SEMANAL, self::HOOK_DIARIO, self::HOOK_MENSUAL, self::HOOK_RESUMEN ] as $hook ) {
 			$ts = wp_next_scheduled( $hook );
 			if ( $ts ) {
 				wp_unschedule_event( $ts, $hook );
@@ -247,6 +264,42 @@ class SWPK_Correos {
 		update_option( 'swpk_ultimo_semanal', current_time( 'mysql' ), false );
 
 		return $resumen;
+	}
+
+	/**
+	 * El resumen de los domingos: todo lo que se notificó en la semana.
+	 *
+	 * Sale IGUAL cuando no se envió nada, y eso no es un descuido: es el pedido.
+	 * «En ese resumen se le puede indicar: de esto no se obtuvo ningún
+	 * movimiento, no ha pasado nada.» Un domingo sin correo no significa «no
+	 * pasó nada», significa «no sé si el panel corrió» — y poder distinguir las
+	 * dos cosas es justo para lo que sirve el panel.
+	 *
+	 * @return array<string,mixed>
+	 */
+	public static function resumen_semanal(): array {
+		$hasta = current_time( 'Y-m-d' );
+		$desde = wp_date( 'Y-m-d', strtotime( '-6 days', (int) current_time( 'timestamp' ) ) );
+
+		$filas = SWPK_Bitacora::entre( $desde, $hasta );
+
+		// El propio resumen no se cuenta a sí mismo.
+		$filas = array_values(
+			array_filter( $filas, static fn( $f ) => SWPK_Bitacora::RESUMEN !== $f->tipo )
+		);
+
+		$cuerpo = SWPK_Plantillas::resumen_semanal( $filas, $desde, $hasta );
+
+		$r = self::despachar(
+			SWPK_Bitacora::RESUMEN,
+			self::destinatarios_soporte(),
+			SWPK_Plantillas::asunto( 'resumen', [ '{{cuantos}}' => (string) count( $filas ) ] ),
+			$cuerpo
+		);
+
+		update_option( 'swpk_ultimo_resumen', current_time( 'mysql' ), false );
+
+		return [ 'avisos' => count( $filas ), 'desde' => $desde, 'hasta' => $hasta, 'resultado' => $r ];
 	}
 
 	/** Resumen diario a soporte: qué cambió ayer. */

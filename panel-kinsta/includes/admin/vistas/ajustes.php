@@ -119,6 +119,26 @@ $a = SWPK_Ajustes::todos();
 			esc_html( $cuando )
 		);
 	}
+
+	// El jefe pidió hora fija: «para que nosotros le digamos, oye, todos los
+	// días a medianoche». Las horas de arriba son las que están puestas, pero
+	// solo se cumplen de verdad si el servidor llama al reloj de WordPress por
+	// su cuenta. Si no, el reloj se dispara con la primera visita DESPUÉS de la
+	// hora — y en un panel al que entran dos personas, eso puede ser horas más
+	// tarde. Decirlo aquí es la diferencia entre una hora y una intención.
+	$cron_real = defined( 'DISABLE_WP_CRON' ) && DISABLE_WP_CRON;
+
+	printf(
+		'<div class="notice notice-%s inline" style="margin:16px 0 0"><p style="margin:.5em 0">%s</p></div>',
+		$cron_real ? 'success' : 'warning',
+		$cron_real
+			? 'El servidor llama al reloj por su cuenta, así que estas horas se cumplen.'
+			: 'Ojo: el reloj de WordPress se dispara con la primera visita <em>después</em> de cada hora, '
+				. 'no a la hora exacta. En un panel al que entran pocas personas, una corrida de las 6:30 '
+				. 'puede acabar pasando a media mañana. Para que las horas se cumplan de verdad hace falta '
+				. 'que el servidor llame a <code>wp-cron.php</code> él mismo, y que aquí se ponga '
+				. '<code>DISABLE_WP_CRON</code>. Es un ajuste del hosting, no del panel.'
+	);
 	?>
 
 	<?php if ( SWPK_Perfiles::puede( SWPK_Perfiles::ADMINISTRAR ) ) : ?>

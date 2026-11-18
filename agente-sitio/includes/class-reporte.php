@@ -145,6 +145,8 @@ class SWA_Reporte {
 			// Si este sitio vende de verdad, y cómo está montado el cobro.
 			// Vacío cuando no hay WooCommerce. Ver SWA_Tienda.
 			'tienda'        => SWA_Tienda::medir( ! $liviano ),
+			// Si WordPress tiene callados sus propios correos de actualización.
+			'callar_correos' => SWA_Silencio::activo(),
 			// Quién cerró el editor importa tanto como que esté cerrado: si lo
 			// cerró el agente, se abre de nuevo al desactivar el plugin.
 			'editor_codigo_por' => ( defined( 'DISALLOW_FILE_MODS' ) && DISALLOW_FILE_MODS ) || ( defined( 'DISALLOW_FILE_EDIT' ) && DISALLOW_FILE_EDIT && ! SWA_Ajustes::obtener( 'cerrar_editor' ) )

@@ -14,6 +14,7 @@ $proximos = [
 	'Semanal a las asesoras' => wp_next_scheduled( SWPK_Correos::HOOK_SEMANAL ),
 	'Diario a soporte'       => wp_next_scheduled( SWPK_Correos::HOOK_DIARIO ),
 	'Mensual a los clientes' => wp_next_scheduled( SWPK_Correos::HOOK_MENSUAL ),
+	'Resumen de los domingos' => wp_next_scheduled( SWPK_Correos::HOOK_RESUMEN ),
 ];
 
 $accion = static fn( $a ) => wp_nonce_url( admin_url( 'admin-post.php?action=' . $a ), $a );
@@ -132,6 +133,19 @@ $accion = static fn( $a ) => wp_nonce_url( admin_url( 'admin-post.php?action=' .
 					direcciones propias. Cuántas veces se actualizó su sitio y qué se mantuvo al día.
 				</td>
 				<td><a class="button" href="<?php echo esc_url( $accion( 'swpk_correo_mensual' ) ); ?>">Mandar una prueba</a></td>
+			</tr>
+			<tr>
+				<td><strong>Resumen de los domingos</strong></td>
+				<td>
+					Cada domingo, 18:00<br>
+					<span class="swpk-gris" style="font-size:12px">próximo: <?php echo $proximos['Resumen de los domingos'] ? esc_html( SWPK_Frescura::fmt( 'j M, H:i', $proximos['Resumen de los domingos'] ) ) : '<span style="color:#d63638">sin programar</span>'; ?></span>
+				</td>
+				<td>
+					A soporte: todo lo que el panel notificó durante la semana, con el resultado de
+					cada envío. <strong>Sale también cuando no hubo nada</strong> — un domingo sin
+					correo no querría decir «no pasó nada» sino «no sé si el panel corrió».
+				</td>
+				<td><a class="button" href="<?php echo esc_url( $accion( 'swpk_correo_resumen' ) ); ?>">Mandar una prueba</a></td>
 			</tr>
 		</tbody>
 	</table>

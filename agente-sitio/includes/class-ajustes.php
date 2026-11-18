@@ -18,6 +18,10 @@ class SWA_Ajustes {
 			'2fa_gracia_hasta' => 0,
 			'cerrar_xmlrpc'    => 0,
 			'cerrar_editor'    => 0,   // lo enciende una orden del panel, no una persona
+			// Encendido de fábrica. Es el pedido literal del jefe: «no debe
+			// notificar doble correo (...) deben llegar los del sistema, solo
+			// los del panel». Ver SWA_Silencio.
+			'callar_correos'   => 1,
 		];
 	}
 

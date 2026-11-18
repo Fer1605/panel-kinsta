@@ -26,6 +26,7 @@ class SWPK_Bitacora {
 	public const SOPORTE  = 'aviso_soporte';
 	public const DOS_FA   = 'aviso_2fa';
 	public const CAIDA    = 'aviso_caida';
+	public const RESUMEN  = 'resumen_semanal';
 
 	public static function tipos(): array {
 		return [
@@ -34,6 +35,7 @@ class SWPK_Bitacora {
 			self::SOPORTE => 'Soporte',
 			self::DOS_FA  => 'Doble autenticación',
 			self::CAIDA   => 'Caída',
+			self::RESUMEN => 'Resumen semanal',
 		];
 	}
 

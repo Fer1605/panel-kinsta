@@ -76,6 +76,22 @@ class SWPK_Plantillas {
 					'{{cambios}}' => 'EL BLOQUE: la tabla de qué cambió, en qué sitio y cuándo.',
 				],
 			],
+			'resumen' => [
+				'nombre' => 'Resumen semanal de lo enviado',
+				'quien'  => 'A soporte, cada domingo: todo lo que el panel notificó durante la semana.',
+				'titulo' => 'Lo que notificamos esta semana',
+				'asunto' => 'Resumen semanal: {{cuantos}} avisos enviados',
+				'cuerpo' => "Esto es todo lo que el panel notificó entre el {{desde}} y el {{hasta}}.\n\n"
+					. "{{tabla}}\n\n"
+					. 'Queda guardado en la Bitácora del panel, con el contenido completo de cada correo y '
+					. 'la fecha exacta en que salió.',
+				'marcas' => [
+					'{{cuantos}}' => 'Cuántos avisos salieron en la semana',
+					'{{desde}}'   => 'El lunes de la semana',
+					'{{hasta}}'   => 'El domingo de la semana',
+					'{{tabla}}'   => 'EL BLOQUE: el desglose por tipo de aviso y el detalle de cada uno.',
+				],
+			],
 			'mensual' => [
 				'nombre' => 'Mensual a los clientes',
 				'quien'  => 'A los administradores de cada sitio nuestro, el día 1. Sin una palabra técnica.',
@@ -389,6 +405,89 @@ class SWPK_Plantillas {
 				[ '{{cambios}}' => $tabla ]
 			)
 		);
+	}
+
+	/**
+	 * El resumen semanal de lo que se envió.
+	 *
+	 * ─── De dónde sale ──────────────────────────────────────────────────
+	 *
+	 * Del audio del 18/11/2026, y es textual:
+	 *
+	 *   «me gustaría que se mande UN RESUMEN DE LO QUE SE ENVIÓ. Si algo se
+	 *    envía a diario, al final de semana, UN DOMINGO, se mande el resumen de
+	 *    lo que se envió: "te damos tu resumen semanal, se enviaron tres
+	 *    correos notificando"»                                        [05:12]
+	 *
+	 *   «en ese resumen se le puede indicar: DE ESTO NO SE OBTUVO NINGÚN
+	 *    MOVIMIENTO, NO HA PASADO NADA, que se le ha notificado a todos»
+	 *                                                                 [05:35]
+	 *
+	 * Esa segunda frase es la que decide el diseño: el correo sale IGUAL
+	 * cuando no se envió nada. Un domingo sin correo no significa «no pasó
+	 * nada», significa «no sé si el panel corrió». La diferencia es justo lo
+	 * que él quiere poder demostrar.
+	 *
+	 * @param array<int,object> $filas lo que salió en la semana
+	 */
+	public static function resumen_semanal( array $filas, string $desde, string $hasta ): string {
+		$nombres = SWPK_Bitacora::tipos();
+
+		// Agrupar por tipo para el encabezado, y listar el detalle debajo.
+		$por_tipo = [];
+
+		foreach ( $filas as $f ) {
+			$t = (string) $f->tipo;
+			$por_tipo[ $t ] = ( $por_tipo[ $t ] ?? 0 ) + 1;
+		}
+
+		$html = '';
+
+		if ( ! $filas ) {
+			$html .= '<div style="background:#f0f6fc;border-left:4px solid #2271b1;padding:14px 16px;margin:0 0 18px">'
+				. '<strong>Esta semana no hubo nada que notificar.</strong><br>'
+				. 'No es que el panel no haya corrido: corrió, revisó la cartera y no encontró nada que ameritara '
+				. 'un aviso. Este correo sale igual para que quede constancia de eso.'
+				. '</div>';
+
+			return self::envolver( self::catalogo()['resumen']['titulo'], $html );
+		}
+
+		$html .= '<table role="presentation" style="width:100%;border-collapse:collapse;margin:0 0 20px">';
+
+		foreach ( $por_tipo as $tipo => $cuantos ) {
+			$html .= sprintf(
+				'<tr><td style="padding:7px 0;border-bottom:1px solid #e6e7eb">%s</td>'
+				. '<td style="padding:7px 0;border-bottom:1px solid #e6e7eb;text-align:right;font-weight:600">%d</td></tr>',
+				esc_html( $nombres[ $tipo ] ?? $tipo ),
+				(int) $cuantos
+			);
+		}
+
+		$html .= '</table>';
+
+		$html .= '<p style="margin:0 0 10px;font-weight:600">Uno por uno</p>';
+		$html .= '<table role="presentation" style="width:100%;border-collapse:collapse;font-size:13px">';
+
+		foreach ( array_slice( $filas, 0, 60 ) as $f ) {
+			$html .= sprintf(
+				'<tr><td style="padding:6px 10px 6px 0;border-bottom:1px solid #f0f0f1;white-space:nowrap;color:#50575e">%s</td>'
+				. '<td style="padding:6px 0;border-bottom:1px solid #f0f0f1">%s</td>'
+				. '<td style="padding:6px 0 6px 10px;border-bottom:1px solid #f0f0f1;text-align:right;color:%s">%s</td></tr>',
+				esc_html( wp_date( 'j/n H:i', strtotime( (string) $f->enviado_en ) ) ),
+				esc_html( (string) $f->asunto ),
+				'enviado' === $f->resultado ? '#008a20' : '#d63638',
+				esc_html( (string) $f->resultado )
+			);
+		}
+
+		$html .= '</table>';
+
+		if ( count( $filas ) > 60 ) {
+			$html .= sprintf( '<p style="color:#50575e;font-size:13px">Y %d más, en la Bitácora.</p>', count( $filas ) - 60 );
+		}
+
+		return self::envolver( self::catalogo()['resumen']['titulo'], $html );
 	}
 
 	/**
