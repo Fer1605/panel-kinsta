@@ -14,9 +14,18 @@
  * corrida tarda MINUTOS por diseño. Una petición web no dura minutos: el
  * servidor la corta mucho antes, y el trabajo se queda a medias.
  *
- * En local nunca se vio porque la fuente de demostración contesta al instante.
- * El botón sirvió desde el primer día contra datos inventados y no sirvió nunca
- * contra la cuenta real.
+ * Por qué no se vio antes: NO fue por correr contra datos de prueba. El panel
+ * de desarrollo tiene la misma llave y la misma cartera, y la corrida tarda
+ * ahí los mismos minutos. Se escapó porque la corrida se probaba siempre desde
+ * la línea de comandos, donde no hay servidor web que corte. Nadie había
+ * pulsado el botón en un navegador con los 108 sitios delante.
+ *
+ * Es la segunda vez en dos días que muerde lo mismo —la otra fue la clave de
+ * registro, que se sacaba con un comando en vez de leerla en la pantalla donde
+ * el agente decía que estaba—. La regla, entonces, escrita donde se vea:
+ * **lo que va a usar una persona se prueba por donde lo va a usar esa
+ * persona.** Si el camino de quien prueba no es el camino de quien usa, el
+ * hueco no se ve.
  *
  * ─── Cómo se arregla ────────────────────────────────────────────────────────
  *

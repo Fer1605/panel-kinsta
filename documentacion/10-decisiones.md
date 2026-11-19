@@ -374,10 +374,22 @@ por minuto que impone Kinsta. O sea que tarda minutos **por diseño**. Una
 petición web no dura minutos: el servidor la corta y el trabajo queda a medias.
 
 **Cómo se supo.** El 18 de noviembre de 2026 el jefe entró al panel recién
-instalado en producción y pulsó el botón. Le salió un 504 del servidor. En
-local nunca se había visto porque la fuente de demostración contesta al
-instante: el botón sirvió desde el primer día contra datos inventados y no
-sirvió nunca contra la cuenta real.
+instalado en producción y pulsó el botón. Le salió un 504 del servidor.
+
+**Por qué no se había visto antes, que es la parte que enseña algo.** No fue
+por probar contra datos inventados: el panel de desarrollo tiene la misma llave
+de Kinsta y la misma cartera de 108 sitios, y la corrida tarda ahí los mismos
+minutos. Se escapó porque se probaba **siempre desde la línea de comandos**,
+donde no hay servidor web que corte la petición. Nadie había pulsado el botón
+en un navegador con la cartera completa delante.
+
+Es la segunda vez en dos días que muerde lo mismo. La otra fue la clave de
+registro del agente: el agente decía «está en el panel, en Ajustes», no estaba
+en ninguna pantalla, y no se notó porque en las pruebas la clave se sacaba con
+un comando contra la base de datos. La regla, entonces:
+
+> **Lo que va a usar una persona se prueba por donde lo va a usar esa persona.**
+> Si el camino de quien prueba no es el camino de quien usa, el hueco no se ve.
 
 **Lo que arregla de paso.** La corrida vieja borraba la fecha de escaneo de los
 107 sitios al empezar y la volvía a llenar al final. Si moría a la mitad
