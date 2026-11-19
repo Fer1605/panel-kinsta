@@ -466,6 +466,44 @@ $url_pestana = static fn( string $s ) => add_query_arg(
 		?>
 		<div class="swpk-pastillas" style="margin:0 0 12px"><?php echo SWPK_Vista::pastillas( $pastillas_tema ); // phpcs:ignore WordPress.Security.EscapeOutput ?></div>
 
+		<?php
+		// Lo mismo que se dice en Seguridad, dicho también aquí: esta es la
+		// otra pantalla donde se entra a arreglar y donde la columna de la
+		// derecha sale vacía casi siempre.
+		$arreglables_aqui = 0;
+		foreach ( $para_ver as $n_a ) {
+			$fila_a = $cumple_sitio[ (string) $n_a->clave ] ?? null;
+			if ( SWPK_Normas::FALLA === ( $fila_a ? (string) $fila_a->estado : '' )
+				&& '' !== SWPK_Ordenes::orden_de_la_norma( (string) $n_a->clave )
+				&& 1 === (int) $n_a->arreglable
+				&& ! $es_cliente
+			) {
+				++$arreglables_aqui;
+			}
+		}
+		?>
+		<p class="swpk-aviso-corto">
+			<?php
+			if ( $es_cliente ) {
+				echo 'Este sitio lo lleva el cliente: el panel lo mide, pero no le cambia nada.';
+			} elseif ( 0 === $arreglables_aqui ) {
+				echo 'De lo que le falta a este sitio, el panel no puede arreglar nada solo: hay que entrar al sitio a cambiarlo.';
+			} else {
+				echo esc_html( sprintf(
+					'%s desde aquí; el resto hay que ir a cambiarlo al sitio.',
+					SWPK_Vista::plural( $arreglables_aqui, 'norma se arregla', 'normas se arreglan' )
+				) );
+			}
+
+			echo wp_kses_post( SWPK_Vista::ayuda(
+				'El agente sabe cambiar estas normas, y ninguna más: '
+				. implode( '; ', SWPK_Ordenes::normas_que_sabe_arreglar() ) . '. Las demás —una cabecera '
+				. 'del servidor, una política de contenido, una versión de PHP— no están a su alcance: el '
+				. 'panel las mide y avisa, y el arreglo lo hace una persona entrando al sitio.'
+			) );
+			?>
+		</p>
+
 		<table class="widefat striped swpk-tabla">
 			<thead>
 				<tr>

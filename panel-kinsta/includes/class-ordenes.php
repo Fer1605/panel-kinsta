@@ -72,6 +72,30 @@ class SWPK_Ordenes {
 	}
 
 	/** Qué orden arregla cada norma. Una norma sin orden aquí no es arreglable. */
+	/**
+	 * Las normas que el panel sabe arreglar, por su nombre.
+	 *
+	 * Son cinco de setenta y tres, y eso hay que poder decirlo en pantalla:
+	 * «ya ni siquiera puedo arreglar cosas, ya no sé dónde arreglo». El botón
+	 * estaba donde tenía que estar; lo que faltaba era que el panel dijera que
+	 * casi nada de lo que se ve desde ahí es suyo para cambiar.
+	 *
+	 * @return array<int,string>
+	 */
+	public static function normas_que_sabe_arreglar(): array {
+		$nombres = [];
+
+		foreach ( SWPK_Normas::activas() as $n ) {
+			if ( '' !== self::orden_de_la_norma( (string) $n->clave ) && 1 === (int) $n->arreglable ) {
+				$nombres[] = (string) $n->nombre;
+			}
+		}
+
+		sort( $nombres );
+
+		return $nombres;
+	}
+
 	public static function orden_de_la_norma( string $norma ): string {
 		return match ( $norma ) {
 			'dos_pasos_activa' => 'activar_dos_pasos',

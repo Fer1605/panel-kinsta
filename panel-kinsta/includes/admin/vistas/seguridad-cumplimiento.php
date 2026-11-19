@@ -374,6 +374,37 @@ $cuenta_vista = [
 	?>
 
 	<?php
+	// Por qué casi todo dice «Hay que hacerlo a mano».
+	//
+	// De las 73 normas, el agente sabe cambiar cinco. Las demás son cosas que
+	// se arreglan entrando al sitio —una cabecera del servidor, una política
+	// de contenido— y el panel solo puede avisar. Sin esta frase, se recorren
+	// veintiún bloques sin tropezarse con un botón y la conclusión razonable
+	// es que el botón desapareció: «ya ni sé dónde arreglo yo las cosas».
+	$sabe_arreglar = SWPK_Ordenes::normas_que_sabe_arreglar();
+	?>
+	<p class="swpk-aviso-corto">
+		<?php
+		if ( 0 === $cuantas_arreglables ) {
+			echo 'Ahora mismo no hay nada que el panel pueda arreglar solo: lo que falla son normas que hay que ir a cambiar al sitio.';
+		} else {
+			echo esc_html( sprintf(
+				'%s desde aquí; el resto hay que ir a cambiarlo al sitio.',
+				SWPK_Vista::plural( $cuantas_arreglables, 'problema se arregla', 'problemas se arreglan' )
+			) );
+		}
+
+		echo wp_kses_post( SWPK_Vista::ayuda(
+			'El agente sabe cambiar estas ' . count( $sabe_arreglar ) . ' normas, y ninguna más: '
+			. implode( '; ', $sabe_arreglar ) . '. Las demás —una cabecera del servidor, una política de '
+			. 'contenido, una versión de PHP— no están a su alcance: el panel las mide y avisa, y el '
+			. 'arreglo lo hace una persona entrando al sitio. Los sitios que lleva el cliente quedan '
+			. 'fuera aunque la norma sea de las cinco: se miden, no se tocan.'
+		) );
+		?>
+	</p>
+
+	<?php
 	SWPK_Vista::barra_de_filtros(
 		'panel-kinsta-seguridad',
 		[
