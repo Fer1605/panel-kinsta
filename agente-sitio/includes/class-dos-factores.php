@@ -82,6 +82,18 @@ class SWA_Dos_Factores {
 		}
 
 		add_action( 'wp_login', [ __CLASS__, 'interceptar' ], 10, 2 );
+
+		// El código se manda a admin-post.php, no a wp-login.php, y hay un
+		// motivo concreto: nuestro tema hijo esconde el login en /panel/admin/
+		// y rebota a quien no ha entrado y pida wp-login.php. El segundo paso
+		// ocurre justo ahí, con la persona todavía sin entrar, así que el
+		// código se habría ido a parar a la página de contacto. admin-post.php
+		// sí está permitido, porque lo usan los formularios del sitio.
+		add_action( 'admin_post_nopriv_swa_verificar', [ __CLASS__, 'procesar_verificacion' ] );
+		add_action( 'admin_post_swa_verificar', [ __CLASS__, 'procesar_verificacion' ] );
+
+		// Y se deja el camino viejo puesto, para que un formulario que ya
+		// estaba abierto en una pestaña no se quede sin sitio donde llegar.
 		add_action( 'login_form_swa_verificar', [ __CLASS__, 'procesar_verificacion' ] );
 
 		if ( SWA_Ajustes::obtener( 'cerrar_xmlrpc' ) ) {
@@ -224,10 +236,32 @@ class SWA_Dos_Factores {
 		);
 	}
 
+	/**
+	 * Dibuja el segundo paso.
+	 *
+	 * ─── Por qué no se llama a login_header() a secas ───────────────────
+	 *
+	 * Porque no siempre existe. `login_header()` y `login_footer()` viven
+	 * dentro de wp-login.php, y solo están definidas cuando la petición pasó
+	 * por ese archivo. Si el sitio tiene su propio login —como el tema hijo,
+	 * que lo pone en /panel/admin/— quien valida la contraseña es una
+	 * plantilla del front, wp-login.php no se cargó, y llamarlas ahí revienta
+	 * con un error fatal en mitad de la entrada. O sea: encender la
+	 * verificación en dos pasos dejaba a todo el mundo fuera.
+	 *
+	 * Así que cuando no están, esta pantalla se dibuja sola, con la hoja de
+	 * estilos del login de WordPress para que se vea igual.
+	 */
 	private static function pantalla( WP_User $usuario, string $testigo, string $redirigir, bool $recordar, string $error = '' ): void {
-		login_header( 'Verificación en dos pasos', '', new WP_Error() );
+		$propia = ! function_exists( 'login_header' );
+
+		if ( $propia ) {
+			self::cabecera();
+		} else {
+			login_header( 'Verificación en dos pasos', '', new WP_Error() );
+		}
 		?>
-		<form name="swa" id="loginform" action="<?php echo esc_url( site_url( 'wp-login.php?action=swa_verificar', 'login_post' ) ); ?>" method="post">
+		<form name="swa" id="loginform" action="<?php echo esc_url( admin_url( 'admin-post.php?action=swa_verificar' ) ); ?>" method="post">
 			<?php if ( '' !== $error ) : ?>
 				<div id="login_error" style="margin-bottom:16px"><?php echo esc_html( $error ); ?></div>
 			<?php endif; ?>
@@ -258,7 +292,44 @@ class SWA_Dos_Factores {
 			</p>
 		</form>
 		<?php
-		login_footer();
+		if ( $propia ) {
+			self::pie();
+		} else {
+			login_footer();
+		}
+	}
+
+	/** La cabecera de la pantalla, cuando wp-login.php no está en la petición. */
+	private static function cabecera(): void {
+		if ( ! headers_sent() ) {
+			nocache_headers();
+			header( 'Content-Type: text/html; charset=' . get_bloginfo( 'charset' ) );
+		}
+		?>
+<!DOCTYPE html>
+<html <?php language_attributes(); ?>>
+<head>
+	<meta charset="<?php bloginfo( 'charset' ); ?>">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<meta name="robots" content="noindex, nofollow">
+	<title><?php echo esc_html( 'Verificación en dos pasos · ' . get_bloginfo( 'name' ) ); ?></title>
+	<?php wp_admin_css( 'login', true ); ?>
+</head>
+<body class="login wp-core-ui">
+	<div id="login">
+		<h1 style="text-align:center;margin-bottom:18px">
+			<?php echo esc_html( get_bloginfo( 'name' ) ); ?>
+		</h1>
+		<?php
+	}
+
+	/** El pie de esa misma pantalla. */
+	private static function pie(): void {
+		?>
+	</div>
+</body>
+</html>
+		<?php
 	}
 
 	public static function procesar_verificacion(): void {
