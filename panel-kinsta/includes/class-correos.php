@@ -207,11 +207,16 @@ class SWPK_Correos {
 	 * veinte filas, que es donde hace falta enseñar a quién le va a llegar el
 	 * aviso sin tener que entrar a cada ficha.
 	 *
-	 * Devuelve solo los sitios que tienen a alguien: el que no aparece es que
-	 * no tiene agente, o que todos sus administradores son de casa.
+	 * Devuelve una entrada por sitio con sus correos y, cuando no hay ninguno,
+	 * POR QUÉ no lo hay. Esa distinción importa: «el agente todavía no ha
+	 * mandado su lista de usuarios» no es lo mismo que «este sitio no tiene
+	 * agente», y decir lo segundo cuando pasa lo primero es decirle a quien
+	 * mira que le falta instalar algo que ya está instalado.
+	 *
+	 * El motivo es uno de: `ok`, `sin_agente`, `sin_reporte`, `todos_de_casa`.
 	 *
 	 * @param array<int,object> $sitios
-	 * @return array<string,array<int,string>> sitio_id => correos
+	 * @return array<string,array{correos:array<int,string>,motivo:string}>
 	 */
 	public static function destinatarios_de_varios( array $sitios ): array {
 		global $wpdb;
@@ -252,9 +257,14 @@ class SWPK_Correos {
 		) ?: [];
 
 		$correos_por_url = [];
+		$reporto_alguno  = []; // url => true, aunque todos fueran de casa
 
 		foreach ( $usuarios as $u ) {
-			$correo  = (string) $u->correo;
+			$url_u  = (string) $u->sitio_url;
+			$correo = (string) $u->correo;
+
+			$reporto_alguno[ $url_u ] = true;
+
 			$dominio = strtolower( (string) substr( strrchr( $correo, '@' ) ?: '', 1 ) );
 
 			foreach ( $propios as $propio ) {
@@ -263,7 +273,7 @@ class SWPK_Correos {
 				}
 			}
 
-			$correos_por_url[ (string) $u->sitio_url ][] = $correo;
+			$correos_por_url[ $url_u ][] = $correo;
 		}
 
 		$salida = [];
@@ -273,11 +283,24 @@ class SWPK_Correos {
 			$host = strtolower( preg_replace( '/^www\./', '', (string) $s->dominio ) );
 			$url  = $por_id[ $id ] ?? ( $por_dominio[ $host ] ?? '' );
 
-			if ( '' === $url || empty( $correos_por_url[ $url ] ) ) {
+			if ( ! empty( $correos_por_url[ $url ] ) ) {
+				$salida[ $id ] = [
+					'correos' => array_values( array_unique( $correos_por_url[ $url ] ) ),
+					'motivo'  => 'ok',
+				];
 				continue;
 			}
 
-			$salida[ $id ] = array_values( array_unique( $correos_por_url[ $url ] ) );
+			// Sin correos. El porqué sale de lo que el panel ya sabe: si el
+			// sitio tiene agente, si ese agente ha mandado alguna vez su
+			// lista, y si lo que mandó se quedó todo fuera por ser de casa.
+			$motivo = 'sin_agente';
+
+			if ( 1 === (int) ( $s->cobertura_agente ?? 0 ) || '' !== $url ) {
+				$motivo = ! empty( $reporto_alguno[ $url ] ) ? 'todos_de_casa' : 'sin_reporte';
+			}
+
+			$salida[ $id ] = [ 'correos' => [], 'motivo' => $motivo ];
 		}
 
 		return $salida;

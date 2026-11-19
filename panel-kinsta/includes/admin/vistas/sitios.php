@@ -350,31 +350,51 @@ $volver = add_query_arg(
 							// alguien entra o sale del sitio—.
 							//
 							// Vacío: manda la lista del agente. Escrito: manda lo escrito.
-							$del_agente = $destinos_pagina[ (string) $s->sitio_id ] ?? [];
-							$marcador   = $del_agente
-								? implode( ', ', $del_agente )
-								: 'correo del cliente, separados por coma';
+							$info       = $destinos_pagina[ (string) $s->sitio_id ] ?? [ 'correos' => [], 'motivo' => 'sin_agente' ];
+							$del_agente = $info['correos'];
+
+							// Qué se pone de marcador, y qué se explica, según POR QUÉ no
+							// hay correos. Decir «no tiene el agente instalado» cuando lo
+							// que pasa es que el agente aún no ha mandado su lista manda a
+							// instalar algo que ya está puesto.
+							[ $marcador, $explica ] = $del_agente
+								? [
+									implode( ', ', $del_agente ),
+									'En gris están los administradores que reporta el agente, menos los de los '
+									. 'dominios de la casa que haya en Ajustes → Correos. Si lo dejás en blanco, '
+									. 'el aviso va a esas direcciones y la lista se mantiene sola. Si escribís '
+									. 'algo, manda lo que escribas; varias direcciones, separadas por coma.',
+								]
+								: match ( $info['motivo'] ) {
+									'sin_reporte' => [
+										'el agente aún no ha mandado la lista',
+										'Este sitio sí tiene el agente instalado, pero todavía no ha mandado su '
+										. 'lista de administradores: llega con su próximo reporte y entonces el '
+										. 'campo se llena solo. Mientras tanto se puede escribir a mano, y lo '
+										. 'escrito manda sobre lo que mande el agente.',
+									],
+									'todos_de_casa' => [
+										'todos sus administradores son de la casa',
+										'El agente reportó sus administradores, pero todos son de los dominios '
+										. 'de la casa puestos en Ajustes → Correos, así que ninguno cuenta como '
+										. 'contacto del cliente. Si hay que avisarle a alguien de fuera, se '
+										. 'escribe aquí.',
+									],
+									default => [
+										'correo del cliente, separados por coma',
+										'Este sitio no tiene el agente instalado, así que el panel no puede '
+										. 'saber quiénes son sus administradores: aquí hay que escribirlo a '
+										. 'mano. Varias direcciones, separadas por coma. Si se queda vacío, su '
+										. 'aviso no sale.',
+									],
+								};
 							?>
 							<input type="text" style="width:100%"
 								class="<?php echo $del_agente ? 'swpk-del-agente' : ''; ?>"
 								name="contacto[<?php echo esc_attr( $s->sitio_id ); ?>]"
 								value="<?php echo esc_attr( (string) $s->contacto_cliente ); ?>"
 								placeholder="<?php echo esc_attr( $marcador ); ?>">
-							<?php if ( $del_agente ) : ?>
-								<?php echo wp_kses_post( SWPK_Vista::ayuda(
-									'En gris está lo que dice el agente instalado: los administradores del '
-									. 'sitio, menos los de los dominios de la casa que haya en Ajustes → '
-									. 'Correos. Si lo dejás en blanco, el aviso va a esas direcciones y la '
-									. 'lista se mantiene sola. Si escribís algo, manda lo que escribas; '
-									. 'varias direcciones, separadas por coma.'
-								) ); ?>
-							<?php else : ?>
-								<?php echo wp_kses_post( SWPK_Vista::ayuda(
-									'Este sitio no tiene el agente instalado, así que el panel no puede saber '
-									. 'quiénes son sus administradores: aquí hay que escribirlo a mano. Varias '
-									. 'direcciones, separadas por coma. Si se queda vacío, su aviso no sale.'
-								) ); ?>
-							<?php endif; ?>
+							<?php echo wp_kses_post( SWPK_Vista::ayuda( $explica ) ); ?>
 						</td>
 						<td>
 							<a class="button button-small"
