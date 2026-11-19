@@ -225,10 +225,10 @@ if ( '' !== $sev_pedida || '' !== $norma_pedida ) {
 // norma puede traer ochenta renglones, y hay decenas de normas: la pantalla
 // se volvía un pozo por el que nunca se termina de bajar.
 //
-// Ahora: seis bloques por página, y dentro de cada bloque los primeros ocho
+// Ahora: seis bloques por página, y dentro de cada bloque los primeros cinco
 // sitios con un enlace para ver el resto. Al pedir una norma concreta sí se
 // abre entera, porque entonces es justo lo que se vino a ver.
-$POR_BLOQUE = 8;
+$POR_BLOQUE = 5;
 
 [ $con_fallas_pagina, $pag_fallas, $pags_fallas ] = SWPK_Vista::paginar(
 	$con_fallas,
