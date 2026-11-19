@@ -1727,9 +1727,20 @@ body[class*="panel-kinsta"] .swpk-renglon-capa {
 	border-radius: 8px;
 }
 
+/* El contenido va por encima de la capa para que se lea y se seleccione…
+   pero entonces se come el clic: pulsar en medio del renglón daba en el div
+   del nombre, no en el enlace de debajo, y solo funcionaba en los huecos.
+   Por eso el contenido no recibe clics —`pointer-events: none`— salvo lo que
+   de verdad es pulsable, que los recupera. */
 body[class*="panel-kinsta"] .swpk-renglon-vivo > *:not(.swpk-renglon-capa) {
 	position: relative;
 	z-index: 1;
+	pointer-events: none;
+}
+
+body[class*="panel-kinsta"] .swpk-renglon-vivo a,
+body[class*="panel-kinsta"] .swpk-renglon-vivo button {
+	pointer-events: auto;
 }
 
 body[class*="panel-kinsta"] .swpk-renglon-vivo:hover {
@@ -1771,4 +1782,16 @@ body[class*="panel-kinsta"] .wrap .notice-dismiss {
 body[class*="panel-kinsta"] .wrap .notice-dismiss::before {
 	margin: 0;
 	padding: 0;
+}
+
+/* Las cifras de la ficha: todas en una fila, y ninguna estirada.
+   Eran cuatro de 259 px que llenaban el renglón justo, así que la quinta
+   —la de doble autenticación— se caía abajo y, con `flex: 1`, se estiraba a
+   los 1.078 px de ancho con dos palabras dentro. Con una base corta caben
+   las cinco; si algún día no cupieran, el tope impide que la que sobre se
+   quede ocupando el renglón entero ella sola. */
+body[class*="panel-kinsta"] .swpk-tarjetas .swpk-tarjeta {
+	flex: 1 1 150px;
+	min-width: 150px;
+	max-width: 320px;
 }

@@ -345,7 +345,15 @@ $a = SWPK_Ajustes::todos();
 
 	</form>
 
-	<?php SWPK_Vista::caja_abrir( 'Cómo está el panel', esc_html( 'versión ' . SWPK_VERSION ), 'swpk-c12', true ); ?>
+	<?php SWPK_Vista::caja_abrir(
+		'Cómo está el panel' . SWPK_Vista::ayuda(
+			'De cuándo es cada cosa de las que enseña el panel, y cada cuánto se refresca sola. '
+			. 'Ninguna pantalla se actualiza mientras la tenés abierta: hay que recargarla.'
+		),
+		esc_html( 'versión ' . SWPK_VERSION ),
+		'swpk-c12',
+		true
+	); ?>
 	<?php // swpk-pares: nombre a la izquierda en gris, dato a la derecha en negrita, como la maqueta. ?>
 	<table class="widefat swpk-pares">
 		<tbody>
@@ -434,6 +442,7 @@ $a = SWPK_Ajustes::todos();
 			<tr><td>Versión del plugin</td><td><?php echo esc_html( SWPK_VERSION ); ?></td></tr>
 		</tbody>
 	</table>
+	<?php SWPK_Frescura::sello(); ?>
 	<?php SWPK_Vista::caja_cerrar(); ?>
 
 	<?php SWPK_Vista::rejilla_cerrar(); ?>

@@ -27,9 +27,11 @@ $url_sec = static fn( string $s ) => add_query_arg(
 	<?php
 	SWPK_Vista::cabecera(
 		'Ajustes',
-		'panel' === $seccion
-			? 'La llave del hosting, los grupos y cómo corre.'
-			: 'Cómo consultar el panel desde fuera, o desde Claude.',
+		match ( $seccion ) {
+			'correos' => 'A qué direcciones nuestras sale cada aviso.',
+			'api'     => 'Cómo consultar el panel desde fuera, o desde Claude.',
+			default   => 'La llave del hosting, los grupos y los tiempos.',
+		},
 		SWPK_Vista::pastillas( [
 			[
 				'texto'  => 'El panel',
@@ -54,8 +56,9 @@ $url_sec = static fn( string $s ) => add_query_arg(
 	<?php require SWPK_RUTA . 'includes/admin/vistas/ajustes-' . $seccion . '.php'; ?>
 
 	<?php
-	// El sello de frescura va en TODAS las pantallas, como en la maqueta: es
-	// el dato que convierte una pantalla en evidencia.
-	SWPK_Frescura::sello();
+	// El sello de frescura —de cuándo es cada dato— vive en «Cómo está el
+	// panel», que es la tarjeta que contesta eso. Suelto al pie de las tres
+	// pestañas era «puro estorbo», y en la de correos no venía a cuento: ahí
+	// no hay ningún dato con fecha.
 	?>
 </div>
