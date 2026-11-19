@@ -140,7 +140,8 @@ que se ve en pantalla es siempre una foto, nunca el momento, y por eso existe
 | `class-api.php` | La API de consulta |
 | `class-mcp.php` | El panel hablando MCP, para Claude Desktop |
 | `class-monitor.php` | Sondeo de caídas |
-| `class-sincronizador.php` | La corrida diaria, y analizar un sitio suelto |
+| `class-sincronizador.php` | Los pasos de la corrida, y analizar un sitio suelto |
+| `class-trabajo.php` | El motor que parte la corrida en tramos y la reanuda |
 | `class-frescura.php` | De cuándo es cada dato, y cuándo hay que avisarlo |
 | `class-estado.php` | El veredicto del Resumen: qué está mal, con nombre |
 | `class-exportar.php` | Excel |

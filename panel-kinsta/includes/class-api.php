@@ -114,6 +114,16 @@ class SWPK_Api {
 
 		register_rest_route(
 			self::ESPACIO,
+			'/corrida',
+			[
+				'methods'             => 'GET',
+				'callback'            => [ __CLASS__, 'corrida' ],
+				'permission_callback' => $leer,
+			]
+		);
+
+		register_rest_route(
+			self::ESPACIO,
 			'/sondear',
 			[
 				'methods'             => 'POST',
@@ -228,14 +238,14 @@ class SWPK_Api {
 	 *
 	 * @param array<string,mixed> $datos
 	 */
-	private static function responder( array $datos ): WP_REST_Response {
+	private static function responder( array $datos, int $codigo = 200 ): WP_REST_Response {
 		return new WP_REST_Response(
 			$datos + [
 				'frescura'    => self::frescura(),
 				'generado_en' => current_time( 'mysql' ),
 				'zona'        => wp_timezone_string(),
 			],
-			200
+			$codigo
 		);
 	}
 
@@ -691,10 +701,37 @@ class SWPK_Api {
 		);
 	}
 
+	/**
+	 * Dispara la corrida completa.
+	 *
+	 * Contesta enseguida, sin esperarla. No es por comodidad: la corrida son
+	 * dos consultas al hosting por cada sitio y tarda minutos, y una petición
+	 * web que dure minutos la corta el servidor. Quien llame a esto recibe un
+	 * 202 y consulta el avance en GET /corrida.
+	 */
 	public static function analizar( WP_REST_Request $peticion ): WP_REST_Response {
-		$resumen = SWPK_Sincronizador::correr();
+		$ya = SWPK_Trabajo::corriendo() && ! SWPK_Trabajo::colgado();
 
-		return self::responder( [ 'corrida' => $resumen ] );
+		return self::responder(
+			[
+				'corrida' => SWPK_Trabajo::empezar(),
+				'aviso'   => $ya
+					? 'Ya había una corrida en marcha; esta petición no empezó otra.'
+					: 'La corrida queda encolada y avanza sola. Su estado se consulta en GET /corrida.',
+			],
+			202
+		);
+	}
+
+	/** Cómo va la corrida, si hay alguna. */
+	public static function corrida( WP_REST_Request $peticion ): WP_REST_Response {
+		return self::responder(
+			[
+				'corrida'  => SWPK_Trabajo::publico( SWPK_Trabajo::estado() ),
+				'colgada'  => SWPK_Trabajo::colgado(),
+				'ultima'   => SWPK_Sincronizador::ultima_corrida(),
+			]
+		);
 	}
 
 	public static function sondear( WP_REST_Request $peticion ): WP_REST_Response {

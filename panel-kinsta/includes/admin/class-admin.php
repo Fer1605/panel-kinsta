@@ -213,6 +213,7 @@ class SWPK_Admin {
 		wp_enqueue_style( 'swpk-heredado', $base . 'heredado.css', [], SWPK_VERSION );
 		wp_enqueue_style( 'swpk-panel', $base . 'panel.css', [ 'swpk-heredado' ], SWPK_VERSION );
 		wp_enqueue_script( 'swpk-filtros', $base . 'filtros.js', [], SWPK_VERSION, true );
+		wp_enqueue_script( 'swpk-progreso', $base . 'progreso.js', [], SWPK_VERSION, true );
 	}
 
 	public static function aviso_demo(): void {
@@ -230,6 +231,20 @@ class SWPK_Admin {
 	}
 
 	public static function barra_acciones(): void {
+		$t = SWPK_Trabajo::estado();
+
+		if ( $t && 'corriendo' === $t['estado'] ) {
+			self::avance( SWPK_Trabajo::publico( $t ) );
+			return;
+		}
+
+		// Una corrida que acaba de terminar deja su resultado a la vista una vez
+		// y se olvida. Si no se olvidara, el mismo "listo" saldría mañana.
+		if ( $t && in_array( $t['estado'], [ 'hecho', 'error' ], true ) ) {
+			self::resultado( SWPK_Trabajo::publico( $t ) );
+			SWPK_Trabajo::olvidar();
+		}
+
 		$url = wp_nonce_url( admin_url( 'admin-post.php?action=swpk_correr' ), 'swpk_correr' );
 		$ult = SWPK_Frescura::corrida();
 		?>
@@ -244,6 +259,65 @@ class SWPK_Admin {
 			</span>
 		</p>
 		<?php
+	}
+
+	/**
+	 * La barra mientras corre.
+	 *
+	 * El `data-nonce` es lo que la pantalla usa para ir pidiendo el siguiente
+	 * tramo. Si el navegador no puede con ello —JavaScript apagado, pestaña
+	 * cerrada— no se pierde nada: el trabajo está anotado y el reloj lo termina.
+	 * Por eso el texto lo dice, en vez de dejar a nadie esperando.
+	 *
+	 * @param array<string,mixed> $p
+	 */
+	private static function avance( array $p ): void {
+		?>
+		<div class="swpk-corrida" data-nonce="<?php echo esc_attr( wp_create_nonce( 'swpk_avanzar' ) ); ?>">
+			<div class="swpk-corrida-pista">
+				<span style="width:<?php echo (int) $p['porcentaje']; ?>%"></span>
+			</div>
+			<p class="swpk-corrida-texto"><?php echo esc_html( (string) $p['texto'] ); ?></p>
+			<p class="swpk-corrida-nota">
+				Esto tarda unos minutos: son dos consultas al hosting por cada sitio.
+				Se puede cerrar esta pantalla —la corrida sigue sola y termina igual.
+			</p>
+		</div>
+		<?php
+	}
+
+	/**
+	 * Lo que quedó de la corrida que acaba de terminar.
+	 *
+	 * @param array<string,mixed> $p
+	 */
+	private static function resultado( array $p ): void {
+		$r       = (array) $p['resumen'];
+		$errores = (array) ( $r['errores'] ?? [] );
+		$notas   = (array) ( $r['notas'] ?? [] );
+
+		if ( $errores ) {
+			printf(
+				'<div class="notice notice-error"><p><strong>La corrida se detuvo.</strong> %s</p></div>',
+				esc_html( implode( ' · ', $errores ) )
+			);
+
+			return;
+		}
+
+		printf(
+			'<div class="notice notice-success"><p><strong>Corrida terminada.</strong> %s</p>%s</div>',
+			esc_html(
+				sprintf(
+					'%d sitios, %d filas de inventario, %d vulnerabilidades, %d eventos nuevos.',
+					(int) ( $r['sitios'] ?? 0 ),
+					(int) ( $r['filas_foto'] ?? 0 ),
+					(int) ( $r['vulnerabilidades'] ?? 0 ),
+					(int) ( $r['eventos'] ?? 0 )
+				)
+			),
+			$notas ? '<p>' . esc_html( implode( ' · ', $notas ) ) . '</p>' : ''
+		);
 	}
 
 	public static function nivel_badge( string $nivel ): string {
@@ -392,27 +466,24 @@ class SWPK_Admin {
 
 	// ── Acciones ────────────────────────────────────────────────────────────
 
+	/**
+	 * «Correr ahora».
+	 *
+	 * No corre nada aquí: apunta que hay trabajo y devuelve la pantalla. Lo que
+	 * sigue lo lleva SWPK_Trabajo, a tramos, y la pantalla lo enseña con una
+	 * barra. Antes esta acción hacía la corrida entera dentro de la petición, y
+	 * contra la cuenta real eso termina siempre igual: el servidor corta a los
+	 * pocos minutos y el usuario ve un 504.
+	 */
 	public static function accion_correr(): void {
 		if ( ! self::puede_administrar() ) {
 			wp_die( 'Sin permiso.' );
 		}
 		check_admin_referer( 'swpk_correr' );
 
-		$resumen = SWPK_Sincronizador::correr();
+		SWPK_Trabajo::empezar();
 
-		$mensaje = $resumen['errores']
-			? 'error:' . rawurlencode( implode( ' · ', $resumen['errores'] ) )
-			: 'ok:' . rawurlencode(
-				sprintf(
-					'%d sitios, %d filas de inventario, %d vulnerabilidades, %d eventos nuevos.',
-					$resumen['sitios'],
-					$resumen['filas_foto'],
-					$resumen['vulnerabilidades'],
-					$resumen['eventos']
-				)
-			);
-
-		wp_safe_redirect( admin_url( 'admin.php?page=' . self::SLUG . '&swpk_msg=' . $mensaje ) );
+		wp_safe_redirect( admin_url( 'admin.php?page=' . self::SLUG ) );
 		exit;
 	}
 

@@ -305,7 +305,8 @@ panel-kinsta/
     ├── class-inventario.php      el inventario consolidado
     ├── class-normas.php          las normas de seguridad y el cumplimiento
     ├── class-ordenes.php         la cola de lo que el panel le pide a un agente
-    ├── class-sincronizador.php   la corrida diaria
+    ├── class-sincronizador.php   los pasos de la corrida
+    ├── class-trabajo.php         el motor que la parte en tramos
     ├── class-wordfence.php       feed de vulnerabilidades (lectura en trozos)
     ├── class-riesgo.php          cruce de versiones instaladas contra el feed
     ├── class-eventos.php         comparación entre fotos: qué cambió

@@ -141,7 +141,7 @@ $volver = add_query_arg(
 		printf(
 			'<a class="button" href="%s" title="%s" style="margin-left:6px">Revisar todos</a>',
 			esc_url( wp_nonce_url( admin_url( 'admin-post.php?action=swpk_correr' ), 'swpk_correr' ) ),
-			esc_attr( 'Vuelve a revisar los ' . count( $todos ) . ' sitios. Tarda un par de minutos.' )
+			esc_attr( 'Vuelve a revisar los ' . count( $todos ) . ' sitios. Arranca al momento y sigue en el Resumen, donde se ve cómo va.' )
 		);
 	}
 

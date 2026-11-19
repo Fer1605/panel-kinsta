@@ -291,8 +291,8 @@ de evidencia con las horas mal es un panel de evidencia inservible.
 
 ## 22. El inventario diario se llama `fotos` por dentro
 
-**Qué.** La tabla es `swpk_fotos` y el método `tomar_foto()`, pero en pantalla
-y en los comentarios se habla de «inventario».
+**Qué.** La tabla es `swpk_fotos`, pero en pantalla y en los comentarios se
+habla de «inventario».
 
 **Por qué.** Es una deuda de nombres, no una decisión. Está pendiente
 renombrarlo. Si lo haces, acuérdate de que es una migración de base de datos,
@@ -358,3 +358,40 @@ solo esto, solo pagando, y esto otro no se puede ni pagando». Lo escrito en
 [14 · Cadencia y lo que cuesta](14-cadencia-y-lo-que-cuesta.md) está para que
 nadie tenga que volver a averiguarlo, y para que nadie prometa una hora fija que
 el panel no puede cumplir.
+
+---
+
+## 24. La corrida no cabe en una petición web, y por eso va a tramos
+
+**Qué.** «Correr ahora» no corre nada. Apunta que hay trabajo y devuelve la
+pantalla. El trabajo avanza después en tramos de doce segundos, empujados por
+la pantalla mientras esté abierta y por el reloj del servidor cuando no lo
+esté. La pantalla enseña una barra.
+
+**Por qué.** Porque la corrida son dos consultas al hosting por cada sitio
+—214 con 107 sitios— y el cliente HTTP frena solo para no pasarse del límite
+por minuto que impone Kinsta. O sea que tarda minutos **por diseño**. Una
+petición web no dura minutos: el servidor la corta y el trabajo queda a medias.
+
+**Cómo se supo.** El 18 de noviembre de 2026 el jefe entró al panel recién
+instalado en producción y pulsó el botón. Le salió un 504 del servidor. En
+local nunca se había visto porque la fuente de demostración contesta al
+instante: el botón sirvió desde el primer día contra datos inventados y no
+sirvió nunca contra la cuenta real.
+
+**Lo que arregla de paso.** La corrida vieja borraba la fecha de escaneo de los
+107 sitios al empezar y la volvía a llenar al final. Si moría a la mitad
+—justo lo que pasaba— dejaba medio inventario marcado como «nunca escaneado»,
+que es una mentira distinta de «todavía no se sabe». Ahora la fecha se anota
+sitio por sitio conforme se lee, y lo que se borra al cerrar es solo lo de los
+sitios que de verdad no contestaron.
+
+**Un tramo se mide con reloj, no con sitios.** Si se midiera en «veinte sitios»
+y un día el hosting contestara lento, el tramo duraría el triple y volveríamos
+al mismo 504. Doce segundos duran doce segundos conteste como conteste: lo que
+cambia es cuánto avanza, no si sobrevive.
+
+**El endpoint de empresa no es la salida.** Devuelve lo mismo en pocas llamadas,
+pero pagina de 30 en 30 y los parámetros que controlan eso van en el cuerpo de
+un GET, que es lo que WordPress no puede mandar. Comprobado contra la API real
+el 11 de noviembre de 2026; está contado en `class-fuente-api.php`.

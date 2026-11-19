@@ -1189,3 +1189,42 @@ body[class*="panel-kinsta"] .swpk-par .swpk-v {
 	font-weight: 600;
 	text-align: right;
 }
+
+/* ── La corrida en marcha ───────────────────────────────────────────────────
+   Sale en lugar del botón «Correr ahora» mientras hay trabajo. La barra no es
+   decoración: es la respuesta a por qué la pantalla no hace nada todavía. */
+
+body[class*="panel-kinsta"] .swpk-corrida {
+	margin: 12px 0 18px;
+	max-width: 520px;
+}
+
+body[class*="panel-kinsta"] .swpk-corrida-pista {
+	background: #e5e7eb;
+	border-radius: 999px;
+	height: 10px;
+	overflow: hidden;
+}
+
+body[class*="panel-kinsta"] .swpk-corrida-pista span {
+	background: #2271b1;
+	border-radius: 999px;
+	display: block;
+	height: 100%;
+	/* Que el avance se deslice y no salte: con tramos de doce segundos, un
+	   salto seco parece un error y un deslizamiento parece trabajo. */
+	transition: width .4s ease;
+	width: 0;
+}
+
+body[class*="panel-kinsta"] .swpk-corrida-texto {
+	color: #1d2327;
+	font-weight: 600;
+	margin: 8px 0 2px;
+}
+
+body[class*="panel-kinsta"] .swpk-corrida-nota {
+	color: #50575e;
+	font-size: 12px;
+	margin: 0;
+}

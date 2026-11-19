@@ -216,7 +216,7 @@ $a = SWPK_Ajustes::todos();
 
 	<?php if ( SWPK_Perfiles::puede( SWPK_Perfiles::ADMINISTRAR ) ) : ?>
 		<p style="margin:16px 0 0">
-			<a class="button button-primary" href="<?php echo esc_url( wp_nonce_url( admin_url( 'admin-post.php?action=swpk_correr' ), 'swpk_correr' ) ); ?>">Correr ahora</a>
+			<a class="button button-primary" href="<?php echo esc_url( wp_nonce_url( admin_url( 'admin-post.php?action=swpk_correr' ), 'swpk_correr' ) ); ?>" title="Arranca la corrida y lleva al Resumen, donde se ve cómo va.">Correr ahora</a>
 			<a class="button" href="<?php echo esc_url( wp_nonce_url( admin_url( 'admin-post.php?action=swpk_sondear' ), 'swpk_sondear' ) ); ?>" style="margin-left:6px">Sondear ahora</a>
 			<a class="button" href="<?php echo esc_url( wp_nonce_url( admin_url( 'admin-post.php?action=swpk_revisar' ), 'swpk_revisar' ) ); ?>" style="margin-left:6px">Revisar configuración</a>
 			<a class="button" href="<?php echo esc_url( wp_nonce_url( admin_url( 'admin-post.php?action=swpk_plataforma' ), 'swpk_plataforma' ) ); ?>" style="margin-left:6px">Leer la plataforma</a>

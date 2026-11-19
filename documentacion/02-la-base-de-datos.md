@@ -64,9 +64,9 @@ la historia la construye el panel guardando una foto diaria y comparándolas.
 | `activo` | Si está activo en el sitio |
 | `escaneado_en` | Cuándo lo miró el hosting |
 
-> El nombre de la tabla es `fotos` y el del método es `tomar_foto()`, pero en
-> las pantallas y en los comentarios se habla de «inventario». Es una deuda de
-> nombres conocida y pendiente: el concepto es el mismo.
+> El nombre de la tabla es `fotos`, pero en las pantallas y en los comentarios
+> se habla de «inventario». Es una deuda de nombres conocida y pendiente: el
+> concepto es el mismo.
 
 ---
 
