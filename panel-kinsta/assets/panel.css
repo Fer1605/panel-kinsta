@@ -395,10 +395,14 @@ body[class*="panel-kinsta"] .swpk-dia-hoy .swpk-dia-f { color: #14559e; }
 
 /* Enlaces: el azul de la marca, no el de WordPress.
 
-   La pastilla de filtro activa queda fuera: es un enlace con el fondo azul
-   pleno, y pintarle el texto de azul lo dejaba invisible — la pastilla «Todos»
-   se veía como una mancha azul vacía. */
-body[class*="panel-kinsta"] .wrap a:not(.button):not(.nav-tab):not(.swpk-filtro-activo) {
+   Quedan fuera los enlaces que ya son un botón o una pestaña: tienen su propio
+   fondo, y pintarles el texto de azul los deja ilegibles. Pasó dos veces. La
+   segunda fue esta misma regla ganándole por especificidad a la de las
+   pestañas de cabecera —tres `:not()` pesan más que `a.swpk-pastilla-activa`—
+   y dejando la pestaña activa con texto azul sobre fondo azul oscuro: 1,6 de
+   contraste, o sea «un botón azul y no leo qué dice». Si mañana aparece otro
+   enlace con fondo propio, va a esta lista, no a una regla nueva más abajo. */
+body[class*="panel-kinsta"] .wrap a:not(.button):not(.nav-tab):not(.swpk-filtro-activo):not(.swpk-pastilla) {
 	color: var(--swpk-marca);
 }
 
