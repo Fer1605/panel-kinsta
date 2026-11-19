@@ -267,23 +267,81 @@ $plano = SWPK_Textos::para_asesora( $sitio, $hallazgos );
 			</div>
 		<?php endif; ?>
 
+		<?php
+		// Las 73 normas de corrido en la ficha de cada sitio son el mismo pozo
+		// que había en «Qué revisamos». Se divide por tema y se pagina, y con
+		// las mismas pastillas, para que las dos pantallas se lean igual.
+		$aplicables = [];
+		foreach ( $normas_activas as $n ) {
+			if ( SWPK_Normas::aplica( $n, (string) $sitio->tag ) ) {
+				$aplicables[] = $n;
+			}
+		}
+
+		$por_tema = [];
+		foreach ( $aplicables as $n ) {
+			$g = (string) ( $n->grupo ?? '' );
+			$por_tema[ '' !== $g ? $g : 'Sin clasificar' ][] = $n;
+		}
+
+		$temas = [];
+		foreach ( SWPK_Normas::grupos() as $g ) {
+			if ( isset( $por_tema[ $g ] ) ) {
+				$temas[] = $g;
+			}
+		}
+		foreach ( array_keys( $por_tema ) as $g ) {
+			if ( ! in_array( $g, $temas, true ) ) {
+				$temas[] = $g;
+			}
+		}
+
+		$tema_pedido = isset( $_GET['tema'] ) ? sanitize_text_field( wp_unslash( (string) $_GET['tema'] ) ) : '';
+		$hay_tema    = '' !== $tema_pedido && isset( $por_tema[ $tema_pedido ] );
+		$para_ver    = $hay_tema ? $por_tema[ $tema_pedido ] : $aplicables;
+
+		$url_tema = static fn( string $g ) => add_query_arg(
+			array_filter( [
+				'page'  => 'panel-kinsta-sitio',
+				'sitio' => (string) $sitio->sitio_id,
+				'tema'  => $g,
+			] ),
+			admin_url( 'admin.php' )
+		);
+
+		$pastillas_tema = [ [
+			'texto'  => 'Todas',
+			'n'      => count( $aplicables ),
+			'url'    => $url_tema( '' ),
+			'activa' => ! $hay_tema,
+		] ];
+
+		foreach ( $temas as $g ) {
+			$pastillas_tema[] = [
+				'texto'  => $g,
+				'n'      => count( $por_tema[ $g ] ),
+				'url'    => $url_tema( $g ),
+				'activa' => $hay_tema && $tema_pedido === $g,
+			];
+		}
+
+		[ $normas_pagina, $pag_nor, $pags_nor ] = SWPK_Vista::paginar( $para_ver, SWPK_Vista::pagina_pedida(), 12 );
+		?>
+		<div class="swpk-pastillas" style="margin:0 0 12px"><?php echo SWPK_Vista::pastillas( $pastillas_tema ); // phpcs:ignore WordPress.Security.EscapeOutput ?></div>
+
 		<table class="widefat striped" style="max-width:1000px">
 			<thead>
 				<tr>
 					<th style="width:34%">Norma</th>
-					<th style="width:110px">Cómo está</th>
-					<th>Detalle</th>
-					<th style="width:160px"></th>
+					<th style="width:12%">Cómo está</th>
+					<th style="width:36%">Detalle</th>
+					<th style="width:18%"></th>
 				</tr>
 			</thead>
 			<tbody>
-			<?php foreach ( $normas_activas as $n ) : ?>
+			<?php foreach ( $normas_pagina as $n ) : ?>
 				<?php
 				$clave = (string) $n->clave;
-
-				if ( ! SWPK_Normas::aplica( $n, (string) $sitio->tag ) ) {
-					continue;
-				}
 
 				$fila   = $cumple_sitio[ $clave ] ?? null;
 				$estado = $fila ? (string) $fila->estado : SWPK_Normas::SIN_DATO;
@@ -345,6 +403,7 @@ $plano = SWPK_Textos::para_asesora( $sitio, $hallazgos );
 			<?php endforeach; ?>
 			</tbody>
 		</table>
+		<?php SWPK_Vista::paginador( $pag_nor, $pags_nor, count( $para_ver ), 'normas', 'norma' ); ?>
 		<?php SWPK_Vista::caja_cerrar(); ?>
 	<?php endif; ?>
 

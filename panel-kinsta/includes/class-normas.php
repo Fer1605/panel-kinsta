@@ -58,7 +58,7 @@ class SWPK_Normas {
 	public const OPCION_SEMBRADO = 'swpk_normas_sembradas';
 
 	/** Cada vez que cambie el catálogo de fábrica, este número sube. */
-	public const VERSION_CATALOGO = 9;
+	public const VERSION_CATALOGO = 10;
 
 	/**
 	 * Los comprobadores que contesta la sonda del panel, no el agente.
@@ -169,6 +169,32 @@ class SWPK_Normas {
 	 *
 	 * @return array<string,array<string,mixed>>
 	 */
+	/**
+	 * Los temas en los que se divide el catálogo, en orden de lectura.
+	 *
+	 * Estaban desde el principio, pero solo como comentarios dentro del
+	 * código: la pantalla no tenía de dónde agarrarse y sacaba las 73 normas
+	 * de corrido, una detrás de otra, sin que nadie pudiera decir dónde
+	 * empezaba un tema y terminaba otro.
+	 *
+	 * El orden importa y no es alfabético: va de lo que cualquiera entiende
+	 * —quién entra al sitio— a lo que solo le dice algo a quien lo administra.
+	 *
+	 * @return array<int,string>
+	 */
+	public static function grupos(): array {
+		return [
+			'Cuentas y accesos',
+			'Archivos a la vista',
+			'Cómo viaja el sitio',
+			'Versiones',
+			'El hosting',
+			'Formularios y subidas',
+			'Dentro del sitio',
+			'Tienda',
+		];
+	}
+
 	public static function catalogo(): array {
 		return [
 			'dos_pasos_activa' => [
@@ -181,6 +207,7 @@ class SWPK_Normas {
 				'severidad'   => 'alta',
 				'arreglable'  => 1,
 				'orden'       => 10,
+				'grupo'       => 'Cuentas y accesos',
 			],
 			'admins_dos_pasos' => [
 				'nombre'      => 'Ningún administrador sin verificación en dos pasos',
@@ -192,6 +219,7 @@ class SWPK_Normas {
 				'severidad'   => 'alta',
 				'arreglable'  => 1,
 				'orden'       => 20,
+				'grupo'       => 'Cuentas y accesos',
 			],
 			'editor_codigo' => [
 				'nombre'      => 'No se puede escribir código desde el escritorio',
@@ -204,6 +232,7 @@ class SWPK_Normas {
 				'severidad'   => 'alta',
 				'arreglable'  => 1,
 				'orden'       => 30,
+				'grupo'       => 'Cuentas y accesos',
 			],
 			'php_en_uploads' => [
 				'nombre'      => 'En la carpeta de subidas no se ejecuta PHP',
@@ -215,6 +244,7 @@ class SWPK_Normas {
 				'severidad'   => 'alta',
 				'arreglable'  => 0,
 				'orden'       => 40,
+				'grupo'       => 'Cuentas y accesos',
 			],
 			'xmlrpc_cerrado' => [
 				'nombre'      => 'XML-RPC está cerrado',
@@ -228,6 +258,7 @@ class SWPK_Normas {
 				'severidad'   => 'media',
 				'arreglable'  => 1,
 				'orden'       => 50,
+				'grupo'       => 'Cuentas y accesos',
 			],
 			'registro_cerrado' => [
 				'nombre'      => 'El registro de usuarios está cerrado',
@@ -238,6 +269,7 @@ class SWPK_Normas {
 				'severidad'   => 'media',
 				'arreglable'  => 1,
 				'orden'       => 60,
+				'grupo'       => 'Cuentas y accesos',
 			],
 			'sin_usuario_admin' => [
 				'nombre'      => 'Ninguna cuenta tiene un nombre adivinable',
@@ -250,6 +282,7 @@ class SWPK_Normas {
 				'severidad'   => 'media',
 				'arreglable'  => 0,
 				'orden'       => 70,
+				'grupo'       => 'Cuentas y accesos',
 			],
 			'usuarios_enumerables' => [
 				'nombre'      => 'El sitio no publica sus nombres de usuario',
@@ -263,6 +296,7 @@ class SWPK_Normas {
 				'severidad'   => 'media',
 				'arreglable'  => 0,
 				'orden'       => 75,
+				'grupo'       => 'Cuentas y accesos',
 			],
 			// ── Lo que se ve desde fuera: archivos que no deberían estar ──
 			//
@@ -280,6 +314,7 @@ class SWPK_Normas {
 				'severidad'   => 'alta',
 				'arreglable'  => 0,
 				'orden'       => 110,
+				'grupo'       => 'Archivos a la vista',
 			],
 			'debug_log' => [
 				'nombre'      => 'El registro de errores no es accesible',
@@ -291,6 +326,7 @@ class SWPK_Normas {
 				'severidad'   => 'alta',
 				'arreglable'  => 0,
 				'orden'       => 115,
+				'grupo'       => 'Archivos a la vista',
 			],
 			'volcados' => [
 				'nombre'      => 'No hay respaldos descargables en la raíz',
@@ -302,6 +338,7 @@ class SWPK_Normas {
 				'severidad'   => 'alta',
 				'arreglable'  => 0,
 				'orden'       => 120,
+				'grupo'       => 'Archivos a la vista',
 			],
 			'phpinfo' => [
 				'nombre'      => 'No hay páginas de diagnóstico expuestas',
@@ -313,6 +350,7 @@ class SWPK_Normas {
 				'severidad'   => 'alta',
 				'arreglable'  => 0,
 				'orden'       => 125,
+				'grupo'       => 'Archivos a la vista',
 			],
 			'restos_instalador' => [
 				'nombre'      => 'No quedaron restos de una migración',
@@ -324,6 +362,7 @@ class SWPK_Normas {
 				'severidad'   => 'alta',
 				'arreglable'  => 0,
 				'orden'       => 130,
+				'grupo'       => 'Archivos a la vista',
 			],
 			'instalador_abierto' => [
 				'nombre'      => 'Las páginas de instalación y reparación no se pueden usar',
@@ -336,6 +375,7 @@ class SWPK_Normas {
 				'severidad'   => 'alta',
 				'arreglable'  => 0,
 				'orden'       => 135,
+				'grupo'       => 'Archivos a la vista',
 			],
 			'delatores' => [
 				'nombre'      => 'No hay archivos de desarrollo publicados',
@@ -348,6 +388,7 @@ class SWPK_Normas {
 				'severidad'   => 'alta',
 				'arreglable'  => 0,
 				'orden'       => 140,
+				'grupo'       => 'Archivos a la vista',
 			],
 			'listado_de_carpetas' => [
 				'nombre'      => 'Las carpetas no listan su contenido',
@@ -359,6 +400,7 @@ class SWPK_Normas {
 				'severidad'   => 'media',
 				'arreglable'  => 0,
 				'orden'       => 145,
+				'grupo'       => 'Archivos a la vista',
 			],
 			'autor_enumerable' => [
 				'nombre'      => 'No se puede averiguar un nombre de usuario por la dirección',
@@ -370,6 +412,7 @@ class SWPK_Normas {
 				'severidad'   => 'media',
 				'arreglable'  => 0,
 				'orden'       => 76,
+				'grupo'       => 'Archivos a la vista',
 			],
 			'readme_expuesto' => [
 				'nombre'      => 'El readme de WordPress no está accesible',
@@ -381,6 +424,7 @@ class SWPK_Normas {
 				'severidad'   => 'baja',
 				'arreglable'  => 0,
 				'orden'       => 150,
+				'grupo'       => 'Archivos a la vista',
 			],
 			'trace_habilitado' => [
 				'nombre'      => 'El método TRACE está deshabilitado',
@@ -391,6 +435,7 @@ class SWPK_Normas {
 				'severidad'   => 'baja',
 				'arreglable'  => 0,
 				'orden'       => 155,
+				'grupo'       => 'Archivos a la vista',
 			],
 			'sitio_indexable' => [
 				'nombre'      => 'El sitio deja que los buscadores lo indexen',
@@ -402,6 +447,7 @@ class SWPK_Normas {
 				'severidad'   => 'baja',
 				'arreglable'  => 0,
 				'orden'       => 160,
+				'grupo'       => 'Archivos a la vista',
 			],
 
 			// ── Lo que se ve desde fuera: cómo viaja y cómo se enmarca ────
@@ -415,6 +461,7 @@ class SWPK_Normas {
 				'severidad'   => 'alta',
 				'arreglable'  => 0,
 				'orden'       => 200,
+				'grupo'       => 'Cómo viaja el sitio',
 			],
 			'cors_abierto' => [
 				'nombre'      => 'El sitio no se abre a cualquier origen con credenciales',
@@ -427,6 +474,7 @@ class SWPK_Normas {
 				'severidad'   => 'alta',
 				'arreglable'  => 0,
 				'orden'       => 205,
+				'grupo'       => 'Cómo viaja el sitio',
 			],
 			'hsts' => [
 				'nombre'      => 'El sitio exige HTTPS en las siguientes visitas',
@@ -438,6 +486,7 @@ class SWPK_Normas {
 				'severidad'   => 'alta',
 				'arreglable'  => 0,
 				'orden'       => 210,
+				'grupo'       => 'Cómo viaja el sitio',
 			],
 			'bloqueo_de_marco' => [
 				'nombre'      => 'El sitio no se puede meter dentro de otra página',
@@ -449,6 +498,7 @@ class SWPK_Normas {
 				'severidad'   => 'alta',
 				'arreglable'  => 0,
 				'orden'       => 215,
+				'grupo'       => 'Cómo viaja el sitio',
 			],
 			'contenido_mixto' => [
 				'nombre'      => 'La portada no carga recursos sin cifrar',
@@ -460,6 +510,7 @@ class SWPK_Normas {
 				'severidad'   => 'media',
 				'arreglable'  => 0,
 				'orden'       => 220,
+				'grupo'       => 'Cómo viaja el sitio',
 			],
 			'dominio_canonico' => [
 				'nombre'      => 'El sitio responde por un solo nombre',
@@ -471,6 +522,7 @@ class SWPK_Normas {
 				'severidad'   => 'media',
 				'arreglable'  => 0,
 				'orden'       => 225,
+				'grupo'       => 'Cómo viaja el sitio',
 			],
 			'csp' => [
 				'nombre'      => 'Hay una política de contenido con lo mínimo',
@@ -484,6 +536,7 @@ class SWPK_Normas {
 				'severidad'   => 'media',
 				'arreglable'  => 0,
 				'orden'       => 230,
+				'grupo'       => 'Cómo viaja el sitio',
 			],
 			'referrer_policy' => [
 				'nombre'      => 'El sitio no filtra a dónde venía la gente',
@@ -495,6 +548,7 @@ class SWPK_Normas {
 				'severidad'   => 'baja',
 				'arreglable'  => 0,
 				'orden'       => 235,
+				'grupo'       => 'Cómo viaja el sitio',
 			],
 			'permissions_policy' => [
 				'nombre'      => 'El sitio declara qué funciones del navegador no usa',
@@ -506,6 +560,7 @@ class SWPK_Normas {
 				'severidad'   => 'baja',
 				'arreglable'  => 0,
 				'orden'       => 240,
+				'grupo'       => 'Cómo viaja el sitio',
 			],
 			'xss_obsoleta' => [
 				'nombre'      => 'No se manda la cabecera X-XSS-Protection',
@@ -517,6 +572,7 @@ class SWPK_Normas {
 				'severidad'   => 'baja',
 				'arreglable'  => 0,
 				'orden'       => 245,
+				'grupo'       => 'Cómo viaja el sitio',
 			],
 			// ── Lo que ya está en el inventario, sin pedir nada ───────────
 			//
@@ -533,6 +589,7 @@ class SWPK_Normas {
 				'severidad'   => 'alta',
 				'arreglable'  => 0,
 				'orden'       => 12,
+				'grupo'       => 'Versiones',
 			],
 			'sin_inactivos' => [
 				'nombre'      => 'No hay plugins instalados pero apagados',
@@ -544,6 +601,7 @@ class SWPK_Normas {
 				'severidad'   => 'media',
 				'arreglable'  => 0,
 				'orden'       => 14,
+				'grupo'       => 'Versiones',
 			],
 			'sitio_sano' => [
 				'nombre'      => 'El sitio no está bloqueado en la plataforma',
@@ -554,6 +612,7 @@ class SWPK_Normas {
 				'severidad'   => 'alta',
 				'arreglable'  => 0,
 				'orden'       => 16,
+				'grupo'       => 'Versiones',
 			],
 
 			// ── Lo que hay que pedirle a la plataforma ────────────────────
@@ -567,6 +626,7 @@ class SWPK_Normas {
 				'severidad'   => 'alta',
 				'arreglable'  => 0,
 				'orden'       => 250,
+				'grupo'       => 'El hosting',
 			],
 			'respaldo_reciente' => [
 				'nombre'      => 'Hay un respaldo de las últimas 48 horas',
@@ -578,6 +638,7 @@ class SWPK_Normas {
 				'severidad'   => 'alta',
 				'arreglable'  => 0,
 				'orden'       => 255,
+				'grupo'       => 'El hosting',
 			],
 			'trafico_normal' => [
 				'nombre'      => 'El tráfico está dentro de lo normal de este sitio',
@@ -591,6 +652,7 @@ class SWPK_Normas {
 				'severidad'   => 'media',
 				'arreglable'  => 0,
 				'orden'       => 260,
+				'grupo'       => 'El hosting',
 			],
 			'errores_servidor' => [
 				'nombre'      => 'El sitio no está devolviendo errores de servidor',
@@ -601,6 +663,7 @@ class SWPK_Normas {
 				'severidad'   => 'media',
 				'arreglable'  => 0,
 				'orden'       => 265,
+				'grupo'       => 'El hosting',
 			],
 			'oleada_de_login' => [
 				'nombre'      => 'No hay una oleada de intentos de entrada',
@@ -612,6 +675,7 @@ class SWPK_Normas {
 				'severidad'   => 'media',
 				'arreglable'  => 0,
 				'orden'       => 270,
+				'grupo'       => 'El hosting',
 			],
 			'proteccion_bots' => [
 				'nombre'      => 'La protección contra bots está encendida',
@@ -622,6 +686,7 @@ class SWPK_Normas {
 				'severidad'   => 'media',
 				'arreglable'  => 0,
 				'orden'       => 275,
+				'grupo'       => 'El hosting',
 			],
 			'excepciones_bots' => [
 				'nombre'      => 'No hay excepciones abiertas en la protección contra bots',
@@ -633,6 +698,7 @@ class SWPK_Normas {
 				'severidad'   => 'media',
 				'arreglable'  => 0,
 				'orden'       => 280,
+				'grupo'       => 'El hosting',
 			],
 			'sftp_adicional' => [
 				'nombre'      => 'No hay cuentas SFTP extra sin revisar',
@@ -643,6 +709,7 @@ class SWPK_Normas {
 				'severidad'   => 'media',
 				'arreglable'  => 0,
 				'orden'       => 285,
+				'grupo'       => 'El hosting',
 			],
 			'reglas_redireccion' => [
 				'nombre'      => 'Las redirecciones de la plataforma están revisadas',
@@ -654,6 +721,7 @@ class SWPK_Normas {
 				'severidad'   => 'media',
 				'arreglable'  => 0,
 				'orden'       => 290,
+				'grupo'       => 'El hosting',
 			],
 			'rastreadores_ia' => [
 				'nombre'      => 'La política de rastreadores de IA está decidida',
@@ -665,6 +733,7 @@ class SWPK_Normas {
 				'severidad'   => 'baja',
 				'arreglable'  => 0,
 				'orden'       => 295,
+				'grupo'       => 'El hosting',
 			],
 			// ── Los archivos que sube la gente por un formulario ─────────
 			//
@@ -684,6 +753,7 @@ class SWPK_Normas {
 				'severidad'   => 'alta',
 				'arreglable'  => 0,
 				'orden'       => 20,
+				'grupo'       => 'Formularios y subidas',
 			],
 			'htaccess_inerte' => [
 				'nombre'      => 'Ningún plugin confía en una protección que aquí no funciona',
@@ -696,6 +766,7 @@ class SWPK_Normas {
 				'severidad'   => 'alta',
 				'arreglable'  => 0,
 				'orden'       => 22,
+				'grupo'       => 'Formularios y subidas',
 			],
 			'php_en_subidas_archivos' => [
 				'nombre'      => 'No hay archivos PHP en la carpeta de subidas',
@@ -707,6 +778,7 @@ class SWPK_Normas {
 				'severidad'   => 'alta',
 				'arreglable'  => 0,
 				'orden'       => 24,
+				'grupo'       => 'Formularios y subidas',
 			],
 			// ── Lo que solo se ve estando dentro ─────────────────────────
 			//
@@ -729,6 +801,7 @@ class SWPK_Normas {
 				'severidad'   => 'alta',
 				'arreglable'  => 0,
 				'orden'       => 30,
+				'grupo'       => 'Dentro del sitio',
 			],
 			'modo_depuracion' => [
 				'nombre'      => 'El modo de depuración está apagado',
@@ -741,6 +814,7 @@ class SWPK_Normas {
 				'severidad'   => 'alta',
 				'arreglable'  => 0,
 				'orden'       => 32,
+				'grupo'       => 'Dentro del sitio',
 			],
 			'puertas_de_mantenimiento' => [
 				'nombre'      => 'Las puertas de mantenimiento están cerradas',
@@ -752,6 +826,7 @@ class SWPK_Normas {
 				'severidad'   => 'alta',
 				'arreglable'  => 0,
 				'orden'       => 34,
+				'grupo'       => 'Dentro del sitio',
 			],
 			'actualizaciones_automaticas' => [
 				'nombre'      => 'Las actualizaciones automáticas del núcleo están encendidas',
@@ -763,6 +838,7 @@ class SWPK_Normas {
 				'severidad'   => 'alta',
 				'arreglable'  => 0,
 				'orden'       => 36,
+				'grupo'       => 'Dentro del sitio',
 			],
 			'admin_por_https' => [
 				'nombre'      => 'El escritorio se sirve solo por HTTPS',
@@ -774,6 +850,7 @@ class SWPK_Normas {
 				'severidad'   => 'alta',
 				'arreglable'  => 0,
 				'orden'       => 38,
+				'grupo'       => 'Dentro del sitio',
 			],
 			'credenciales_en_config' => [
 				'nombre'      => 'No hay contraseñas guardadas en wp-config.php',
@@ -785,6 +862,7 @@ class SWPK_Normas {
 				'severidad'   => 'alta',
 				'arreglable'  => 0,
 				'orden'       => 40,
+				'grupo'       => 'Dentro del sitio',
 			],
 			'roles_sin_permisos_de_mas' => [
 				'nombre'      => 'Ningún rol tiene permisos que no le tocan',
@@ -796,6 +874,7 @@ class SWPK_Normas {
 				'severidad'   => 'alta',
 				'arreglable'  => 0,
 				'orden'       => 42,
+				'grupo'       => 'Dentro del sitio',
 			],
 			'rol_por_omision' => [
 				'nombre'      => 'Quien se registre entra con el rol más bajo',
@@ -807,6 +886,7 @@ class SWPK_Normas {
 				'severidad'   => 'alta',
 				'arreglable'  => 0,
 				'orden'       => 44,
+				'grupo'       => 'Dentro del sitio',
 			],
 			'administradores_contados' => [
 				'nombre'      => 'La cantidad de administradores está controlada',
@@ -817,6 +897,7 @@ class SWPK_Normas {
 				'severidad'   => 'media',
 				'arreglable'  => 0,
 				'orden'       => 46,
+				'grupo'       => 'Dentro del sitio',
 			],
 			'claves_de_aplicacion' => [
 				'nombre'      => 'Las contraseñas de aplicación están contadas',
@@ -828,6 +909,7 @@ class SWPK_Normas {
 				'severidad'   => 'media',
 				'arreglable'  => 0,
 				'orden'       => 48,
+				'grupo'       => 'Dentro del sitio',
 			],
 			'nucleo_sin_tocar' => [
 				'nombre'      => 'Los archivos de WordPress no están modificados',
@@ -840,6 +922,7 @@ class SWPK_Normas {
 				'severidad'   => 'alta',
 				'arreglable'  => 0,
 				'orden'       => 50,
+				'grupo'       => 'Dentro del sitio',
 			],
 			'plugins_cerrados' => [
 				'nombre'      => 'Ningún plugin fue cerrado por WordPress.org',
@@ -852,6 +935,7 @@ class SWPK_Normas {
 				'severidad'   => 'alta',
 				'arreglable'  => 0,
 				'orden'       => 52,
+				'grupo'       => 'Dentro del sitio',
 			],
 			'plugins_abandonados' => [
 				'nombre'      => 'Ningún plugin lleva años sin actualizarse',
@@ -864,6 +948,7 @@ class SWPK_Normas {
 				'severidad'   => 'alta',
 				'arreglable'  => 0,
 				'orden'       => 54,
+				'grupo'       => 'Dentro del sitio',
 			],
 			'drop_ins_esperados' => [
 				'nombre'      => 'No hay archivos que se cargan antes que WordPress',
@@ -875,6 +960,7 @@ class SWPK_Normas {
 				'severidad'   => 'alta',
 				'arreglable'  => 0,
 				'orden'       => 56,
+				'grupo'       => 'Dentro del sitio',
 			],
 			'tareas_programadas' => [
 				'nombre'      => 'No hay tareas programadas sin dueño',
@@ -886,6 +972,7 @@ class SWPK_Normas {
 				'severidad'   => 'media',
 				'arreglable'  => 0,
 				'orden'       => 58,
+				'grupo'       => 'Dentro del sitio',
 			],
 			'registro_de_accesos' => [
 				'nombre'      => 'El sitio guarda quién entró y qué tocó',
@@ -897,6 +984,7 @@ class SWPK_Normas {
 				'severidad'   => 'media',
 				'arreglable'  => 0,
 				'orden'       => 60,
+				'grupo'       => 'Dentro del sitio',
 			],
 			// ── Solo para las tiendas ────────────────────────────────────
 			//
@@ -915,6 +1003,7 @@ class SWPK_Normas {
 				'arreglable'  => 0,
 				'aplica_tipo' => 'tienda,cotizador',
 				'orden'       => 300,
+				'grupo'       => 'Tienda',
 			],
 			'tienda_logs_cerrados' => [
 				'nombre'      => 'Los registros de la tienda no se pueden descargar',
@@ -929,6 +1018,7 @@ class SWPK_Normas {
 				'arreglable'  => 0,
 				'aplica_tipo' => 'tienda,cotizador',
 				'orden'       => 302,
+				'grupo'       => 'Tienda',
 			],
 			'tienda_descargas_protegidas' => [
 				'nombre'      => 'Los archivos que se venden no se bajan sin comprar',
@@ -941,6 +1031,7 @@ class SWPK_Normas {
 				'arreglable'  => 0,
 				'aplica_tipo' => 'tienda',
 				'orden'       => 304,
+				'grupo'       => 'Tienda',
 			],
 			'tienda_pedido_invitado' => [
 				'nombre'      => 'Un pedido de invitado pide el correo antes de mostrarse',
@@ -953,6 +1044,7 @@ class SWPK_Normas {
 				'arreglable'  => 0,
 				'aplica_tipo' => 'tienda',
 				'orden'       => 306,
+				'grupo'       => 'Tienda',
 			],
 			'tienda_sin_datos_de_tarjeta' => [
 				'nombre'      => 'No se encontraron números de tarjeta guardados',
@@ -966,6 +1058,7 @@ class SWPK_Normas {
 				'arreglable'  => 0,
 				'aplica_tipo' => 'tienda',
 				'orden'       => 308,
+				'grupo'       => 'Tienda',
 			],
 			'tienda_webhooks_cifrados' => [
 				'nombre'      => 'Los avisos automáticos de la tienda van cifrados',
@@ -977,6 +1070,7 @@ class SWPK_Normas {
 				'arreglable'  => 0,
 				'aplica_tipo' => 'tienda,cotizador',
 				'orden'       => 310,
+				'grupo'       => 'Tienda',
 			],
 			'tienda_limpieza_viva' => [
 				'nombre'      => 'La limpieza de datos personales funciona',
@@ -990,6 +1084,7 @@ class SWPK_Normas {
 				'arreglable'  => 0,
 				'aplica_tipo' => 'tienda',
 				'orden'       => 312,
+				'grupo'       => 'Tienda',
 			],
 			'tienda_pasarela_en_vivo' => [
 				'nombre'      => 'Las pasarelas de pago están en modo real',
@@ -1001,6 +1096,7 @@ class SWPK_Normas {
 				'arreglable'  => 0,
 				'aplica_tipo' => 'tienda',
 				'orden'       => 314,
+				'grupo'       => 'Tienda',
 			],
 			'formularios_honeypot' => [
 				'nombre'      => 'Los formularios tienen honeypot o captcha',
@@ -1014,6 +1110,7 @@ class SWPK_Normas {
 				'severidad'   => 'media',
 				'arreglable'  => 0,
 				'orden'       => 80,
+				'grupo'       => 'Tienda',
 			],
 			'wp_al_dia' => [
 				'nombre'      => 'WordPress está en una versión con soporte',
@@ -1024,6 +1121,7 @@ class SWPK_Normas {
 				'severidad'   => 'media',
 				'arreglable'  => 0,
 				'orden'       => 90,
+				'grupo'       => 'Tienda',
 			],
 			'php_soportado' => [
 				'nombre'      => 'PHP está en una versión con soporte',
@@ -1034,6 +1132,7 @@ class SWPK_Normas {
 				'severidad'   => 'media',
 				'arreglable'  => 0,
 				'orden'       => 100,
+				'grupo'       => 'Tienda',
 			],
 		];
 	}
@@ -1060,6 +1159,7 @@ class SWPK_Normas {
 				'arreglable'  => (int) $n['arreglable'],
 				'orden'       => (int) $n['orden'],
 				'aplica_tipo' => (string) ( $n['aplica_tipo'] ?? '' ),
+				'grupo'       => (string) ( $n['grupo'] ?? '' ),
 				'de_fabrica'  => 1,
 			];
 
@@ -1449,6 +1549,25 @@ class SWPK_Normas {
 
 		if ( ! $usuarios ) {
 			return [ 'estado' => self::SIN_DATO, 'detalle' => 'El agente no reportó usuarios.' ];
+		}
+
+		// Si la verificación en dos pasos está apagada en el sitio, que no haya
+		// ningún administrador con ella puesta no es un segundo problema: es el
+		// mismo, contado otra vez.
+		//
+		// Lo dijo quien lo leyó en pantalla: «aquí dice la verificación en dos
+		// pasos, está apagada, y luego viene hay administradores sin verificar
+		// en dos pasos, que no sé por qué también, vamos a hacer regla
+		// repetida». Tenía razón. Dos avisos para una sola causa hacen que se
+		// dejen de leer los dos.
+		//
+		// La norma no desaparece: queda como «no aplica», que es la verdad —
+		// vuelve a medirse sola en cuanto alguien encienda la verificación.
+		if ( isset( $r['dos_pasos']['activo'] ) && empty( $r['dos_pasos']['activo'] ) ) {
+			return [
+				'estado'  => self::NO_APLICA,
+				'detalle' => 'La verificación en dos pasos está apagada en el sitio, así que esto se mide cuando se encienda.',
+			];
 		}
 
 		$sin = [];

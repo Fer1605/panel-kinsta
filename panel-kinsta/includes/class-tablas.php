@@ -33,7 +33,7 @@ defined( 'ABSPATH' ) || exit;
 
 class SWPK_Tablas {
 
-	public const VERSION = 12;
+	public const VERSION = 13;
 
 	public static function tabla( string $nombre ): string {
 		global $wpdb;
@@ -264,6 +264,7 @@ class SWPK_Tablas {
 				comprobador VARCHAR(64) NOT NULL DEFAULT '',
 				aplica_a VARCHAR(191) NOT NULL DEFAULT '',
 				aplica_tipo VARCHAR(64) NOT NULL DEFAULT '',
+				grupo VARCHAR(48) NOT NULL DEFAULT '',
 				severidad VARCHAR(16) NOT NULL DEFAULT 'media',
 				arreglable TINYINT(1) NOT NULL DEFAULT 0,
 				activa TINYINT(1) NOT NULL DEFAULT 1,

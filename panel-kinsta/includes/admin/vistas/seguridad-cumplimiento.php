@@ -211,6 +211,24 @@ if ( '' !== $sev_pedida || '' !== $norma_pedida ) {
 		)
 	);
 }
+
+// ── Que esto no sea una página sin fondo ────────────────────────────────────
+//
+// Cada norma que falla saca un bloque, y dentro el bloque sacaba la lista
+// COMPLETA de sitios que la incumplen. Con 95 sitios reportando, una sola
+// norma puede traer ochenta renglones, y hay decenas de normas: la pantalla
+// se volvía un pozo por el que nunca se termina de bajar.
+//
+// Ahora: seis bloques por página, y dentro de cada bloque los primeros ocho
+// sitios con un enlace para ver el resto. Al pedir una norma concreta sí se
+// abre entera, porque entonces es justo lo que se vino a ver.
+$POR_BLOQUE = 8;
+
+[ $con_fallas_pagina, $pag_fallas, $pags_fallas ] = SWPK_Vista::paginar(
+	$con_fallas,
+	SWPK_Vista::pagina_pedida(),
+	4
+);
 ?>
 
 <?php if ( $con_fallas_todas ) : ?>
@@ -270,12 +288,20 @@ if ( '' !== $sev_pedida || '' !== $norma_pedida ) {
 		</p>
 	</div>
 
-	<?php foreach ( $con_fallas as $r ) : ?>
+	<?php foreach ( $con_fallas_pagina as $r ) : ?>
 		<?php
 		$n     = $r['norma'];
 		$clave = (string) $n->clave;
 		$lista = $quienes_fallan[ $clave ] ?? [];
 		$orden = SWPK_Ordenes::orden_de_la_norma( $clave );
+
+		// Entera solo si se pidió esta norma; si no, los primeros y un enlace.
+		$lista_entera = $lista;
+		$recortada    = '' === $norma_pedida && count( $lista ) > $POR_BLOQUE;
+
+		if ( $recortada ) {
+			$lista = array_slice( $lista, 0, $POR_BLOQUE );
+		}
 		?>
 		<div class="swpk-norma-bloque">
 			<div class="swpk-norma-cabeza">
@@ -289,7 +315,14 @@ if ( '' !== $sev_pedida || '' !== $norma_pedida ) {
 				</span>
 			</div>
 
-			<p class="swpk-norma-porque"><?php echo esc_html( (string) $n->porque ); ?></p>
+			<?php // Resumido: el texto entero se lee al abrir la norma sola. ?>
+			<p class="swpk-norma-porque" title="<?php echo esc_attr( (string) $n->porque ); ?>"><?php
+				echo esc_html(
+					'' !== $norma_pedida
+						? (string) $n->porque
+						: SWPK_Vista::recortar( (string) $n->porque, 160 )
+				);
+			?></p>
 
 			<table class="widefat striped swpk-norma-tabla">
 				<tbody>
@@ -317,10 +350,21 @@ if ( '' !== $sev_pedida || '' !== $norma_pedida ) {
 				</tbody>
 			</table>
 
+			<?php if ( $recortada ) : ?>
+				<p class="swpk-norma-pie">
+					<a href="<?php echo esc_url( add_query_arg(
+						[ 'page' => 'panel-kinsta-seguridad', 'seccion' => 'cumplimiento', 'norma' => $clave ],
+						admin_url( 'admin.php' )
+					) ); ?>">
+						Ver los <?php echo (int) count( $lista_entera ); ?> sitios que lo tienen
+					</a>
+				</p>
+			<?php endif; ?>
+
 			<?php
 			$nuestros = array_values(
 				array_filter(
-					$lista,
+					$lista_entera,
 					static fn( $i ) => SWPK_Etiquetas::NO_UPDATE !== (string) $i['sitio']->tag
 						&& isset( $con_plugin[ (string) $i['sitio']->sitio_id ] )
 				)
@@ -338,6 +382,7 @@ if ( '' !== $sev_pedida || '' !== $norma_pedida ) {
 			<?php endif; ?>
 		</div>
 	<?php endforeach; ?>
+	<?php SWPK_Vista::paginador( $pag_fallas, $pags_fallas, count( $con_fallas ), 'problemas', 'problema' ); ?>
 	<?php SWPK_Vista::caja_cerrar(); ?>
 <?php endif; ?>
 

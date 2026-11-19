@@ -21,11 +21,70 @@
 
 defined( 'ABSPATH' ) || exit;
 
-$normas = SWPK_Normas::todas();
-$grupos = SWPK_Etiquetas::nombres();
+$normas    = SWPK_Normas::todas();
+$etiquetas = SWPK_Etiquetas::nombres();
 
 $editar = isset( $_GET['editar'] ) ? sanitize_key( (string) $_GET['editar'] ) : '';
 $norma  = '' !== $editar ? SWPK_Normas::una( $editar ) : null;
+
+// ── Dividir por tema ────────────────────────────────────────────────────────
+//
+// Setenta y tres normas de corrido, cada una con su párrafo, es una pantalla
+// por la que nunca se termina de bajar: «tengo que seguir haciendo demasiado
+// scroll y no veo todas las reglas porque no está bien dividido». Los temas ya
+// existían dentro del código, solo que como comentarios. Ahora son un dato, y
+// esta pantalla los usa para dos cosas: enseñar de un vistazo en cuántas
+// partes se divide esto, y no sacar más de una página de golpe.
+$grupo_pedido = isset( $_GET['grupo'] ) ? sanitize_text_field( wp_unslash( (string) $_GET['grupo'] ) ) : '';
+
+$por_grupo = [];
+foreach ( $normas as $n ) {
+	$g = (string) ( $n->grupo ?? '' );
+	$por_grupo[ '' !== $g ? $g : 'Sin clasificar' ][] = $n;
+}
+
+// El orden del catálogo manda; lo que no esté en él va al final, pero va.
+$orden = [];
+foreach ( SWPK_Normas::grupos() as $g ) {
+	if ( isset( $por_grupo[ $g ] ) ) {
+		$orden[] = $g;
+	}
+}
+foreach ( array_keys( $por_grupo ) as $g ) {
+	if ( ! in_array( $g, $orden, true ) ) {
+		$orden[] = $g;
+	}
+}
+
+$hay_grupo = '' !== $grupo_pedido && isset( $por_grupo[ $grupo_pedido ] );
+$lista     = $hay_grupo ? $por_grupo[ $grupo_pedido ] : $normas;
+
+$url_grupo = static fn( string $g ) => add_query_arg(
+	array_filter( [
+		'page'    => 'panel-kinsta-seguridad',
+		'seccion' => 'normas',
+		'grupo'   => $g,
+	] ),
+	admin_url( 'admin.php' )
+);
+
+$pastillas = [ [
+	'texto'  => 'Todas',
+	'n'      => count( $normas ),
+	'url'    => $url_grupo( '' ),
+	'activa' => ! $hay_grupo,
+] ];
+
+foreach ( $orden as $g ) {
+	$pastillas[] = [
+		'texto'  => $g,
+		'n'      => count( $por_grupo[ $g ] ),
+		'url'    => $url_grupo( $g ),
+		'activa' => $hay_grupo && $grupo_pedido === $g,
+	];
+}
+
+[ $en_pantalla, $pagina, $paginas ] = SWPK_Vista::paginar( $lista, SWPK_Vista::pagina_pedida(), 12 );
 ?>
 
 <p class="swpk-intro">
@@ -37,25 +96,38 @@ $norma  = '' !== $editar ? SWPK_Normas::una( $editar ) : null;
 	La <strong>gravedad</strong> solo decide el orden en que salen los problemas: las altas primero.
 	<strong>Apagar</strong> una norma hace que deje de revisarse y desaparezca de la pestaña anterior;
 	encenderla la vuelve a meter, pero no al instante — se mide con el siguiente reporte de cada sitio.
+	Donde dice <strong>El plugin</strong>, la mira solo y la reporta cada día; donde dice
+	<strong>Una persona</strong>, alguien la marca entrando a la ficha del sitio.
+	<strong>Se arregla</strong> quiere decir que el panel le puede pedir al plugin que la corrija.
 </p>
 
-<?php SWPK_Vista::caja_abrir( 'Qué revisamos en cada sitio', esc_html( SWPK_Vista::plural( count( $normas ), 'norma', 'normas' ) ), '', true ); ?>
+<div class="swpk-pastillas" style="margin:0 0 14px"><?php echo SWPK_Vista::pastillas( $pastillas ); // phpcs:ignore WordPress.Security.EscapeOutput ?></div>
+
+<?php
+SWPK_Vista::caja_abrir(
+	$hay_grupo ? $grupo_pedido : 'Qué revisamos en cada sitio',
+	esc_html( SWPK_Vista::plural( count( $lista ), 'norma', 'normas' ) ),
+	'',
+	true
+);
+?>
 <table class="widefat striped" style="margin-top:10px">
 	<thead>
 		<tr>
-			<th style="width:34%">La norma</th>
-			<th style="width:90px">Gravedad</th>
-			<th style="width:170px">Quién la revisa</th>
-			<th>Estado</th>
-			<th style="width:150px"></th>
+			<th style="width:38%">La norma</th>
+			<th style="width:11%">Gravedad</th>
+			<th style="width:13%">Quién la revisa</th>
+			<th style="width:20%">A qué sitios aplica</th>
+			<th style="width:18%"></th>
 		</tr>
 	</thead>
 	<tbody>
-	<?php foreach ( $normas as $n ) : ?>
+	<?php foreach ( $en_pantalla as $n ) : ?>
 		<?php
 		$apagada     = (int) $n->activa !== 1;
 		$declarativa = 'declarativa' === (string) $n->comprobador;
 		$aplica      = trim( (string) $n->aplica_a );
+		$su_grupo    = (string) ( $n->grupo ?? '' );
 		?>
 		<tr<?php echo $apagada ? ' style="opacity:.5"' : ''; ?>>
 			<td>
@@ -66,8 +138,22 @@ $norma  = '' !== $editar ? SWPK_Normas::una( $editar ) : null;
 				<?php if ( $apagada ) : ?>
 					<span class="swpk-etq swpk-sev-baja">Apagada</span>
 				<?php endif; ?>
-				<?php if ( (string) $n->porque !== '' ) : ?>
-					<p class="swpk-mudo" style="margin:4px 0 0"><?php echo esc_html( (string) $n->porque ); ?></p>
+				<?php if ( ! $hay_grupo && '' !== $su_grupo ) : ?>
+					<br><a class="swpk-mudo" href="<?php echo esc_url( $url_grupo( $su_grupo ) ); ?>"><?php echo esc_html( $su_grupo ); ?></a>
+				<?php endif; ?>
+				<?php
+				// El «porqué» es un párrafo entero y es bueno que lo sea: explica
+				// qué permite hacer la falla. Pero sacarlo completo en todas las
+				// filas daba filas de 300 píxeles y una pantalla de ocho
+				// pantallazos. Aquí va resumido, y entero al pasar por encima o
+				// al abrir «Cambiar».
+				$porque = trim( (string) $n->porque );
+				if ( '' !== $porque ) :
+					$corto = SWPK_Vista::recortar( $porque, 70 );
+					?>
+					<p class="swpk-mudo" style="margin:4px 0 0" title="<?php echo esc_attr( $porque ); ?>">
+						<?php echo esc_html( $corto ); ?>
+					</p>
 				<?php endif; ?>
 			</td>
 			<td>
@@ -76,15 +162,19 @@ $norma  = '' !== $editar ? SWPK_Normas::una( $editar ) : null;
 				</span>
 			</td>
 			<td>
+				<?php
+				// Antes esta celda explicaba, en tres renglones, lo mismo en las
+				// 73 filas. Repetir la explicación 73 veces no explica mejor:
+				// solo hace la fila tres veces más alta. La explicación vive
+				// ahora una sola vez, arriba de la tabla.
+				?>
 				<?php if ( $declarativa ) : ?>
-					<strong>Una persona</strong>
-					<br><span class="swpk-mudo">entrando a la ficha del sitio y marcándola</span>
+					<span title="Alguien la marca entrando a la ficha del sitio.">Una persona</span>
 				<?php else : ?>
-					<strong>El plugin, solo</strong>
-					<br><span class="swpk-mudo">la mira en el sitio y la reporta cada día</span>
+					<span title="El plugin la mira en el sitio y la reporta cada día.">El plugin</span>
 				<?php endif; ?>
 				<?php if ( (int) $n->arreglable === 1 ) : ?>
-					<br><span class="swpk-mudo">y se puede arreglar</span>
+					<span class="swpk-mudo" title="El panel le puede pedir al plugin que la arregle.">· se arregla</span>
 				<?php endif; ?>
 			</td>
 			<td>
@@ -94,7 +184,7 @@ $norma  = '' !== $editar ? SWPK_Normas::una( $editar ) : null;
 				} else {
 					$nombres = [];
 					foreach ( explode( ',', $aplica ) as $t ) {
-						$nombres[] = $grupos[ trim( $t ) ] ?? trim( $t );
+						$nombres[] = $etiquetas[ trim( $t ) ] ?? trim( $t );
 					}
 					echo esc_html( implode( ', ', $nombres ) );
 				}
@@ -124,9 +214,22 @@ $norma  = '' !== $editar ? SWPK_Normas::una( $editar ) : null;
 	<?php endforeach; ?>
 	</tbody>
 </table>
+<?php SWPK_Vista::paginador( $pagina, $paginas, count( $lista ), 'normas', 'norma' ); ?>
 <?php SWPK_Vista::caja_cerrar(); ?>
 
-<?php SWPK_Vista::caja_abrir( $norma ? 'Cambiar una norma' : 'Agregar una norma' ); ?>
+<?php
+// El formulario, plegado mientras no haga falta.
+//
+// Estaba siempre abierto y son mil píxeles de campos debajo de la lista. Se
+// agrega o se cambia una norma cada varios meses; se consulta la lista todos
+// los días. Lo que se usa poco no puede estorbar a lo que se usa siempre.
+?>
+<details class="swpk-caja" style="padding:0" <?php echo $norma ? 'open' : ''; ?>>
+	<summary style="cursor:pointer;padding:14px 18px;font-weight:600">
+		<?php echo $norma ? 'Cambiar «' . esc_html( (string) $norma->nombre ) . '»' : 'Agregar una norma'; ?>
+	</summary>
+	<div class="swpk-caja-cuerpo">
+
 
 <form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" style="max-width:720px">
 	<input type="hidden" name="action" value="swpk_guardar_norma">
@@ -263,4 +366,5 @@ $norma  = '' !== $editar ? SWPK_Normas::una( $editar ) : null;
 		<?php endif; ?>
 	</p>
 </form>
-<?php SWPK_Vista::caja_cerrar(); ?>
+	</div>
+</details>
