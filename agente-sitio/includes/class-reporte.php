@@ -23,6 +23,12 @@ class SWA_Reporte {
 
 	public static function init(): void {
 		add_action( self::HOOK, [ __CLASS__, 'enviar' ] );
+
+		// Y se programa aquí además de al activar. Hace falta por dos cosas:
+		// porque una activación puede quedarse a medias, y porque dentro del
+		// tema hijo no hay gancho de activación ninguno. programar() ya
+		// comprueba si está puesta.
+		self::programar();
 	}
 
 	public static function programar(): void {
