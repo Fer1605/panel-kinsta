@@ -207,6 +207,27 @@ class SWPK_Receptor {
 			}
 		}
 
+		// Este sitio ya tiene quien lo mire por dentro.
+		//
+		// La columna `cobertura_agente` existía desde el principio y NADIE la
+		// escribía: se leía en tres sitios —aquí al medir normas, en la sonda y
+		// en la API— y nacía en cero, así que el panel daba por hecho que
+		// ningún sitio tenía agente aunque estuvieran todos reportando.
+		//
+		// Se vio el 19 de noviembre de 2026, al conectar los 95 de golpe: 95
+		// agentes registrados, 95 reportes recibidos, 341 administradores
+		// guardados… y «sitios con cobertura de agente: 0 de 108».
+		//
+		// Un dato que solo se lee y nunca se escribe no da error: da una
+		// respuesta tranquila y equivocada, que es peor.
+		if ( '' !== $sitio_id ) {
+			$wpdb->update(
+				SWPK_Tablas::tabla( 'sitios' ),
+				[ 'cobertura_agente' => 1 ],
+				[ 'sitio_id' => $sitio_id ]
+			);
+		}
+
 		// Las normas se miden con el reporte en la mano, no después: lo que
 		// hace falta para medirlas es justo lo que acaba de llegar.
 		// Lo de la tienda se guarda ANTES de medir, porque de ahí sale el tipo
