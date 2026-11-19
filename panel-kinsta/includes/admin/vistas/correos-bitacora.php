@@ -217,7 +217,7 @@ $hubo_alguna_vez = SWPK_Bitacora::hay_alguno();
 		         pantalla que es evidencia, decir de más es tan malo como decir de menos. */ ?>
 		<div class="notice notice-info"><p>
 			<?php if ( ! $hubo_alguna_vez ) : ?>
-				Todavía no se ha enviado ningún aviso, de ninguna fecha. La bitácora empieza a
+				Todavía no se ha enviado ningún aviso, de ninguna fecha. El historial empieza a
 				llenarse cuando se activen los correos automáticos.
 			<?php else : ?>
 				<strong>Ningún aviso en este rango de fechas<?php echo '' !== $tipo_filtro ? ' con ese filtro' : ''; ?>.</strong>

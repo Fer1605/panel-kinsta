@@ -160,7 +160,7 @@ $llamadas = array_slice( $llamadas, 0, 25 );
 
 	<p style="max-width:860px;color:#3c434a">
 		Una llave es una cuenta que <strong>solo puede leer</strong>: consulta los sitios, las
-		vulnerabilidades, los usuarios, los movimientos y la bitácora, y no puede disparar procesos
+		vulnerabilidades, los usuarios, los movimientos y el historial de envíos, y no puede disparar procesos
 		ni tocar ajustes. Es a propósito — una llave que vive dentro de otro sistema se puede
 		filtrar, y lo que se filtre no debe poder cambiar nada.
 	</p>

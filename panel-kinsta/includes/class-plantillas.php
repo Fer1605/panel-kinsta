@@ -84,7 +84,7 @@ class SWPK_Plantillas {
 					. "{{movimiento}}\n\n"
 					. "{{tabla}}\n\n"
 					. 'Todo esto queda guardado en el panel: los movimientos en Movimientos y los avisos en '
-					. 'la Bitácora, con el contenido completo de cada correo y la fecha exacta en que salió.',
+					. 'el historial de envíos, con el contenido completo de cada correo y la fecha exacta en que salió.',
 				'marcas' => [
 					'{{cuantos}}'    => 'Cuántos avisos salieron en la semana',
 					'{{movimientos}}' => 'Cuántos movimientos hubo en los sitios',
@@ -627,7 +627,7 @@ class SWPK_Plantillas {
 		$html .= '</table>';
 
 		if ( count( $filas ) > 60 ) {
-			$html .= sprintf( '<p style="color:#50575e;font-size:13px">Y %d más, en la Bitácora.</p>', count( $filas ) - 60 );
+			$html .= sprintf( '<p style="color:#50575e;font-size:13px">Y %d más, en el historial de envíos del panel.</p>', count( $filas ) - 60 );
 		}
 
 		return self::envolver( self::catalogo()['resumen']['titulo'], $html );

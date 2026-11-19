@@ -131,7 +131,7 @@ class SWPK_Perfiles {
 	public static function descripciones(): array {
 		return [
 			self::DIRECCION => [
-				've'    => [ 'Todos los sitios', 'Vulnerabilidades y pendientes', 'Caídas', 'Bitácora de avisos', 'Registro de accesos', 'Ajustes y llaves' ],
+				've'    => [ 'Todos los sitios', 'Vulnerabilidades y pendientes', 'Caídas', 'Historial de envíos', 'Registro de accesos', 'Ajustes y llaves' ],
 				'no_ve' => [],
 			],
 			self::VENTAS => [
@@ -139,7 +139,7 @@ class SWPK_Perfiles {
 				'no_ve' => [ 'Los sitios de otras asesoras', 'Caídas', 'Registro de accesos', 'Ajustes y llaves' ],
 			],
 			self::SOPORTE => [
-				've'    => [ 'Todos los sitios', 'Vulnerabilidades y pendientes', 'Caídas y recuperaciones', 'Bitácora de avisos' ],
+				've'    => [ 'Todos los sitios', 'Vulnerabilidades y pendientes', 'Caídas y recuperaciones', 'Historial de envíos' ],
 				'no_ve' => [ 'Registro de accesos', 'Ajustes y llaves' ],
 			],
 			self::API => [

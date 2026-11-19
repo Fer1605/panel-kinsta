@@ -69,7 +69,7 @@ $texto_de = static fn( string $plantilla ) => add_query_arg(
 			<span class="swpk-como">
 				<?php if ( $en_prueba ) : ?>
 					En prueba los correos no salen a los clientes: se arman y se guardan en la
-					bitácora. Hay que cambiarlo a propósito.
+					historial de envíos. Hay que cambiarlo a propósito.
 					<strong>Pulsa para activar el envío real.</strong>
 				<?php else : ?>
 					Los correos están saliendo a clientes de verdad.
@@ -288,6 +288,6 @@ $texto_de = static fn( string $plantilla ) => add_query_arg(
 
 <p class="swpk-nota">
 	"Generarlo ahora" arma el correo con los datos de hoy y lo deja en la
-	<a href="<?php echo esc_url( admin_url( 'admin.php?page=panel-kinsta-correos&seccion=bitacora' ) ); ?>">bitácora</a>,
+	<a href="<?php echo esc_url( admin_url( 'admin.php?page=panel-kinsta-correos&seccion=bitacora' ) ); ?>">el historial de envíos</a>,
 	donde se puede abrir y leer completo. En modo de prueba no sale a nadie.
 </p>

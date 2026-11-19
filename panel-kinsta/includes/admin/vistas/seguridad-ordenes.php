@@ -328,7 +328,7 @@ SWPK_Vista::barra_de_filtros(
 			Pedir el cambio
 		</button>
 		<span class="swpk-mudo" style="margin-left:10px">
-			Queda anotado quién lo pidió y cuándo, sitio por sitio, en esta misma pantalla y en la Bitácora.
+			Queda anotado quién lo pidió y cuándo, sitio por sitio, en esta misma pantalla.
 		</span>
 	</p>
 </form>

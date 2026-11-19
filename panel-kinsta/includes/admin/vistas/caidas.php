@@ -333,7 +333,7 @@ $historial = array_filter(
 		<p style="color:#50575e">
 			No se ha caído nada desde que el monitor está encendido. Cada caída y cada recuperación
 			queda aquí con su hora, y el aviso a soporte queda en la
-			<a href="<?php echo esc_url( admin_url( 'admin.php?page=panel-kinsta-correos&seccion=bitacora' ) ); ?>">bitácora</a>.
+			<a href="<?php echo esc_url( admin_url( 'admin.php?page=panel-kinsta-correos&seccion=bitacora' ) ); ?>">el historial de envíos</a>.
 		</p>
 	<?php else : ?>
 		<table class="widefat striped swpk-tabla">
