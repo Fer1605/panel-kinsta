@@ -44,6 +44,10 @@ class SWA_Ordenes {
 		add_filter( 'cron_schedules', [ __CLASS__, 'intervalo' ] );
 		add_action( self::HOOK, [ __CLASS__, 'preguntar' ] );
 
+		// Además de en la activación. Ver programar(): en los sitios donde ya
+		// está instalado, la pregunta cada cinco minutos nunca quedó puesta.
+		self::programar();
+
 		// La constante se define aquí y no en el ejecutor, porque hay que
 		// definirla en CADA carga de la página, no una sola vez.
 		if ( SWA_Ajustes::obtener( 'cerrar_editor' ) && ! defined( 'DISALLOW_FILE_EDIT' ) ) {
@@ -72,11 +76,31 @@ class SWA_Ordenes {
 	 * con tráfico esto corre cada cinco minutos de verdad; en un sitio que
 	 * nadie visita de noche, la orden espera a la primera visita de la mañana.
 	 * No se puede prometer masivo e instantáneo, y el panel lo dice así.
+	 *
+	 * ─── Y por qué se asegura el intervalo aquí ──────────────────────────
+	 *
+	 * Esto estaba roto en todos los sitios y no se veía. `wp_schedule_event()`
+	 * comprueba que la recurrencia exista en `wp_get_schedules()`; si no
+	 * existe devuelve false sin lanzar nada. Nuestro `swa_cinco_minutos` lo
+	 * mete `init()`, que cuelga de `plugins_loaded` — y al ACTIVAR el plugin
+	 * `plugins_loaded` ya pasó, porque WordPress incluye el archivo y dispara
+	 * el gancho de activación dentro de una petición donde el plugin todavía
+	 * no estaba activo. Así que la pregunta cada cinco minutos no se programó
+	 * nunca: las órdenes del panel esperaban al reporte diario.
+	 *
+	 * El reporte diario sí quedó puesto porque usa `daily`, que WordPress trae
+	 * de fábrica. Por eso el fallo pasó desapercibido: el agente reportaba.
 	 */
 	public static function programar(): void {
-		if ( ! wp_next_scheduled( self::HOOK ) ) {
-			wp_schedule_event( time() + 60, self::CADA, self::HOOK );
+		if ( wp_next_scheduled( self::HOOK ) ) {
+			return;
 		}
+
+		if ( ! isset( wp_get_schedules()[ self::CADA ] ) ) {
+			add_filter( 'cron_schedules', [ __CLASS__, 'intervalo' ] );
+		}
+
+		wp_schedule_event( time() + 60, self::CADA, self::HOOK );
 	}
 
 	public static function desprogramar(): void {

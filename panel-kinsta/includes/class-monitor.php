@@ -63,6 +63,11 @@ class SWPK_Monitor {
 	public static function init(): void {
 		add_filter( 'cron_schedules', [ __CLASS__, 'intervalo' ] );
 		add_action( self::HOOK, [ __CLASS__, 'sondear_todos' ] );
+
+		// Y se programa aquí además de en la activación, igual que la sonda y
+		// la revisión diaria. Ver programar(): en los paneles instalados antes
+		// de este arreglo el sondeo NUNCA quedó puesto.
+		self::programar();
 	}
 
 	public static function intervalo( array $horarios ): array {
@@ -73,10 +78,35 @@ class SWPK_Monitor {
 		return $horarios;
 	}
 
+	/**
+	 * Pone el sondeo cada cinco minutos, si no estaba.
+	 *
+	 * ─── Por qué se asegura el intervalo aquí ───────────────────────────
+	 *
+	 * Esto estaba roto y no se veía. `wp_schedule_event()` comprueba que la
+	 * recurrencia exista en `wp_get_schedules()`; si no existe devuelve false
+	 * sin lanzar nada, y el evento no queda puesto. Nuestro intervalo de cinco
+	 * minutos lo mete `init()`, que cuelga de `plugins_loaded` — y al ACTIVAR
+	 * el plugin `plugins_loaded` ya pasó: WordPress incluye el archivo y
+	 * dispara el hook de activación dentro de una petición donde este plugin
+	 * todavía no estaba activo. Resultado: el gancho de activación llamaba a
+	 * `programar()` con `swpk_cinco_minutos` aún sin registrar, y el sondeo no
+	 * se programó nunca, en ninguna instalación.
+	 *
+	 * Los demás relojes del panel no lo sufrieron porque usan `daily` y
+	 * `weekly`, que WordPress trae de fábrica. Por eso el panel decía «el
+	 * sondeo de cada cinco minutos no está corriendo»: tenía razón.
+	 */
 	public static function programar(): void {
-		if ( ! wp_next_scheduled( self::HOOK ) ) {
-			wp_schedule_event( time() + 60, self::INTERVALO, self::HOOK );
+		if ( wp_next_scheduled( self::HOOK ) ) {
+			return;
 		}
+
+		if ( ! isset( wp_get_schedules()[ self::INTERVALO ] ) ) {
+			add_filter( 'cron_schedules', [ __CLASS__, 'intervalo' ] );
+		}
+
+		wp_schedule_event( time() + 60, self::INTERVALO, self::HOOK );
 	}
 
 	public static function desprogramar(): void {

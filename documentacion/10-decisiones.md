@@ -310,8 +310,14 @@ por tu cuenta.
 2. **¿Las llaves vuelven a la pantalla de Usuarios?** En pausa, esperándolo.
 3. **¿Se acepta que una orden tarde?** Por el cron de WordPress.
 4. **Pantheon.** Ver [12](12-pantheon.md).
-5. **El agente no está instalado en ningún sitio.** Es la dependencia que
-   bloquea la mitad de lo que el panel sabe hacer.
+5. **¿Cada cuánto tiene que sondear el panel?** El sondeo está programado cada
+   cinco minutos, pero el panel vive en Pantheon, que ejecuta el cron una vez
+   por hora. O sea que hoy una caída se ve hasta una hora tarde, mientras el
+   correo al cliente dice «el monitor revisa cada cinco minutos». Hay tres
+   salidas y ninguna es obvia: aceptar la hora y decirlo así; aprovechar que
+   los 95 agentes llaman al panel cada cinco minutos y disparar el sondeo con
+   esas llamadas; o volver a encender WP-Cron en el sitio, que Pantheon apaga
+   a propósito. Ver [25](#25-un-reloj-que-falla-en-silencio-es-peor-que-un-reloj-parado).
 
 ## 12. Una norma que nadie mira es peor que ninguna
 
@@ -407,3 +413,53 @@ cambia es cuánto avanza, no si sobrevive.
 pero pagina de 30 en 30 y los parámetros que controlan eso van en el cuerpo de
 un GET, que es lo que WordPress no puede mandar. Comprobado contra la API real
 el 11 de noviembre de 2026; está contado en `class-fuente-api.php`.
+
+## 25. Un reloj que falla en silencio es peor que un reloj parado
+
+**Qué pasó.** El 19 de noviembre de 2026 el panel decía, en «De cuándo es lo
+que estás viendo»: *el panel revisó si los sitios responden → nunca*, y debajo,
+en rojo, *el sondeo de cada cinco minutos no está corriendo*. Tenía razón: no
+había corrido una sola vez, ni ahí ni en ninguna otra instalación.
+
+**Por qué.** `wp_schedule_event()` comprueba que la recurrencia que le pasas
+exista en `wp_get_schedules()`. Si no existe **devuelve `false` y no dice
+nada**: ni excepción, ni aviso, ni entrada en el registro. El intervalo de
+cinco minutos es nuestro, lo registra un filtro que se engancha en `init()`,
+y `init()` cuelga de `plugins_loaded`.
+
+Al activar un plugin, `plugins_loaded` ya pasó. WordPress incluye el archivo
+del plugin y dispara el gancho de activación dentro de una petición en la que
+ese plugin todavía no estaba en la lista de activos. Así que el gancho de
+activación llamaba a `programar()` con un intervalo que, en esa petición
+concreta, no existía. El evento no se creaba. Nadie se enteraba.
+
+**Por qué no se vio antes.** Los demás relojes del panel usan `daily` y
+`weekly`, que WordPress trae de fábrica, y esos sí quedaban puestos. En la
+pantalla de cron se veían cinco eventos `swpk_` y todo parecía normal. Faltaba
+el sexto.
+
+**Lo mismo en el agente.** `swa_preguntar_ordenes` —la pregunta cada cinco
+minutos con la que el sitio recoge las órdenes del panel— tenía el fallo
+idéntico, y por la misma razón: intervalo propio. Comprobado por SSH en los 95
+sitios. El reporte diario sí estaba puesto, porque usa `daily`, y por eso el
+agente parecía sano: reportaba. Lo que no hacía era obedecer. Una orden
+enviada desde el panel esperaba al reporte del día siguiente en vez de cinco
+minutos.
+
+**El arreglo.** `programar()` ya no da por supuesto el intervalo: si no está
+registrado lo registra antes de usarlo. Y se vuelve a llamar desde `init()` en
+cada carga, como ya hacían la sonda y la revisión diaria, para que las
+instalaciones que ya existen se curen solas sin reactivar nada.
+
+**La regla.** Una función que devuelve `false` en vez de quejarse necesita que
+alguien compruebe el resultado. Si programar un reloj puede fallar sin ruido,
+el que lo programa comprueba que quedó puesto — o el panel acaba prometiendo
+una vigilancia que no existe.
+
+**Lo que esto no arregla: el reloj del hosting.** Programar el evento cada
+cinco minutos no significa que ocurra cada cinco minutos. WP-Cron no es un
+reloj, es «lo que se ejecuta cuando alguien pide una página». En Pantheon
+—donde vive el panel— ni eso: el upstream de WordPress trae `DISABLE_WP_CRON`
+puesto y la plataforma ejecuta el cron **una vez por hora**. Así que el sondeo
+quedará puesto cada cinco minutos y correrá cada hora. Eso es una decisión
+pendiente, no un detalle: está en «Lo que sigue abierto».
