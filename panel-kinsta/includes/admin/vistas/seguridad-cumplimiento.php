@@ -131,7 +131,13 @@ if ( $cumplidas && $medibles ) {
 	$limpias = array_filter( $cumplidas, static fn( $r ) => $r['cumple'] >= 1 );
 
 	if ( $limpias ) {
-		echo '<p class="swpk-titulin" style="margin:18px 0 6px">Lo que está bien</p>';
+		// Plegado a propósito: que algo esté bien hay que afirmarlo —si no, un
+		// panel solo enseña desgracias— pero no puede ocupar media pantalla por
+		// delante de lo que sí hay que atender. El número se ve sin abrir.
+		printf(
+			'<details style="margin:18px 0 6px"><summary class="swpk-titulin" style="cursor:pointer">Lo que está bien <span class="swpk-mudo">(%s)</span></summary>',
+			esc_html( SWPK_Vista::plural( count( $limpias ), 'norma que nadie incumple', 'normas que nadie incumple' ) )
+		);
 		echo '<ul class="swpk-bien-lista">';
 
 		foreach ( $limpias as $r ) {
@@ -142,7 +148,7 @@ if ( $cumplidas && $medibles ) {
 			);
 		}
 
-		echo '</ul>';
+		echo '</ul></details>';
 	}
 }
 
@@ -226,7 +232,7 @@ $POR_BLOQUE = 8;
 
 [ $con_fallas_pagina, $pag_fallas, $pags_fallas ] = SWPK_Vista::paginar(
 	$con_fallas,
-	SWPK_Vista::pagina_pedida(),
+	SWPK_Vista::pagina_pedida( 'pf' ),
 	4
 );
 ?>
@@ -382,7 +388,7 @@ $POR_BLOQUE = 8;
 			<?php endif; ?>
 		</div>
 	<?php endforeach; ?>
-	<?php SWPK_Vista::paginador( $pag_fallas, $pags_fallas, count( $con_fallas ), 'problemas', 'problema' ); ?>
+	<?php SWPK_Vista::paginador( $pag_fallas, $pags_fallas, count( $con_fallas ), 'problemas', 'problema', 'pf' ); ?>
 	<?php SWPK_Vista::caja_cerrar(); ?>
 <?php endif; ?>
 
@@ -404,8 +410,19 @@ foreach ( $medibles as $f ) {
 }
 ?>
 
+<?php
+// Una fila por norma con huecos: con 73 normas eso era otra pantalla sin
+// fondo. Se pagina igual que todo lo demás.
+$normas_con_hueco = [];
+foreach ( $normas as $n ) {
+	if ( ! empty( $huecos_reales[ (string) $n->clave ] ) ) {
+		$normas_con_hueco[] = $n;
+	}
+}
+[ $huecos_pagina, $pag_hue, $pags_hue ] = SWPK_Vista::paginar( $normas_con_hueco, SWPK_Vista::pagina_pedida( 'ph' ), 10 );
+?>
 <?php if ( $huecos_reales ) : ?>
-	<?php SWPK_Vista::caja_abrir( 'Lo que falta revisar', '', 'swpk-c12', true ); ?>
+	<?php SWPK_Vista::caja_abrir( 'Lo que falta revisar', esc_html( SWPK_Vista::plural( count( $normas_con_hueco ), 'norma', 'normas' ) ), 'swpk-c12', true ); ?>
 	<p class="swpk-mudo" style="margin:-4px 0 12px;max-width:860px">
 		Esto no son problemas: es lo que el panel todavía no sabe de sitios que sí puede revisar. Un sitio
 		sin revisar puede estar perfecto o puede estar mal, y decir cualquiera de las dos cosas sería
@@ -415,10 +432,9 @@ foreach ( $medibles as $f ) {
 	<table class="widefat striped" style="max-width:980px">
 		<thead><tr><th style="width:42%">La norma</th><th>Dónde falta, y por qué</th></tr></thead>
 		<tbody>
-		<?php foreach ( $normas as $n ) : ?>
+		<?php foreach ( $huecos_pagina as $n ) : ?>
 			<?php
-			$clave = (string) $n->clave;
-			if ( empty( $huecos_reales[ $clave ] ) ) { continue; }
+			$clave   = (string) $n->clave;
 			$quienes = $huecos_reales[ $clave ];
 			?>
 			<tr>
@@ -443,6 +459,7 @@ foreach ( $medibles as $f ) {
 		<?php endforeach; ?>
 		</tbody>
 	</table>
+	<?php SWPK_Vista::paginador( $pag_hue, $pags_hue, count( $normas_con_hueco ), 'normas', 'norma', 'ph' ); ?>
 	<?php SWPK_Vista::caja_cerrar(); ?>
 <?php endif; ?>
 

@@ -182,7 +182,7 @@ class SWPK_Vista {
 	 * Lleva el singular aparte porque ahora se filtra de verdad: filtrar hasta
 	 * dejar un solo sitio es lo normal, y el pie decía «1 sitios».
 	 */
-	public static function paginador( int $pagina, int $paginas, int $total, string $que = 'sitios', string $uno = 'sitio' ): void {
+	public static function paginador( int $pagina, int $paginas, int $total, string $que = 'sitios', string $uno = 'sitio', string $parametro = 'p' ): void {
 		$cuenta = self::plural( $total, $uno, $que );
 
 		if ( $paginas < 2 ) {
@@ -194,11 +194,11 @@ class SWPK_Vista {
 			<span class="swpk-cuenta"><?php echo esc_html( $cuenta ); ?></span>
 			<span>
 				<?php if ( $pagina > 1 ) : ?>
-					<a class="button" href="<?php echo esc_url( add_query_arg( 'p', $pagina - 1 ) ); ?>">‹ Anterior</a>
+					<a class="button" href="<?php echo esc_url( add_query_arg( $parametro, $pagina - 1 ) ); ?>">‹ Anterior</a>
 				<?php endif; ?>
 				<span class="swpk-pag">Página <?php echo (int) $pagina; ?> de <?php echo (int) $paginas; ?></span>
 				<?php if ( $pagina < $paginas ) : ?>
-					<a class="button" href="<?php echo esc_url( add_query_arg( 'p', $pagina + 1 ) ); ?>">Siguiente ›</a>
+					<a class="button" href="<?php echo esc_url( add_query_arg( $parametro, $pagina + 1 ) ); ?>">Siguiente ›</a>
 				<?php endif; ?>
 			</span>
 		</div>
@@ -803,8 +803,16 @@ class SWPK_Vista {
 		echo '</svg>';
 	}
 
-	public static function pagina_pedida(): int {
-		return isset( $_GET['p'] ) ? max( 1, (int) $_GET['p'] ) : 1;
+	/**
+	 * Qué página se pidió.
+	 *
+	 * El nombre del parámetro se puede cambiar porque hay pantallas con más de
+	 * una lista paginada. Con un solo nombre, pulsar «Siguiente» en una movía
+	 * las tres a la vez, que es peor que no paginar: la pantalla se reordena
+	 * entera y nadie entiende por qué.
+	 */
+	public static function pagina_pedida( string $parametro = 'p' ): int {
+		return isset( $_GET[ $parametro ] ) ? max( 1, (int) $_GET[ $parametro ] ) : 1;
 	}
 
 	public static function tag_pedido(): string {
