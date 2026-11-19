@@ -170,6 +170,16 @@ $bien_hoy = $resumen_dia[ $hoy ] ?? [ 'sitios' => 0, 'modulos' => 0 ];
 	<?php SWPK_Frescura::aviso(); ?>
 
 	<?php
+	// El botón de correr, arriba. Estaba al pie de la pantalla, después de
+	// todas las tarjetas: «debería estar arriba, no hasta abajo». Y es el
+	// botón del que depende que haya algo que mirar — cuando el panel se
+	// estrena, o se muda de sitio, no hay nada hasta que alguien lo pulsa.
+	if ( SWPK_Perfiles::puede( SWPK_Perfiles::ADMINISTRAR ) ) {
+		SWPK_Admin::barra_acciones();
+	}
+	?>
+
+	<?php
 	// ── Las normas de seguridad, en una línea ───────────────────────────────
 	//
 	// Un sitio con el editor de código abierto está mal aunque tenga todos sus
@@ -433,7 +443,7 @@ $bien_hoy = $resumen_dia[ $hoy ] ?? [ 'sitios' => 0, 'modulos' => 0 ];
 						? '<span class="swpk-nivel swpk-nivel-caido">Caído</span>'
 						: SWPK_Admin::nivel_badge( (string) $u['nivel'] ),
 					'accion_url'   => SWPK_Vista::url_del_sitio( (string) $u['sitio_id'], 'panel-kinsta' ),
-					'accion_texto' => 'Ver qué tiene',
+					'accion_texto' => 'Revisar el sitio',
 				];
 			}
 
@@ -489,21 +499,9 @@ $bien_hoy = $resumen_dia[ $hoy ] ?? [ 'sitios' => 0, 'modulos' => 0 ];
 		// Lo que antes separaba la cabecera de las tarjetas, ahora al pie.
 		SWPK_Admin::tira_de_perfil();
 		SWPK_Admin::aviso_demo();
-
-		if ( SWPK_Perfiles::puede( SWPK_Perfiles::ADMINISTRAR ) ) {
-			SWPK_Admin::barra_acciones();
-		}
 		?>
-
-		<?php SWPK_Frescura::sello(); ?>
 
 	<?php endif; ?>
 
-	<p class="swpk-nota">
-		Los datos de los sitios vienen de <?php echo esc_html( SWPK_Admin::proveedor() ); ?>; las
-		vulnerabilidades, del feed de Wordfence Intelligence. Lo que se ve es siempre la última foto
-		buena, por eso cada dato lleva su fecha.
-	</p>
 
-	<p class="swpk-atribucion"><?php echo wp_kses_post( SWPK_Wordfence::atribucion() ); ?></p>
 </div>

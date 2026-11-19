@@ -49,6 +49,8 @@ class SWPK_Admin {
 		add_filter( 'parent_file', [ __CLASS__, 'menu_abierto' ] );
 		add_filter( 'submenu_file', [ __CLASS__, 'submenu_marcado' ] );
 		add_filter( 'admin_title', [ __CLASS__, 'titulo_de_la_ficha' ], 10, 2 );
+		add_filter( 'admin_footer_text', [ __CLASS__, 'pie_limpio' ] );
+		add_filter( 'update_footer', [ __CLASS__, 'pie_limpio' ], 11 );
 	}
 
 	private static function puede_ver(): bool {
@@ -205,6 +207,23 @@ class SWPK_Admin {
 		return self::SLUG . '-reporte' === $pagina
 			? sprintf( 'Reporte de mantenimiento — %s', $nombre )
 			: sprintf( '%s — Panel Kinsta', $nombre );
+	}
+
+	/**
+	 * El pie de WordPress, fuera de las pantallas del panel.
+	 *
+	 * «Thank you for creating with WordPress» y el número de versión son de
+	 * WordPress, no del panel, y en una pantalla que se le enseña a un cliente
+	 * o a dirección solo son ruido al final de todo. Se quitan aquí y no con
+	 * CSS porque así tampoco viajan en el HTML.
+	 *
+	 * Solo en las pantallas del panel: el resto del escritorio se queda como
+	 * está, que no es nuestro para tocarlo.
+	 *
+	 * @param string $texto
+	 */
+	public static function pie_limpio( $texto ) {
+		return str_starts_with( self::pagina_actual(), self::SLUG ) ? '' : $texto;
 	}
 
 	/** El nombre del proveedor, para escribirlo en las pantallas. */

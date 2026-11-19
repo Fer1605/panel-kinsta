@@ -519,6 +519,19 @@ class SWPK_Vista {
 			<?php endif; ?>
 		</div>
 		<?php
+		// ── Por qué este <hr> ───────────────────────────────────────────────
+		//
+		// WordPress mueve sus avisos con JavaScript hasta justo detrás del
+		// primer <h1> de la página… salvo que encuentre esta marca, y entonces
+		// los deja aquí. Sin ella, un aviso aterrizaba DENTRO de la cabecera,
+		// entre el título y el subtítulo, y al meterse en medio rompía la fila
+		// y tiraba las pestañas abajo y a la izquierda. De ahí el «los filtros
+		// se mueven de lugar: en una pestaña los tengo aquí y en otra se van a
+		// la esquina superior derecha»: no se movían las pestañas, se movía el
+		// aviso.
+		?>
+		<hr class="wp-header-end">
+		<?php
 	}
 
 	/**
@@ -627,8 +640,23 @@ class SWPK_Vista {
 				);
 			}
 
+			// El renglón entero se pulsa, no solo el nombre ni solo el botón:
+			// «que sea cliqueable toda; sí que existe el botón, pero que pueda
+			// clicarlo como que completo». La capa va por debajo de todo
+			// (`position:absolute` y `z-index:0`), así que el botón y el
+			// nombre siguen siendo enlaces propios y el resto del renglón
+			// lleva al mismo sitio.
+			$destino = (string) ( $f['accion_url'] ?? $f['url'] ?? '' );
+
 			printf(
-				'<li><div><div class="swpk-renglon-nom">%s</div>%s</div><div class="swpk-renglon-dato">%s%s</div></li>',
+				'<li class="%s">%s<div><div class="swpk-renglon-nom">%s</div>%s</div><div class="swpk-renglon-dato">%s%s</div></li>',
+				'' !== $destino ? 'swpk-renglon-vivo' : '',
+				'' !== $destino
+					? sprintf(
+						'<a class="swpk-renglon-capa" href="%s" aria-hidden="true" tabindex="-1"></a>',
+						esc_url( $destino )
+					)
+					: '',
 				$nom,
 				'' !== (string) ( $f['sub'] ?? '' )
 					? '<div class="swpk-renglon-sub">' . esc_html( (string) $f['sub'] ) . '</div>'

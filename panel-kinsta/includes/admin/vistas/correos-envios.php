@@ -87,13 +87,13 @@ $texto_de = static fn( string $plantilla ) => add_query_arg(
 		<?php elseif ( $en_prueba ) : ?>
 		<div class="notice notice-warning">
 			<p>
-				<strong>Modo de prueba.</strong> Los correos se arman completos y quedan en la bitácora
-				para leerlos, pero <strong>no se envían a nadie</strong>.
-			</p>
-			<p>
-				Es a propósito: el primer lote sale a clientes reales, y un error de redacción o un
-				destinatario mal calculado se vuelve cien correos que no se pueden recoger. Conviene
-				leer unos cuantos antes de abrir la llave.
+				<strong>Modo de prueba:</strong> los correos se arman enteros y quedan en el historial
+				para leerlos, pero no salen a nadie.
+				<?php echo wp_kses_post( SWPK_Vista::ayuda(
+					'Es a propósito. El primer lote sale a clientes reales, y un error de redacción o un '
+					. 'destinatario mal calculado se vuelve cien correos que no se pueden recoger. '
+					. 'Conviene leer unos cuantos antes de abrir la llave.'
+				) ); ?>
 			</p>
 		</div>
 		<?php else : ?>
@@ -104,7 +104,7 @@ $texto_de = static fn( string $plantilla ) => add_query_arg(
 
 	<?php SWPK_Vista::rejilla_abrir(); ?>
 
-	<?php SWPK_Vista::caja_abrir( 'Qué sale, y a quién', esc_html( SWPK_Vista::plural( count( $proximos ), 'aviso automático', 'avisos automáticos' ) ), 'swpk-c12', true ); ?>
+	<?php SWPK_Vista::caja_abrir( 'Los avisos automáticos', esc_html( SWPK_Vista::plural( count( $proximos ), 'aviso', 'avisos' ) ), 'swpk-c12', true ); ?>
 	<table class="widefat striped swpk-tabla">
 		<thead>
 			<tr>
@@ -188,7 +188,7 @@ $texto_de = static fn( string $plantilla ) => add_query_arg(
 			'<a href="%s">Cambiarlo en Ajustes</a>',
 			esc_url( admin_url( 'admin.php?page=panel-kinsta-ajustes' ) )
 		),
-		'swpk-c12'
+		'swpk-c6'
 	);
 	?>
 	<table class="form-table" role="presentation">
@@ -216,7 +216,16 @@ $texto_de = static fn( string $plantilla ) => add_query_arg(
 	</table>
 	<?php SWPK_Vista::caja_cerrar(); ?>
 
-	<?php SWPK_Vista::caja_abrir( 'Cosas que conviene revisar antes de abrir la llave', '', 'swpk-c12', true ); ?>
+	<?php SWPK_Vista::caja_abrir(
+		'Lo que falta para que un aviso llegue' . SWPK_Vista::ayuda(
+			'Un aviso solo sale si tiene a quién. Esta lista dice cuántos sitios no tienen a nadie a '
+			. 'quien escribirle y por qué, para que no se descubra el día que se abra la llave y no '
+			. 'salga nada.'
+		),
+		'',
+		'swpk-c6',
+		true
+	); ?>
 	<?php
 	$sin_asesora  = 0;
 	$sin_contacto = 0;
@@ -257,7 +266,7 @@ $texto_de = static fn( string $plantilla ) => add_query_arg(
 		],
 	];
 	?>
-	<table class="widefat striped swpk-tabla">
+	<table class="widefat striped swpk-tabla swpk-tabla-fija">
 		<tbody>
 		<?php foreach ( $revisiones as $r ) : ?>
 			<tr>

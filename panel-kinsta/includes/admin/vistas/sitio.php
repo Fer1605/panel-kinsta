@@ -142,6 +142,16 @@ $url_pestana = static fn( string $s ) => add_query_arg(
 				SWPK_Admin::proveedor()
 			) ) ); ?>
 		<?php endif; ?>
+
+		<?php if ( $hallazgos && 'pendiente' === $seccion ) : ?>
+			<button type="button" class="button" onclick="document.getElementById('swpk-mensaje-dlg').showModal()">
+				Ver el mensaje para la asesora
+			</button>
+			<?php echo wp_kses_post( SWPK_Vista::ayuda(
+				'El texto escrito para que el cliente entienda qué se juega con lo que tiene pendiente, '
+				. 'listo para copiar y pegar en un correo o una cotización.'
+			) ); ?>
+		<?php endif; ?>
 	</p>
 
 	<?php
@@ -218,20 +228,10 @@ $url_pestana = static fn( string $s ) => add_query_arg(
 
 	<?php if ( $hallazgos && 'pendiente' === $seccion ) : ?>
 		<?php
-		// En una ventana, no en la pantalla. «Mensaje para la asesora no me
-		// interesa, todo lo que tiene pendiente eso me interesa más; eso
-		// debería levantar en un modal, para que entre menos información
-		// tenga yo visualmente, mejor.» Es un texto largo que se usa una vez
-		// cada mucho y que, puesto aquí, empujaba fuera de la vista justo lo
-		// que sí se viene a mirar.
+		// Solo la ventana: el botón que la abre vive arriba, con los otros
+		// dos. Aquí, entre los números y la tabla, partía en dos justo lo que
+		// se viene a mirar.
 		?>
-		<p class="swpk-mensaje-abrir">
-			<button type="button" class="button" onclick="document.getElementById('swpk-mensaje-dlg').showModal()">
-				Ver el mensaje para la asesora
-			</button>
-			<span class="swpk-mudo">escrito para que el cliente entienda qué se juega, listo para pegar</span>
-		</p>
-
 		<dialog id="swpk-mensaje-dlg" class="swpk-dialogo swpk-dialogo-texto">
 			<div class="swpk-dialogo-cab">
 				<strong>El mensaje para la asesora</strong>
@@ -262,11 +262,19 @@ $url_pestana = static fn( string $s ) => add_query_arg(
 		</div>
 
 		</dialog>
-		<?php SWPK_Vista::caja_cerrar(); ?>
 
 		<?php
+		// El título dice QUÉ se está mirando. Al pulsar «19 con vulnerabilidad
+		// conocida» la tabla quedaba filtrada pero seguía titulándose «todo lo
+		// que tiene pendiente», que es justo lo que ya no es.
+		$titulo_tabla = match ( $solo ) {
+			'vuln' => 'Vulnerabilidades conocidas',
+			'act'  => 'Actualizaciones pendientes',
+			default => 'Todo lo que tiene pendiente',
+		};
+
 		SWPK_Vista::caja_abrir(
-			'Todo lo que tiene pendiente',
+			$titulo_tabla,
 			'' !== $solo
 				? sprintf(
 					'%s · <a href="%s">ver todo</a>',
@@ -664,6 +672,33 @@ $url_pestana = static fn( string $s ) => add_query_arg(
 			'Quién lo atiende'     => $asesora
 				? esc_html( $asesora->display_name )
 				: '<span class="swpk-gris">sin asignar</span>',
+			'A quién le llega el correo' => ( static function () use ( $sitio ) {
+				// «Dice: lo da el agente. ¿Y por qué no lo estoy viendo?»
+				// Porque el panel lo calculaba solo en el momento de enviar y
+				// no lo enseñaba en ningún sitio. Es la misma cuenta que hace
+				// el envío, así que lo que sale aquí es exactamente a quién le
+				// va a llegar.
+				$destinos = SWPK_Correos::destinatarios_cliente( $sitio );
+
+				if ( ! $destinos ) {
+					return '<span class="swpk-gris">a nadie todavía</span>'
+						. wp_kses_post( SWPK_Vista::ayuda(
+							'El panel saca los destinatarios de los administradores que reporta el '
+							. 'agente, quitando los de nuestros propios dominios. Si no sale ninguno es '
+							. 'porque el agente aún no ha mandado su lista de usuarios, porque todos los '
+							. 'administradores son nuestros, o porque el sitio no tiene agente. En ese '
+							. 'último caso se usa el contacto escrito a mano, aquí abajo.'
+						) );
+				}
+
+				return '<span class="swpk-mono">' . esc_html( implode( ', ', $destinos ) ) . '</span>'
+					. wp_kses_post( SWPK_Vista::ayuda(
+						'Lo único que les llega es el reporte mensual de mantenimiento: qué se actualizó '
+						. 'en su sitio y qué se mantuvo al día. Ningún otro aviso del panel sale hacia '
+						. 'ellos. Son los administradores que reporta el agente, menos los de nuestros '
+						. 'dominios.'
+					) );
+			} )(),
 			'Contacto del cliente' => '' !== $contacto
 				? esc_html( $contacto )
 				: '<span class="swpk-gris">sin contacto</span>'

@@ -72,7 +72,6 @@ if ( $ve_accesos ) {
 		<?php require SWPK_RUTA . 'includes/admin/vistas/registros-accesos.php'; ?>
 	<?php else : ?>
 		<?php require SWPK_RUTA . 'includes/admin/vistas/bitacora-movimientos.php'; ?>
-		<p class="swpk-atribucion"><?php echo wp_kses_post( SWPK_Wordfence::atribucion() ); ?></p>
 	<?php endif; ?>
 
 </div>

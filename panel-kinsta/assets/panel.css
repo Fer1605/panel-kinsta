@@ -658,14 +658,19 @@ body[class*="panel-kinsta"] .swpk-pastillas {
 	align-items: center;
 }
 
+/* Cuadraditas y no redondas, y con el fondo de un botón.
+   Redondas, en blanco y con el borde del mismo gris que todo lo demás, no se
+   leían como algo que se pueda pulsar: «casi no se ven, ni te das cuenta de
+   que tenés opciones de ver más temas internos». Ahora se parecen a los demás
+   botones del panel, que es lo que son. */
 body[class*="panel-kinsta"] .swpk-pastilla {
 	display: inline-flex;
 	align-items: center;
 	gap: 7px;
-	padding: 7px 15px;
-	border: 1px solid var(--swpk-borde);
-	border-radius: 999px;
-	background: #fff;
+	padding: 6px 13px;
+	border: 1px solid #c3c4c7;
+	border-radius: 5px;
+	background: #f6f7f7;
 	color: var(--swpk-texto);
 	font-size: 12.5px;
 	font-weight: 500;
@@ -675,6 +680,8 @@ body[class*="panel-kinsta"] .swpk-pastilla {
 
 body[class*="panel-kinsta"] .swpk-pastilla:hover {
 	border-color: var(--swpk-marca);
+	background: #fff;
+	color: var(--swpk-marca);
 	text-decoration: none;
 }
 
@@ -689,19 +696,25 @@ body[class*="panel-kinsta"] .swpk-pastilla-n {
 
 body[class*="panel-kinsta"] .swpk-pastilla-activa {
 	border-color: var(--swpk-marca);
-	color: var(--swpk-marca);
+	background: var(--swpk-marca);
+	color: #fff;
 	font-weight: 600;
 }
 
+body[class*="panel-kinsta"] .swpk-pastilla-activa:hover {
+	background: var(--swpk-marca);
+	color: #fff;
+}
+
 body[class*="panel-kinsta"] .swpk-pastilla-activa .swpk-pastilla-n {
-	background: var(--swpk-marca-suave);
-	color: var(--swpk-marca);
+	background: rgba(255, 255, 255, .25);
+	color: #fff;
 }
 
 /* La pastilla es un enlace y el color del texto se lo pone la regla general
    de enlaces. Aquí se gana porque va después y tiene más peso. */
 body[class*="panel-kinsta"] .wrap a.swpk-pastilla { color: var(--swpk-texto); }
-body[class*="panel-kinsta"] .wrap a.swpk-pastilla-activa { color: var(--swpk-marca); }
+body[class*="panel-kinsta"] .wrap a.swpk-pastilla-activa { color: #fff; }
 
 /* ── La rejilla ─────────────────────────────────────────────────────────── */
 
@@ -1458,8 +1471,17 @@ body[class*="panel-kinsta"] .swpk-caja-cuerpo.swpk-sin-aire {
 	overflow-x: auto;
 }
 
-body[class*="panel-kinsta"] .swpk-caja-cuerpo > table.swpk-tabla {
+/* Las tablas anchas —la de sitios, la de vulnerabilidades— piden 900 px y la
+   tarjeta las deja desplazar. Pero una tabla de ancho fijo dentro de media
+   tarjeta no: ahí los 900 px la sacaban 371 px por fuera, y lo que sobraba se
+   quedaba cortado porque la tarjeta recorta. */
+body[class*="panel-kinsta"] .swpk-caja-cuerpo > table.swpk-tabla:not(.swpk-tabla-fija) {
 	min-width: 900px;
+}
+
+body[class*="panel-kinsta"] .swpk-tabla-fija {
+	min-width: 0;
+	width: 100%;
 }
 
 /* Un nombre largo se parte por donde se pueda, nunca letra a letra. */
@@ -1681,4 +1703,39 @@ body[class*="panel-kinsta"] .swpk-ancho-celda {
 	width: 100%;
 	max-width: 100%;
 	min-width: 0;
+}
+
+/* El renglón entero se pulsa. La capa va por debajo del contenido, así que el
+   nombre y el botón siguen siendo enlaces propios —y se pueden abrir en otra
+   pestaña— mientras el resto del renglón lleva al mismo sitio. */
+body[class*="panel-kinsta"] .swpk-renglon-vivo {
+	position: relative;
+}
+
+body[class*="panel-kinsta"] .swpk-renglon-capa {
+	position: absolute;
+	inset: 0;
+	z-index: 0;
+	border-radius: 8px;
+}
+
+body[class*="panel-kinsta"] .swpk-renglon-vivo > *:not(.swpk-renglon-capa) {
+	position: relative;
+	z-index: 1;
+}
+
+body[class*="panel-kinsta"] .swpk-renglon-vivo:hover {
+	background: #f3f6fb;
+}
+
+/* La marca que le dice a WordPress dónde dejar sus avisos. No se ve. */
+body[class*="panel-kinsta"] .wrap > .wp-header-end {
+	display: none;
+}
+
+/* En una tabla de ancho fijo, una frase larga en una celda estrecha tiene que
+   poder partirse; si no, la celda impone su ancho mínimo y vuelve a salirse. */
+body[class*="panel-kinsta"] .swpk-tabla-fija td,
+body[class*="panel-kinsta"] .swpk-tabla-fija th {
+	overflow-wrap: anywhere;
 }

@@ -45,7 +45,7 @@ foreach ( array_keys( SWPK_Plantillas::catalogo() ) as $clave ) {
 		'Los avisos que salen solos, a quién le llegan y qué dicen.',
 		SWPK_Vista::pastillas( [
 			[
-				'texto'  => 'Qué sale y a quién',
+				'texto'  => 'Los avisos',
 				'url'    => $url_sec( 'envios' ),
 				'activa' => 'envios' === $seccion,
 			],

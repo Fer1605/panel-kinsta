@@ -135,7 +135,11 @@ SWPK_Vista::rejilla_abrir();
 // quedaba media pantalla en blanco: «ese espacio en blanco ahí no le gusta».
 // Ahora la dona es una tira baja a todo lo ancho y la lista va entera debajo.
 SWPK_Vista::caja_abrir(
-	'Estado de cumplimiento',
+	'Estado de cumplimiento' . SWPK_Vista::ayuda(
+		'El panel no comprueba estas normas por su cuenta: las mira el plugin instalado en cada '
+		. 'sitio y las manda en su reporte. Lo que se ve es cómo estaba ese sitio la última vez que '
+		. 'reportó, y por eso cada dato lleva su fecha en la ficha del sitio.'
+	),
 	esc_html( SWPK_Vista::plural( count( $normas ), 'norma activa', 'normas activas' ) ),
 	'swpk-c12'
 );
@@ -783,8 +787,4 @@ $cuenta_vista = [
 <?php endif; ?>
 
 
-<p class="swpk-atribucion" style="margin-top:22px">
-	El panel no comprueba estas normas por su cuenta: las mira el plugin instalado en cada sitio y las manda
-	en su reporte. Así que lo que se ve es siempre cómo estaba ese sitio la última vez que reportó, y por eso
-	cada dato lleva su fecha en la ficha del sitio.
-</p>
+
