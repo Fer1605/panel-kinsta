@@ -687,3 +687,11 @@ nombrar cuál.
 Lo segundo no es opcional cuando lo que se cambió es cómo se ve algo. Decir
 «verificado» con lo primero, habiendo tocado colores y maquetado, es decir que
 se comprobó una cosa y dar a entender otra.
+
+**Y una trampa de lo segundo, que casi cuela dos fallos inventados:** una
+medida de maquetado no vale nada sin saber a qué ancho se tomó. El panel del
+navegador se quedó en 253 px —la emulación de pantalla se había borrado sola—
+y con eso «medí» que dos tablas se salían 680 y 99 px de su tarjeta. A 1280 px
+las dos estaban bien. Así que cada barrido de maquetado empieza leyendo
+`window.innerWidth` y lo dice junto al resultado: una cifra de desborde sin el
+ancho al lado es una cifra que no se puede creer.
