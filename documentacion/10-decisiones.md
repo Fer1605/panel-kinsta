@@ -645,3 +645,45 @@ con puntos suspensivos y se ve entero al desplegarlo.
 altura del campo más alto. Si la barra mide mucho más que un campo, envolvió.
 Y se mide a **1280 px**, que es la pantalla de trece pulgadas desde la que se
 revisa esto, no a la del que lo escribe.
+
+## 33. Leer el HTML no es ver la pantalla
+
+Toda una tarde diciendo «verificado» después de pedir las pantallas con
+`fetch` y revisar el HTML: que no hubiera `Fatal error`, que hubiera un solo
+`wrap`, que las tarjetas tuvieran la clase de ancho que les tocaba. Las
+pantallas pasaban. Y lo que Fer tenía delante estaba roto.
+
+Tres fallos que ese método no puede ver, los tres encontrados en cuanto volvió
+el navegador:
+
+1. **Un botón ilegible.** La pestaña activa salía con texto azul sobre fondo
+   azul oscuro: **1,60 de contraste**. El HTML era correcto; el color lo
+   decidía una regla de CSS. Peor: el `color: #fff` que le había puesto el día
+   antes no se aplicaba nunca, porque
+   `a:not(.button):not(.nav-tab):not(.swpk-filtro-activo)` pesa (0,5,2) —cada
+   `:not()` suma lo que lleva dentro— y le ganaba a `a.swpk-pastilla-activa`,
+   que pesa (0,3,2).
+2. **Un renglón que no se pulsaba.** La capa de clic estaba en el HTML, en su
+   sitio. Pero el contenido iba por encima para poder leerse, así que se comía
+   el clic en todas partes menos en los huecos.
+3. **Una tarjeta estirada.** Cuatro cifras de 259 px llenaban el renglón, la
+   quinta caía abajo y `flex: 1` la estiraba a 1.078 px con dos palabras
+   dentro.
+
+Ninguno es un error de programa. Los tres son de **estilo aplicado**, que solo
+existe después de que el navegador resuelve la cascada, mide y pinta.
+
+**Lo que queda:** «verificado» se dice de dos cosas distintas y hay que
+nombrar cuál.
+
+- *Que no reviente*: pedir la pantalla y buscar `Fatal error`, `Warning`,
+  `Notice`, `Deprecated` y el `wrap` duplicado. Sirve, es barato y hay que
+  seguir haciéndolo con los parámetros de verdad.
+- *Que se vea*: medir en el navegador. Contraste calculado entre el color y el
+  fondo heredado, `elementFromPoint` en el centro de lo que debería ser
+  pulsable, el ancho de cada hijo contra el de su tarjeta, y a 1280 px, que es
+  la pantalla desde la que se revisa esto.
+
+Lo segundo no es opcional cuando lo que se cambió es cómo se ve algo. Decir
+«verificado» con lo primero, habiendo tocado colores y maquetado, es decir que
+se comprobó una cosa y dar a entender otra.
