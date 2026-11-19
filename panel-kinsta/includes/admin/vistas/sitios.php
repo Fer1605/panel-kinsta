@@ -237,7 +237,16 @@ $volver = add_query_arg(
 					<th style="width:120px">Revisado</th>
 					<th style="width:165px">Asesora</th>
 					<?php if ( $asignar ) : ?>
-						<th style="width:190px">Contacto del cliente</th>
+						<th style="width:190px">
+							Contacto del cliente
+							<?php echo wp_kses_post( SWPK_Vista::ayuda(
+								'A quién se le manda el reporte de lo que se hizo. En los sitios que '
+								. 'llevamos nosotros no hace falta escribirlo: los destinatarios los da el '
+								. 'agente instalado, y se ven en la ficha de cada sitio. En los que lleva '
+								. 'el cliente no hay agente, así que ahí sí hay que escribirlo a mano — y '
+								. 'son justo los que más hay que avisar.'
+							) ); ?>
+						</th>
 						<th style="width:90px"></th>
 					<?php endif; ?>
 				</tr>
@@ -346,13 +355,6 @@ $volver = add_query_arg(
 		</table>
 
 		<?php if ( $asignar ) : ?>
-			<?php if ( ! SWPK_Etiquetas::es_nuestro( $tag ) ) : ?>
-				<p style="max-width:820px;color:#50575e;margin-top:12px">
-					<strong>En este grupo el contacto del cliente hay que escribirlo a mano.</strong>
-					En los sitios nuestros los destinatarios del aviso los da el agente instalado, pero
-					aquí no hay agente — y son justo los que más hay que avisar.
-				</p>
-			<?php endif; ?>
 			<?php submit_button( 'Guardar esta página' ); ?>
 			</form>
 		<?php endif; ?>

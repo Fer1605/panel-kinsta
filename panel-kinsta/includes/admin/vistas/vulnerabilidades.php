@@ -102,17 +102,37 @@ $del_grupo = array_values( array_filter(
 $por_nivel = [];
 $modulos   = [];
 
+// Las opciones de sitio salen de los hallazgos que hay, no del inventario:
+// ofrecer un sitio sin nada pendiente es ofrecer una tabla vacía. Con el
+// número de hallazgos al lado, que es lo que se viene a saber.
+$cuenta_sitio = [];
+$nombre_sitio = [];
+
 foreach ( $del_grupo as $f ) {
 	$por_nivel[ $f['nivel'] ] = ( $por_nivel[ $f['nivel'] ] ?? 0 ) + 1;
 	$modulos[ $f['modulo'] ]  = $f['modulo'];
+
+	$cuenta_sitio[ $f['sitio_id'] ] = ( $cuenta_sitio[ $f['sitio_id'] ] ?? 0 ) + 1;
+	$nombre_sitio[ $f['sitio_id'] ] = (string) $f['nombre'];
 }
 
 ksort( $modulos, SORT_NATURAL | SORT_FLAG_CASE );
 $modulo = SWPK_Vista::opcion_pedida( 'modulo', $modulos );
 
+$sitios_opciones = [];
+foreach ( $nombre_sitio as $id_s => $nom_s ) {
+	$sitios_opciones[ $id_s ] = sprintf( '%s (%d)', $nom_s, (int) $cuenta_sitio[ $id_s ] );
+}
+asort( $sitios_opciones, SORT_NATURAL | SORT_FLAG_CASE );
+
+$sitio_filtro = SWPK_Vista::opcion_pedida( 'sitio_f', $sitios_opciones );
+
 $filas = array_values( array_filter(
 	$del_grupo,
-	static function ( $f ) use ( $nivel, $modulo, $busqueda ) {
+	static function ( $f ) use ( $nivel, $modulo, $busqueda, $sitio_filtro ) {
+		if ( '' !== $sitio_filtro && $f['sitio_id'] !== $sitio_filtro ) {
+			return false;
+		}
 		if ( '' !== $nivel && $f['nivel'] !== $nivel ) {
 			return false;
 		}
@@ -250,6 +270,12 @@ $nombres = SWPK_Riesgo::nombres();
 				'actual'   => $tag,
 				'todas'    => 'Todos los grupos',
 			],
+			'sitio_f' => [
+				'etiqueta' => 'Sitio',
+				'opciones' => $sitios_opciones,
+				'actual'   => $sitio_filtro,
+				'todas'    => 'Todos los sitios',
+			],
 			'modulo' => [
 				'etiqueta' => 'Módulo',
 				'opciones' => $modulos,
@@ -277,6 +303,7 @@ $nombres = SWPK_Riesgo::nombres();
 					<th>Qué pasa, y qué hay que hacer</th>
 					<th style="width:120px">Gravedad</th>
 					<th style="width:110px">Revisado</th>
+					<th style="width:110px"></th>
 				</tr>
 			</thead>
 			<tbody>
@@ -356,6 +383,15 @@ $nombres = SWPK_Riesgo::nombres();
 					</td>
 					<td class="swpk-gris">
 						<?php echo esc_html( '' !== $f['revisado'] ? SWPK_Frescura::fmt( 'j M, H:i', $f['revisado'] ) : '—' ); ?>
+					</td>
+					<td style="text-align:right">
+						<a class="button button-small" href="<?php
+							echo esc_url( add_query_arg(
+								'solo',
+								'vuln',
+								SWPK_Vista::url_del_sitio( $f['sitio_id'], 'panel-kinsta-vulnerabilidades' )
+							) );
+						?>">Ver el sitio</a>
 					</td>
 				</tr>
 			<?php endforeach; ?>

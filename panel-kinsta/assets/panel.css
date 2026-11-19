@@ -660,7 +660,7 @@ body[class*="panel-kinsta"] .swpk-cabecera-sub {
    filtrado: el número no es decoración, es a dónde lleva. */
 body[class*="panel-kinsta"] .swpk-pastillas {
 	display: flex;
-	gap: 8px;
+	gap: 10px;
 	flex-wrap: wrap;
 	align-items: center;
 }
@@ -1615,7 +1615,15 @@ body[class*="panel-kinsta"] .swpk-aviso-corto {
 /* Sub-pestañas dentro de una pestaña: un escalón por debajo de las de arriba,
    para que se vea que eligen qué se mira dentro de esta pantalla y no a qué
    pantalla se va. */
+/* Las sub-pestañas eran un `display: block` con las pastillas una pegada a la
+   otra, sin un píxel entre ellas: se leían como un solo bloque partido en
+   trozos y no como tres opciones. Misma fila y misma separación que las
+   pestañas de arriba. */
 body[class*="panel-kinsta"] .swpk-subpestanas {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 10px;
 	margin: 0 0 14px;
 }
 
@@ -1806,4 +1814,11 @@ body[class*="panel-kinsta"] .swpk-tarjetas .swpk-tarjeta {
 	flex: 1 1 150px;
 	min-width: 150px;
 	max-width: 320px;
+}
+
+/* La fila de «Mostrar: Todo · Cliente · Asesora…» del historial de envíos.
+   Venía del CSS heredado con 7 px entre chips: igual de pegada que las
+   sub-pestañas. Misma separación que el resto de grupos del panel. */
+body[class*="panel-kinsta"] .swpk-filtros {
+	gap: 10px;
 }
