@@ -486,3 +486,55 @@ estaba la regla; lo que no se hereda es el retraso.
 **El precio, dicho claro.** Una caída se ve hasta una hora tarde. Eso es lo que
 hay con el reloj de este hosting y sin montar nada aparte, y está escrito aquí
 para que el día que no alcance, se sepa qué hay que cambiar y qué costaba.
+
+## 27. El agente se muda al tema, y la mudanza destapó dos minas
+
+**Qué.** El agente deja de ser solo un plugin suelto: va también dentro del
+tema hijo `hello-elementor-child`, que ya se instala en todos los sitios. Un
+sitio nuevo nace conectado al panel sin que nadie se acuerde de instalar nada.
+Lo pidió el jefe el 19 de noviembre de 2026, y es el mismo camino que ya había
+seguido el plugin `no_url_field`, que hoy es `inc/form-security.php` de ese
+tema.
+
+**Cómo conviven.** Los 95 sitios que ya tienen el plugin no cambian. Los
+plugins cargan antes que el tema, así que cuando se llega al módulo del tema el
+plugin ya definió `SWA_VERSION` y el módulo se aparta. Nunca corren los dos. Y
+el día que se quite el plugin de un sitio, el tema toma el relevo solo: los
+ajustes viven en la base de datos, no en el plugin. En el panel se distinguen
+por la versión: `0.6.3` es plugin, `0.6.3-tema` es tema.
+
+**Doce de trece archivos son copia exacta.** A propósito. El único que cambia
+es la pantalla, que se dibuja con los recuadros y los interruptores del tema en
+vez del aspecto suelto de WordPress. Así una corrección del agente se trae sin
+pensar.
+
+### Y ahora lo que enseña de verdad
+
+Probar la entrada **por donde la hace una persona** —el login escondido que ese
+tema pone en `/panel/admin/`— destapó dos fallos del agente. Los dos le pasaban
+igual al plugin desde siempre; no son de la mudanza.
+
+**Uno: error fatal al entrar.** La pantalla del segundo paso llamaba a
+`login_header()`, que vive DENTRO de `wp-login.php` y solo existe si la
+petición pasó por ese archivo. Con un login propio, quien valida la contraseña
+es una plantilla del front: `wp-login.php` no se carga y la llamada revienta a
+mitad de la entrada. Dicho sin rodeos: **encender la verificación en dos pasos
+en un sitio con el tema hijo dejaba fuera a todos los administradores.**
+
+**Dos: el código no tenía dónde llegar.** El formulario mandaba el código a
+`wp-login.php`, y ese mismo tema rebota a `/contacto/` a quien pida
+`wp-login.php` sin haber entrado — que es exactamente la situación de alguien a
+medio segundo paso. Ahora el código va a `admin-post.php`, que el tema sí deja
+pasar porque lo usan los formularios del sitio.
+
+**Por qué no lo había visto nadie.** Porque la verificación en dos pasos está
+apagada en los 95 sitios, a propósito, hasta probarla. Habría saltado en el
+primero donde se encendiera, y el primero iba a ser una prueba a mano.
+
+Es la tercera vez que muerde lo mismo —antes fueron la clave de registro y el
+botón de «Correr ahora»—, así que la regla ya no es una anécdota:
+
+> **Lo que va a usar una persona se prueba por donde lo va a usar esa persona.**
+> Y para una pantalla de entrada, eso significa entrar: escribir la contraseña,
+> esperar el código, escribirlo. No basta con que el archivo no tenga errores
+> de sintaxis.
