@@ -104,7 +104,7 @@ class SWPK_Plantillas {
 					. "Dirección: {{url}}\n"
 					. "Detectado: {{cuando}}\n"
 					. "Qué pasó: {{motivo}}\n\n"
-					. 'El monitor revisa cada cinco minutos. Cuando vuelva, les llega otro correo con cuánto estuvo caído.',
+					. 'El monitor revisa cada hora. Cuando vuelva, les llega otro correo con cuánto estuvo caído.',
 				'marcas' => [
 					'{{sitio}}'  => 'El nombre del sitio',
 					'{{url}}'    => 'La dirección que se sondeó',

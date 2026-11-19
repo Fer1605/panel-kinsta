@@ -90,7 +90,7 @@ Así se mueve todo, de punta a punta:
      ├─ normas de seguridad      SWPK_Normas::medir()  → swpk_cumplimiento
      └─ ◄ la respuesta trae las órdenes pendientes
 
-  ③ EL MONITOR DE CAÍDAS         SWPK_Monitor::sondear_todos()   cada 5 min
+  ③ EL MONITOR DE CAÍDAS         SWPK_Monitor::sondear_todos()   cada hora
      → swpk_monitor, y swpk_eventos cuando algo cambia
 
   ④ LOS AVISOS                   SWPK_Correos::despachar()

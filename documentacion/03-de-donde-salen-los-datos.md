@@ -159,15 +159,20 @@ mata a la mitad, y entonces se pierden las dos.
 
 ## El monitor: ¿responde o no?
 
-`SWPK_Monitor` sondea cada cinco minutos. El panel vigila por su cuenta en vez
+`SWPK_Monitor` sondea una vez por hora. El panel vigila por su cuenta en vez
 de esperar a Kinsta por una razón simple: **un aviso que depende de Kinsta no
 sirve para enterarse de que Kinsta se cayó.**
 
-No avisa al primer fallo. Hacen falta dos sondeos fallidos seguidos.
+No avisa al primer fallo. Al sitio que no contesta se le pregunta otra vez ocho
+segundos después, dentro de la misma corrida, y solo cuenta si falla las dos
+veces. Antes la segunda opinión llegaba en el sondeo siguiente; con el sondeo
+cada hora eso habría significado avisar a las dos horas.
 
-El cron de WordPress no sirve para esto —solo corre cuando alguien visita el
-sitio— y el código lo dice en su propio comentario. En producción esto quiere
-un cron de verdad del sistema.
+Por qué una hora y no cinco minutos: el cron de WordPress no es un reloj, solo
+corre cuando alguien visita el sitio, y en Pantheon —donde vive el panel— ni
+eso: viene con `DISABLE_WP_CRON` puesto y la plataforma ejecuta el cron una vez
+por hora. Se podía montar algo aparte para ir más rápido y se decidió que no.
+Lo que no se podía era seguir prometiendo cinco minutos.
 
 ---
 

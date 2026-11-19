@@ -120,7 +120,7 @@ $historial = array_filter(
 	<?php
 	SWPK_Vista::cabecera(
 		'Caídas',
-		esc_html( sprintf( 'El panel sondea los %d sitios cada cinco minutos.', count( $estados ) ) ),
+		esc_html( sprintf( 'El panel sondea los %d sitios una vez por hora.', count( $estados ) ) ),
 		SWPK_Vista::pastillas( [
 			[
 				'texto'  => $al_dia ? 'Sondeo automático' : 'El sondeo no está pasando',
@@ -156,8 +156,9 @@ $historial = array_filter(
 			?>
 		</h2>
 		<p>
-			No se avisa al primer fallo: hacen falta dos sondeos fallidos seguidos, porque un fallo
-			suelto casi siempre es la red y no el sitio.
+			No se avisa al primer fallo: al que no contesta se le pregunta otra vez ocho segundos
+			después, y solo cuenta si falla las dos veces. Un fallo suelto casi siempre es la red
+			y no el sitio.
 		</p>
 	</div>
 
@@ -171,12 +172,15 @@ $historial = array_filter(
 				?>
 			</p>
 			<p>
-				WP-Cron se dispara con las visitas al sitio, y a este panel casi nadie entra. Un monitor
-				que no corre es peor que no tener monitor, porque da falsa tranquilidad. En producción
-				hay que apagar WP-Cron y poner una tarea programada de verdad en Plesk:
+				El sondeo va cada hora, y lo dispara el reloj del hosting. Si han pasado más de dos
+				horas, ese reloj no está pasando por aquí. Un monitor que no corre es peor que no
+				tener monitor, porque da falsa tranquilidad.
 			</p>
-			<p><code>define( 'DISABLE_WP_CRON', true );</code> en wp-config.php, y en Plesk, cada 5 minutos:<br>
-				<code>/usr/bin/php /ruta/al/sitio/wp-cron.php &gt;/dev/null 2&gt;&amp;1</code></p>
+			<p>
+				Lo primero es mirar el reloj del servidor: en Pantheon, que es donde vive este panel,
+				el cron lo ejecuta la plataforma una vez por hora y no depende de las visitas.
+				Mientras tanto, «Sondear ahora» hace la vuelta completa a mano.
+			</p>
 		</div>
 	<?php endif; ?>
 
@@ -185,7 +189,7 @@ $historial = array_filter(
 
 	<?php if ( $estados ) : ?>
 		<?php
-		SWPK_Vista::caja_abrir( 'Cómo están ahora', 'sondeo cada 5 minutos', 'swpk-c5' );
+		SWPK_Vista::caja_abrir( 'Cómo están ahora', 'sondeo cada hora', 'swpk-c5' );
 
 		SWPK_Vista::dona(
 			[

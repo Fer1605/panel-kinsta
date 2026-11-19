@@ -310,14 +310,9 @@ por tu cuenta.
 2. **¿Las llaves vuelven a la pantalla de Usuarios?** En pausa, esperándolo.
 3. **¿Se acepta que una orden tarde?** Por el cron de WordPress.
 4. **Pantheon.** Ver [12](12-pantheon.md).
-5. **¿Cada cuánto tiene que sondear el panel?** El sondeo está programado cada
-   cinco minutos, pero el panel vive en Pantheon, que ejecuta el cron una vez
-   por hora. O sea que hoy una caída se ve hasta una hora tarde, mientras el
-   correo al cliente dice «el monitor revisa cada cinco minutos». Hay tres
-   salidas y ninguna es obvia: aceptar la hora y decirlo así; aprovechar que
-   los 95 agentes llaman al panel cada cinco minutos y disparar el sondeo con
-   esas llamadas; o volver a encender WP-Cron en el sitio, que Pantheon apaga
-   a propósito. Ver [25](#25-un-reloj-que-falla-en-silencio-es-peor-que-un-reloj-parado).
+5. **El agente no está instalado en todos los sitios.** Desde el 19 de
+   noviembre de 2026 está en 95 —los *live* de Auto Update y Desarrollo— y los
+   13 del cliente siguen fuera, que es donde el panel ve menos.
 
 ## 12. Una norma que nadie mira es peor que ninguna
 
@@ -456,10 +451,38 @@ alguien compruebe el resultado. Si programar un reloj puede fallar sin ruido,
 el que lo programa comprueba que quedó puesto — o el panel acaba prometiendo
 una vigilancia que no existe.
 
-**Lo que esto no arregla: el reloj del hosting.** Programar el evento cada
-cinco minutos no significa que ocurra cada cinco minutos. WP-Cron no es un
-reloj, es «lo que se ejecuta cuando alguien pide una página». En Pantheon
-—donde vive el panel— ni eso: el upstream de WordPress trae `DISABLE_WP_CRON`
-puesto y la plataforma ejecuta el cron **una vez por hora**. Así que el sondeo
-quedará puesto cada cinco minutos y correrá cada hora. Eso es una decisión
-pendiente, no un detalle: está en «Lo que sigue abierto».
+**Lo que esto destapó: el reloj del hosting.** Programar el evento cada cinco
+minutos no significa que ocurra cada cinco minutos. WP-Cron no es un reloj, es
+«lo que se ejecuta cuando alguien pide una página». En Pantheon —donde vive el
+panel— ni eso: el upstream de WordPress trae `DISABLE_WP_CRON` puesto y la
+plataforma ejecuta el cron **una vez por hora**. Un sondeo programado cada
+cinco minutos iba a correr cada hora igual, y el panel iba a seguir avisando en
+rojo con razón.
+
+## 26. El sondeo es cada hora, y el panel lo dice
+
+**La decisión.** El 19 de noviembre de 2026, puestas las tres salidas delante
+—aceptar la hora; disparar el sondeo con las llamadas que los 95 agentes ya
+hacen al panel cada cinco minutos; o reencender WP-Cron en solucionweb.com—, se
+eligió **la hora**. Nada que montar, nada que depender de los agentes, nada que
+tocar en la configuración de Pantheon.
+
+**Lo que cambió, entonces.** El evento usa `hourly`, que es de WordPress, así
+que de paso desaparece el intervalo propio que causó el fallo de arriba. Y
+cambió el texto en todas partes donde el panel prometía cinco minutos: la
+pantalla de Caídas, la de Ajustes, el sello de frescura, el README, y —la que
+importa de verdad— **la plantilla del correo de caída que le llega al
+cliente**, que decía «el monitor revisa cada cinco minutos».
+
+**Lo que no se podía dejar como estaba.** La regla era «no se avisa hasta dos
+sondeos fallidos seguidos», y la segunda opinión llegaba en la corrida
+siguiente. Con cinco minutos eso costaba cinco minutos; con una hora habría
+costado **dos horas**, y el panel estaría diciendo «reviso cada hora» mientras
+avisa a las dos. Así que la segunda opinión se pide ahora dentro de la misma
+corrida, ocho segundos después del primer fallo y solo a los que fallaron. Un
+corte de red de tres segundos sigue sin contar como caída, que es para lo que
+estaba la regla; lo que no se hereda es el retraso.
+
+**El precio, dicho claro.** Una caída se ve hasta una hora tarde. Eso es lo que
+hay con el reloj de este hosting y sin montar nada aparte, y está escrito aquí
+para que el día que no alcance, se sepa qué hay que cambiar y qué costaba.

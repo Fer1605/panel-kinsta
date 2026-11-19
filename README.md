@@ -231,10 +231,15 @@ registrado como entrada a alguien que solo acertó la contraseña.
 
 ## El monitor de caídas
 
-El panel revisa cada sitio cada cinco minutos desde su propio servidor, en
+El panel revisa cada sitio una vez por hora desde su propio servidor, en
 paralelo con `curl_multi`. No depende de que el hosting avise: **un aviso que
 depende del hosting no sirve para enterarse de que el hosting se cayó.** Esa es
 la razón de que el panel viva fuera del hosting que vigila.
+
+La hora no es un capricho: es lo que da el reloj del hosting donde vive el
+panel. Pantheon trae `DISABLE_WP_CRON` puesto de fábrica y ejecuta el cron una
+vez por hora. Se podría sondear más seguido montando algo aparte; se decidió
+que no, y que el panel lo dijera así en vez de prometer cinco minutos.
 
 Qué cuenta como caído:
 
@@ -263,18 +268,21 @@ WP-Cron se dispara con las visitas al sitio. **Un panel que casi nadie visita no
 ejecuta nada**, y un monitor que no corre es peor que no tener monitor: da falsa
 tranquilidad. El panel detecta esto y lo avisa en pantalla.
 
-En producción hay que apagarlo y poner una tarea programada de verdad. En
-`wp-config.php`:
+En producción hay que apagarlo y que lo llame el servidor. En `wp-config.php`:
 
 ```php
 define( 'DISABLE_WP_CRON', true );
 ```
 
-Y en el panel del servidor (Plesk → Tareas programadas), cada 5 minutos:
+Y que el hosting llame a `wp-cron.php` él mismo:
 
 ```
 /usr/bin/php /ruta/al/sitio/wp-cron.php >/dev/null 2>&1
 ```
+
+En Pantheon —donde vive el panel— esto ya viene hecho: el upstream trae
+`DISABLE_WP_CRON` puesto y la plataforma ejecuta el cron una vez por hora. Esa
+hora es la que marca el ritmo de todo lo que corre solo, el sondeo incluido.
 
 ## Exportar
 
@@ -313,7 +321,7 @@ panel-kinsta/
     ├── class-perfiles.php        roles, permisos y alcance por perfil
     ├── class-llaves.php          las llaves de la API, lejos de las personas
     ├── class-accesos.php         entradas, salidas e intentos fallidos
-    ├── class-monitor.php         sondeo de disponibilidad cada 5 minutos
+    ├── class-monitor.php         sondeo de disponibilidad cada hora
     ├── class-receptor.php        recibe los reportes firmados de los agentes
     ├── class-api.php             la puerta de consulta: 10 rutas, sin lógica propia
     ├── class-mcp.php             el mismo panel, hablando MCP por una URL

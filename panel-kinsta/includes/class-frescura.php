@@ -6,7 +6,7 @@
  *
  * El panel no vigila nada en vivo: toma inventario. Le pregunta a Kinsta una vez al
  * día, se baja la lista de vulnerabilidades una vez al día, y revisa si los
- * sitios responden cada cinco minutos. Lo que se ve en pantalla siempre es una
+ * sitios responden una vez por hora. Lo que se ve en pantalla siempre es una
  * inventario, nunca el momento.
  *
  * Eso está bien mientras el inventario sea de hoy. El peligro es el día en que la
@@ -36,7 +36,7 @@
  *   1. Kinsta escaneó el sitio       → por sitio, lo pone Kinsta a su ritmo
  *   2. El panel le preguntó a Kinsta → la corrida diaria, 6:30 am
  *   3. Se bajó la lista de Wordfence → una vez al día, con freno de 20 horas
- *   4. Se revisó si el sitio responde → cada cinco minutos
+ *   4. Se revisó si el sitio responde → cada hora
  *
  * El 1 vive en la columna `inventario_en` de cada sitio y se enseña en su
  * ficha. Los otros tres son globales y los enseña esta clase.
@@ -332,7 +332,7 @@ class SWPK_Frescura {
 				'que'    => 'El panel revisó si los sitios responden',
 				'cuando' => self::sondeo(),
 				'al_dia' => SWPK_Monitor::esta_al_dia(),
-				'si_no'  => 'El sondeo de cada cinco minutos no está corriendo.',
+				'si_no'  => 'El sondeo de cada hora no está corriendo.',
 			];
 		}
 

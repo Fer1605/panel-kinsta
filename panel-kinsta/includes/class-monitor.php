@@ -43,12 +43,39 @@ defined( 'ABSPATH' ) || exit;
 
 class SWPK_Monitor {
 
-	public const HOOK      = 'swpk_sondeo';
-	public const INTERVALO = 'swpk_cinco_minutos';
+	public const HOOK = 'swpk_sondeo';
+
+	/**
+	 * Cada cuánto se sondea.
+	 *
+	 * `hourly` es de WordPress, no nuestro, y eso importa: el intervalo propio
+	 * de cinco minutos que había antes es exactamente lo que no llegó a
+	 * registrarse nunca al activar el plugin. Ver programar().
+	 *
+	 * Y es una hora porque es lo que el hosting puede dar. Ver esta_al_dia().
+	 */
+	public const INTERVALO = 'hourly';
 
 	private const TIMEOUT        = 12;
 	private const CONCURRENCIA   = 15;
-	private const FALLOS_PARA_AVISAR = 2;
+	/**
+	 * Cuántos sondeos fallidos hacen falta para decir que un sitio está caído.
+	 *
+	 * Era 2, y la segunda opinión llegaba en el sondeo siguiente. Con el
+	 * sondeo cada cinco minutos eso costaba cinco minutos de retraso; con el
+	 * sondeo cada hora costaría DOS HORAS, y entonces el panel diría «reviso
+	 * cada hora» mientras avisa a las dos. Así que la segunda opinión se pide
+	 * dentro de la misma corrida, unos segundos después: ver confirmar(). Un
+	 * corte de red de tres segundos sigue sin contar como caída, que es para
+	 * lo que estaba la regla.
+	 */
+	private const FALLOS_PARA_AVISAR = 1;
+
+	/** Cuánto se espera antes de preguntar por segunda vez. */
+	private const ESPERA_CONFIRMAR = 8;
+
+	/** Cuánto puede pasar sin sondeo antes de decir que no está corriendo. */
+	private const MARGEN = 2 * HOUR_IN_SECONDS;
 	private const LENTO_MS       = 5000;
 
 	/** Frases que significan "caído" aunque el servidor conteste 200. */
@@ -61,7 +88,6 @@ class SWPK_Monitor {
 	];
 
 	public static function init(): void {
-		add_filter( 'cron_schedules', [ __CLASS__, 'intervalo' ] );
 		add_action( self::HOOK, [ __CLASS__, 'sondear_todos' ] );
 
 		// Y se programa aquí además de en la activación, igual que la sonda y
@@ -70,43 +96,40 @@ class SWPK_Monitor {
 		self::programar();
 	}
 
-	public static function intervalo( array $horarios ): array {
-		$horarios[ self::INTERVALO ] = [
-			'interval' => 5 * MINUTE_IN_SECONDS,
-			'display'  => 'Cada cinco minutos (Panel Kinsta)',
-		];
-		return $horarios;
-	}
-
 	/**
-	 * Pone el sondeo cada cinco minutos, si no estaba.
+	 * Pone el sondeo cada hora, si no estaba.
 	 *
-	 * ─── Por qué se asegura el intervalo aquí ───────────────────────────
+	 * ─── Lo que enseñó el fallo que esto arregla ────────────────────────
 	 *
-	 * Esto estaba roto y no se veía. `wp_schedule_event()` comprueba que la
-	 * recurrencia exista en `wp_get_schedules()`; si no existe devuelve false
-	 * sin lanzar nada, y el evento no queda puesto. Nuestro intervalo de cinco
-	 * minutos lo mete `init()`, que cuelga de `plugins_loaded` — y al ACTIVAR
-	 * el plugin `plugins_loaded` ya pasó: WordPress incluye el archivo y
-	 * dispara el hook de activación dentro de una petición donde este plugin
-	 * todavía no estaba activo. Resultado: el gancho de activación llamaba a
-	 * `programar()` con `swpk_cinco_minutos` aún sin registrar, y el sondeo no
-	 * se programó nunca, en ninguna instalación.
+	 * Antes el sondeo iba con un intervalo nuestro, `swpk_cinco_minutos`, y
+	 * no quedó programado NUNCA, en ninguna instalación. `wp_schedule_event()`
+	 * comprueba que la recurrencia exista en `wp_get_schedules()`, y si no
+	 * existe devuelve `false` sin decir nada: ni excepción, ni aviso, ni
+	 * registro. Ese intervalo lo metía un filtro enganchado en `init()`, que
+	 * cuelga de `plugins_loaded` — y al ACTIVAR el plugin `plugins_loaded` ya
+	 * pasó, porque WordPress incluye el archivo y dispara el gancho de
+	 * activación dentro de una petición donde el plugin todavía no estaba
+	 * activo. Los demás relojes usan `daily` y `weekly` y por eso sí estaban.
 	 *
-	 * Los demás relojes del panel no lo sufrieron porque usan `daily` y
-	 * `weekly`, que WordPress trae de fábrica. Por eso el panel decía «el
-	 * sondeo de cada cinco minutos no está corriendo»: tenía razón.
+	 * Ahora usa `hourly`, que WordPress trae de fábrica, así que el fallo no
+	 * puede repetirse. Y de paso se comprueba lo que quedó puesto, porque una
+	 * función que devuelve `false` en vez de quejarse necesita que alguien
+	 * mire el resultado.
 	 */
 	public static function programar(): void {
-		if ( wp_next_scheduled( self::HOOK ) ) {
-			return;
+		$puesto = wp_next_scheduled( self::HOOK );
+
+		// Los paneles que vienen de la versión de cinco minutos traen el
+		// evento con una recurrencia que ya no existe. Un evento así corre una
+		// vez y no se vuelve a poner: hay que cambiarlo, no dejarlo estar.
+		if ( $puesto && self::INTERVALO !== wp_get_schedule( self::HOOK ) ) {
+			self::desprogramar();
+			$puesto = false;
 		}
 
-		if ( ! isset( wp_get_schedules()[ self::INTERVALO ] ) ) {
-			add_filter( 'cron_schedules', [ __CLASS__, 'intervalo' ] );
+		if ( ! $puesto ) {
+			wp_schedule_event( time() + MINUTE_IN_SECONDS, self::INTERVALO, self::HOOK );
 		}
-
-		wp_schedule_event( time() + 60, self::INTERVALO, self::HOOK );
 	}
 
 	public static function desprogramar(): void {
@@ -136,7 +159,7 @@ class SWPK_Monitor {
 			return [ 'sondeados' => 0, 'abajo' => 0, 'cambios' => 0 ];
 		}
 
-		$resultados = self::sondear( $objetivos );
+		$resultados = self::confirmar( self::sondear( $objetivos ), $objetivos );
 
 		$abajo   = 0;
 		$cambios = 0;
@@ -155,6 +178,45 @@ class SWPK_Monitor {
 		);
 
 		return [ 'sondeados' => count( $resultados ), 'abajo' => $abajo, 'cambios' => $cambios ];
+	}
+
+	/**
+	 * Pide una segunda opinión de los que salieron caídos.
+	 *
+	 * Un sitio que no contesta una vez casi nunca está caído: es la red, un
+	 * segundo de carga del servidor, un cortafuegos con el día torcido. Por
+	 * eso nunca se avisó al primer fallo. Lo que cambia es CUÁNDO llega la
+	 * segunda opinión: antes, en el sondeo siguiente; ahora, ocho segundos
+	 * después, aquí mismo. Así una caída de verdad se ve dentro de la misma
+	 * corrida en vez de en la de dentro de una hora.
+	 *
+	 * Cuesta ocho segundos y solo cuando hay algo caído. Si no hay ninguno
+	 * —que es lo normal— esto no hace nada.
+	 *
+	 * @param array<string,array<string,mixed>> $resultados lo que salió
+	 * @param array<string,string>              $objetivos  sitio_id => url
+	 * @return array<string,array<string,mixed>>
+	 */
+	private static function confirmar( array $resultados, array $objetivos ): array {
+		$dudosos = [];
+
+		foreach ( $resultados as $sitio_id => $r ) {
+			if ( 'abajo' === ( $r['estado'] ?? '' ) && isset( $objetivos[ $sitio_id ] ) ) {
+				$dudosos[ $sitio_id ] = $objetivos[ $sitio_id ];
+			}
+		}
+
+		if ( ! $dudosos ) {
+			return $resultados;
+		}
+
+		sleep( self::ESPERA_CONFIRMAR );
+
+		foreach ( self::sondear( $dudosos ) as $sitio_id => $segundo ) {
+			$resultados[ $sitio_id ] = $segundo;
+		}
+
+		return $resultados;
 	}
 
 	/**
@@ -193,9 +255,9 @@ class SWPK_Monitor {
 	/**
 	 * Hace los sondeos en paralelo.
 	 *
-	 * Con 107 sitios, uno detrás de otro no funciona: si varios tardan en
-	 * contestar, la corrida de cinco minutos no termina antes de la siguiente.
-	 * Por eso va con curl en paralelo, de quince en quince.
+	 * Con 107 sitios, uno detrás de otro no funciona: a doce segundos de
+	 * espera cada uno, un día malo son veinte minutos de corrida. Por eso va
+	 * con curl en paralelo, de quince en quince, y acaba en medio minuto.
 	 *
 	 * Nota de auditoría: esto habla con los sitios públicos de los clientes,
 	 * nunca con la API de Kinsta. Las peticiones a Kinsta salen únicamente de
@@ -393,8 +455,9 @@ class SWPK_Monitor {
 		$fallo  = 'abajo' === $r['estado'];
 		$fallos = $fallo ? ( (int) ( $previo->fallos_seguidos ?? 0 ) + 1 ) : 0;
 
-		// Solo se declara caído tras dos fallos seguidos. Mientras tanto el
-		// estado guardado sigue siendo el anterior: no se avisa por un parpadeo.
+		// No se avisa por un parpadeo: el que llega aquí como caído ya falló
+		// dos veces, la segunda ocho segundos después de la primera. Ver
+		// confirmar() y FALLOS_PARA_AVISAR.
 		$estado_publico = $previo->estado ?? 'desconocido';
 		$cambio         = false;
 
@@ -548,16 +611,23 @@ class SWPK_Monitor {
 	/**
 	 * ¿Está corriendo de verdad?
 	 *
-	 * WP-Cron se dispara con las visitas al sitio. En un panel que casi nadie
-	 * visita, eso significa que el sondeo puede no ocurrir — y un monitor que
-	 * no corre es peor que no tener monitor, porque da falsa tranquilidad.
-	 * Por eso esto se comprueba y se dice en pantalla.
+	 * WP-Cron no es un reloj: es «lo que se ejecuta cuando alguien pide una
+	 * página». En un panel que casi nadie visita, el sondeo puede no ocurrir —
+	 * y un monitor que no corre es peor que no tener monitor, porque da falsa
+	 * tranquilidad. Por eso esto se comprueba y se dice en pantalla.
+	 *
+	 * El margen es de dos horas, no de dos minutos, y el motivo es el hosting.
+	 * El panel vive en Pantheon, que trae `DISABLE_WP_CRON` puesto de fábrica
+	 * y ejecuta el cron UNA VEZ POR HORA. No hay manera de sondear cada cinco
+	 * minutos ahí sin montar algo aparte, así que el sondeo es cada hora y el
+	 * panel lo dice así. Dos horas sin sondeo son dos vueltas perdidas: eso ya
+	 * no es el reloj yendo flojo, es que no está corriendo.
 	 */
 	public static function esta_al_dia(): bool {
 		$u = self::ultimo_sondeo();
 		if ( empty( $u['cuando'] ) ) {
 			return false;
 		}
-		return ( SWPK_Frescura::ahora_ts() - strtotime( (string) $u['cuando'] ) ) < 20 * MINUTE_IN_SECONDS;
+		return ( SWPK_Frescura::ahora_ts() - strtotime( (string) $u['cuando'] ) ) < self::MARGEN;
 	}
 }

@@ -25,7 +25,7 @@ Todo lo que corre el panel tiene hora fija:
 | Lectura de la plataforma | cada día, 4:30 |
 | Revisión de configuración (la sonda) | cada día, 5:30 |
 | Inventario de los sitios | cada día, 6:30 |
-| Sondeo de caídas | cada 5 minutos |
+| Sondeo de caídas | cada hora |
 | Diario a soporte | cada día, 7:30 |
 | Semanal a las asesoras | lunes, 7:00 |
 | Resumen de la semana | domingos, 18:00 |
