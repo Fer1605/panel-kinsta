@@ -152,7 +152,7 @@ $a = SWPK_Ajustes::todos();
 	// cada cosa. Aquí tenía la tabla de estado del panel, que es otra cosa y
 	// se bajó a su propia tarjeta.
 	SWPK_Vista::caja_abrir(
-		'Cada cuánto corre cada cosa' . SWPK_Vista::ayuda(
+		'Tiempos de verificación' . SWPK_Vista::ayuda(
 			'Son las horas a las que el panel sale a buscar cada tipo de dato. No se cambian desde '
 			. 'aquí: las fija el programa. Si el servidor no llama al reloj de WordPress por su '
 			. 'cuenta, se cumplen con retraso, y eso lo dice el aviso de abajo.'
@@ -240,10 +240,35 @@ $a = SWPK_Ajustes::todos();
 	// misma cosa y no están en ninguna otra parte.
 	?>
 	<?php if ( SWPK_Perfiles::puede( SWPK_Perfiles::ADMINISTRAR ) ) : ?>
-		<p style="margin:16px 0 0;display:flex;flex-wrap:wrap;gap:8px">
+		<?php
+		// Cada botón dispara una corrida distinta contra los 108 sitios, y por
+		// el nombre no se sabe cuál: «le di a leer la plataforma y ni entiendo
+		// qué hice». Ahora cada uno dice qué hace y cuánto tarda antes de que
+		// nadie lo pulse.
+		?>
+		<p class="swpk-acciones-ficha" style="margin:16px 0 0">
 			<a class="button" href="<?php echo esc_url( wp_nonce_url( admin_url( 'admin-post.php?action=swpk_sondear' ), 'swpk_sondear' ) ); ?>">Sondear ahora</a>
+			<?php echo wp_kses_post( SWPK_Vista::ayuda(
+				'Llama a los 108 sitios por su dirección y anota cuáles no contestan. Es lo que alimenta '
+				. 'la pantalla de Caídas. Tarda menos de un minuto y no cambia nada en ningún sitio.'
+			) ); ?>
+
 			<a class="button" href="<?php echo esc_url( wp_nonce_url( admin_url( 'admin-post.php?action=swpk_revisar' ), 'swpk_revisar' ) ); ?>">Revisar configuración</a>
+			<?php echo wp_kses_post( SWPK_Vista::ayuda(
+				'Mide desde fuera las normas que se ven sin entrar al sitio: si exige HTTPS, si publica '
+				. 'sus nombres de usuario, si deja leer el readme. Alimenta Seguridad. Tarda unos '
+				. 'minutos y no cambia nada en ningún sitio.'
+			) ); ?>
+
 			<a class="button" href="<?php echo esc_url( wp_nonce_url( admin_url( 'admin-post.php?action=swpk_plataforma' ), 'swpk_plataforma' ) ); ?>">Leer la plataforma</a>
+			<?php echo wp_kses_post( SWPK_Vista::ayuda( sprintf(
+				'Le pregunta a %s por la configuración de cada sitio: si fuerza HTTPS, cómo tiene la '
+				. 'protección contra bots, qué respaldos hay. Es la más lenta —unos 25 minutos para los '
+				. '108— porque su API solo deja hacer unas cuantas preguntas por minuto y no se puede '
+				. 'apurar. Queda en cola y sigue sola aunque se cierre la pestaña. No cambia nada en '
+				. 'ningún sitio.',
+				SWPK_Admin::proveedor()
+			) ) ); ?>
 		</p>
 		<p class="swpk-gris" style="margin:10px 0 0">
 			La corrida que trae el inventario se dispara desde el
@@ -257,7 +282,7 @@ $a = SWPK_Ajustes::todos();
 		<input type="hidden" name="action" value="swpk_guardar_ajustes">
 		<?php wp_nonce_field( 'swpk_ajustes' ); ?>
 
-		<?php SWPK_Vista::caja_abrir( 'Los grupos de sitios', 'se descubren solos', 'swpk-c12' ); ?>
+		<?php SWPK_Vista::caja_abrir( 'Los grupos de sitios', 'se descubren solos', 'swpk-c6' ); ?>
 		<?php $etiquetas = SWPK_Etiquetas::descubrir(); ?>
 
 		<?php if ( ! $etiquetas ) : ?>
@@ -316,40 +341,6 @@ $a = SWPK_Ajustes::todos();
 			</p>
 		<?php endif; ?>
 
-		<?php SWPK_Vista::caja_cerrar(); ?>
-
-		<?php
-		// «Nuestros dominios» era una tarjeta entera para un solo campo, con
-		// medio panel vacío al lado. Y el campo es de lo mismo que esta: a
-		// quién le llega cada correo y a quién no. Van juntos.
-		SWPK_Vista::caja_abrir( 'A quién le llega', '', 'swpk-c12' );
-		?>
-		<table class="form-table" role="presentation">
-			<tr>
-				<th scope="row"><label for="dominios_propios">Dominios de la casa</label></th>
-				<td>
-					<input type="text" class="regular-text" name="dominios_propios" id="dominios_propios" value="<?php echo esc_attr( $a['dominios_propios'] ); ?>">
-					<p class="description">
-						Los correos de estos dominios no cuentan como contacto del cliente.
-						<?php echo wp_kses_post( SWPK_Vista::ayuda(
-							'Separados por coma. Sirve para que un aviso dirigido al cliente no acabe '
-							. 'llegándonos a nosotros por ser administradores de su sitio.'
-						) ); ?>
-					</p>
-				</td>
-			</tr>
-			<tr>
-				<th scope="row"><label for="correo_ventas">Copia a ventas</label></th>
-				<td><input type="text" class="regular-text" name="correo_ventas" id="correo_ventas" value="<?php echo esc_attr( $a['correo_ventas'] ); ?>">
-				<p class="description">Recibe copia de lo que se le manda a cada cliente. Una dirección de grupo, o varias separadas por coma.</p></td>
-			</tr>
-			<tr>
-				<th scope="row"><label for="correo_soporte">Correo de soporte</label></th>
-				<td><input type="text" class="regular-text" name="correo_soporte" id="correo_soporte" value="<?php echo esc_attr( $a['correo_soporte'] ); ?>">
-				<p class="description">Le llega el diario con todo lo técnico.</p></td>
-			</tr>
-		</table>
-		<?php submit_button( 'Guardar' ); ?>
 		<?php SWPK_Vista::caja_cerrar(); ?>
 
 	</form>

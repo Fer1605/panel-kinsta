@@ -695,14 +695,15 @@ body[class*="panel-kinsta"] .swpk-pastilla-n {
 }
 
 body[class*="panel-kinsta"] .swpk-pastilla-activa {
-	border-color: var(--swpk-marca);
-	background: var(--swpk-marca);
+	border-color: #0f4f81;
+	background: #135e96;
 	color: #fff;
 	font-weight: 600;
 }
 
 body[class*="panel-kinsta"] .swpk-pastilla-activa:hover {
-	background: var(--swpk-marca);
+	border-color: #0f4f81;
+	background: #135e96;
 	color: #fff;
 }
 
@@ -714,7 +715,10 @@ body[class*="panel-kinsta"] .swpk-pastilla-activa .swpk-pastilla-n {
 /* La pastilla es un enlace y el color del texto se lo pone la regla general
    de enlaces. Aquí se gana porque va después y tiene más peso. */
 body[class*="panel-kinsta"] .wrap a.swpk-pastilla { color: var(--swpk-texto); }
-body[class*="panel-kinsta"] .wrap a.swpk-pastilla-activa { color: #fff; }
+body[class*="panel-kinsta"] .wrap a.swpk-pastilla-activa,
+body[class*="panel-kinsta"] .wrap a.swpk-pastilla-activa:hover,
+body[class*="panel-kinsta"] .wrap a.swpk-pastilla-activa:focus,
+body[class*="panel-kinsta"] .wrap a.swpk-pastilla-activa:visited { color: #fff; }
 
 /* ── La rejilla ─────────────────────────────────────────────────────────── */
 
@@ -1738,4 +1742,29 @@ body[class*="panel-kinsta"] .wrap > .wp-header-end {
 body[class*="panel-kinsta"] .swpk-tabla-fija td,
 body[class*="panel-kinsta"] .swpk-tabla-fija th {
 	overflow-wrap: anywhere;
+}
+
+/* La ✕ de cerrar un aviso de WordPress se apoya arriba a la derecha y, en un
+   aviso de una sola línea con nuestro espaciado, quedaba descolgada hacia
+   abajo. Se centra contra el alto real del aviso, sea el que sea. */
+body[class*="panel-kinsta"] .wrap .notice.is-dismissible {
+	position: relative;
+	padding-right: 44px;
+}
+
+body[class*="panel-kinsta"] .wrap .notice-dismiss {
+	top: 50%;
+	right: 6px;
+	transform: translateY(-50%);
+	padding: 0;
+	width: 30px;
+	height: 30px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+
+body[class*="panel-kinsta"] .wrap .notice-dismiss::before {
+	margin: 0;
+	padding: 0;
 }

@@ -1105,7 +1105,18 @@ class SWPK_Admin {
 
 		SWPK_Ajustes::guardar( $nuevos );
 
-		wp_safe_redirect( admin_url( 'admin.php?page=' . self::SLUG . '-ajustes&swpk_msg=ok:' . rawurlencode( 'Ajustes guardados.' ) ) );
+		// De vuelta a la pestaña desde la que se guardó, no siempre a la
+		// primera: ahora los ajustes están repartidos en tres.
+		$volver = isset( $_POST['volver_a'] ) ? sanitize_key( (string) $_POST['volver_a'] ) : '';
+
+		wp_safe_redirect( add_query_arg(
+			array_filter( [
+				'page'     => self::SLUG . '-ajustes',
+				'seccion'  => in_array( $volver, [ 'panel', 'correos', 'api' ], true ) ? $volver : '',
+				'swpk_msg' => 'ok:' . rawurlencode( 'Ajustes guardados.' ),
+			] ),
+			admin_url( 'admin.php' )
+		) );
 		exit;
 	}
 

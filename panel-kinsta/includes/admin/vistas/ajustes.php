@@ -14,7 +14,7 @@ defined( 'ABSPATH' ) || exit;
 
 $seccion = isset( $_GET['seccion'] ) ? sanitize_key( (string) $_GET['seccion'] ) : 'panel';
 
-if ( ! in_array( $seccion, [ 'panel', 'api' ], true ) ) {
+if ( ! in_array( $seccion, [ 'panel', 'correos', 'api' ], true ) ) {
 	$seccion = 'panel';
 }
 
@@ -37,6 +37,11 @@ $url_sec = static fn( string $s ) => add_query_arg(
 				'activa' => 'panel' === $seccion,
 			],
 			[
+				'texto'  => 'Correos',
+				'url'    => $url_sec( 'correos' ),
+				'activa' => 'correos' === $seccion,
+			],
+			[
 				'texto'  => 'Conectarse (API)',
 				'url'    => $url_sec( 'api' ),
 				'activa' => 'api' === $seccion,
@@ -46,7 +51,7 @@ $url_sec = static fn( string $s ) => add_query_arg(
 	?>
 	<?php SWPK_Admin::mostrar_mensaje(); ?>
 
-	<?php require SWPK_RUTA . 'includes/admin/vistas/ajustes-' . ( 'api' === $seccion ? 'api' : 'panel' ) . '.php'; ?>
+	<?php require SWPK_RUTA . 'includes/admin/vistas/ajustes-' . $seccion . '.php'; ?>
 
 	<?php
 	// El sello de frescura va en TODAS las pantallas, como en la maqueta: es
