@@ -151,7 +151,15 @@ $a = SWPK_Ajustes::todos();
 	// «Cómo corre» es, en la maqueta, la lista de horarios: cada cuánto pasa
 	// cada cosa. Aquí tenía la tabla de estado del panel, que es otra cosa y
 	// se bajó a su propia tarjeta.
-	SWPK_Vista::caja_abrir( 'Cómo corre', '', 'swpk-c6' );
+	SWPK_Vista::caja_abrir(
+		'Cada cuánto corre cada cosa' . SWPK_Vista::ayuda(
+			'Son las horas a las que el panel sale a buscar cada tipo de dato. No se cambian desde '
+			. 'aquí: las fija el programa. Si el servidor no llama al reloj de WordPress por su '
+			. 'cuenta, se cumplen con retraso, y eso lo dice el aviso de abajo.'
+		),
+		'',
+		'swpk-c6'
+	);
 
 	$horarios = [
 		'Inventario de los sitios'        => 'cada día, 6:30',
@@ -249,7 +257,7 @@ $a = SWPK_Ajustes::todos();
 		<input type="hidden" name="action" value="swpk_guardar_ajustes">
 		<?php wp_nonce_field( 'swpk_ajustes' ); ?>
 
-		<?php SWPK_Vista::caja_abrir( 'Los grupos de sitios', 'se descubren solos', 'swpk-c7' ); ?>
+		<?php SWPK_Vista::caja_abrir( 'Los grupos de sitios', 'se descubren solos', 'swpk-c12' ); ?>
 		<?php $etiquetas = SWPK_Etiquetas::descubrir(); ?>
 
 		<?php if ( ! $etiquetas ) : ?>
@@ -268,7 +276,7 @@ $a = SWPK_Ajustes::todos();
 				) ) ); ?>
 			</p>
 
-			<table class="widefat striped swpk-tabla">
+			<table class="widefat striped swpk-tabla swpk-tabla-fija">
 				<thead>
 					<tr>
 						<th>Grupo</th>
@@ -289,7 +297,7 @@ $a = SWPK_Ajustes::todos();
 						</td>
 						<td><?php echo (int) $e['sitios']; ?></td>
 						<td>
-							<select name="etiqueta[<?php echo esc_attr( $clave ); ?>]" style="width:100%">
+							<select name="etiqueta[<?php echo esc_attr( $clave ); ?>]" class="swpk-ancho-celda">
 								<?php foreach ( SWPK_Etiquetas::nombres() as $tag => $nombre_tag ) : ?>
 									<option value="<?php echo esc_attr( $tag ); ?>" <?php selected( $e['tag'], $tag ); ?>>
 										<?php echo esc_html( $nombre_tag ); ?>
@@ -310,7 +318,12 @@ $a = SWPK_Ajustes::todos();
 
 		<?php SWPK_Vista::caja_cerrar(); ?>
 
-		<?php SWPK_Vista::caja_abrir( 'Nuestros dominios', '', 'swpk-c5' ); ?>
+		<?php
+		// «Nuestros dominios» era una tarjeta entera para un solo campo, con
+		// medio panel vacío al lado. Y el campo es de lo mismo que esta: a
+		// quién le llega cada correo y a quién no. Van juntos.
+		SWPK_Vista::caja_abrir( 'A quién le llega', '', 'swpk-c12' );
+		?>
 		<table class="form-table" role="presentation">
 			<tr>
 				<th scope="row"><label for="dominios_propios">Dominios de la casa</label></th>
@@ -325,12 +338,6 @@ $a = SWPK_Ajustes::todos();
 					</p>
 				</td>
 			</tr>
-		</table>
-
-		<?php SWPK_Vista::caja_cerrar(); ?>
-
-		<?php SWPK_Vista::caja_abrir( 'A quién le llega', '', 'swpk-c12' ); ?>
-		<table class="form-table" role="presentation">
 			<tr>
 				<th scope="row"><label for="correo_ventas">Copia a ventas</label></th>
 				<td><input type="text" class="regular-text" name="correo_ventas" id="correo_ventas" value="<?php echo esc_attr( $a['correo_ventas'] ); ?>">

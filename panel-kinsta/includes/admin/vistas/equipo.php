@@ -159,7 +159,7 @@ $hay_filtro_equipo = ( '' !== $perfil_pedido || '' !== $busca_persona );
 	<?php endif; ?>
 	<?php SWPK_Vista::caja_cerrar(); ?>
 
-	<?php SWPK_Vista::caja_abrir( 'Dar acceso a alguien', '', 'swpk-c12' ); ?>
+	<?php SWPK_Vista::caja_abrir( 'Dar acceso a alguien', '', 'swpk-c4' ); ?>
 	<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
 		<input type="hidden" name="action" value="swpk_crear_acceso">
 		<?php wp_nonce_field( 'swpk_crear_acceso' ); ?>
@@ -190,7 +190,7 @@ $hay_filtro_equipo = ( '' !== $perfil_pedido || '' !== $busca_persona );
 	</form>
 	<?php SWPK_Vista::caja_cerrar(); ?>
 
-	<?php SWPK_Vista::caja_abrir( 'Qué ve cada perfil', esc_html( SWPK_Vista::plural( count( $roles ), 'perfil', 'perfiles' ) ), 'swpk-c12' ); ?>
+	<?php SWPK_Vista::caja_abrir( 'Qué ve cada perfil', esc_html( SWPK_Vista::plural( count( $roles ), 'perfil', 'perfiles' ) ), 'swpk-c8' ); ?>
 	<div class="swpk-perfiles">
 		<?php foreach ( $roles as $slug => $nombre ) : ?>
 			<div class="swpk-perfil">

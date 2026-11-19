@@ -29,7 +29,7 @@ if ( $ver ) {
 	);
 
 	if ( $uno && ( SWPK_Perfiles::puede( SWPK_Perfiles::VER_TODO ) || SWPK_Perfiles::puede_ver_sitio( (string) $uno->sitio_id ) ) ) {
-		SWPK_Vista::volver( esc_url( remove_query_arg( 'ver' ) ), 'Volver a la bitácora' );
+		SWPK_Vista::volver( esc_url( remove_query_arg( 'ver' ) ), 'Volver al historial de envíos' );
 		printf( '<h1>%s</h1>', esc_html( (string) $uno->asunto ) );
 		printf(
 			'<p style="color:#50575e">%s · a %s · <strong>%s</strong></p>',
@@ -47,7 +47,7 @@ if ( $ver ) {
 		echo wp_kses_post( (string) $uno->cuerpo );
 		echo '</div>';
 
-		SWPK_Vista::volver( esc_url( remove_query_arg( 'ver' ) ), 'Volver a la bitácora' );
+		SWPK_Vista::volver( esc_url( remove_query_arg( 'ver' ) ), 'Volver al historial de envíos' );
 		return;
 	}
 }
@@ -76,6 +76,49 @@ if ( ! SWPK_Perfiles::puede( SWPK_Perfiles::VER_TODO ) ) {
 	$registros = array_filter( $registros, static fn( $r ) => in_array( (string) $r->sitio_id, $mios, true ) );
 }
 
+// ── Filtrar por sitio ───────────────────────────────────────────────────────
+//
+// «Deberían poder filtrar todos estos correos por sitio.» Las opciones salen
+// de los avisos que hay de verdad en el rango, no del inventario entero:
+// ofrecer un sitio del que no se ha avisado nada es ofrecer una pantalla
+// vacía sin explicación.
+$sitios_bit = [];
+$sin_sitio  = 0;
+
+foreach ( $registros as $r ) {
+	$id = trim( (string) $r->sitio_id );
+
+	if ( '' === $id ) {
+		++$sin_sitio;
+		continue;
+	}
+
+	$s = SWPK_Inventario::obtener( $id );
+	$sitios_bit[ $id ] = $s ? ( $s->nombre_visible ?: $s->nombre ) : $id;
+}
+
+asort( $sitios_bit );
+
+// «Sin sitio» es una opción de verdad: los avisos de toda la cartera —el
+// diario, el resumen de los domingos— no son de ningún sitio, y hasta ahora
+// la columna salía vacía sin decir por qué.
+$SIN_SITIO = '_ninguno';
+
+if ( $sin_sitio > 0 ) {
+	$sitios_bit = [ $SIN_SITIO => 'De toda la cartera (sin un sitio)' ] + $sitios_bit;
+}
+
+$sitio_pedido = SWPK_Vista::opcion_pedida( 'sitio', $sitios_bit );
+
+if ( '' !== $sitio_pedido ) {
+	$registros = array_filter(
+		$registros,
+		static fn( $r ) => $SIN_SITIO === $sitio_pedido
+			? '' === trim( (string) $r->sitio_id )
+			: $sitio_pedido === trim( (string) $r->sitio_id )
+	);
+}
+
 $registros = array_values( $registros );
 [ $en_pantalla, $pagina, $paginas ] = SWPK_Vista::paginar( $registros, SWPK_Vista::pagina_pedida(), 25 );
 
@@ -83,34 +126,26 @@ $registros = array_values( $registros );
 $hubo_alguna_vez = SWPK_Bitacora::hay_alguno();
 ?>
 
-	<p style="max-width:820px;color:#3c434a">
-		Todo lo que el panel notifica queda aquí con su fecha, su destinatario y su contenido. Esto
-		es el respaldo: sirve para demostrar qué se avisó, a quién y cuándo.
+	<p class="swpk-aviso-corto">
+		Cada correo que salió, con su fecha, a quién y qué decía.
+		<?php echo wp_kses_post( SWPK_Vista::ayuda(
+			'Guarda lo que se AVISÓ, no lo que pasó: si un sitio se actualizó y todavía nadie le '
+			. 'escribió al cliente, el cambio está en Historial y aquí no. Cada aviso queda tal como '
+			. 'salió, aunque después se corrija el dato que lo originó: una constancia que se '
+			. 'reescribe sola no sirve como constancia. Y prueba que el panel lo ENVIÓ, no que llegó: '
+			. 'probar la entrega depende de que el correo del servidor dé acuse, y puede que no lo dé. '
+			. 'Por eso la columna dice «enviado» y no «entregado».'
+		) ); ?>
 	</p>
 
-	<p style="max-width:820px;color:#3c434a">
-		<strong>Ojo con qué es y qué no:</strong> esta pestaña guarda <em>lo que se avisó</em>, no
-		<em>lo que pasó</em>. Si un sitio se actualizó y todavía nadie le escribió al cliente, el
-		cambio está en <a href="<?php echo esc_url( admin_url( 'admin.php?page=panel-kinsta-movimientos' ) ); ?>">Historial</a>
-		y aquí no aparece. Y cada aviso queda tal como salió: si después se corrige el dato que lo
-		originó, el aviso se queda escrito igual — una constancia que se reescribe sola no sirve
-		como constancia.
-	</p>
-
-	<div class="notice notice-warning inline" style="max-width:820px">
+	<?php if ( SWPK_Correos::en_prueba() ) : ?>
+	<div class="notice notice-warning inline">
 		<p>
-			<strong>Una precisión que importa el día que alguien reclame:</strong> esta bitácora prueba
-			que el panel <em>envió</em> el correo. Probar que <em>llegó</em> depende de que el SMTP del
-			sitio dé acuse de entrega, y puede que no lo dé. Por eso la columna dice "enviado" y no
-			"entregado".
+			El panel está en <strong>modo de prueba</strong>: lo que dice «De prueba» se armó pero no
+			salió a nadie. Se puede abrir y leer con el botón de la derecha.
 		</p>
-		<?php if ( SWPK_Correos::en_prueba() ) : ?>
-			<p>
-				Y ahora mismo el panel está en <strong>modo de prueba</strong>: lo que dice "De prueba"
-				se armó pero no salió a nadie. Se puede abrir y leer con el botón de la derecha.
-			</p>
-		<?php endif; ?>
 	</div>
+	<?php endif; ?>
 
 	<?php // Los mismos campos que las demás barras del panel: «el buscar aquí es
 	// diferente a todos los demás botones». ?>
@@ -127,6 +162,18 @@ $hubo_alguna_vez = SWPK_Bitacora::hay_alguno();
 		<label class="swpk-campo">
 			<span>Hasta</span>
 			<input type="date" name="hasta" value="<?php echo esc_attr( $hasta ); ?>">
+		</label>
+
+		<label class="swpk-campo swpk-campo-ancho">
+			<span>Sitio</span>
+			<select name="sitio">
+				<option value="">Todos los sitios</option>
+				<?php foreach ( $sitios_bit as $id_s => $nombre_s ) : ?>
+					<option value="<?php echo esc_attr( $id_s ); ?>" <?php selected( $sitio_pedido, (string) $id_s ); ?>>
+						<?php echo esc_html( $nombre_s ); ?>
+					</option>
+				<?php endforeach; ?>
+			</select>
 		</label>
 
 		<button class="button swpk-filtra-ir">Filtrar</button>
@@ -197,7 +244,19 @@ $hubo_alguna_vez = SWPK_Bitacora::hay_alguno();
 				<tr>
 					<td><?php echo esc_html( SWPK_Frescura::fmt( 'j M Y, H:i', $r->enviado_en ) ); ?></td>
 					<td><?php echo esc_html( $tipos[ $r->tipo ] ?? $r->tipo ); ?></td>
-					<td><?php echo esc_html( $sitio->nombre_visible ?? '—' ); ?></td>
+					<td>
+						<?php
+						// La columna salía en blanco y no se sabía por qué. Un
+						// aviso sin sitio no es un dato que falte: es un correo
+						// de toda la cartera, como el diario o el de los
+						// domingos. Se dice, en vez de dejar el hueco.
+						if ( $sitio ) {
+							echo esc_html( (string) ( $sitio->nombre_visible ?: $sitio->nombre ) );
+						} else {
+							echo '<span class="swpk-mudo">De toda la cartera</span>';
+						}
+						?>
+					</td>
 					<td class="swpk-mono"><?php echo esc_html( (string) $r->destinatarios ); ?></td>
 					<td><?php echo esc_html( (string) $r->asunto ); ?></td>
 					<td>

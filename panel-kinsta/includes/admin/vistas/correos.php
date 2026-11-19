@@ -4,7 +4,7 @@
  *
  *   Qué sale y a quién     el interruptor, los tres avisos y cuándo salen
  *   Cómo están redactados  las plantillas
- *   Qué se mandó ya        la bitácora, con su fecha y su destinatario
+ *   Historial de envíos    cada correo que salió, con su fecha y su destinatario
  *
  * Tres pestañas y no tres entradas en el menú, porque son la misma cosa vista
  * de tres maneras: qué se manda, qué dice lo que se manda, y qué se mandó. La
@@ -56,7 +56,7 @@ foreach ( array_keys( SWPK_Plantillas::catalogo() ) as $clave ) {
 				'activa' => 'plantillas' === $seccion,
 			],
 			[
-				'texto'  => 'Qué se mandó ya',
+				'texto'  => 'Historial de envíos',
 				'url'    => $url_sec( 'bitacora' ),
 				'activa' => 'bitacora' === $seccion,
 			],

@@ -118,25 +118,31 @@ $url_pestana = static fn( string $s ) => add_query_arg(
 	<?php SWPK_Admin::mostrar_mensaje(); ?>
 	<?php SWPK_Frescura::aviso(); ?>
 
-	<p>
+	<?php
+	// Los dos botones en una fila, cada uno con su burbuja. Antes cada uno iba
+	// en su renglón con un párrafo al lado explicando qué hacía, y entre los
+	// dos se comían el alto de la pantalla antes de enseñar un solo dato.
+	?>
+	<p class="swpk-acciones-ficha">
 		<a class="button button-primary"
 			href="<?php echo esc_url( add_query_arg( [ 'page' => 'panel-kinsta-reporte', 'sitio' => $sitio_id ] + SWPK_Vista::rastro(), admin_url( 'admin.php' ) ) ); ?>">
 			Reporte para el cliente
 		</a>
-		<span style="color:#50575e;margin-left:8px">qué se le notificó y cuándo, listo para imprimir o guardar en PDF</span>
-	</p>
+		<?php echo wp_kses_post( SWPK_Vista::ayuda(
+			'Qué se le notificó a este cliente y cuándo, en una hoja lista para imprimir o guardar en PDF.'
+		) ); ?>
 
-	<?php if ( SWPK_Perfiles::puede( SWPK_Perfiles::ADMINISTRAR ) ) : ?>
-		<p>
+		<?php if ( SWPK_Perfiles::puede( SWPK_Perfiles::ADMINISTRAR ) ) : ?>
 			<a class="button" href="<?php echo esc_url( SWPK_Admin::url_analizar( $sitio_id ) ); ?>">
 				Analizar este sitio ahora
 			</a>
-			<span style="color:#50575e;margin-left:8px">
-				vuelve a preguntarle a <?php echo esc_html( SWPK_Admin::proveedor() ); ?> qué tiene instalado
-				y revisa si responde, sin esperar a la corrida de mañana
-			</span>
-		</p>
-	<?php endif; ?>
+			<?php echo wp_kses_post( SWPK_Vista::ayuda( sprintf(
+				'Vuelve a preguntarle a %s qué tiene instalado este sitio y revisa si responde, sin '
+				. 'esperar a la corrida de mañana. Tarda unos segundos y no toca los demás sitios.',
+				SWPK_Admin::proveedor()
+			) ) ); ?>
+		<?php endif; ?>
+	</p>
 
 	<?php
 	// ── Los dos primeros números llevan a su lista ──────────────────────────
@@ -402,9 +408,22 @@ $url_pestana = static fn( string $s ) => add_query_arg(
 			}
 		}
 
+		// Las cinco que el panel sabe arreglar, de las 73. Con el resto
+		// paginado de doce en doce, buscarlas a mano es rendirse a la tercera
+		// página: «no hay ningún sitio en donde me salga un botón. No hay
+		// ninguno». Son una pastilla más, al final.
+		$ARREGLABLES = '_arreglables';
+
+		$las_arreglables = array_values( array_filter(
+			$aplicables,
+			static fn( $n ) => '' !== SWPK_Ordenes::orden_de_la_norma( (string) $n->clave )
+				&& 1 === (int) $n->arreglable
+		) );
+
 		$tema_pedido = isset( $_GET['tema'] ) ? sanitize_text_field( wp_unslash( (string) $_GET['tema'] ) ) : '';
+		$pide_arreglables = $ARREGLABLES === $tema_pedido && $las_arreglables;
 		$hay_tema    = '' !== $tema_pedido && isset( $por_tema[ $tema_pedido ] );
-		$para_ver    = $hay_tema ? $por_tema[ $tema_pedido ] : $aplicables;
+		$para_ver    = $pide_arreglables ? $las_arreglables : ( $hay_tema ? $por_tema[ $tema_pedido ] : $aplicables );
 
 		// ── Primero lo que falta ────────────────────────────────────────
 		//
@@ -450,7 +469,7 @@ $url_pestana = static fn( string $s ) => add_query_arg(
 			'texto'  => 'Todas',
 			'n'      => count( $aplicables ),
 			'url'    => $url_tema( '' ),
-			'activa' => ! $hay_tema,
+			'activa' => ! $hay_tema && ! $pide_arreglables,
 		] ];
 
 		foreach ( $temas as $g ) {
@@ -459,6 +478,15 @@ $url_pestana = static fn( string $s ) => add_query_arg(
 				'n'      => count( $por_tema[ $g ] ),
 				'url'    => $url_tema( $g ),
 				'activa' => $hay_tema && $tema_pedido === $g,
+			];
+		}
+
+		if ( $las_arreglables ) {
+			$pastillas_tema[] = [
+				'texto'  => 'Las que el panel sabe arreglar',
+				'n'      => count( $las_arreglables ),
+				'url'    => $url_tema( $ARREGLABLES ),
+				'activa' => (bool) $pide_arreglables,
 			];
 		}
 
@@ -486,6 +514,11 @@ $url_pestana = static fn( string $s ) => add_query_arg(
 			<?php
 			if ( $es_cliente ) {
 				echo 'Este sitio lo lleva el cliente: el panel lo mide, pero no le cambia nada.';
+			} elseif ( 0 === $arreglables_aqui && $las_arreglables ) {
+				echo esc_html( sprintf(
+					'Ahora mismo no hay nada que pedirle al panel: de las %s que sabe arreglar, ninguna está fallando aquí.',
+					SWPK_Vista::plural( count( $las_arreglables ), 'norma', 'normas' )
+				) );
 			} elseif ( 0 === $arreglables_aqui ) {
 				echo 'De lo que le falta a este sitio, el panel no puede arreglar nada solo: hay que entrar al sitio a cambiarlo.';
 			} else {
@@ -521,6 +554,14 @@ $url_pestana = static fn( string $s ) => add_query_arg(
 				$fila   = $cumple_sitio[ $clave ] ?? null;
 				$estado = $fila ? (string) $fila->estado : SWPK_Normas::SIN_DATO;
 				$orden  = SWPK_Ordenes::orden_de_la_norma( $clave );
+
+				// La celda de la derecha dice SIEMPRE qué se puede hacer con esta
+				// norma, y no solo cuando falla. Antes, una que el panel sabe
+				// arreglar pero que todavía no se ha medido salía con la celda en
+				// blanco: ni botón ni explicación. Desde fuera eso se lee como
+				// «aquí no se puede arreglar nada», que es lo contrario de lo que
+				// pasa, y es lo que hacía parecer que el botón había desaparecido.
+				$puede_el_panel = '' !== $orden && 1 === (int) $n->arreglable;
 				?>
 				<tr>
 					<td>
@@ -566,13 +607,21 @@ $url_pestana = static fn( string $s ) => add_query_arg(
 							<a class="button button-small" href="<?php
 								echo esc_url( SWPK_Admin::url_marcar_norma( $clave, $sitio_id, SWPK_Normas::FALLA ) );
 							?>">No</a>
-						<?php elseif ( SWPK_Normas::FALLA === $estado && '' !== $orden && (int) $n->arreglable === 1 && ! $es_cliente ) : ?>
-							<a class="button button-small" href="<?php
-								echo esc_url( SWPK_Admin::url_arreglar( $clave, $sitio_id ) );
-							?>">Arreglar</a>
-						<?php elseif ( SWPK_Normas::FALLA === $estado && $es_cliente ) : ?>
-							<span class="swpk-mudo" title="Sitio del cliente: se mide, no se cambia.">Es del cliente</span>
-						<?php endif; ?>
+					<?php elseif ( $es_cliente && $puede_el_panel ) : ?>
+						<span class="swpk-mudo" title="Sitio del cliente: se mide, no se cambia sin que lo pida.">Lo lleva el cliente</span>
+					<?php elseif ( SWPK_Normas::FALLA === $estado && $puede_el_panel ) : ?>
+						<a class="button button-small button-primary" href="<?php
+							echo esc_url( SWPK_Admin::url_arreglar( $clave, $sitio_id ) );
+						?>">Arreglar</a>
+					<?php elseif ( $puede_el_panel && SWPK_Normas::SIN_DATO === $estado ) : ?>
+						<span class="swpk-puede" title="El panel sabe arreglar esta norma, pero todavía no sabe si hace falta: el sitio no ha mandado la medición.">
+							Se puede arreglar
+						</span>
+					<?php elseif ( $puede_el_panel ) : ?>
+						<span class="swpk-mudo" title="El panel sabe arreglarla, y aquí ya está bien.">El panel la sabe arreglar</span>
+					<?php elseif ( SWPK_Normas::FALLA === $estado ) : ?>
+						<span class="swpk-mudo" title="Esto no lo puede cambiar el panel: hay que entrar al sitio a hacerlo.">Hay que hacerlo a mano</span>
+					<?php endif; ?>
 					</td>
 				</tr>
 			<?php endforeach; ?>

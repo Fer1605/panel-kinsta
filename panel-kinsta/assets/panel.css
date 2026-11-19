@@ -784,6 +784,25 @@ body[class*="panel-kinsta"] .swpk-caja-cuerpo {
 /* Para lo que trae su propio aire: tablas y listas, que ya llevan el suyo. */
 body[class*="panel-kinsta"] .swpk-caja-cuerpo.swpk-sin-aire { padding: 0; }
 
+/* `sin-aire` existe para que una tabla llegue de borde a borde de la tarjeta,
+   que es como se lee bien. Pero se lo quitaba el aire a TODO lo que hubiera
+   dentro: las pastillas, los párrafos y los avisos quedaban pegados al borde
+   izquierdo, veinte píxeles a la izquierda del propio título de la tarjeta.
+   El aire vuelve para todo lo que no sea una tabla o un paginador, que traen
+   el suyo. */
+body[class*="panel-kinsta"] .swpk-caja-cuerpo.swpk-sin-aire > *:not(table):not(.swpk-tabla-marco) {
+	padding-left: 20px;
+	padding-right: 20px;
+}
+
+body[class*="panel-kinsta"] .swpk-caja-cuerpo.swpk-sin-aire > *:first-child {
+	padding-top: 16px;
+}
+
+body[class*="panel-kinsta"] .swpk-caja-cuerpo.swpk-sin-aire > *:last-child:not(table) {
+	padding-bottom: 16px;
+}
+
 body[class*="panel-kinsta"] .swpk-caja-cuerpo > p:first-child { margin-top: 0; }
 body[class*="panel-kinsta"] .swpk-caja-cuerpo > p:last-child { margin-bottom: 0; }
 
@@ -1351,9 +1370,9 @@ body[class*="panel-kinsta"] .swpk-ayuda {
 	height: 16px;
 	margin-left: 5px;
 	border-radius: 50%;
-	border: 1px solid var(--swpk-borde);
-	background: #fff;
-	color: var(--swpk-apagado);
+	border: 1px solid #d9a21b;
+	background: #f6c343;
+	color: #4a3608;
 	font-size: 11px;
 	font-weight: 700;
 	font-style: normal;
@@ -1365,10 +1384,14 @@ body[class*="panel-kinsta"] .swpk-ayuda {
 
 body[class*="panel-kinsta"] .swpk-ayuda::before { content: "i"; }
 
+/* Ámbar y no gris. En gris sobre blanco no se veía —«eso en todo el panel no
+   se lee, no se ve»— y una burbuja que nadie encuentra es una explicación que
+   no existe. Rojo no: esto no avisa de nada malo, ofrece leer más. */
 body[class*="panel-kinsta"] .swpk-ayuda:hover,
 body[class*="panel-kinsta"] .swpk-ayuda:focus {
-	border-color: var(--swpk-apagado);
-	color: var(--swpk-texto);
+	border-color: #a9790a;
+	background: #f0b429;
+	color: #2b1f04;
 	outline: none;
 }
 
@@ -1621,4 +1644,41 @@ body[class*="panel-kinsta"] .swpk-subpestanas {
 	gap: 10px;
 	margin: 0;
 	padding: 14px 16px;
+}
+
+/* Los dos botones de la ficha, en una fila y con su burbuja pegada. */
+body[class*="panel-kinsta"] .swpk-acciones-ficha {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 4px 10px;
+	margin: 0 0 18px;
+}
+
+body[class*="panel-kinsta"] .swpk-acciones-ficha .button + .swpk-ayuda {
+	margin-right: 10px;
+}
+
+/* «Se puede arreglar»: el panel sabe hacerlo, pero todavía no sabe si hace
+   falta porque el sitio no ha mandado la medición. Ni botón ni silencio. */
+body[class*="panel-kinsta"] .swpk-puede {
+	display: inline-block;
+	padding: 2px 9px;
+	border: 1px dashed #c3a568;
+	border-radius: 999px;
+	color: #7a5c13;
+	font-size: 12px;
+	white-space: nowrap;
+	cursor: help;
+}
+
+/* Una tabla que respeta el ancho que le piden a sus columnas. Sin esto, un
+   desplegable crece hasta su opción más larga, arrastra la columna y la tabla
+   se sale de la tarjeta: en Ajustes salía 285 px por fuera. */
+body[class*="panel-kinsta"] .swpk-tabla-fija { table-layout: fixed; }
+
+body[class*="panel-kinsta"] .swpk-ancho-celda {
+	width: 100%;
+	max-width: 100%;
+	min-width: 0;
 }
