@@ -1,5 +1,15 @@
 <?php
-/** Accesos al panel: entradas, salidas e intentos fallidos. */
+/**
+ * Quién entró al panel: entradas, salidas e intentos fallidos.
+ *
+ * Era una entrada propia del menú. Ahora es la segunda pestaña de Registros,
+ * porque es la misma pregunta que la primera —«¿qué pasó?»— solo que de
+ * nosotros en vez de los sitios. El jefe lo dijo así: «eso debería estar en
+ * movimientos, todo lo que han hecho».
+ *
+ * Este archivo es solo el cuerpo: el recuadro y las pestañas los pone
+ * movimientos.php.
+ */
 defined( 'ABSPATH' ) || exit;
 
 $etiquetas = [
@@ -64,7 +74,6 @@ if ( '' !== $busca_acceso ) {
 [ $en_pantalla, $pagina, $paginas ] = SWPK_Vista::paginar( $registros, SWPK_Vista::pagina_pedida(), 25 );
 $fallidos  = SWPK_Accesos::fallidos_recientes( 24 );
 ?>
-<div class="wrap">
 	<?php
 	// Las tres cosas que más se anotan, de más a menos, como pastillas.
 	arsort( $por_accion );
@@ -76,8 +85,9 @@ $fallidos  = SWPK_Accesos::fallidos_recientes( 24 );
 			'n'      => (int) $cuantas,
 			'url'    => add_query_arg(
 				array_filter( [
-					'page'   => 'panel-kinsta-accesos',
-					'accion' => $filtro === $clave_a ? '' : $clave_a,
+					'page'    => 'panel-kinsta-movimientos',
+					'seccion' => 'accesos',
+					'accion'  => $filtro === $clave_a ? '' : $clave_a,
 				] ),
 				admin_url( 'admin.php' )
 			),
@@ -85,13 +95,8 @@ $fallidos  = SWPK_Accesos::fallidos_recientes( 24 );
 		];
 	}
 
-	SWPK_Vista::cabecera(
-		'Accesos al panel',
-		'Quién entró, cuándo, y quién lo intentó.',
-		SWPK_Vista::pastillas( $pastillas_acc )
-	);
+	echo SWPK_Vista::pastillas( $pastillas_acc ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 	?>
-	<?php SWPK_Admin::mostrar_mensaje(); ?>
 
 	<p style="max-width:840px;color:#3c434a">
 		Quién entró al panel, cuándo entró y cuándo salió. También quedan los intentos fallidos:
@@ -128,7 +133,7 @@ $fallidos  = SWPK_Accesos::fallidos_recientes( 24 );
 	);
 
 	SWPK_Vista::barra_de_filtros(
-		'panel-kinsta-accesos',
+		'panel-kinsta-movimientos',
 		[
 			'accion' => [
 				'etiqueta' => 'Qué pasó',
@@ -198,12 +203,3 @@ $fallidos  = SWPK_Accesos::fallidos_recientes( 24 );
 		No se guarda ninguna contraseña, ni siquiera las de los intentos fallidos: un registro de
 		contraseñas intentadas es una lista de contraseñas reales de gente que se equivocó de campo.
 	</p>
-
-	<?php
-	// El sello de frescura va en TODAS las pantallas, como en la maqueta.
-	// Estaba solo en cuatro, y es justo el dato que convierte una pantalla en
-	// evidencia: de cuándo es lo que se está mirando. Una pantalla sin él
-	// afirma sin fecha.
-	SWPK_Frescura::sello();
-	?>
-</div>

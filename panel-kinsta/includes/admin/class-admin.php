@@ -31,6 +31,7 @@ class SWPK_Admin {
 		add_action( 'admin_post_swpk_envios', [ __CLASS__, 'accion_envios' ] );
 		add_action( 'admin_post_swpk_guardar_plantilla', [ __CLASS__, 'accion_guardar_plantilla' ] );
 		add_action( 'admin_post_swpk_plantilla_fabrica', [ __CLASS__, 'accion_plantilla_fabrica' ] );
+		add_action( 'admin_post_swpk_vista_previa', [ __CLASS__, 'accion_vista_previa' ] );
 		add_action( 'admin_post_swpk_correo_semanal', [ __CLASS__, 'accion_correo_semanal' ] );
 		add_action( 'admin_post_swpk_correo_diario', [ __CLASS__, 'accion_correo_diario' ] );
 		add_action( 'admin_post_swpk_correo_mensual', [ __CLASS__, 'accion_correo_mensual' ] );
@@ -90,21 +91,46 @@ class SWPK_Admin {
 		add_submenu_page( self::SLUG, 'Seguridad', 'Seguridad', $ver, self::SLUG . '-seguridad', [ __CLASS__, 'pantalla_seguridad' ] );
 		add_submenu_page( self::SLUG, 'Caídas', 'Caídas', $tecnico, self::SLUG . '-caidas', [ __CLASS__, 'pantalla_caidas' ] );
 
-		// Movimientos tiene entrada propia, como en la maqueta aprobada. Era
-		// una pestaña dentro de Bitácora, y ahí no se encontraba: Bitácora
-		// contesta «¿a quién se le avisó?» y esto contesta «¿qué pasó?», que
-		// es la pregunta de todos los días.
-		add_submenu_page( self::SLUG, 'Movimientos', 'Movimientos', $ver, self::SLUG . '-movimientos', [ __CLASS__, 'pantalla_movimientos' ] );
-
-		// La ficha de un sitio no va en el menú: se llega desde las listas.
-		add_submenu_page( null, 'Sitio', 'Sitio', $ver, self::SLUG . '-sitio', [ __CLASS__, 'pantalla_sitio' ] );
-		add_submenu_page( null, 'Reporte', 'Reporte', $ver, self::SLUG . '-reporte', [ __CLASS__, 'pantalla_reporte' ] );
+		// ─── Por qué el menú tiene ocho entradas y no trece ──────────────
+		//
+		// Tenía trece, y el jefe lo dijo sin rodeos mirándolo: «panel es
+		// simple, o sea no tener tanto», «necesito simpleza». Tres de esas
+		// entradas eran la misma pregunta que otra, vista de otro lado, así
+		// que se volvieron pestañas de quien ya la contestaba:
+		//
+		//   Accesos           → Historial, pestaña «En el panel»
+		//   Bitácora          → Correos,   pestaña «Qué se mandó ya»
+		//   Conectarse (API)  → Ajustes,   pestaña «Conectarse (API)»
+		//
+		// Y «Movimientos» pasó a llamarse «Historial». Ni «Movimientos» ni
+		// «Registros» se entendían al leerlos en el menú; esta pantalla
+		// contesta «¿qué pasó, y cuándo?», y eso es un historial.
+		add_submenu_page( self::SLUG, 'Historial', 'Historial', $ver, self::SLUG . '-movimientos', [ __CLASS__, 'pantalla_movimientos' ] );
 		add_submenu_page( self::SLUG, 'Correos', 'Correos', $admin, self::SLUG . '-correos', [ __CLASS__, 'pantalla_correos' ] );
-		add_submenu_page( self::SLUG, 'Bitácora', 'Bitácora', $ver, self::SLUG . '-bitacora', [ __CLASS__, 'pantalla_bitacora' ] );
 		add_submenu_page( self::SLUG, 'Equipo', 'Equipo', $admin, self::SLUG . '-equipo', [ __CLASS__, 'pantalla_equipo' ] );
-		add_submenu_page( self::SLUG, 'Accesos', 'Accesos', $admin, self::SLUG . '-accesos', [ __CLASS__, 'pantalla_accesos' ] );
-		add_submenu_page( self::SLUG, 'Conectarse (API)', 'Conectarse (API)', $admin, self::SLUG . '-api', [ __CLASS__, 'pantalla_api' ] );
 		add_submenu_page( self::SLUG, 'Ajustes', 'Ajustes', $admin, self::SLUG . '-ajustes', [ __CLASS__, 'pantalla_ajustes' ] );
+
+		// ─── La ficha y el reporte: registradas, pero escondidas ──────────
+		//
+		// Estaban colgando de `null`, que es la forma habitual de registrar
+		// una pantalla a la que solo se llega desde otra. El precio era que
+		// WordPress no reconocía el menú como el actual y **lo cerraba**: al
+		// entrar a un sitio desaparecían las nueve entradas del panel y había
+		// que volver atrás para ir a otra parte. «Si entro en algún sitio se
+		// me cierra todo el panel donde puedo ver todas las opciones.»
+		//
+		// Así que cuelgan del panel como las demás, y se esconden del menú
+		// con una regla de estilo. El menú se queda abierto y marca de dónde
+		// se vino.
+		add_submenu_page( self::SLUG, 'Sitio', 'Sitio', $ver, self::SLUG . '-sitio', [ __CLASS__, 'pantalla_sitio' ] );
+		add_submenu_page( self::SLUG, 'Reporte', 'Reporte', $ver, self::SLUG . '-reporte', [ __CLASS__, 'pantalla_reporte' ] );
+
+		// Las tres direcciones viejas siguen existiendo, escondidas, y llevan
+		// a su pestaña nueva. Quien tenga una guardada en favoritos, o un
+		// enlace en un correo que ya salió, no se encuentra una pared.
+		add_submenu_page( null, 'Accesos', 'Accesos', $admin, self::SLUG . '-accesos', [ __CLASS__, 'pantalla_accesos' ] );
+		add_submenu_page( null, 'Bitácora', 'Bitácora', $ver, self::SLUG . '-bitacora', [ __CLASS__, 'pantalla_bitacora' ] );
+		add_submenu_page( null, 'Conectarse (API)', 'Conectarse (API)', $admin, self::SLUG . '-api', [ __CLASS__, 'pantalla_api' ] );
 	}
 
 	/** El botón de bajar a Excel, con los filtros que estén puestos. */
@@ -172,10 +198,13 @@ class SWPK_Admin {
 		$nombre = $sitio->nombre_visible ?? 'Sitio';
 
 		// El título de la pestaña es el nombre que propone el navegador al
-		// guardar el PDF, así que en el reporte conviene que diga de qué es.
+		// guardar el PDF, y es también lo que el navegador imprime en la
+		// esquina de cada hoja. Por eso se escribe entero aquí y no se le pega
+		// el título del menú, que dejaba «Reporte Tal Sitio Reporte» en la
+		// cabecera de un documento que va a ver un cliente.
 		return self::SLUG . '-reporte' === $pagina
-			? sprintf( 'Reporte %s %s', $nombre, $admin_titulo )
-			: $nombre . ' ' . $admin_titulo;
+			? sprintf( 'Reporte de mantenimiento — %s', $nombre )
+			: sprintf( '%s — Panel Kinsta', $nombre );
 	}
 
 	/** El nombre del proveedor, para escribirlo en las pantallas. */
@@ -197,6 +226,8 @@ class SWPK_Admin {
 	 *   heredado.css  lo que ya había, movido tal cual
 	 *   panel.css     el diseño nuevo, que va encima
 	 *   filtros.js    que los desplegables de filtro se apliquen al elegir
+	 *   ayuda.js      que la burbujita de ⓘ no salga cortada
+	 *   previa.js     la ventana con la vista previa de un correo
 	 *
 	 * Solo se cargan en las pantallas del panel. Una hoja que reescribe tablas
 	 * y botones no tiene por qué andar suelta por el escritorio de alguien.
@@ -214,6 +245,8 @@ class SWPK_Admin {
 		wp_enqueue_style( 'swpk-panel', $base . 'panel.css', [ 'swpk-heredado' ], SWPK_VERSION );
 		wp_enqueue_script( 'swpk-filtros', $base . 'filtros.js', [], SWPK_VERSION, true );
 		wp_enqueue_script( 'swpk-progreso', $base . 'progreso.js', [], SWPK_VERSION, true );
+		wp_enqueue_script( 'swpk-ayuda', $base . 'ayuda.js', [], SWPK_VERSION, true );
+		wp_enqueue_script( 'swpk-previa', $base . 'previa.js', [], SWPK_VERSION, true );
 	}
 
 	public static function aviso_demo(): void {
@@ -415,11 +448,26 @@ class SWPK_Admin {
 		require SWPK_RUTA . 'includes/admin/vistas/equipo.php';
 	}
 
+	/**
+	 * Las tres direcciones viejas, que ahora solo llevan a su pestaña.
+	 *
+	 * No borran nada ni enseñan nada: redirigen. Un enlace guardado hace tres
+	 * semanas tiene que seguir llegando a donde llegaba, aunque la pantalla se
+	 * haya mudado dentro de otra.
+	 */
+	private static function mudado( string $pagina, string $seccion ): void {
+		wp_safe_redirect(
+			add_query_arg( [ 'page' => $pagina, 'seccion' => $seccion ], admin_url( 'admin.php' ) ),
+			301
+		);
+		exit;
+	}
+
 	public static function pantalla_accesos(): void {
 		if ( ! SWPK_Perfiles::puede( SWPK_Perfiles::VER_ACCESOS ) ) {
 			wp_die( 'Sin permiso.' );
 		}
-		require SWPK_RUTA . 'includes/admin/vistas/accesos.php';
+		self::mudado( self::SLUG . '-movimientos', 'accesos' );
 	}
 
 	public static function pantalla_correos(): void {
@@ -440,7 +488,7 @@ class SWPK_Admin {
 		if ( ! self::puede_ver() ) {
 			wp_die( 'Sin permiso.' );
 		}
-		require SWPK_RUTA . 'includes/admin/vistas/bitacora.php';
+		self::mudado( self::SLUG . '-correos', 'bitacora' );
 	}
 
 	public static function pantalla_seguridad(): void {
@@ -461,7 +509,7 @@ class SWPK_Admin {
 		if ( ! self::puede_administrar() ) {
 			wp_die( 'Sin permiso.' );
 		}
-		require SWPK_RUTA . 'includes/admin/vistas/api.php';
+		self::mudado( self::SLUG . '-ajustes', 'api' );
 	}
 
 	// ── Acciones ────────────────────────────────────────────────────────────
@@ -797,6 +845,51 @@ class SWPK_Admin {
 	 * línea, que es lo único que separa un párrafo del siguiente. Se guarda tal
 	 * cual y se escapa al armar el correo, que es donde importa.
 	 */
+	/**
+	 * La vista previa de una plantilla: dibuja el correo y no manda nada.
+	 *
+	 * Sale en un marco dentro de la misma pantalla, así que escribe el correo
+	 * entero y corta —no hay cabecera de administrador alrededor, que es justo
+	 * lo que falsearía cómo se ve—. Trabaja sobre lo que esté escrito en el
+	 * formulario, guardado o no: la gracia es ver antes de guardar.
+	 */
+	public static function accion_vista_previa(): void {
+		if ( ! self::puede_administrar() ) {
+			wp_die( 'Sin permiso.' );
+		}
+		check_admin_referer( 'swpk_vista_previa' );
+
+		$cual = isset( $_POST['plantilla'] ) ? sanitize_key( (string) $_POST['plantilla'] ) : '';
+
+		if ( ! isset( SWPK_Plantillas::catalogo()[ $cual ] ) ) {
+			wp_die( 'Esa plantilla no existe.' );
+		}
+
+		$previa = SWPK_Plantillas::ejemplo(
+			$cual,
+			isset( $_POST['asunto'] ) ? wp_unslash( (string) $_POST['asunto'] ) : '',
+			isset( $_POST['cuerpo'] ) ? wp_unslash( (string) $_POST['cuerpo'] ) : ''
+		);
+
+		header( 'Content-Type: text/html; charset=utf-8' );
+		header( 'X-Frame-Options: SAMEORIGIN' );
+
+		printf(
+			'<!doctype html><html lang="es"><head><meta charset="utf-8">'
+			. '<meta name="viewport" content="width=device-width, initial-scale=1">'
+			. '<title>Vista previa</title></head>'
+			. '<body style="margin:0;background:#f0f0f1">'
+			. '<div style="background:#fff;border-bottom:1px solid #dcdcde;padding:14px 18px;'
+			. 'font:13px -apple-system,system-ui,sans-serif;color:#50575e">'
+			. '<span style="color:#8c8f94">Asunto</span><br>'
+			. '<strong style="font-size:15px;color:#1d2327">%s</strong></div>%s</body></html>',
+			esc_html( $previa['asunto'] ),
+			wp_kses_post( $previa['html'] )
+		);
+
+		exit;
+	}
+
 	public static function accion_guardar_plantilla(): void {
 		if ( ! self::puede_administrar() ) {
 			wp_die( 'Sin permiso.' );

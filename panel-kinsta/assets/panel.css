@@ -144,8 +144,24 @@ body[class*="panel-kinsta"] .wrap table.widefat tfoot th {
 
 /* ── Botones ────────────────────────────────────────────────────────────── */
 
+/* ─── Por qué los botones son flex ────────────────────────────────────────
+   Porque el texto se iba arriba. WordPress le pone al botón una altura
+   mínima de 40 px y el texto, con su línea de 19,5 px y 6 px de relleno,
+   ocupaba 31,5: los 8,5 que sobraban quedaban TODOS abajo, así que la
+   palabra se veía pegada al techo. Medido en el navegador, no supuesto.
+   Eso es lo que él vio: «los textos dentro de los botones están súper
+   desalineados, están como más arriba, no están centrados».
+
+   Centrarlo con relleno sería adivinar; con flex, el texto queda en medio
+   mida lo que mida el botón. `vertical-align: middle` es para lo de fuera:
+   un botón al lado de una frase se alineaba por la base de la letra y
+   quedaba un escalón. */
 body[class*="panel-kinsta"] .wrap .button,
 body[class*="panel-kinsta"] .wrap .button-secondary {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	vertical-align: middle;
 	border-radius: 7px;
 	border-color: var(--swpk-borde);
 	background: #fff;
@@ -153,9 +169,21 @@ body[class*="panel-kinsta"] .wrap .button-secondary {
 	font-weight: 600;
 	font-size: 13px;
 	height: auto;
+	min-height: 34px;
 	padding: 6px 14px;
 	line-height: 1.5;
 	box-shadow: none;
+	text-align: center;
+}
+
+/* Los `input` no son contenedores flex, pero centran su texto solos en
+   cuanto dejan de tener una altura mínima que no les corresponde. */
+body[class*="panel-kinsta"] .wrap input.button,
+body[class*="panel-kinsta"] .wrap input.button-primary,
+body[class*="panel-kinsta"] .wrap button.button,
+body[class*="panel-kinsta"] .wrap button.button-primary {
+	min-height: 34px;
+	line-height: 1.5;
 }
 
 body[class*="panel-kinsta"] .wrap .button:hover {
@@ -200,6 +228,22 @@ body[class*="panel-kinsta"] .wrap textarea {
 	min-height: 0;
 }
 
+/* ─── La flecha de los desplegables se montaba encima del texto ───────────
+   WordPress le quita al `select` su apariencia nativa y le dibuja la flecha
+   con una imagen de fondo a la derecha; para que el texto no pase por
+   debajo, deja 24 px de relleno a ese lado. Aquí se estaba poniendo el
+   relleno a 11 px por los dos lados, así que «Versión de WordPress» se metía
+   bajo la flecha. Es lo que él vio: «flechas que se montan en los filtros».
+
+   Se repite el relleno del lado izquierdo a propósito: la regla de arriba
+   usa la forma corta y si no se repitiera, se perdería. */
+body[class*="panel-kinsta"] .wrap select {
+	padding-left: 11px;
+	padding-right: 30px;
+	background-position: right 10px top 55%;
+	text-overflow: ellipsis;
+}
+
 body[class*="panel-kinsta"] .wrap input:focus,
 body[class*="panel-kinsta"] .wrap select:focus,
 body[class*="panel-kinsta"] .wrap textarea:focus {
@@ -214,17 +258,19 @@ body[class*="panel-kinsta"] .wrap .notice,
 body[class*="panel-kinsta"] .wrap div.notice {
 	border-radius: 9px;
 	border: 1px solid var(--swpk-borde);
-	border-left-width: 4px;
 	box-shadow: var(--swpk-sombra);
 	padding: 4px 16px;
 	margin: 14px 0;
 	background: #fff;
 }
 
-body[class*="panel-kinsta"] .wrap .notice-success { border-left-color: var(--swpk-bien); }
-body[class*="panel-kinsta"] .wrap .notice-warning { border-left-color: var(--swpk-medio); background: #fdfbf2; }
-body[class*="panel-kinsta"] .wrap .notice-error   { border-left-color: var(--swpk-critico); background: #fdf5f5; }
-body[class*="panel-kinsta"] .wrap .notice-info    { border-left-color: var(--swpk-marca); background: #f7fafe; }
+/* Sin franja de color en la orilla. El estado se dice con el fondo, que es
+   suficiente y no deja la pantalla rayada de líneas de colores: «evita usar
+   las líneas de color en la orilla, quítalas todas las que encuentres». */
+body[class*="panel-kinsta"] .wrap .notice-success { background: #f4faf5; border-color: #cbe5d1; }
+body[class*="panel-kinsta"] .wrap .notice-warning { background: #fdfbf2; border-color: #ebd9a4; }
+body[class*="panel-kinsta"] .wrap .notice-error   { background: #fdf5f5; border-color: #ecc7c9; }
+body[class*="panel-kinsta"] .wrap .notice-info    { background: #f7fafe; border-color: #c9ddf2; }
 
 /* ── Las piezas propias del panel ───────────────────────────────────────── */
 
@@ -331,7 +377,6 @@ body[class*="panel-kinsta"] .swpk-pag {
 body[class*="panel-kinsta"] .swpk-aviso-demo {
 	border-radius: 9px;
 	border: 1px solid #ebd9a4;
-	border-left: 4px solid var(--swpk-medio);
 	background: #fdfbf2;
 }
 
@@ -408,11 +453,21 @@ body[class*="panel-kinsta"] .wrap .description { color: var(--swpk-apagado); fon
    solo «Todas» no deja saber todas qué — hay que abrirlo para averiguarlo, y
    eso es justo el trabajo que un filtro tendría que ahorrar.
    ────────────────────────────────────────────────────────────────────────── */
+/* ─── La barra de filtros, pareja ─────────────────────────────────────────
+   «El buscar aquí es diferente a todos los demás botones… filtrar aquí no
+   está centrado, no está alineado.» Tenía razón, y se podía medir: los
+   desplegables salían de 49,3 px de alto y la caja de buscar de 34, porque
+   WordPress le pone al `select` una altura de línea de 2,71. Con dos alturas
+   distintas y los bloques alineados por abajo, la palabra BUSCAR quedaba
+   quince píxeles más baja que las demás.
+
+   Ahora todos los campos miden lo mismo, las etiquetas arrancan arriba y el
+   botón se pega abajo, a la altura de los campos. */
 body[class*="panel-kinsta"] .wrap .swpk-filtra,
 body[class*="panel-kinsta"] .wrap .swpk-rango {
 	display: flex;
 	flex-wrap: wrap;
-	align-items: flex-end;
+	align-items: flex-start;
 	gap: 10px 14px;
 	margin: 0 0 14px;
 	padding: 14px 16px;
@@ -457,16 +512,59 @@ body[class*="panel-kinsta"] .wrap .swpk-campo input[type="search"]:focus {
 	outline: none;
 }
 
-body[class*="panel-kinsta"] .wrap .swpk-filtra .button { min-height: 34px; }
-
-body[class*="panel-kinsta"] .wrap .swpk-filtra-limpiar {
-	font-size: 12.5px;
-	color: var(--swpk-apagado);
-	text-decoration: underline;
-	padding-bottom: 8px;
+/* Un alto para todos: el del campo más bajo. */
+body[class*="panel-kinsta"] .wrap .swpk-filtra select,
+body[class*="panel-kinsta"] .wrap .swpk-filtra input[type="search"],
+body[class*="panel-kinsta"] .wrap .swpk-filtra input[type="text"],
+body[class*="panel-kinsta"] .wrap .swpk-filtra input[type="date"],
+body[class*="panel-kinsta"] .wrap .swpk-rango select,
+body[class*="panel-kinsta"] .wrap .swpk-rango input[type="search"],
+body[class*="panel-kinsta"] .wrap .swpk-rango input[type="text"],
+body[class*="panel-kinsta"] .wrap .swpk-rango input[type="date"] {
+	height: 34px;
+	min-height: 34px;
+	line-height: 1.5;
+	padding-top: 0;
+	padding-bottom: 0;
 }
 
-body[class*="panel-kinsta"] .wrap .swpk-filtra-limpiar:hover { color: var(--swpk-critico); }
+/* El botón y el «limpiar» se pegan abajo, donde están los campos, y no
+   arriba, donde están las etiquetas. */
+body[class*="panel-kinsta"] .wrap .swpk-filtra .button,
+body[class*="panel-kinsta"] .wrap .swpk-rango .button,
+body[class*="panel-kinsta"] .wrap .swpk-filtra-limpiar {
+	align-self: flex-end;
+	min-height: 34px;
+}
+
+/* «Limpiar» era un enlace subrayado en medio de botones redondeados: «el
+   buscar aquí es diferente a todos los demás botones; limpiar debería ser un
+   clear o algo así». Ahora es una pastilla con su ✕, del mismo alto que lo
+   demás, y se ve que quita algo. */
+body[class*="panel-kinsta"] .wrap .swpk-filtra-limpiar {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	padding: 0 12px;
+	border: 1px solid var(--swpk-borde);
+	border-radius: 7px;
+	background: #fff;
+	font-size: 12.5px;
+	font-weight: 600;
+	color: var(--swpk-apagado);
+	text-decoration: none;
+}
+
+body[class*="panel-kinsta"] .wrap .swpk-filtra-limpiar::before {
+	content: "✕";
+	font-size: 11px;
+	line-height: 1;
+}
+
+body[class*="panel-kinsta"] .wrap .swpk-filtra-limpiar:hover {
+	border-color: var(--swpk-critico);
+	color: var(--swpk-critico);
+}
 
 /* En pantalla angosta los filtros se apilan en vez de salirse de la caja. */
 @media (max-width: 782px) {
@@ -1104,7 +1202,6 @@ body[class*="panel-kinsta"] .swpk-nivel-caido     { background: #fdecec; color: 
 body[class*="panel-kinsta"] .swpk-veredicto {
 	background: #fff;
 	border: 1px solid var(--swpk-borde);
-	border-left: 5px solid var(--swpk-bien);
 	border-radius: var(--swpk-radio);
 	box-shadow: var(--swpk-sombra);
 	padding: 20px 24px;
@@ -1126,8 +1223,18 @@ body[class*="panel-kinsta"] .swpk-veredicto p {
 	max-width: 70ch;
 }
 
-body[class*="panel-kinsta"] .swpk-veredicto-mal { border-left-color: var(--swpk-critico); }
-body[class*="panel-kinsta"] .swpk-veredicto-ciego { border-left-color: var(--swpk-bajo); }
+/* Sin franja: el veredicto ya dice en palabras si algo va mal. Una línea de
+   color al lado no añadía nada y sumaba a la pantalla rayada. */
+
+/* Los botones del veredicto: lo que hay que hacer con lo que acaba de leer.
+   Van debajo de la frase, no al lado, porque al lado se pierden en cuanto la
+   frase crece — y en pantalla chica se montaban encima. */
+body[class*="panel-kinsta"] .swpk-veredicto-acciones {
+	margin-top: 14px;
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+}
 
 /* La pastilla que en realidad es un botón: «Sondear ahora» al lado de
    «Sondeo automático», como en la maqueta. */
@@ -1227,4 +1334,291 @@ body[class*="panel-kinsta"] .swpk-corrida-nota {
 	color: #50575e;
 	font-size: 12px;
 	margin: 0;
+}
+
+
+/* ── La burbujita de ayuda ───────────────────────────────────────────────
+   Un ⓘ discreto que suelta la explicación al pasar el mouse o al llegar con
+   el teclado. Sustituye a los párrafos que nadie leía. El globo se dibuja
+   con CSS y no con el `title` del navegador porque aquel tarda un segundo
+   en salir, no se puede leer con el teclado y no se deja dar estilo. */
+body[class*="panel-kinsta"] .swpk-ayuda {
+	position: relative;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 16px;
+	height: 16px;
+	margin-left: 5px;
+	border-radius: 50%;
+	border: 1px solid var(--swpk-borde);
+	background: #fff;
+	color: var(--swpk-apagado);
+	font-size: 11px;
+	font-weight: 700;
+	font-style: normal;
+	line-height: 1;
+	cursor: help;
+	vertical-align: middle;
+	user-select: none;
+}
+
+body[class*="panel-kinsta"] .swpk-ayuda::before { content: "i"; }
+
+body[class*="panel-kinsta"] .swpk-ayuda:hover,
+body[class*="panel-kinsta"] .swpk-ayuda:focus {
+	border-color: var(--swpk-apagado);
+	color: var(--swpk-texto);
+	outline: none;
+}
+
+/* `fixed` y no `absolute`: dentro de la tarjeta, que recorta lo que se sale
+   para poder desplazar las tablas anchas, un globo absoluto salía cortado.
+   Lo coloca ayuda.js, que mide el hueco y lo pone arriba o abajo. */
+body[class*="panel-kinsta"] .swpk-ayuda-globo {
+	position: fixed;
+	z-index: 100000;
+	display: none;
+	width: max-content;
+	max-width: 320px;
+	padding: 9px 12px;
+	border-radius: 8px;
+	background: #1d2327;
+	color: #fff;
+	font-size: 12.5px;
+	font-weight: 400;
+	line-height: 1.45;
+	text-align: left;
+	white-space: normal;
+	box-shadow: 0 8px 24px rgba(0, 0, 0, .18);
+}
+
+body[class*="panel-kinsta"] .swpk-ayuda:hover .swpk-ayuda-globo,
+body[class*="panel-kinsta"] .swpk-ayuda:focus .swpk-ayuda-globo { display: block; }
+
+@media (max-width: 782px) {
+	body[class*="panel-kinsta"] .swpk-ayuda-globo { max-width: 220px; }
+}
+
+/* Las tarjetas de la ficha que llevan a su lista. Se ven igual que las otras
+   —no son botones— pero se nota que se pueden pulsar. El jefe las quería
+   clicables: «quiero ver las 19 críticas, no puedo, ¿dónde puedo ver eso?». */
+body[class*="panel-kinsta"] a.swpk-tarjeta-enlace {
+	display: block;
+	text-decoration: none;
+	color: inherit;
+	transition: border-color .12s ease, box-shadow .12s ease;
+}
+
+body[class*="panel-kinsta"] a.swpk-tarjeta-enlace:hover,
+body[class*="panel-kinsta"] a.swpk-tarjeta-enlace:focus {
+	border-color: var(--swpk-apagado);
+	box-shadow: var(--swpk-sombra);
+	outline: none;
+}
+
+/* ── Pantallas chicas ────────────────────────────────────────────────────
+   «Yo no compro pantalla grande, porque uno se acostumbra a esa pantalla
+   grande y piensa que se ve bien.» Tiene razón, y en la suya las tablas de
+   muchas columnas se aplastaban hasta partir el nombre del sitio una letra
+   por renglón: "se montan las cosas, mirá estas líneas".
+
+   La tabla conserva un ancho mínimo donde se lee, y es el cuerpo de la
+   tarjeta el que desplaza en horizontal. Antes se encogía la tabla; ahora se
+   mueve la vista, que es lo que no destruye el contenido. */
+/* Solo las tarjetas que llevan una tabla a ras (las `sin-aire`) desplazan en
+   horizontal. En una tarjeta con relleno, el desplazamiento se come el
+   relleno de la derecha y el texto queda pegado al borde — que es justo lo
+   que él vio: «tenemos textos todavía pegados en las orillas de los
+   recuadros». */
+body[class*="panel-kinsta"] .swpk-caja-cuerpo.swpk-sin-aire {
+	overflow-x: auto;
+}
+
+body[class*="panel-kinsta"] .swpk-caja-cuerpo > table.swpk-tabla {
+	min-width: 900px;
+}
+
+/* Un nombre largo se parte por donde se pueda, nunca letra a letra. */
+body[class*="panel-kinsta"] .swpk-tabla td,
+body[class*="panel-kinsta"] .swpk-tabla th {
+	word-break: normal;
+	overflow-wrap: break-word;
+}
+
+/* Lo que antes era un recuadro azul con dos párrafos y ahora es una línea con
+   su burbujita. «Esto para mí es un montón de texto que no entiendo.» */
+body[class*="panel-kinsta"] .swpk-comoasi-linea {
+	margin: 0 0 16px;
+	font-size: 13.5px;
+	color: var(--swpk-apagado);
+}
+
+/* Los desplegables de la barra no se estiran a lo que mida su opción más
+   larga: con uno muy ancho, el botón «Filtrar» se caía a un segundo renglón
+   y la barra dejaba de leerse como una sola fila. La opción larga se recorta
+   con puntos suspensivos; al desplegarla se ve entera. */
+body[class*="panel-kinsta"] .wrap .swpk-filtra .swpk-campo {
+	flex: 1 1 120px;
+	min-width: 0;
+	max-width: 210px;
+}
+
+body[class*="panel-kinsta"] .wrap .swpk-filtra .swpk-campo-ancho {
+	flex: 2 1 150px;
+	max-width: none;
+}
+
+/* Con `flex-basis: auto` el navegador decide si la fila cabe mirando el ancho
+   del CONTENIDO de cada campo, no el que acabarán teniendo: con seis campos y
+   un desplegable de nombres de sitio, esa suma se pasaba y el buscador y el
+   botón se caían al renglón de abajo. Con una base corta la cuenta da, y el
+   reparto del ancho sobrante se hace después. */
+body[class*="panel-kinsta"] .wrap .swpk-filtra .swpk-campo select,
+body[class*="panel-kinsta"] .wrap .swpk-filtra .swpk-campo input {
+	width: 100%;
+	min-width: 0;
+	text-overflow: ellipsis;
+}
+
+/* La ficha de un sitio y el reporte están colgados del menú para que
+   WordPress lo deje abierto al entrar en ellos, pero no son sitios a los que
+   se va desde el menú: se llega desde una lista. Por eso se esconden. */
+#toplevel_page_panel-kinsta .wp-submenu a[href$="page=panel-kinsta-sitio"],
+#toplevel_page_panel-kinsta .wp-submenu a[href$="page=panel-kinsta-reporte"] {
+	display: none;
+}
+
+/* El dato y el botón de cada renglón, en la misma línea y separados. */
+body[class*="panel-kinsta"] .swpk-renglon-dato {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	white-space: nowrap;
+}
+
+/* Los dos interruptores de Correos, uno al lado del otro y a todo lo ancho.
+   Antes iban apilados en una columna estrecha, que es lo que dejaba la tabla
+   de al lado apretada y con desplazamiento propio. */
+body[class*="panel-kinsta"] .swpk-interruptores {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(330px, 1fr));
+	gap: 12px;
+	margin: 0 0 16px;
+}
+
+body[class*="panel-kinsta"] .swpk-interruptores .swpk-interruptor {
+	margin: 0;
+	height: 100%;
+}
+
+/* La dona, cuando ocupa una tarjeta ancha: el círculo a la izquierda y su
+   leyenda al lado, en una tira baja. Antes iba en una columna estrecha con
+   la tabla apretada a su derecha; ahora no le roba ancho a nadie y no deja
+   media pantalla en blanco debajo. */
+body[class*="panel-kinsta"] .swpk-c12 .swpk-dona {
+	display: flex;
+	align-items: center;
+	gap: 32px;
+	flex-wrap: wrap;
+}
+
+body[class*="panel-kinsta"] .swpk-c12 .swpk-dona .swpk-leyenda {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 10px 28px;
+	margin: 0;
+	flex: 1 1 260px;
+}
+
+/* Dos botones en una misma celda: en fila, y que bajen juntos si no caben. */
+.swpk-acciones-fila {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 6px;
+}
+
+/* Un aviso de una línea, con su burbuja al lado. Reemplaza a los párrafos
+   largos que antes abrían cada pantalla: la frase corta queda a la vista y el
+   detalle se lee al pasar el ratón, en vez de ocupar media pantalla siempre. */
+body[class*="panel-kinsta"] .swpk-aviso-corto {
+	margin: 0 0 14px;
+	font-size: 13px;
+	color: #50575e;
+}
+
+/* Sub-pestañas dentro de una pestaña: un escalón por debajo de las de arriba,
+   para que se vea que eligen qué se mira dentro de esta pantalla y no a qué
+   pantalla se va. */
+body[class*="panel-kinsta"] .swpk-subpestanas {
+	margin: 0 0 14px;
+}
+
+/* ── La ventana de la vista previa ──────────────────────────────────────── */
+
+.swpk-dialogo {
+	width: min(820px, 92vw);
+	max-width: 92vw;
+	height: min(78vh, 760px);
+	padding: 0;
+	border: 0;
+	border-radius: var(--swpk-radio);
+	box-shadow: 0 18px 50px rgba(20, 20, 63, .22);
+	overflow: hidden;
+}
+
+.swpk-dialogo::backdrop {
+	background: rgba(20, 20, 63, .45);
+}
+
+.swpk-dialogo-cab {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 16px;
+	padding: 12px 16px;
+	border-bottom: 1px solid #dcdcde;
+	background: #fff;
+	font-size: 14px;
+}
+
+.swpk-dialogo iframe {
+	display: block;
+	width: 100%;
+	height: calc(100% - 50px);
+	border: 0;
+	background: #f0f0f1;
+}
+
+/* Las marcas, en una columna estrecha al lado del editor: el nombre arriba y
+   para qué sirve debajo, que es lo que cabe sin que se parta la palabra. */
+.swpk-marcas code {
+	display: inline-block;
+	margin-bottom: 3px;
+	font-size: 12px;
+}
+
+.swpk-marca-explica {
+	display: block;
+	color: #50575e;
+	font-size: 12px;
+	line-height: 1.45;
+}
+
+/* La misma ventana, cuando lo que lleva dentro es texto del panel y no un
+   correo en su propio marco: hace falta aire y que se pueda desplazar. */
+.swpk-dialogo-texto .swpk-mensaje {
+	height: calc(100% - 50px);
+	overflow-y: auto;
+	padding: 16px 18px;
+	background: #fff;
+}
+
+.swpk-mensaje-abrir {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 10px;
+	margin: 0;
+	padding: 14px 16px;
 }

@@ -1,45 +1,78 @@
 <?php
 /**
- * Movimientos: qué cambió en los sitios, y cuándo.
+ * Registros: lo que pasó, y quién lo hizo.
  *
- * Era una pestaña dentro de Bitácora. En la maqueta que aprobó el jefe es una
- * entrada del menú, entre Caídas y Correos, y tiene razón en serlo: Bitácora
- * guarda lo que se AVISÓ y esto guarda lo que PASÓ. La segunda se mira todos
- * los días; la primera, cuando alguien reclama.
+ * Dos pestañas:
  *
- * El cuerpo es el mismo archivo que usaba la pestaña, sin tocar: lo único que
- * cambia es que ahora tiene su propia pantalla y su propia dirección.
+ *   Qué pasó en los sitios   los cambios del inventario, día a día
+ *   Quién entró al panel     entradas, salidas e intentos fallidos
+ *
+ * Antes eran dos entradas del menú —«Movimientos» y «Accesos»— y el jefe las
+ * juntó en una sola frase: «eso debería estar en movimientos, todo lo que han
+ * hecho». Es la misma pregunta hecha dos veces, una sobre los sitios y otra
+ * sobre nosotros, así que se miran en el mismo sitio.
+ *
+ * Y se llama Registros porque «Movimientos» no se entendía: «debería llamarse
+ * registros, histórico o logs».
  */
 defined( 'ABSPATH' ) || exit;
 
+$seccion = isset( $_GET['seccion'] ) ? sanitize_key( (string) $_GET['seccion'] ) : 'sitios';
+
+if ( ! in_array( $seccion, [ 'sitios', 'accesos' ], true ) ) {
+	$seccion = 'sitios';
+}
+
+// Quien no puede ver los accesos no tiene esa pestaña, ni entrando a mano.
+$ve_accesos = SWPK_Perfiles::puede( SWPK_Perfiles::VER_ACCESOS );
+
+if ( 'accesos' === $seccion && ! $ve_accesos ) {
+	$seccion = 'sitios';
+}
+
 $url_sec = static fn( string $s ) => add_query_arg(
-	[ 'page' => 'movimientos' === $s ? 'panel-kinsta-movimientos' : 'panel-kinsta-bitacora' ],
+	[ 'page' => 'panel-kinsta-movimientos', 'seccion' => $s ],
 	admin_url( 'admin.php' )
 );
+
+$pastillas = [
+	[
+		'texto'  => 'En los sitios',
+		'url'    => $url_sec( 'sitios' ),
+		'activa' => 'sitios' === $seccion,
+	],
+];
+
+if ( $ve_accesos ) {
+	$pastillas[] = [
+		'texto'  => 'En el panel',
+		'url'    => $url_sec( 'accesos' ),
+		'activa' => 'accesos' === $seccion,
+	];
+}
 ?>
 <div class="wrap">
 	<?php
+	// «Registros» tampoco se entendía. Esta pantalla contesta una sola
+	// pregunta —«¿qué pasó, y cuándo?»— con dos respuestas: lo que pasó en
+	// los sitios y lo que hicimos nosotros en el panel. Historial lo dice sin
+	// que haya que abrirlo para saberlo.
 	SWPK_Vista::cabecera(
-		'Movimientos',
-		'Qué cambió en los sitios, y cuándo.',
-		SWPK_Vista::pastillas( [
-			[ 'texto' => 'Movimientos',    'url' => $url_sec( 'movimientos' ),    'activa' => true ],
-			[ 'texto' => 'Notificaciones', 'url' => $url_sec( 'notificaciones' ), 'activa' => false ],
-		] )
+		'Historial',
+		'sitios' === $seccion
+			? 'Qué cambió en cada sitio y cuándo: actualizaciones, plugins nuevos, usuarios y caídas.'
+				. SWPK_Vista::ayuda( 'Esto se guarda pase lo que pase con los correos: aunque hoy no se le esté avisando a nadie, el movimiento queda escrito.' )
+			: 'Quién entró al panel, cuándo, y quién lo intentó sin lograrlo.',
+		SWPK_Vista::pastillas( $pastillas )
 	);
 	?>
 	<?php SWPK_Admin::mostrar_mensaje(); ?>
-	<?php SWPK_Admin::tira_de_perfil(); ?>
 
-	<?php require SWPK_RUTA . 'includes/admin/vistas/bitacora-movimientos.php'; ?>
+	<?php if ( 'accesos' === $seccion ) : ?>
+		<?php require SWPK_RUTA . 'includes/admin/vistas/registros-accesos.php'; ?>
+	<?php else : ?>
+		<?php require SWPK_RUTA . 'includes/admin/vistas/bitacora-movimientos.php'; ?>
+		<p class="swpk-atribucion"><?php echo wp_kses_post( SWPK_Wordfence::atribucion() ); ?></p>
+	<?php endif; ?>
 
-	<p class="swpk-atribucion"><?php echo wp_kses_post( SWPK_Wordfence::atribucion() ); ?></p>
-
-	<?php
-	// El sello de frescura va en TODAS las pantallas, como en la maqueta.
-	// Estaba solo en cuatro, y es justo el dato que convierte una pantalla en
-	// evidencia: de cuándo es lo que se está mirando. Una pantalla sin él
-	// afirma sin fecha.
-	SWPK_Frescura::sello();
-	?>
 </div>

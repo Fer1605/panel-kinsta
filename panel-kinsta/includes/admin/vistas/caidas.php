@@ -189,7 +189,15 @@ $historial = array_filter(
 
 	<?php if ( $estados ) : ?>
 		<?php
-		SWPK_Vista::caja_abrir( 'Cómo están ahora', 'sondeo cada hora', 'swpk-c5' );
+		// ── La dona, estrecha; la tabla, entera ─────────────────────────
+		//
+		// Iban a cinco y siete columnas, y la tabla de al lado quedaba tan
+		// apretada que le salía desplazamiento propio: «le generaste un scroll
+		// interno bien feo a lo de sitio por sitio, mejor que esté horizontal».
+		// La dona necesita lo que necesita —es un círculo de 140 px— y lo que
+		// sobraba era el hueco en blanco a su derecha. Así que la dona ocupa
+		// un tercio y la tabla, abajo, todo el ancho.
+		SWPK_Vista::caja_abrir( 'Cómo están ahora', 'sondeo cada hora', 'swpk-c12' );
 
 		SWPK_Vista::dona(
 			[
@@ -217,7 +225,7 @@ $historial = array_filter(
 		SWPK_Vista::caja_abrir(
 			'Sitio por sitio',
 			'los que más tardan, primero',
-			'swpk-c7',
+			'swpk-c12',
 			true
 		);
 
@@ -325,7 +333,7 @@ $historial = array_filter(
 		<p style="color:#50575e">
 			No se ha caído nada desde que el monitor está encendido. Cada caída y cada recuperación
 			queda aquí con su hora, y el aviso a soporte queda en la
-			<a href="<?php echo esc_url( admin_url( 'admin.php?page=panel-kinsta-bitacora' ) ); ?>">bitácora</a>.
+			<a href="<?php echo esc_url( admin_url( 'admin.php?page=panel-kinsta-correos&seccion=bitacora' ) ); ?>">bitácora</a>.
 		</p>
 	<?php else : ?>
 		<table class="widefat striped swpk-tabla">
@@ -363,5 +371,4 @@ $historial = array_filter(
 	// sello solo —que son cuatro renglones de fechas— empujaba la tabla fuera
 	// de la pantalla.
 	?>
-	<?php SWPK_Frescura::sello(); ?>
 </div>

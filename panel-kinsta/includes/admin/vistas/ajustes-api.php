@@ -25,14 +25,6 @@ $llamadas   = array_merge( SWPK_Accesos::listar( 25, SWPK_Accesos::API ), SWPK_A
 usort( $llamadas, static fn( $a, $b ) => strcmp( (string) $b->ocurrio_en, (string) $a->ocurrio_en ) );
 $llamadas = array_slice( $llamadas, 0, 25 );
 ?>
-<div class="wrap">
-	<?php
-	SWPK_Vista::cabecera(
-		'Conectarse al panel',
-		'Consultarlo desde fuera, o desde Claude.'
-	);
-	?>
-	<?php SWPK_Admin::mostrar_mensaje(); ?>
 
 	<p style="max-width:860px;color:#3c434a">
 		El panel contesta preguntas. Cualquier otro sistema —o Claude, en la Fase 2— le pregunta
@@ -115,7 +107,7 @@ $llamadas = array_slice( $llamadas, 0, 25 );
 		mes?</em>, <em>¿quién tiene acceso de administrador a este sitio?</em>
 	</p>
 
-	<table class="widefat striped swpk-tabla" style="max-width:860px">
+	<table class="widefat striped swpk-tabla">
 		<thead>
 			<tr>
 				<th style="width:210px">Lo que puede consultar</th>
@@ -203,7 +195,7 @@ $llamadas = array_slice( $llamadas, 0, 25 );
 		.swpk-modal h2 { margin: 0 0 2px; font-size: 21px; }
 		.swpk-modal-nombre { margin: 0 0 18px; color: #50575e; }
 		.swpk-modal-aviso {
-			background: #fcf0f1; border-left: 4px solid #d63638;
+			background: #fcf0f1; border: 1px solid #ecc7c9;
 			padding: 11px 14px; margin: 0 0 20px; color: #3c434a;
 		}
 		.swpk-campo { display: block; margin: 0 0 16px; }
@@ -368,7 +360,7 @@ $llamadas = array_slice( $llamadas, 0, 25 );
 	</form>
 
 	<?php if ( $llaves ) : ?>
-		<table class="widefat striped swpk-tabla" style="max-width:860px">
+		<table class="widefat striped swpk-tabla">
 			<thead>
 				<tr>
 					<th>Nombre</th>
@@ -447,7 +439,7 @@ $llamadas = array_slice( $llamadas, 0, 25 );
 	$quien_ruta    = SWPK_Vista::opcion_pedida( 'perfil', $quienes_ruta );
 
 	SWPK_Vista::barra_de_filtros(
-		'panel-kinsta-api',
+		'panel-kinsta-ajustes',
 		[
 			'metodo' => [
 				'etiqueta' => 'Cómo',
@@ -569,13 +561,13 @@ $llamadas = array_slice( $llamadas, 0, 25 );
 		Cada llamada queda escrita, la que pasa y la que se rechaza. Hace falta porque una contraseña
 		de aplicación <strong>se salta la verificación en dos pasos</strong> —no pasa por el
 		formulario de entrada— así que lo único que queda de ella es esta fila. Las entradas de
-		personas están en <a href="<?php echo esc_url( admin_url( 'admin.php?page=panel-kinsta-accesos' ) ); ?>">Accesos</a>.
+		personas están en <a href="<?php echo esc_url( admin_url( 'admin.php?page=panel-kinsta-movimientos&seccion=accesos' ) ); ?>">Historial</a>.
 	</p>
 
 	<?php if ( ! $llamadas ) : ?>
 		<p class="swpk-gris">Nadie ha consultado la API todavía.</p>
 	<?php else : ?>
-		<table class="widefat striped swpk-tabla" style="max-width:860px">
+		<table class="widefat striped swpk-tabla">
 			<thead>
 				<tr>
 					<th style="width:150px">Cuándo</th>
@@ -608,12 +600,3 @@ $llamadas = array_slice( $llamadas, 0, 25 );
 	<?php SWPK_Vista::caja_cerrar(); ?>
 
 	<?php SWPK_Vista::rejilla_cerrar(); ?>
-
-	<?php
-	// El sello de frescura va en TODAS las pantallas, como en la maqueta.
-	// Estaba solo en cuatro, y es justo el dato que convierte una pantalla en
-	// evidencia: de cuándo es lo que se está mirando. Una pantalla sin él
-	// afirma sin fecha.
-	SWPK_Frescura::sello();
-	?>
-</div>

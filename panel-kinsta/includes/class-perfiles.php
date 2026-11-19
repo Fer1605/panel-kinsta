@@ -319,11 +319,22 @@ class SWPK_Perfiles {
 		return false;
 	}
 
-	/** Las asesoras a las que se les puede asignar un sitio. */
+	/**
+	 * Las asesoras a las que se les puede asignar un sitio.
+	 *
+	 * Solo la gente de nuestro Equipo. Antes entraban también los
+	 * `administrator` del WordPress donde vive el panel, y eso llenaba el
+	 * desplegable con cuentas que no son del equipo: en solucionweb.com, los
+	 * administradores del sitio de la empresa. Quien asigna un sitio tiene que
+	 * ver a sus compañeras, no la lista de usuarios de otro sitio.
+	 *
+	 * La llave de la API queda fuera a propósito: es una llave, no una persona,
+	 * y no se le puede asignar un cliente.
+	 */
 	public static function asesoras(): array {
 		return get_users(
 			[
-				'role__in' => [ self::VENTAS, self::DIRECCION, 'administrator' ],
+				'role__in' => [ self::DIRECCION, self::VENTAS, self::SOPORTE ],
 				'orderby'  => 'display_name',
 			]
 		);

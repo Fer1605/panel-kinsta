@@ -99,21 +99,17 @@ $url_estado = static fn( string $e ) => add_query_arg(
 );
 ?>
 
-<p class="swpk-intro">
-	Cada vez que le das a <strong>«Arreglarlo»</strong> en <em>Qué le falta a cada sitio</em>, el encargo
-	aparece aquí. <strong>Esta pantalla es la lista de lo que pediste y en qué va cada cosa</strong>, hasta
-	que el sitio confirma que lo hizo.
-</p>
-
-<div class="swpk-comoasi">
-	<p>
-		<strong>Un arreglo tarda entre unos minutos y unas horas.</strong> El plugin de cada sitio se
-		comunica con el panel cada cinco minutos y en ese momento recoge lo que haya pendiente; en un sitio
-		con poco tráfico eso puede tardar más. Por eso aquí se ve el estado y no un «listo» de inmediato.
-	</p>
-</div>
-
-<?php SWPK_Vista::caja_abrir( 'Lo que pedimos', '', '', true ); ?>
+<?php SWPK_Vista::caja_abrir(
+	'Lo que pedimos' . SWPK_Vista::ayuda(
+		'Cada vez que le das a «Arreglarlo» en «Qué le falta a cada sitio», el encargo aparece aquí y se '
+		. 'queda hasta que el sitio confirma que lo hizo. Tarda entre unos minutos y unas horas: el plugin '
+		. 'de cada sitio recoge lo pendiente cuando se comunica con el panel, y en un sitio con poco '
+		. 'tráfico eso puede tardar más. Por eso aquí se ve el estado y no un «listo» de inmediato.'
+	),
+	'',
+	'',
+	true
+); ?>
 
 <?php
 // Solo se dibujan los estados que tienen algo. Seis filtros en cero son seis
@@ -167,6 +163,7 @@ SWPK_Vista::barra_de_filtros(
 		?>
 	</p>
 <?php else : ?>
+	<?php SWPK_Vista::paginador( $pag_ord, $pags_ord, count( $ordenes ), 'arreglos pedidos', 'arreglo pedido' ); ?>
 	<table class="widefat striped">
 		<thead>
 			<tr>

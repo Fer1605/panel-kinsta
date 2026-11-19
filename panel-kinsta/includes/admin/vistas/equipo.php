@@ -76,7 +76,7 @@ $hay_filtro_equipo = ( '' !== $perfil_pedido || '' !== $busca_persona );
 	SWPK_Vista::caja_abrir(
 		'Quién entra al panel',
 		esc_html( SWPK_Vista::plural( count( $equipo ), 'con acceso', 'con acceso' ) ),
-		'swpk-c7',
+		'swpk-c12',
 		true
 	);
 
@@ -159,7 +159,7 @@ $hay_filtro_equipo = ( '' !== $perfil_pedido || '' !== $busca_persona );
 	<?php endif; ?>
 	<?php SWPK_Vista::caja_cerrar(); ?>
 
-	<?php SWPK_Vista::caja_abrir( 'Dar acceso a alguien', '', 'swpk-c5' ); ?>
+	<?php SWPK_Vista::caja_abrir( 'Dar acceso a alguien', '', 'swpk-c12' ); ?>
 	<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
 		<input type="hidden" name="action" value="swpk_crear_acceso">
 		<?php wp_nonce_field( 'swpk_crear_acceso' ); ?>
@@ -223,11 +223,4 @@ $hay_filtro_equipo = ( '' !== $perfil_pedido || '' !== $busca_persona );
 		<a href="<?php echo esc_url( admin_url( 'admin.php?page=panel-kinsta-sitios' ) ); ?>">Sitios</a>.
 	</p>
 
-	<?php
-	// El sello de frescura va en TODAS las pantallas, como en la maqueta.
-	// Estaba solo en cuatro, y es justo el dato que convierte una pantalla en
-	// evidencia: de cuándo es lo que se está mirando. Una pantalla sin él
-	// afirma sin fecha.
-	SWPK_Frescura::sello();
-	?>
 </div>

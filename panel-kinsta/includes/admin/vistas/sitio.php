@@ -26,7 +26,37 @@ $nivel     = SWPK_Riesgo::nivel_del_sitio( $sitio_id );
 $con_vuln = array_values( array_filter( $hallazgos, static fn( $h ) => 'actualizacion_pendiente' !== $h['motivo'] ) );
 $solo_act = array_values( array_filter( $hallazgos, static fn( $h ) => 'actualizacion_pendiente' === $h['motivo'] ) );
 
+// El filtro al que llevan los dos números de arriba. `$hallazgos` se recorta
+// solo para la tabla; los contadores siguen contando el total, porque si
+// cambiaran al pulsarlos dejarían de servir para saltar de uno a otro.
+$solo = isset( $_GET['solo'] ) ? sanitize_key( (string) $_GET['solo'] ) : '';
+
+if ( 'vuln' === $solo ) {
+	$hallazgos = $con_vuln;
+} elseif ( 'act' === $solo ) {
+	$hallazgos = $solo_act;
+}
+
 $plano = SWPK_Textos::para_asesora( $sitio, $hallazgos );
+
+// ── Las pestañas de la ficha ────────────────────────────────────────────────
+//
+// La ficha era una sola página larga y el jefe se perdió en ella: «aquí lo que
+// yo hago es navegar todo donde mismo», «cero experiencia de usuario». Pidió
+// pestañas y hasta las nombró: «normas de seguridad, resumen del proyecto,
+// actualizaciones pendientes críticas, características del proyecto».
+//
+// Se entra por lo que hay que hacer, que es a lo que se viene.
+$seccion = isset( $_GET['seccion'] ) ? sanitize_key( (string) $_GET['seccion'] ) : 'pendiente';
+
+if ( ! in_array( $seccion, [ 'pendiente', 'normas', 'datos' ], true ) ) {
+	$seccion = 'pendiente';
+}
+
+$url_pestana = static fn( string $s ) => add_query_arg(
+	[ 'page' => 'panel-kinsta-sitio', 'sitio' => $sitio_id, 'seccion' => $s ] + SWPK_Vista::rastro(),
+	admin_url( 'admin.php' )
+);
 ?>
 <div class="wrap">
 	<?php SWPK_Vista::volver( $regreso['url'], $regreso['texto'] ); ?>
@@ -35,15 +65,53 @@ $plano = SWPK_Textos::para_asesora( $sitio, $hallazgos );
 	// La ficha de un sitio no sale en la maqueta —ahí no hay por dónde entrar
 	// a una— pero es a donde lleva cada nombre de cada tabla. Dejarla con la
 	// pinta vieja hacía que el panel cambiara de cara al primer clic.
+	// ── Que se note en qué pestaña estás ────────────────────────────────
+	//
+	// Las pestañas cambiaban el contenido y nada más: ni el título ni la
+	// bajada se movían. «Cambia el panel, pero no me doy cuenta porque no hay
+	// nada que me lo indique; debería cambiar el nombre de la página.» Así
+	// que el título dice el sitio Y la pestaña, y la bajada dice qué se está
+	// mirando.
+	$que_miro = match ( $seccion ) {
+		'normas' => 'Las normas de seguridad de este sitio: cuáles cumple, cuáles no y cuáles no se pueden medir.',
+		'datos'  => 'Los datos del sitio: versiones, quién lo atiende y a quién se le escribe.',
+		default  => 'Lo que este sitio tiene pendiente: fallas conocidas y actualizaciones.',
+	};
+
+	$cual_pestana = match ( $seccion ) {
+		'normas' => 'Normas de seguridad',
+		'datos'  => 'Datos del sitio',
+		default  => 'Lo que tiene pendiente',
+	};
+
 	SWPK_Vista::cabecera(
-		(string) $sitio->nombre_visible,
+		$sitio->nombre_visible . ' · ' . $cual_pestana,
 		sprintf(
-			'<a href="%s" target="_blank" rel="noopener" class="swpk-mono">%s</a>',
+			'%s<br><a href="%s" target="_blank" rel="noopener" class="swpk-mono">%s</a>',
+			esc_html( $que_miro ),
 			esc_url( 'https://' . ltrim( $sitio->dominio, 'htps:/' ) ),
 			esc_html( $sitio->dominio )
 		),
 		SWPK_Admin::grupo_badge( (string) $sitio->tag )
 		. ' ' . SWPK_Admin::nivel_badge( $nivel )
+		. ' ' . SWPK_Vista::pastillas( [
+			[
+				'texto'  => 'Lo que tiene pendiente',
+				'n'      => $hallazgos ? count( $hallazgos ) : '',
+				'url'    => $url_pestana( 'pendiente' ),
+				'activa' => 'pendiente' === $seccion,
+			],
+			[
+				'texto'  => 'Normas de seguridad',
+				'url'    => $url_pestana( 'normas' ),
+				'activa' => 'normas' === $seccion,
+			],
+			[
+				'texto'  => 'Datos del sitio',
+				'url'    => $url_pestana( 'datos' ),
+				'activa' => 'datos' === $seccion,
+			],
+		] )
 	);
 	?>
 
@@ -70,15 +138,30 @@ $plano = SWPK_Textos::para_asesora( $sitio, $hallazgos );
 		</p>
 	<?php endif; ?>
 
+	<?php
+	// ── Los dos primeros números llevan a su lista ──────────────────────────
+	//
+	// «Quiero ver las 19 críticas, quiero ver las 14 pendientes, no puedo,
+	// ¿dónde puedo ver eso?» No podía: eran dos cifras pintadas. Ahora cada
+	// una es un enlace a la pestaña de pendientes de este sitio, con su
+	// filtro puesto. Un número que no lleva a los renglones que lo forman es
+	// un número que hay que creer.
+	?>
 	<div class="swpk-tarjetas">
-		<div class="swpk-tarjeta">
+		<a class="swpk-tarjeta swpk-tarjeta-enlace" href="<?php echo esc_url( add_query_arg( 'solo', 'vuln', $url_pestana( 'pendiente' ) ) ); ?>">
 			<div class="swpk-n" style="color:<?php echo count( $con_vuln ) ? '#b32d2e' : '#008a20'; ?>"><?php echo count( $con_vuln ); ?></div>
 			<div class="swpk-r">Con vulnerabilidad conocida</div>
-		</div>
-		<div class="swpk-tarjeta">
+		</a>
+		<a class="swpk-tarjeta swpk-tarjeta-enlace" href="<?php echo esc_url( add_query_arg( 'solo', 'act', $url_pestana( 'pendiente' ) ) ); ?>">
 			<div class="swpk-n"><?php echo count( $solo_act ); ?></div>
 			<div class="swpk-r">Solo actualización pendiente</div>
-		</div>
+		</a>
+		<?php
+		// En «Datos del sitio» estas tres no se pintan: la tabla de esa
+		// pestaña las dice enteras, y el mismo dato dos veces en la misma
+		// pantalla es ruido, no refuerzo.
+		if ( 'datos' !== $seccion ) :
+		?>
 		<div class="swpk-tarjeta">
 			<div class="swpk-n"><?php echo esc_html( $sitio->version_wp ?: '—' ); ?></div>
 			<div class="swpk-r">WordPress</div>
@@ -87,7 +170,8 @@ $plano = SWPK_Textos::para_asesora( $sitio, $hallazgos );
 			<div class="swpk-n"><?php echo esc_html( $sitio->version_php ?: '—' ); ?></div>
 			<div class="swpk-r">PHP</div>
 		</div>
-		<?php if ( SWPK_Etiquetas::es_nuestro( $sitio->tag ) ) : ?>
+		<?php endif; ?>
+		<?php if ( 'datos' !== $seccion && SWPK_Etiquetas::es_nuestro( $sitio->tag ) ) : ?>
 			<div class="swpk-tarjeta">
 				<div class="swpk-n" style="font-size:19px;padding-top:6px;color:<?php echo $sitio->tiene_2fa ? '#008a20' : '#d63638'; ?>">
 					<?php echo $sitio->tiene_2fa ? '✓ Activa' : 'Pendiente'; ?>
@@ -123,15 +207,30 @@ $plano = SWPK_Textos::para_asesora( $sitio, $hallazgos );
 		</div>
 	<?php endif; ?>
 
-	<?php SWPK_Frescura::sello( $sitio ); ?>
 
 	<?php SWPK_Vista::rejilla_abrir(); ?>
 
-	<?php if ( $hallazgos ) : ?>
-		<?php SWPK_Vista::caja_abrir( 'El mensaje para la asesora', 'listo para pegar', 'swpk-c12' ); ?>
-		<p style="color:#50575e;margin-top:0">
-			Escrito para que el cliente entienda qué se juega, no solo que hay que actualizar.
+	<?php if ( $hallazgos && 'pendiente' === $seccion ) : ?>
+		<?php
+		// En una ventana, no en la pantalla. «Mensaje para la asesora no me
+		// interesa, todo lo que tiene pendiente eso me interesa más; eso
+		// debería levantar en un modal, para que entre menos información
+		// tenga yo visualmente, mejor.» Es un texto largo que se usa una vez
+		// cada mucho y que, puesto aquí, empujaba fuera de la vista justo lo
+		// que sí se viene a mirar.
+		?>
+		<p class="swpk-mensaje-abrir">
+			<button type="button" class="button" onclick="document.getElementById('swpk-mensaje-dlg').showModal()">
+				Ver el mensaje para la asesora
+			</button>
+			<span class="swpk-mudo">escrito para que el cliente entienda qué se juega, listo para pegar</span>
 		</p>
+
+		<dialog id="swpk-mensaje-dlg" class="swpk-dialogo swpk-dialogo-texto">
+			<div class="swpk-dialogo-cab">
+				<strong>El mensaje para la asesora</strong>
+				<form method="dialog"><button class="button">Cerrar</button></form>
+			</div>
 
 		<div class="swpk-mensaje">
 			<?php
@@ -156,12 +255,19 @@ $plano = SWPK_Textos::para_asesora( $sitio, $hallazgos );
 			</p>
 		</div>
 
+		</dialog>
 		<?php SWPK_Vista::caja_cerrar(); ?>
 
 		<?php
 		SWPK_Vista::caja_abrir(
 			'Todo lo que tiene pendiente',
-			esc_html( SWPK_Vista::plural( count( $hallazgos ), 'módulo', 'módulos' ) ),
+			'' !== $solo
+				? sprintf(
+					'%s · <a href="%s">ver todo</a>',
+					esc_html( SWPK_Vista::plural( count( $hallazgos ), 'módulo', 'módulos' ) ),
+					esc_url( $url_pestana( 'pendiente' ) )
+				)
+				: esc_html( SWPK_Vista::plural( count( $hallazgos ), 'módulo', 'módulos' ) ),
 			'swpk-c12',
 			true
 		);
@@ -222,7 +328,7 @@ $plano = SWPK_Textos::para_asesora( $sitio, $hallazgos );
 			</tbody>
 		</table>
 		<?php SWPK_Vista::caja_cerrar(); ?>
-	<?php elseif ( SWPK_Riesgo::SIN_DATOS === $nivel ) : ?>
+	<?php elseif ( 'pendiente' === $seccion && SWPK_Riesgo::SIN_DATOS === $nivel ) : ?>
 		<?php SWPK_Vista::caja_abrir( 'Todo lo que tiene pendiente', 'sin datos', 'swpk-c12' ); ?>
 		<p style="margin:0">
 			<strong>Aquí no hay nada que mostrar, y eso no es una buena noticia.</strong>
@@ -230,7 +336,7 @@ $plano = SWPK_Textos::para_asesora( $sitio, $hallazgos );
 			hay nada contra qué comparar.
 		</p>
 		<?php SWPK_Vista::caja_cerrar(); ?>
-	<?php else : ?>
+	<?php elseif ( 'pendiente' === $seccion ) : ?>
 		<?php SWPK_Vista::caja_abrir( 'Todo lo que tiene pendiente', 'nada', 'swpk-c12' ); ?>
 		<p style="margin:0;color:var(--swpk-bien);font-weight:600">
 			Este sitio no tiene nada pendiente: todos sus módulos están al día y ninguno tiene una
@@ -249,7 +355,7 @@ $plano = SWPK_Textos::para_asesora( $sitio, $hallazgos );
 	$cumple_sitio   = SWPK_Normas::del_sitio( $sitio_id );
 	?>
 
-	<?php if ( $normas_activas ) : ?>
+	<?php if ( $normas_activas && 'normas' === $seccion ) : ?>
 		<?php SWPK_Vista::caja_abrir( 'Las normas de seguridad', '', 'swpk-c12', true ); ?>
 
 		<?php
@@ -300,12 +406,43 @@ $plano = SWPK_Textos::para_asesora( $sitio, $hallazgos );
 		$hay_tema    = '' !== $tema_pedido && isset( $por_tema[ $tema_pedido ] );
 		$para_ver    = $hay_tema ? $por_tema[ $tema_pedido ] : $aplicables;
 
+		// ── Primero lo que falta ────────────────────────────────────────
+		//
+		// Venían en el orden del catálogo, así que al entrar se veía una
+		// norma cumplida, una sin medir y una que falla, mezcladas. Se entra
+		// aquí a ver qué hay que arreglar: eso va arriba. Después lo que no se
+		// pudo medir, y al final lo que ya está bien.
+		$peso_estado = static function ( $n ) use ( $cumple_sitio ): int {
+			$fila = $cumple_sitio[ (string) $n->clave ] ?? null;
+			$e    = $fila ? (string) $fila->estado : SWPK_Normas::SIN_DATO;
+
+			if ( SWPK_Normas::FALLA === $e ) {
+				return 0;
+			}
+			if ( SWPK_Normas::SIN_DATO === $e ) {
+				return 1;
+			}
+			if ( SWPK_Normas::NO_APLICA === $e ) {
+				return 3;
+			}
+			return 2;
+		};
+
+		usort(
+			$para_ver,
+			static fn( $a, $b ) => [ $peso_estado( $a ), (string) $a->nombre ]
+				<=> [ $peso_estado( $b ), (string) $b->nombre ]
+		);
+
+		// El tema conserva la pestaña y de dónde se venía; si no, elegir un
+		// tema devolvía a la pestaña de pendientes y se perdía el regreso.
 		$url_tema = static fn( string $g ) => add_query_arg(
 			array_filter( [
-				'page'  => 'panel-kinsta-sitio',
-				'sitio' => (string) $sitio->sitio_id,
-				'tema'  => $g,
-			] ),
+				'page'    => 'panel-kinsta-sitio',
+				'sitio'   => (string) $sitio->sitio_id,
+				'seccion' => 'normas',
+				'tema'    => $g,
+			] ) + SWPK_Vista::rastro(),
 			admin_url( 'admin.php' )
 		);
 
@@ -329,7 +466,7 @@ $plano = SWPK_Textos::para_asesora( $sitio, $hallazgos );
 		?>
 		<div class="swpk-pastillas" style="margin:0 0 12px"><?php echo SWPK_Vista::pastillas( $pastillas_tema ); // phpcs:ignore WordPress.Security.EscapeOutput ?></div>
 
-		<table class="widefat striped" style="max-width:1000px">
+		<table class="widefat striped swpk-tabla">
 			<thead>
 				<tr>
 					<th style="width:34%">Norma</th>
@@ -406,6 +543,75 @@ $plano = SWPK_Textos::para_asesora( $sitio, $hallazgos );
 		<?php SWPK_Vista::paginador( $pag_nor, $pags_nor, count( $para_ver ), 'normas', 'norma' ); ?>
 		<?php SWPK_Vista::caja_cerrar(); ?>
 	<?php endif; ?>
+
+	<?php
+	// ── Datos del sitio ─────────────────────────────────────────────────────
+	//
+	// «Características del proyecto», en sus palabras. Lo que antes estaba
+	// repartido entre la cabecera, los avisos y el sello, junto y en una
+	// tabla: qué versión tiene, de cuándo es el dato, quién lo atiende y a
+	// quién se le escribe.
+	//
+	// El contacto del cliente está aquí porque él lo echó en falta —«¿no hay
+	// un correo del cliente?»— y porque es el dato que hace falta para mandar
+	// el reporte. Se pone al asignar el sitio, en la pantalla de Sitios.
+	if ( 'datos' === $seccion ) :
+		$asesora  = (int) $sitio->asesora_id ? get_userdata( (int) $sitio->asesora_id ) : null;
+		$contacto = trim( (string) $sitio->contacto_cliente );
+
+		$datos = [
+			'Dirección'            => sprintf(
+				'<a href="%s" target="_blank" rel="noopener" class="swpk-mono">%s</a>',
+				esc_url( 'https://' . ltrim( (string) $sitio->dominio, 'htps:/' ) ),
+				esc_html( (string) $sitio->dominio )
+			),
+			'Grupo'                => SWPK_Admin::grupo_badge( (string) $sitio->tag ),
+			'WordPress'            => esc_html( $sitio->version_wp ?: '—' ),
+			'PHP'                  => esc_html( $sitio->version_php ?: '—' ),
+			'Última revisión'      => $sitio->inventario_en
+				? esc_html( SWPK_Frescura::fmt( 'j \d\e F \d\e Y, H:i', (string) $sitio->inventario_en ) )
+					. wp_kses_post( SWPK_Vista::ayuda(
+						'Cuándo ' . SWPK_Admin::proveedor() . ' revisó por última vez qué tiene instalado este sitio. No lo decide el panel: lo hace el hosting a su ritmo.'
+					) )
+				: '<span class="swpk-gris">nunca</span>',
+			'Quién lo atiende'     => $asesora
+				? esc_html( $asesora->display_name )
+				: '<span class="swpk-gris">sin asignar</span>',
+			'Contacto del cliente' => '' !== $contacto
+				? esc_html( $contacto )
+				: '<span class="swpk-gris">sin contacto</span>'
+					. wp_kses_post( SWPK_Vista::ayuda(
+						'A quién se le manda el reporte de lo que se hizo. Se pone al asignar el sitio, en la pantalla de Sitios. A las asesoras y a soporte se les avisa de lo que falta; al cliente se le cuenta lo que ya se hizo.'
+					) ),
+			'Verificación en dos pasos' => SWPK_Etiquetas::es_nuestro( $sitio->tag )
+				? ( $sitio->tiene_2fa
+					? '<span style="color:var(--swpk-bien);font-weight:600">activa</span>'
+					: '<span style="color:var(--swpk-critico);font-weight:600">apagada</span>' )
+				: '<span class="swpk-gris">no se mide: el sitio es del cliente</span>',
+			'Agente instalado'     => (int) $sitio->cobertura_agente
+				? '<span style="color:var(--swpk-bien);font-weight:600">sí</span>'
+				: '<span class="swpk-gris">no</span>'
+					. wp_kses_post( SWPK_Vista::ayuda(
+						'Sin el agente dentro del sitio, el panel no puede ver quién tiene acceso de administrador ni medir las normas que solo se saben desde dentro.'
+					) ),
+		];
+
+		SWPK_Vista::caja_abrir( 'Datos del sitio', '', 'swpk-c12', true );
+		?>
+		<table class="widefat striped swpk-tabla">
+			<tbody>
+			<?php foreach ( $datos as $que => $valor ) : ?>
+				<tr>
+					<th scope="row" style="width:220px"><?php echo esc_html( $que ); ?></th>
+					<td><?php echo wp_kses_post( $valor ); ?></td>
+				</tr>
+			<?php endforeach; ?>
+			</tbody>
+		</table>
+		<?php
+		SWPK_Vista::caja_cerrar();
+	endif;
+	?>
 
 	<?php SWPK_Vista::rejilla_cerrar(); ?>
 

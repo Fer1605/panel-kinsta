@@ -58,7 +58,7 @@ class SWPK_Normas {
 	public const OPCION_SEMBRADO = 'swpk_normas_sembradas';
 
 	/** Cada vez que cambie el catálogo de fábrica, este número sube. */
-	public const VERSION_CATALOGO = 10;
+	public const VERSION_CATALOGO = 11;
 
 	/**
 	 * Los comprobadores que contesta la sonda del panel, no el agente.
@@ -85,7 +85,7 @@ class SWPK_Normas {
 		'ruta_listado',
 		'ruta_readme',
 
-		// Cómo viaja y cómo se enmarca.
+		// Lo que el servidor le dice al navegador.
 		'certificado',
 		'cors',
 		'hsts',
@@ -186,7 +186,7 @@ class SWPK_Normas {
 		return [
 			'Cuentas y accesos',
 			'Archivos a la vista',
-			'Cómo viaja el sitio',
+			'Lo que el navegador recibe',
 			'Versiones',
 			'El hosting',
 			'Formularios y subidas',
@@ -450,7 +450,7 @@ class SWPK_Normas {
 				'grupo'       => 'Archivos a la vista',
 			],
 
-			// ── Lo que se ve desde fuera: cómo viaja y cómo se enmarca ────
+			// ── Lo que se ve desde fuera: lo que el navegador recibe ──────
 			'certificado' => [
 				'nombre'      => 'El certificado es válido y no está por vencer',
 				'problema'    => 'El certificado tiene un problema',
@@ -461,7 +461,7 @@ class SWPK_Normas {
 				'severidad'   => 'alta',
 				'arreglable'  => 0,
 				'orden'       => 200,
-				'grupo'       => 'Cómo viaja el sitio',
+				'grupo'       => 'Lo que el navegador recibe',
 			],
 			'cors_abierto' => [
 				'nombre'      => 'El sitio no se abre a cualquier origen con credenciales',
@@ -474,7 +474,7 @@ class SWPK_Normas {
 				'severidad'   => 'alta',
 				'arreglable'  => 0,
 				'orden'       => 205,
-				'grupo'       => 'Cómo viaja el sitio',
+				'grupo'       => 'Lo que el navegador recibe',
 			],
 			'hsts' => [
 				'nombre'      => 'El sitio exige HTTPS en las siguientes visitas',
@@ -486,7 +486,7 @@ class SWPK_Normas {
 				'severidad'   => 'alta',
 				'arreglable'  => 0,
 				'orden'       => 210,
-				'grupo'       => 'Cómo viaja el sitio',
+				'grupo'       => 'Lo que el navegador recibe',
 			],
 			'bloqueo_de_marco' => [
 				'nombre'      => 'El sitio no se puede meter dentro de otra página',
@@ -498,7 +498,7 @@ class SWPK_Normas {
 				'severidad'   => 'alta',
 				'arreglable'  => 0,
 				'orden'       => 215,
-				'grupo'       => 'Cómo viaja el sitio',
+				'grupo'       => 'Lo que el navegador recibe',
 			],
 			'contenido_mixto' => [
 				'nombre'      => 'La portada no carga recursos sin cifrar',
@@ -510,7 +510,7 @@ class SWPK_Normas {
 				'severidad'   => 'media',
 				'arreglable'  => 0,
 				'orden'       => 220,
-				'grupo'       => 'Cómo viaja el sitio',
+				'grupo'       => 'Lo que el navegador recibe',
 			],
 			'dominio_canonico' => [
 				'nombre'      => 'El sitio responde por un solo nombre',
@@ -522,7 +522,7 @@ class SWPK_Normas {
 				'severidad'   => 'media',
 				'arreglable'  => 0,
 				'orden'       => 225,
-				'grupo'       => 'Cómo viaja el sitio',
+				'grupo'       => 'Lo que el navegador recibe',
 			],
 			'csp' => [
 				'nombre'      => 'Hay una política de contenido con lo mínimo',
@@ -536,7 +536,7 @@ class SWPK_Normas {
 				'severidad'   => 'media',
 				'arreglable'  => 0,
 				'orden'       => 230,
-				'grupo'       => 'Cómo viaja el sitio',
+				'grupo'       => 'Lo que el navegador recibe',
 			],
 			'referrer_policy' => [
 				'nombre'      => 'El sitio no filtra a dónde venía la gente',
@@ -548,7 +548,7 @@ class SWPK_Normas {
 				'severidad'   => 'baja',
 				'arreglable'  => 0,
 				'orden'       => 235,
-				'grupo'       => 'Cómo viaja el sitio',
+				'grupo'       => 'Lo que el navegador recibe',
 			],
 			'permissions_policy' => [
 				'nombre'      => 'El sitio declara qué funciones del navegador no usa',
@@ -560,7 +560,7 @@ class SWPK_Normas {
 				'severidad'   => 'baja',
 				'arreglable'  => 0,
 				'orden'       => 240,
-				'grupo'       => 'Cómo viaja el sitio',
+				'grupo'       => 'Lo que el navegador recibe',
 			],
 			'xss_obsoleta' => [
 				'nombre'      => 'No se manda la cabecera X-XSS-Protection',
@@ -572,7 +572,7 @@ class SWPK_Normas {
 				'severidad'   => 'baja',
 				'arreglable'  => 0,
 				'orden'       => 245,
-				'grupo'       => 'Cómo viaja el sitio',
+				'grupo'       => 'Lo que el navegador recibe',
 			],
 			// ── Lo que ya está en el inventario, sin pedir nada ───────────
 			//

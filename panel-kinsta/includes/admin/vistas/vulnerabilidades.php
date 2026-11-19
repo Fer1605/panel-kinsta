@@ -39,7 +39,7 @@ $por_tag = SWPK_Vista::conteo_por_tag( $todos );
  * y la corrida diaria la olvida al terminar para que nadie vea datos viejos
  * sin que se le avise.
  */
-$clave_cache = 'swpk_hallazgos_' . get_current_user_id();
+$clave_cache = 'swpk_hallazgos2_' . get_current_user_id();
 $todas       = get_transient( $clave_cache );
 
 if ( ! is_array( $todas ) ) {
@@ -49,21 +49,40 @@ if ( ! is_array( $todas ) ) {
 		foreach ( SWPK_Riesgo::hallazgos( (string) $s->sitio_id ) as $h ) {
 			$v = $h['vulnerabilidades'][0] ?? null;
 
-			$todas[] = [
-				'sitio_id'   => (string) $s->sitio_id,
-				'nombre'     => (string) $s->nombre_visible,
-				'dominio'    => (string) $s->dominio,
-				'tag'        => (string) $s->tag,
-				'revisado'   => (string) ( $s->inventario_en ?? '' ),
-				'nivel'      => (string) $h['nivel'],
-				'motivo'     => (string) $h['motivo'],
-				'modulo'     => SWPK_Textos::limpiar_titulo( (string) $h['titulo'] ),
-				'version'    => (string) $h['version'],
-				'disponible' => (string) $h['version_disponible'],
-				'sin_cuenta' => $v && SWPK_Textos::quien_puede(
+			// ── Lo que faltaba: QUÉ es la falla ─────────────────────────
+			//
+			// Esta pantalla decía cuántas hay y de qué módulo, y nunca qué
+			// hace la falla. «No estoy entendiendo qué vulnerabilidad es.»
+			// Tenía razón, y lo peor es que el dato ya estaba guardado: el
+			// feed de Wordfence trae el título, la descripción y el CVE, y
+			// SWPK_Textos ya sabe traducirlos a una frase que se entiende.
+			// Solo había que enseñarlo.
+			$quien = $v
+				? SWPK_Textos::quien_puede(
 					(string) ( $v->cvss_vector ?? '' ),
 					(string) ( $v->descripcion ?? '' )
-				)['sin_cuenta'],
+				)
+				: [ 'sin_cuenta' => false, 'frase' => '' ];
+
+			$todas[] = [
+				'sitio_id'     => (string) $s->sitio_id,
+				'nombre'       => (string) $s->nombre_visible,
+				'dominio'      => (string) $s->dominio,
+				'tag'          => (string) $s->tag,
+				'revisado'     => (string) ( $s->inventario_en ?? '' ),
+				'nivel'        => (string) $h['nivel'],
+				'motivo'       => (string) $h['motivo'],
+				'modulo'       => SWPK_Textos::limpiar_titulo( (string) $h['titulo'] ),
+				'version'      => (string) $h['version'],
+				'disponible'   => (string) $h['version_disponible'],
+				'sin_cuenta'   => (bool) $quien['sin_cuenta'],
+				'quien'        => (string) ( $quien['frase'] ?? '' ),
+				'que_permite'  => $v
+					? SWPK_Textos::explicar( (string) ( $v->titulo ?? '' ), (string) ( $v->descripcion ?? '' ) )
+					: '',
+				'titulo_vuln'  => $v ? (string) ( $v->titulo ?? '' ) : '',
+				'cve'          => $v ? (string) ( $v->cve ?? '' ) : '',
+				'cuantas'      => count( $h['vulnerabilidades'] ),
 			];
 		}
 	}
@@ -163,6 +182,27 @@ $nombres = SWPK_Riesgo::nombres();
 	);
 	?>
 	<?php SWPK_Admin::mostrar_mensaje(); ?>
+
+	<?php
+	// La otra mitad de la aclaración que pidió al no distinguir esta pantalla
+	// de Seguridad. La burbuja es la misma en las dos, a propósito: es la misma
+	// explicación, y quien la lea en cualquiera de las dos ya no vuelve a
+	// preguntarlo.
+	?>
+	<p class="swpk-comoasi-linea">
+		Aquí están <strong>las fallas conocidas</strong> de los plugins y temas instalados, y lo que
+		está pendiente de actualizar. Lo que todo sitio debería cumplir, tenga lo que tenga
+		instalado, está en
+		<a href="<?php echo esc_url( admin_url( 'admin.php?page=panel-kinsta-seguridad' ) ); ?>">Seguridad</a>.
+		<?php echo wp_kses_post( SWPK_Vista::ayuda(
+			'No son lo mismo y no se arreglan igual. Una norma la incumple el sitio por cómo está '
+			. 'configurado —no exige HTTPS, publica sus nombres de usuario— y se arregla cambiando '
+			. 'esa configuración. Una vulnerabilidad la trae un plugin o un tema en una versión con '
+			. 'una falla ya descubierta, y se arregla actualizándolo. Un sitio puede cumplir las '
+			. 'normas y tener diez plugins con falla, y al revés.'
+		) ); ?>
+	</p>
+
 	<?php // Sin la parte de la lista: esta pantalla la dice abajo, con más detalle.
 	SWPK_Frescura::aviso( false ); ?>
 	<?php
@@ -234,39 +274,79 @@ $nombres = SWPK_Riesgo::nombres();
 			<thead>
 				<tr>
 					<th style="width:230px">Sitio</th>
-					<th>Módulo</th>
-					<th style="width:150px">Gravedad</th>
-					<th style="width:130px">Revisado</th>
+					<th>Qué pasa, y qué hay que hacer</th>
+					<th style="width:120px">Gravedad</th>
+					<th style="width:110px">Revisado</th>
 				</tr>
 			</thead>
 			<tbody>
 			<?php foreach ( $en_pantalla as $f ) : ?>
+				<?php
+				// ── Qué dice cada fila, y en qué orden ──────────────────────
+				//
+				// Primero el sitio. Luego qué pasa, en castellano. Luego qué
+				// hay que hacer. Antes empezaba por el módulo y nunca decía
+				// qué era la falla: «no estoy entendiendo qué vulnerabilidad
+				// es… de primero debería aparecer el sitio».
+				//
+				// La frase de quién puede aprovecharla sale de SWPK_Textos,
+				// que la deduce del vector del CVE. Decía «se puede aprovechar
+				// sin tener cuenta en el sitio», que no se entiende; ahora
+				// dice quién puede usarla y desde dónde.
+				$hay_version = '' !== $f['disponible'] && $f['disponible'] !== $f['version'];
+
+				$que_pasa = match ( $f['motivo'] ) {
+					'actualizacion_pendiente' => sprintf( '%s está desactualizado', $f['modulo'] ),
+					'vulnerable_sin_detalle'  => sprintf( '%s tiene una versión marcada como vulnerable', $f['modulo'] ),
+					default                   => 1 < (int) $f['cuantas']
+						? sprintf( '%s tiene %d fallas conocidas', $f['modulo'], (int) $f['cuantas'] )
+						: sprintf( '%s tiene una falla conocida', $f['modulo'] ),
+				};
+
+				$que_hacer = $hay_version
+					? sprintf( 'Hay que actualizarlo a la %s. Tiene la %s.', $f['disponible'], $f['version'] )
+					: sprintf( 'No hay versión nueva publicada. Tiene la %s.', $f['version'] );
+
+				// Lo que va en la burbujita: el nombre técnico con el que
+				// Wordfence la publicó, para poder buscarla, y su CVE.
+				$detalle = '';
+				if ( '' !== (string) $f['titulo_vuln'] ) {
+					$detalle = 'Wordfence la publicó como: ' . $f['titulo_vuln'] . '.';
+				}
+				if ( '' !== (string) $f['cve'] ) {
+					$detalle .= ( '' !== $detalle ? ' ' : '' ) . 'Identificador ' . $f['cve'] . '.';
+				}
+				if ( 'vulnerable_sin_detalle' === $f['motivo'] ) {
+					$detalle = SWPK_Admin::proveedor() . ' marca esta versión como vulnerable, pero el feed de Wordfence todavía no publicó el detalle de qué falla es.';
+				}
+				if ( 'actualizacion_pendiente' === $f['motivo'] ) {
+					$detalle = 'No hay ninguna vulnerabilidad conocida en la versión instalada. Es una actualización pendiente: se pone al día para no acumular, no porque urja hoy.';
+				}
+				?>
 				<tr>
 					<td>
 						<a href="<?php echo esc_url( SWPK_Vista::url_del_sitio( $f['sitio_id'], 'panel-kinsta-vulnerabilidades' ) ); ?>">
-							<?php echo esc_html( $f['nombre'] ); ?>
+							<strong><?php echo esc_html( $f['nombre'] ); ?></strong>
 						</a>
 						<br><?php echo SWPK_Admin::grupo_badge( $f['tag'] ); ?>
 					</td>
 					<td>
-						<strong><?php echo esc_html( $f['modulo'] ); ?></strong>
-						<br>
-						<span class="swpk-gris">
-							<?php
-							if ( '' !== $f['disponible'] && $f['disponible'] !== $f['version'] ) {
-								echo esc_html( sprintf( 'tiene la %s, hay la %s', $f['version'], $f['disponible'] ) );
-							} else {
-								echo esc_html( sprintf( 'versión %s', $f['version'] ) );
-							}
-							?>
-						</span>
-						<?php if ( $f['sin_cuenta'] ) : ?>
-							<br><span class="swpk-rojo">se puede aprovechar sin tener cuenta en el sitio</span>
-						<?php elseif ( 'vulnerable_sin_detalle' === $f['motivo'] ) : ?>
-							<br><span class="swpk-gris">
-								<?php echo esc_html( SWPK_Admin::proveedor() ); ?> la marca vulnerable, sin detalle publicado
-							</span>
+						<strong><?php echo esc_html( $que_pasa ); ?></strong>
+						<?php echo wp_kses_post( SWPK_Vista::ayuda( $detalle ) ); ?>
+
+						<?php if ( '' !== (string) $f['que_permite'] ) : ?>
+							<br><span><?php echo esc_html( $f['que_permite'] ); ?></span>
 						<?php endif; ?>
+
+						<?php if ( $f['sin_cuenta'] ) : ?>
+							<br><span class="swpk-rojo">
+								Cualquiera desde internet puede usarla, sin necesidad de tener una cuenta en el sitio.
+							</span>
+						<?php elseif ( '' !== (string) $f['quien'] ) : ?>
+							<br><span class="swpk-gris"><?php echo esc_html( $f['quien'] ); ?></span>
+						<?php endif; ?>
+
+						<br><span class="swpk-gris"><?php echo esc_html( $que_hacer ); ?></span>
 					</td>
 					<td>
 						<?php echo wp_kses_post( SWPK_Admin::nivel_badge( (string) $f['nivel'] ) ); ?>
@@ -296,9 +376,7 @@ $nombres = SWPK_Riesgo::nombres();
 		<?php echo esc_html( $wf['frase'] ); ?>
 	</p>
 
-	<?php SWPK_Admin::tira_de_perfil(); ?>
 	<?php SWPK_Admin::aviso_demo(); ?>
-	<?php SWPK_Frescura::sello(); ?>
 
 	<p class="swpk-nota">
 		La gravedad no la inventa el panel: es la que publica Wordfence Intelligence para cada

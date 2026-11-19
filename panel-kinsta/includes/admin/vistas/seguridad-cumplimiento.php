@@ -37,8 +37,22 @@ $sitios  = SWPK_Perfiles::sitios_visibles();
 $tablero = SWPK_Normas::tablero( $sitios );
 $normas  = $tablero['normas'];
 
+/**
+ * A dónde lleva el nombre de un sitio desde esta pantalla.
+ *
+ * A su pestaña de NORMAS, no a la de módulos pendientes. Se entra aquí
+ * preguntando «¿qué le falta a este sitio en seguridad?» y se aterrizaba en la
+ * lista de plugins por actualizar, que es otra cosa: «¿qué pasa si yo quiero
+ * saber cuáles son todas las normas de seguridad de un sitio que le debo de
+ * mejorar? Yo aquí no las veo».
+ */
 $url_sitio = static fn( string $id ) => add_query_arg(
-	[ 'page' => 'panel-kinsta-sitio', 'sitio' => $id, 'de' => 'panel-kinsta-seguridad' ],
+	[
+		'page'    => 'panel-kinsta-sitio',
+		'sitio'   => $id,
+		'seccion' => 'normas',
+		'de'      => 'panel-kinsta-seguridad',
+	],
 	admin_url( 'admin.php' )
 );
 
@@ -116,10 +130,14 @@ $trozos_cumpl = [
 
 SWPK_Vista::rejilla_abrir();
 
+// La dona iba a cinco columnas y al lado, a siete, la lista de problemas. La
+// lista es larga y la dona mide lo que mide un círculo, así que debajo de ella
+// quedaba media pantalla en blanco: «ese espacio en blanco ahí no le gusta».
+// Ahora la dona es una tira baja a todo lo ancho y la lista va entera debajo.
 SWPK_Vista::caja_abrir(
-	'Cómo vamos',
+	'Estado de cumplimiento',
 	esc_html( SWPK_Vista::plural( count( $normas ), 'norma activa', 'normas activas' ) ),
-	'swpk-c5'
+	'swpk-c12'
 );
 
 SWPK_Vista::dona( $trozos_cumpl, (int) $tablero['total'], 'sitios' );
@@ -199,17 +217,38 @@ uksort( $sev_posibles, static fn( $a, $b ) => ( $orden_sev[ $a ] ?? 9 ) <=> ( $o
 $sev_pedida   = SWPK_Vista::opcion_pedida( 'sev', $sev_posibles );
 $norma_pedida = SWPK_Vista::opcion_pedida( 'norma', $normas_malas );
 
+// ── «Ya ni sé dónde arreglo yo las cosas» ───────────────────────────────────
+//
+// De las 73 normas, el panel solo puede arreglar cinco: son las que el agente
+// sabe cambiar desde dentro del sitio. Las demás salen con «Hay que hacerlo a
+// mano», y como las que fallan en más sitios son justo de esas, se puede
+// recorrer la pantalla entera sin tropezarse con un botón de «Arreglarlo».
+// Este filtro deja a la vista solo lo que sí se puede pedir desde aquí.
+$arreglables = [ 'si' => 'Solo lo que podemos arreglar', 'no' => 'Solo lo que va a mano' ];
+$puede_arreglar = static fn( $norma ): bool => '' !== SWPK_Ordenes::orden_de_la_norma( (string) $norma->clave )
+	&& 1 === (int) $norma->arreglable;
+
+$cuantas_arreglables = count( array_filter(
+	$con_fallas,
+	static fn( $r ) => $puede_arreglar( $r['norma'] )
+) );
+
+$arreglo_pedido = SWPK_Vista::opcion_pedida( 'arreglo', $arreglables );
+
 $con_fallas_todas = $con_fallas;
 
-if ( '' !== $sev_pedida || '' !== $norma_pedida ) {
+if ( '' !== $sev_pedida || '' !== $norma_pedida || '' !== $arreglo_pedido ) {
 	$con_fallas = array_values(
 		array_filter(
 			$con_fallas,
-			static function ( $r ) use ( $sev_pedida, $norma_pedida ) {
+			static function ( $r ) use ( $sev_pedida, $norma_pedida, $arreglo_pedido, $puede_arreglar ) {
 				if ( '' !== $sev_pedida && (string) $r['norma']->severidad !== $sev_pedida ) {
 					return false;
 				}
 				if ( '' !== $norma_pedida && (string) $r['norma']->clave !== $norma_pedida ) {
+					return false;
+				}
+				if ( '' !== $arreglo_pedido && $puede_arreglar( $r['norma'] ) !== ( 'si' === $arreglo_pedido ) ) {
 					return false;
 				}
 				return true;
@@ -237,11 +276,102 @@ $POR_BLOQUE = 5;
 );
 ?>
 
-<?php if ( $con_fallas_todas ) : ?>
-	<?php SWPK_Vista::caja_abrir( 'Lo que hay que arreglar', esc_html( sprintf( '%d de %d sitios se pueden revisar', count( $medibles ), (int) $tablero['total'] ) ), 'swpk-c7', false ); ?>
-	<p class="swpk-mudo" style="margin:-4px 0 10px">
-		Cada bloque es un problema encontrado. Debajo, los sitios que lo tienen.
-	</p>
+<?php
+// ── Tres vistas, no tres tablones uno debajo de otro ────────────────────────
+//
+// «Tengo que hacer demasiado scroll, hay demasiadas cosas aquí puestas,
+// entonces ponle pestañas.» Eran tres tablas largas seguidas: los problemas
+// agrupados por norma, los sitios uno por uno, y los huecos sin medir. Ahora
+// se elige cuál se mira. La dona de arriba se queda siempre, porque es el
+// resumen de las tres.
+// ── Lo que falta por revisar, de los sitios que SÍ se pueden revisar ────────
+//
+// Esto antes listaba las diez normas con «107 sitios» al lado, que era repetir
+// diez veces la misma noticia: que falta instalar el plugin. Ahora solo sale
+// lo que está sin revisar en un sitio que sí tiene plugin, que es un hueco de
+// verdad y no el mismo aviso otra vez. Se cuenta aquí arriba porque su número
+// va en la sub-pestaña.
+$huecos_reales = [];
+
+foreach ( $medibles as $f ) {
+	foreach ( $f['celdas'] as $clave => $celda ) {
+		if ( SWPK_Normas::SIN_DATO === $celda['estado'] ) {
+			$huecos_reales[ $clave ][] = $f['sitio'];
+		}
+	}
+}
+
+$normas_con_hueco = [];
+foreach ( $normas as $n ) {
+	if ( ! empty( $huecos_reales[ (string) $n->clave ] ) ) {
+		$normas_con_hueco[] = $n;
+	}
+}
+
+[ $huecos_pagina, $pag_hue, $pags_hue ] = SWPK_Vista::paginar( $normas_con_hueco, SWPK_Vista::pagina_pedida( 'ph' ), 10 );
+
+$VISTAS = [
+	'norma' => 'Por norma',
+	'sitio' => 'Por sitio',
+	'hueco' => 'Sin información',
+];
+
+$vista = isset( $_GET['vista'] ) ? sanitize_key( (string) $_GET['vista'] ) : 'norma';
+
+if ( ! isset( $VISTAS[ $vista ] ) ) {
+	$vista = 'norma';
+}
+
+// Cambiar de vista no arrastra la página ni los filtros de la otra: son
+// listas distintas, y la página seis de una no existe en la otra.
+$url_vista = static fn( string $v ) => add_query_arg(
+	[ 'page' => 'panel-kinsta-seguridad', 'seccion' => 'cumplimiento', 'vista' => $v ],
+	admin_url( 'admin.php' )
+);
+
+$cuenta_vista = [
+	'norma' => count( $con_fallas_todas ),
+	'sitio' => count( $medibles ),
+	'hueco' => count( $normas_con_hueco ),
+];
+?>
+
+<div class="swpk-subpestanas"><?php
+	echo SWPK_Vista::pastillas( array_map(
+		static fn( $v, $etq ) => [
+			'texto'  => $etq,
+			'n'      => $cuenta_vista[ $v ] > 0 ? $cuenta_vista[ $v ] : '',
+			'url'    => $url_vista( $v ),
+			'activa' => $v === $vista,
+		],
+		array_keys( $VISTAS ),
+		array_values( $VISTAS )
+	) ); // phpcs:ignore WordPress.Security.EscapeOutput
+?></div>
+
+<?php if ( 'norma' === $vista && $con_fallas_todas ) : ?>
+	<?php
+	// El aviso de qué hace «Arreglarlo» va en la burbuja del título y no en un
+	// párrafo: es una advertencia que hay que poder leer, no un texto que haya
+	// que leer cada vez que se entra.
+	SWPK_Vista::caja_abrir(
+		'Lo que hay que arreglar' . SWPK_Vista::ayuda(
+			'«Arreglarlo» cambia la configuración en el sitio de verdad. Lo ejecuta el agente que está '
+			. 'instalado en ese sitio: apaga el editor de código, cierra XML-RPC, enciende la verificación '
+			. 'en dos pasos. Queda anotado quién lo pidió y cuándo, y se sigue en «Los arreglos que '
+			. 'pedimos». No pasa en el mismo segundo: tarda entre unos minutos y unas horas, según el '
+			. 'tráfico del sitio. Lo que el agente no sabe hacer sale marcado como «Hay que hacerlo a '
+			. 'mano», y ahí el panel solo avisa.'
+		),
+		esc_html( sprintf(
+			'%d de %d se pueden arreglar desde aquí',
+			$cuantas_arreglables,
+			count( $con_fallas_todas )
+		) ),
+		'swpk-c12',
+		false
+	);
+	?>
 
 	<?php
 	SWPK_Vista::barra_de_filtros(
@@ -257,13 +387,19 @@ $POR_BLOQUE = 5;
 				'etiqueta' => 'Qué norma',
 				'opciones' => $normas_malas,
 				'actual'   => $norma_pedida,
-				'todas'    => 'Quién la revisa',
+				'todas'    => 'Cualquier norma',
+			],
+			'arreglo' => [
+				'etiqueta' => 'Se puede arreglar',
+				'opciones' => $arreglables,
+				'actual'   => $arreglo_pedido,
+				'todas'    => 'Da igual',
 			],
 		],
 		// Los dos filtros de esta pantalla son dos formularios distintos, así
 		// que cada uno tiene que llevarse puesto lo del otro. Si no, filtrar
 		// por gravedad borraba el sitio que se estaba buscando abajo.
-		[ 'seccion' => 'cumplimiento', 'q' => SWPK_Vista::busqueda_pedida() ]
+		[ 'seccion' => 'cumplimiento', 'vista' => $vista, 'q' => SWPK_Vista::busqueda_pedida() ]
 	);
 	?>
 
@@ -279,20 +415,7 @@ $POR_BLOQUE = 5;
 	// se pulsa a ciegas — y esto cambia configuración en el sitio de un
 	// cliente, que es justo donde nadie debería pulsar a ciegas.
 	?>
-	<div class="swpk-comoasi">
-		<p>
-			<strong>¿Qué hace el botón «Arreglarlo»?</strong>
-			Cambia la configuración en el sitio, de verdad, sin que nadie tenga que entrar a hacerlo. El plugin
-			que está instalado en ese sitio es el que ejecuta el cambio: apaga el editor de código, cierra
-			XML-RPC, enciende la verificación en dos pasos. Queda anotado quién lo pidió y cuándo, y se puede
-			seguir en <strong>Los arreglos que pedimos</strong>.
-		</p>
-		<p>
-			No pasa en el mismo segundo: tarda entre unos minutos y unas horas, según el tráfico del sitio.
-			Y lo que el plugin no sabe hacer sale marcado como <strong>«Hay que hacerlo a mano»</strong> —
-			ahí el panel solo avisa, el cambio lo hace una persona entrando al sitio.
-		</p>
-	</div>
+	
 
 	<?php foreach ( $con_fallas_pagina as $r ) : ?>
 		<?php
@@ -390,47 +513,24 @@ $POR_BLOQUE = 5;
 	<?php endforeach; ?>
 	<?php SWPK_Vista::paginador( $pag_fallas, $pags_fallas, count( $con_fallas ), 'problemas', 'problema', 'pf' ); ?>
 	<?php SWPK_Vista::caja_cerrar(); ?>
+<?php elseif ( 'norma' === $vista ) : ?>
+	<div class="notice notice-success inline"><p>Ningún sitio incumple una norma de seguridad.</p></div>
 <?php endif; ?>
 
-<?php
-// ── Lo que falta por revisar, de los sitios que SÍ se pueden revisar ─────────
-//
-// Esto antes listaba las diez normas con «107 sitios» al lado, que era repetir
-// diez veces la misma noticia: que falta instalar el plugin. Ahora solo sale
-// lo que está sin revisar en un sitio que sí tiene plugin, que es un hueco de
-// verdad y no el mismo aviso otra vez.
-$huecos_reales = [];
+<?php if ( 'hueco' === $vista && $huecos_reales ) : ?>
+	<?php SWPK_Vista::caja_abrir(
+		'Sin información' . SWPK_Vista::ayuda(
+			'No son problemas: es lo que el panel todavía no sabe de sitios que sí puede revisar. Un '
+			. 'sitio sin revisar puede estar perfecto o puede estar mal, y decir cualquiera de las dos '
+			. 'cosas sería inventar.'
+		),
+		esc_html( SWPK_Vista::plural( count( $normas_con_hueco ), 'norma', 'normas' ) ),
+		'swpk-c12',
+		true
+	); ?>
 
-foreach ( $medibles as $f ) {
-	foreach ( $f['celdas'] as $clave => $celda ) {
-		if ( SWPK_Normas::SIN_DATO === $celda['estado'] ) {
-			$huecos_reales[ $clave ][] = $f['sitio'];
-		}
-	}
-}
-?>
-
-<?php
-// Una fila por norma con huecos: con 73 normas eso era otra pantalla sin
-// fondo. Se pagina igual que todo lo demás.
-$normas_con_hueco = [];
-foreach ( $normas as $n ) {
-	if ( ! empty( $huecos_reales[ (string) $n->clave ] ) ) {
-		$normas_con_hueco[] = $n;
-	}
-}
-[ $huecos_pagina, $pag_hue, $pags_hue ] = SWPK_Vista::paginar( $normas_con_hueco, SWPK_Vista::pagina_pedida( 'ph' ), 10 );
-?>
-<?php if ( $huecos_reales ) : ?>
-	<?php SWPK_Vista::caja_abrir( 'Lo que falta revisar', esc_html( SWPK_Vista::plural( count( $normas_con_hueco ), 'norma', 'normas' ) ), 'swpk-c12', true ); ?>
-	<p class="swpk-mudo" style="margin:-4px 0 12px;max-width:860px">
-		Esto no son problemas: es lo que el panel todavía no sabe de sitios que sí puede revisar. Un sitio
-		sin revisar puede estar perfecto o puede estar mal, y decir cualquiera de las dos cosas sería
-		inventar.
-	</p>
-
-	<table class="widefat striped" style="max-width:980px">
-		<thead><tr><th style="width:42%">La norma</th><th>Dónde falta, y por qué</th></tr></thead>
+	<table class="widefat striped swpk-tabla">
+		<thead><tr><th style="width:34%">La norma</th><th>De qué sitios no se sabe</th></tr></thead>
 		<tbody>
 		<?php foreach ( $huecos_pagina as $n ) : ?>
 			<?php
@@ -463,14 +563,13 @@ foreach ( $normas as $n ) {
 	<?php SWPK_Vista::caja_cerrar(); ?>
 <?php endif; ?>
 
-<?php if ( $medibles ) : ?>
-	<?php SWPK_Vista::caja_abrir( 'Sitio por sitio', '', 'swpk-c12', true ); ?>
-	<p class="swpk-mudo" style="margin:-4px 0 12px">
-		Los <?php echo (int) count( $medibles ); ?> que el panel puede revisar, con su cuenta.
-		<?php if ( $ciegos ) : ?>
-			Los otros <?php echo (int) count( $ciegos ); ?> aparecerán aquí según se les vaya instalando el plugin.
-		<?php endif; ?>
-	</p>
+<?php if ( 'sitio' === $vista && $medibles ) : ?>
+	<?php SWPK_Vista::caja_abrir(
+		'Normas sin cumplir por sitio',
+		esc_html( SWPK_Vista::plural( count( $medibles ), 'sitio', 'sitios' ) ),
+		'swpk-c12',
+		true
+	); ?>
 
 	<?php
 	$como_posibles = [
@@ -518,7 +617,7 @@ foreach ( $normas as $n ) {
 				'todas'    => 'Listas y por construir',
 			],
 		],
-		[ 'seccion' => 'cumplimiento', 'sev' => $sev_pedida, 'norma' => $norma_pedida ],
+		[ 'seccion' => 'cumplimiento', 'vista' => $vista, 'sev' => $sev_pedida, 'norma' => $norma_pedida, 'arreglo' => $arreglo_pedido ],
 		$busca_sitio
 	);
 
@@ -535,13 +634,14 @@ foreach ( $normas as $n ) {
 		<div class="notice notice-info inline"><p>Ningún sitio coincide con ese filtro.</p></div>
 	<?php endif; ?>
 
-	<table class="widefat striped" style="max-width:980px">
+	<table class="widefat striped swpk-tabla">
 		<thead>
 			<tr>
 				<th style="width:34%">Sitio</th>
-				<th style="width:16%">Cumple</th>
-				<th style="width:16%">Le falta</th>
-				<th>Sin revisar</th>
+				<th style="width:13%">Cumple</th>
+				<th style="width:15%">Le falta</th>
+				<th style="width:15%">Sin revisar</th>
+				<th style="width:160px"></th>
 			</tr>
 		</thead>
 		<tbody>
@@ -556,13 +656,24 @@ foreach ( $normas as $n ) {
 				<td><?php echo (int) $f['cumples']; ?> normas</td>
 				<td>
 					<?php if ( $f['fallas'] > 0 ) : ?>
-						<span class="swpk-etq swpk-sev-alta"><?php echo (int) $f['fallas']; ?> cosas</span>
+						<a href="<?php echo esc_url( $url_sitio( (string) $f['sitio']->sitio_id ) ); ?>">
+							<span class="swpk-etq swpk-sev-alta"><?php echo (int) $f['fallas']; ?> normas sin cumplir</span>
+						</a>
 					<?php else : ?>
 						<span class="swpk-mudo">nada</span>
 					<?php endif; ?>
 				</td>
 				<td>
-					<?php echo $f['huecos'] > 0 ? (int) $f['huecos'] . ' normas' : '<span class="swpk-mudo">nada</span>'; ?>
+					<?php echo $f['huecos'] > 0 ? (int) $f['huecos'] . ' sin medir' : '<span class="swpk-mudo">nada</span>'; ?>
+				</td>
+				<td style="text-align:right">
+					<?php
+					// El botón, además del nombre y del número. Es el camino
+					// que faltaba: de esta pantalla a las normas de UN sitio.
+					?>
+					<a class="button button-small" href="<?php echo esc_url( $url_sitio( (string) $f['sitio']->sitio_id ) ); ?>">
+						Ver sus normas
+					</a>
 				</td>
 			</tr>
 		<?php endforeach; ?>
@@ -584,11 +695,6 @@ foreach ( $normas as $n ) {
 // pantalla. Lo que dicen sigue estando; lo que cambia es que ya no estorban.
 ?>
 
-<p class="swpk-intro">
-	Esta pantalla contesta una sola pregunta: <strong>¿qué le falta a cada sitio para cumplir nuestras
-	normas de seguridad?</strong> Abajo están los problemas encontrados, agrupados por norma y con el
-	nombre del sitio puesto.
-</p>
 
 <?php
 

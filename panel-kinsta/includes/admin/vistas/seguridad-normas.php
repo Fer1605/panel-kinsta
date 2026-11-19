@@ -87,30 +87,25 @@ foreach ( $orden as $g ) {
 [ $en_pantalla, $pagina, $paginas ] = SWPK_Vista::paginar( $lista, SWPK_Vista::pagina_pedida(), 12 );
 ?>
 
-<p class="swpk-intro">
-	<strong>Esta es la lista de lo que revisamos en cada sitio.</strong> Es la que decide qué sale en la
-	pestaña anterior: cada norma encendida se comprueba en todos los sitios que tengan el plugin instalado.
-	Se le pueden agregar normas y quitar, sin tocar el programa.
-</p>
-<p class="swpk-mudo" style="max-width:880px;margin:-6px 0 14px">
-	La <strong>gravedad</strong> solo decide el orden en que salen los problemas: las altas primero.
-	<strong>Apagar</strong> una norma hace que deje de revisarse y desaparezca de la pestaña anterior;
-	encenderla la vuelve a meter, pero no al instante — se mide con el siguiente reporte de cada sitio.
-	Donde dice <strong>El plugin</strong>, la mira solo y la reporta cada día; donde dice
-	<strong>Una persona</strong>, alguien la marca entrando a la ficha del sitio.
-	<strong>Se arregla</strong> quiere decir que el panel le puede pedir al plugin que la corrija.
-</p>
 
 <div class="swpk-pastillas" style="margin:0 0 14px"><?php echo SWPK_Vista::pastillas( $pastillas ); // phpcs:ignore WordPress.Security.EscapeOutput ?></div>
 
 <?php
 SWPK_Vista::caja_abrir(
-	$hay_grupo ? $grupo_pedido : 'Qué revisamos en cada sitio',
+	( $hay_grupo ? $grupo_pedido : 'Qué revisamos en cada sitio' ) . SWPK_Vista::ayuda(
+		'Esta lista decide qué se mide. Cada norma encendida se comprueba en todos los sitios que '
+		. 'tengan el plugin instalado; apagarla la saca de «Qué le falta a cada sitio», y encenderla '
+		. 'la devuelve con el siguiente reporte de cada sitio, no al instante. La gravedad solo decide '
+		. 'el orden: las altas primero. Donde dice «El plugin», la mira el plugin solo; donde dice '
+		. '«Una persona», alguien la marca entrando a la ficha del sitio. «Se arregla» quiere decir '
+		. 'que el panel le puede pedir al plugin que la corrija.'
+	),
 	esc_html( SWPK_Vista::plural( count( $lista ), 'norma', 'normas' ) ),
 	'',
 	true
 );
 ?>
+<?php SWPK_Vista::paginador( $pagina, $paginas, count( $lista ), 'normas', 'norma' ); ?>
 <table class="widefat striped" style="margin-top:10px">
 	<thead>
 		<tr>
@@ -308,9 +303,9 @@ SWPK_Vista::caja_abrir(
 				<?php
 				$actuales = $norma && '' !== trim( (string) $norma->aplica_a )
 					? array_map( 'trim', explode( ',', (string) $norma->aplica_a ) )
-					: array_keys( $grupos );
+					: array_keys( $etiquetas );
 				?>
-				<?php foreach ( $grupos as $tag => $etq ) : ?>
+				<?php foreach ( $etiquetas as $tag => $etq ) : ?>
 					<label style="display:block;margin-bottom:4px">
 						<input type="checkbox" name="aplica_a[]" value="<?php echo esc_attr( $tag ); ?>"
 							<?php checked( in_array( $tag, $actuales, true ) ); ?>>
@@ -337,24 +332,16 @@ SWPK_Vista::caja_abrir(
 	</table>
 
 	<?php if ( ! $norma ) : ?>
-		<div class="swpk-comoasi" style="margin:0 0 14px">
-			<p>
-				<strong>¿Y cómo se revisa una norma que escribo yo?</strong> La revisa una persona, no el
-				programa. Eso es lo que hay que saber antes de escribirla.
-			</p>
-			<p>
-				Las diez que trae el panel las mira el plugin del sitio porque alguien programó <em>cómo</em>
-				mirarlas: dónde está el dato, qué cuenta como cumplir. Una norma escrita aquí no trae eso, y no
-				hay forma de que el panel lo adivine a partir de una frase. Así que va a salir siempre como
-				<strong>«sin revisar»</strong> hasta que alguien entre a la ficha de un sitio y la marque.
-			</p>
-			<p>
-				Sirve igual, y bastante: queda con el nombre de quien la revisó y la fecha, que es exactamente
-				lo que vale cuando hay que demostrar algo. Es una lista de verificación con rastro — pero no es
-				una medición automática, y el panel no va a fingir que lo sea. Si quieres que una norma nueva se
-				revise sola, eso es programarla.
-			</p>
-		</div>
+		<p class="swpk-aviso-corto">
+			<strong>Una norma que escribas tú la revisa una persona, no el programa.</strong>
+			<?php echo wp_kses_post( SWPK_Vista::ayuda(
+				'Las que trae el panel las mira el plugin del sitio porque alguien programó cómo mirarlas: '
+				. 'dónde está el dato y qué cuenta como cumplir. Una norma escrita aquí no trae eso, y el panel '
+				. 'no puede adivinarlo a partir de una frase, así que va a salir como «sin revisar» hasta que '
+				. 'alguien entre a la ficha de un sitio y la marque. Queda con el nombre de quien la revisó y la '
+				. 'fecha, que es lo que vale cuando hay que demostrar algo.'
+			) ); ?>
+		</p>
 	<?php endif; ?>
 
 	<p>
@@ -368,3 +355,4 @@ SWPK_Vista::caja_abrir(
 </form>
 	</div>
 </details>
+

@@ -147,6 +147,38 @@ class SWPK_Vista {
 	 * «Permite dejar código escondido en el si…», que se lee peor que no
 	 * decir nada; cortando por palabra queda «…en el…» y se entiende.
 	 */
+	/**
+	 * La burbujita de ayuda: un ⓘ que explica al pasar el mouse.
+	 *
+	 * ─── Por qué existe ──────────────────────────────────────────────────
+	 *
+	 * Porque el panel explicaba todo con párrafos, y el jefe no los lee: «esto
+	 * para mí es un montón de texto que no entiendo», «entre menos información
+	 * tengo yo visualmente, mejor». Pero la explicación tampoco se puede
+	 * borrar: es la que convierte un dato en algo que se entiende sin saber de
+	 * esto. Lo pidió él mismo por su nombre: «estos textos le puedes hacer un
+	 * info… hay burbujitas».
+	 *
+	 * Así que el texto no se quita, se esconde: queda a un gesto de distancia
+	 * de quien lo necesite y fuera de la vista de quien no.
+	 *
+	 * Lleva `tabindex` y `aria-label` a propósito: con el teclado se llega
+	 * igual, y quien use un lector de pantalla oye la explicación en vez de
+	 * oír «i».
+	 */
+	public static function ayuda( string $texto ): string {
+		$texto = trim( wp_strip_all_tags( $texto ) );
+
+		if ( '' === $texto ) {
+			return '';
+		}
+
+		return sprintf(
+			'<span class="swpk-ayuda" tabindex="0" role="note" aria-label="%1$s"><span class="swpk-ayuda-globo">%1$s</span></span>',
+			esc_attr( $texto )
+		);
+	}
+
 	public static function recortar( string $texto, int $tope ): string {
 		$texto = trim( preg_replace( '/\s+/u', ' ', $texto ) ?? '' );
 
@@ -243,8 +275,9 @@ class SWPK_Vista {
 		'panel-kinsta'                  => 'Volver a Inicio',
 		'panel-kinsta-sitios'           => 'Volver a Sitios',
 		'panel-kinsta-vulnerabilidades' => 'Volver a Vulnerabilidades',
-		'panel-kinsta-bitacora'         => 'Volver a Bitácora',
-		'panel-kinsta-movimientos'      => 'Volver a Movimientos',
+		'panel-kinsta-seguridad'        => 'Volver a Seguridad',
+		'panel-kinsta-correos'          => 'Volver a Correos',
+		'panel-kinsta-movimientos'      => 'Volver al Historial',
 	];
 
 	/**
@@ -264,7 +297,12 @@ class SWPK_Vista {
 	public static function url_de_regreso(): array {
 		$origen = isset( $_GET['de'] ) ? sanitize_key( (string) $_GET['de'] ) : '';
 		if ( ! isset( self::ORIGENES[ $origen ] ) ) {
-			$origen = 'panel-kinsta-vulnerabilidades';
+			// Sin rastro —un enlace pegado, un favorito— se vuelve a Sitios,
+			// que es la lista a la que pertenece cualquier sitio. Antes se
+			// volvía a Vulnerabilidades, y de ahí el «le digo volver al sitio
+			// y me manda otro lado»: se volvía a una lista donde el sitio
+			// podía ni estar.
+			$origen = 'panel-kinsta-sitios';
 		}
 
 		$args = [ 'page' => $origen ];
@@ -538,7 +576,10 @@ class SWPK_Vista {
 		if ( '' !== $titulo ) {
 			printf(
 				'<div class="swpk-caja-cab"><h2>%s</h2>%s</div>',
-				esc_html( $titulo ),
+				// El título lo escribe el panel, nunca una persona de fuera, y
+				// a veces lleva su burbuja de ayuda pegada: por eso kses y no
+				// esc_html, igual que el pie de la caja.
+				wp_kses_post( $titulo ),
 				'' !== $pie ? '<span class="swpk-pie-dato">' . wp_kses_post( $pie ) . '</span>' : ''
 			);
 		}
@@ -573,13 +614,27 @@ class SWPK_Vista {
 				$nom = sprintf( '<a href="%s">%s</a>', esc_url( (string) $f['url'] ), $nom );
 			}
 
+			// El botón de la derecha, cuando la fila lo trae. Sin él, el único
+			// sitio donde se puede pulsar es el nombre, y eso no se ve: «aquí
+			// sigo sin ver el botón que yo pueda clicar; sé que puedo clicar
+			// el nombre, pero… ¿cuál es el crítico? Quiero verlo».
+			$accion = '';
+			if ( ! empty( $f['accion_url'] ) ) {
+				$accion = sprintf(
+					'<a class="button button-small" href="%s">%s</a>',
+					esc_url( (string) $f['accion_url'] ),
+					esc_html( (string) ( $f['accion_texto'] ?? 'Ver' ) )
+				);
+			}
+
 			printf(
-				'<li><div><div class="swpk-renglon-nom">%s</div>%s</div><div class="swpk-renglon-dato">%s</div></li>',
+				'<li><div><div class="swpk-renglon-nom">%s</div>%s</div><div class="swpk-renglon-dato">%s%s</div></li>',
 				$nom,
 				'' !== (string) ( $f['sub'] ?? '' )
 					? '<div class="swpk-renglon-sub">' . esc_html( (string) $f['sub'] ) . '</div>'
 					: '',
-				wp_kses_post( (string) ( $f['dato'] ?? '' ) )
+				wp_kses_post( (string) ( $f['dato'] ?? '' ) ),
+				$accion
 			);
 		}
 

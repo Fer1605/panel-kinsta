@@ -38,11 +38,10 @@ class SWPK_Plantillas {
 	 * puede mover de sitio, poner texto antes o después, o quitarlo. Lo que no
 	 * se puede es escribirlo a mano, y está bien que así sea.
 	 *
-	 * Son tres porque tres son los correos que el panel manda hoy. El ejemplo
-	 * que vio el jefe enseñaba cinco —también uno del código de verificación en
-	 * dos pasos y otro de sitio caído—, pero esos dos correos no existen: el
-	 * panel no los envía. Poner su plantilla aquí sería dejar dos cajas de
-	 * texto que no cambian nada.
+	 * Son seis: los cuatro avisos programados —semanal, diario, mensual y el
+	 * resumen de los domingos— y los dos que salen en el momento, cuando un
+	 * sitio se cae y cuando vuelve. Cada uno de los cuatro programados se abre
+	 * desde su renglón en «Qué sale, y a quién», que es donde se le busca.
 	 *
 	 * @return array<string,array<string,mixed>>
 	 */
@@ -225,9 +224,22 @@ class SWPK_Plantillas {
 	 * @param array<string,string> $bloques Marcas de bloque: HTML que arma el panel.
 	 */
 	public static function cuerpo( string $clave, array $enlinea = [], array $bloques = [] ): string {
-		$plantilla = self::obtener( $clave )['cuerpo'];
-		$parrafos  = preg_split( '/\R\s*\R/u', trim( $plantilla ) ) ?: [];
-		$html      = '';
+		return self::armar( self::obtener( $clave )['cuerpo'], $enlinea, $bloques );
+	}
+
+	/**
+	 * Lo mismo, pero sobre un texto que se le pasa en vez del guardado.
+	 *
+	 * Existe por la vista previa: él quiere ver cómo queda ANTES de guardar,
+	 * y sin que salga ningún correo. Con `cuerpo()` eso no se podía, porque
+	 * siempre leía de la base.
+	 *
+	 * @param array<string,string> $enlinea Marcas de texto: ya escapadas.
+	 * @param array<string,string> $bloques Marcas de bloque: HTML que arma el panel.
+	 */
+	public static function armar( string $plantilla, array $enlinea = [], array $bloques = [] ): string {
+		$parrafos = preg_split( '/\R\s*\R/u', trim( $plantilla ) ) ?: [];
+		$html     = '';
 
 		foreach ( $parrafos as $parrafo ) {
 			$parrafo = trim( (string) $parrafo );
@@ -258,6 +270,78 @@ class SWPK_Plantillas {
 		}
 
 		return $html;
+	}
+
+	/**
+	 * La vista previa de una plantilla, con datos de ejemplo y sin mandar nada.
+	 *
+	 * «Que no te lo mande, sino la previsualización.» El botón de antes decía
+	 * «Ver cómo queda» y llevaba a generar el correo de verdad; esto dibuja el
+	 * correo entero —marco, cabecera y pie incluidos— con valores de muestra,
+	 * y sobre el texto que esté escrito en el formulario, esté guardado o no.
+	 *
+	 * Los bloques que arma el panel con los datos del día no se pueden
+	 * inventar: en la vista previa salen como un recuadro que dice qué va ahí.
+	 * Es preferible a enseñar una tabla falsa que luego no coincide.
+	 *
+	 * @return array{asunto:string,html:string}
+	 */
+	public static function ejemplo( string $clave, string $asunto = '', string $cuerpo = '' ): array {
+		$catalogo = self::catalogo();
+
+		if ( ! isset( $catalogo[ $clave ] ) ) {
+			return [ 'asunto' => '', 'html' => '' ];
+		}
+
+		$ficha   = $catalogo[ $clave ];
+		$guardada = self::obtener( $clave );
+		$asunto  = '' !== trim( $asunto ) ? $asunto : (string) $guardada['asunto'];
+		$cuerpo  = '' !== trim( $cuerpo ) ? $cuerpo : (string) $guardada['cuerpo'];
+
+		// Un valor de muestra por marca de texto. Son los que se leen bien en
+		// una frase: un nombre, un número, una fecha.
+		$muestra = [
+			'{{asesora}}'     => 'María',
+			'{{cuantos}}'     => '3',
+			'{{criticos}}'    => ', y 1 en estado alto o crítico',
+			'{{movimientos}}' => '12',
+			'{{desde}}'       => '9 de noviembre',
+			'{{hasta}}'       => '15 de noviembre',
+			'{{sitio}}'       => 'Sitio de ejemplo',
+			'{{mes}}'         => 'octubre',
+			'{{url}}'         => 'https://ejemplo.com',
+			'{{cuando}}'      => 'hoy a las 14:05',
+			'{{cuanto}}'      => '12 minutos',
+			'{{motivo}}'      => 'rechazó la conexión',
+		];
+
+		$enlinea = [];
+		$bloques = [];
+
+		foreach ( (array) $ficha['marcas'] as $marca => $explica ) {
+			$marca = (string) $marca;
+
+			if ( str_starts_with( (string) $explica, 'EL BLOQUE' ) ) {
+				$bloques[ $marca ] = sprintf(
+					'<div style="border:1px dashed #c3c4c7;border-radius:8px;padding:14px 16px;'
+					. 'margin:14px 0;color:#646970;font-size:13px;line-height:1.5">'
+					. '<strong>%s</strong><br>%s</div>',
+					esc_html( $marca ),
+					esc_html( trim( substr( (string) $explica, strlen( 'EL BLOQUE:' ) ) ) )
+				);
+				continue;
+			}
+
+			$enlinea[ $marca ] = esc_html( $muestra[ $marca ] ?? trim( $marca, '{}' ) );
+		}
+
+		return [
+			'asunto' => trim( str_replace( array_keys( $muestra ), array_values( $muestra ), $asunto ) ),
+			'html'   => self::envolver(
+				(string) $ficha['titulo'],
+				self::armar( $cuerpo, $enlinea, $bloques )
+			),
+		];
 	}
 
 	/** El marco común: cabecera, contenido y pie. */
@@ -340,15 +424,14 @@ class SWPK_Plantillas {
 			$vulns = count( array_filter( $hallazgos, static fn( $h ) => 'actualizacion_pendiente' !== $h['motivo'] ) );
 
 			$bloque .= sprintf(
-				'<div style="border:1px solid #dcdcde;border-left:4px solid %s;border-radius:6px;padding:16px 18px;margin:18px 0">'
+				'<div style="border:1px solid #dcdcde;border-radius:6px;padding:16px 18px;margin:18px 0">'
 				. '<p style="margin:0 0 4px;font-size:15px;font-weight:600">%s</p>'
-				. '<p style="margin:0 0 12px;color:%s;font-size:13px">%s · %d con vulnerabilidad · %d por actualizar</p>'
+				. '<p style="margin:0 0 12px;color:%s;font-size:13px"><strong>%s</strong> · %d con vulnerabilidad · %d por actualizar</p>'
 				. '<p style="margin:0 0 6px;font-size:13px;color:%s">Para copiar y mandarle al cliente:</p>'
 				. '<div style="background:#f6f7f7;border-radius:4px;padding:14px;white-space:pre-wrap;font-size:13px;line-height:1.55">%s</div>'
 				. '</div>',
-				$color,
 				esc_html( $sitio->nombre_visible ),
-				self::GRIS,
+				$color,
 				esc_html( SWPK_Riesgo::nombres()[ $nivel ] ?? '' ),
 				$vulns,
 				count( $hallazgos ) - $vulns,
@@ -408,12 +491,11 @@ class SWPK_Plantillas {
 		$c = '';
 		if ( ! SWPK_Frescura::corrida_al_dia() || SWPK_Frescura::corrida_fallo() ) {
 			$c .= sprintf(
-				'<p style="background:#fcf0f1;border-left:4px solid %s;padding:12px 14px;margin:0 0 18px">'
+				'<p style="background:#fcf0f1;border:1px solid #ecc7c9;border-radius:6px;padding:12px 14px;margin:0 0 18px">'
 				. '<strong>Ojo: este resumen no es de hoy.</strong><br>'
 				. 'El último dato bueno entró el %s. Lo de abajo es ese inventario, no el de ahora, '
 				. 'así que "cero cambios" aquí no quiere decir que no haya pasado nada: quiere '
 				. 'decir que el panel no pudo mirar. Hay que revisar la tarea programada.</p>',
-				self::ROJO,
 				'' === SWPK_Frescura::corrida()
 					? 'nunca'
 					: esc_html( SWPK_Frescura::fmt( 'j \d\e F, g:i a', SWPK_Frescura::corrida() ) . ', ' . SWPK_Frescura::hace( SWPK_Frescura::corrida() ) )
@@ -504,7 +586,7 @@ class SWPK_Plantillas {
 
 		if ( ! $filas ) {
 			$html .= '<p style="margin:0 0 10px;font-weight:600">Lo que avisamos</p>'
-				. '<div style="background:#f0f6fc;border-left:4px solid #2271b1;padding:14px 16px;margin:0 0 18px">'
+				. '<div style="background:#f0f6fc;border:1px solid #c9ddf2;border-radius:6px;padding:14px 16px;margin:0 0 18px">'
 				. '<strong>Esta semana no salió ningún aviso.</strong><br>'
 				. 'No es que el panel no haya corrido: corrió, revisó la cartera y no encontró nada que ameritara '
 				. 'avisarle a nadie. Este correo sale igual para que quede constancia de eso.'
@@ -580,7 +662,7 @@ class SWPK_Plantillas {
 
 		if ( ! $eventos ) {
 			return $html
-				. '<div style="background:#f0f6fc;border-left:4px solid #2271b1;padding:14px 16px;margin:0 0 22px">'
+				. '<div style="background:#f0f6fc;border:1px solid #c9ddf2;border-radius:6px;padding:14px 16px;margin:0 0 22px">'
 				. '<strong>Ningún movimiento esta semana.</strong><br>'
 				. 'Nada se actualizó, nada se instaló, nada se cayó y nadie cambió de rol en ningún sitio '
 				. 'de la cartera.'
@@ -701,9 +783,8 @@ class SWPK_Plantillas {
 		$mes = SWPK_Frescura::fmt( 'F \d\e Y', $desde );
 
 		$recuadro = sprintf(
-			'<p style="background:#f0f6fc;border-left:4px solid %s;padding:14px 16px;margin:18px 0">'
+			'<p style="background:#f0f6fc;border:1px solid #c9ddf2;border-radius:6px;padding:14px 16px;margin:18px 0">'
 			. 'Durante el mes su sitio se actualizó <strong>%d %s</strong>.</p>',
-			self::AZUL,
 			$veces,
 			1 === $veces ? 'vez' : 'veces'
 		);

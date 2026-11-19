@@ -1,21 +1,25 @@
 <?php
 /**
- * Correos: dos pestañas.
+ * Correos: tres pestañas.
  *
- *   Qué sale        el interruptor, los tres avisos y cuándo salen
- *   Las plantillas  cómo están redactados
+ *   Qué sale y a quién     el interruptor, los tres avisos y cuándo salen
+ *   Cómo están redactados  las plantillas
+ *   Qué se mandó ya        la bitácora, con su fecha y su destinatario
  *
- * Dos pestañas y no dos entradas en el menú, porque son la misma cosa vista de
- * dos maneras: qué se manda, y qué dice lo que se manda. Y se entra por la
- * primera, que es la que se mira todos los días; la redacción se cambia cada
- * varios meses.
+ * Tres pestañas y no tres entradas en el menú, porque son la misma cosa vista
+ * de tres maneras: qué se manda, qué dice lo que se manda, y qué se mandó. La
+ * tercera estaba suelta en el menú como «Bitácora» hasta que el jefe la puso
+ * en su sitio: «la bitácora no son movimientos, es la bitácora de los correos
+ * que se enviaron; debería estar ahí dentro».
+ *
+ * Se entra por la primera, que es la que se mira todos los días.
  */
 
 defined( 'ABSPATH' ) || exit;
 
 $seccion = isset( $_GET['seccion'] ) ? sanitize_key( (string) $_GET['seccion'] ) : 'envios';
 
-if ( ! in_array( $seccion, [ 'envios', 'plantillas' ], true ) ) {
+if ( ! in_array( $seccion, [ 'envios', 'plantillas', 'bitacora' ], true ) ) {
 	$seccion = 'envios';
 }
 
@@ -51,6 +55,11 @@ foreach ( array_keys( SWPK_Plantillas::catalogo() ) as $clave ) {
 				'url'    => $url_sec( 'plantillas' ),
 				'activa' => 'plantillas' === $seccion,
 			],
+			[
+				'texto'  => 'Qué se mandó ya',
+				'url'    => $url_sec( 'bitacora' ),
+				'activa' => 'bitacora' === $seccion,
+			],
 		] )
 	);
 	?>
@@ -58,11 +67,4 @@ foreach ( array_keys( SWPK_Plantillas::catalogo() ) as $clave ) {
 
 	<?php require SWPK_RUTA . 'includes/admin/vistas/correos-' . $seccion . '.php'; ?>
 
-	<?php
-	// El sello de frescura va en TODAS las pantallas, como en la maqueta.
-	// Estaba solo en cuatro, y es justo el dato que convierte una pantalla en
-	// evidencia: de cuándo es lo que se está mirando. Una pantalla sin él
-	// afirma sin fecha.
-	SWPK_Frescura::sello();
-	?>
 </div>

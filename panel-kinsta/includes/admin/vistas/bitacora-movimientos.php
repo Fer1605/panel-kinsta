@@ -88,10 +88,11 @@ foreach ( $movimientos as $e ) {
 arsort( $por_tipo );
 ?>
 
-<p style="max-width:820px;color:#3c434a">
-	Todo lo que cambió en los sitios, con su fecha. Esto se guarda <strong>pase lo que pase con
-	los correos</strong>: aunque hoy no se le esté avisando a nadie, el movimiento queda escrito.
-</p>
+<?php
+// La bajada ya dice de qué va esta pantalla. Lo que iba aquí —dos renglones
+// explicando que esto se guarda aunque los correos estén apagados— se fue a
+// la burbujita: es una precisión que hace falta una vez, no cada vez.
+?>
 
 <?php
 SWPK_Vista::caja_abrir(
@@ -102,11 +103,29 @@ SWPK_Vista::caja_abrir(
 );
 ?>
 
-<form method="get" class="swpk-rango">
+<?php
+// Seis campos en una sola fila. Estaban con <br> dentro de cada etiqueta, con
+// los desplegables tan anchos como su opción más larga, y a 1280 px el buscar
+// y el botón se caían al renglón de abajo: «no sé qué hace el buscar y el
+// filtrar abajo, debería continuar con la fila; eso cabe perfectamente en
+// una». Ahora son los mismos campos que las demás barras del panel —misma
+// etiqueta, misma altura— y cada uno cede ancho en vez de empujar.
+?>
+<form method="get" class="swpk-rango swpk-filtra">
 	<input type="hidden" name="page" value="panel-kinsta-movimientos">
-	<label>Desde<br><input type="date" name="desde" value="<?php echo esc_attr( $desde ); ?>"></label>
-	<label>Hasta<br><input type="date" name="hasta" value="<?php echo esc_attr( $hasta ); ?>"></label>
-	<label>Qué pasó<br>
+
+	<label class="swpk-campo">
+		<span>Desde</span>
+		<input type="date" name="desde" value="<?php echo esc_attr( $desde ); ?>">
+	</label>
+
+	<label class="swpk-campo">
+		<span>Hasta</span>
+		<input type="date" name="hasta" value="<?php echo esc_attr( $hasta ); ?>">
+	</label>
+
+	<label class="swpk-campo">
+		<span>Qué pasó</span>
 		<select name="tipo">
 			<option value="">Todo lo que pasa</option>
 			<?php foreach ( $etq_evt as $clave => $nombre ) : ?>
@@ -116,7 +135,9 @@ SWPK_Vista::caja_abrir(
 			<?php endforeach; ?>
 		</select>
 	</label>
-	<label>Sitio<br>
+
+	<label class="swpk-campo">
+		<span>Sitio</span>
 		<select name="sitio">
 			<option value="">Todos los sitios</option>
 			<?php foreach ( $con_movs as $id => $nombre_s ) : ?>
@@ -126,12 +147,19 @@ SWPK_Vista::caja_abrir(
 			<?php endforeach; ?>
 		</select>
 	</label>
-	<label>Buscar<br>
+
+	<label class="swpk-campo swpk-campo-ancho">
+		<span>Buscar</span>
 		<input type="search" name="q" value="<?php echo esc_attr( $busqueda ); ?>" placeholder="sitio o módulo…">
 	</label>
-	<button class="button">Filtrar</button>
+
+	<button class="button swpk-filtra-ir">Filtrar</button>
+
 	<?php if ( $tipo || '' !== $busqueda || '' !== $sitio_pedido ) : ?>
-		<a class="button" href="<?php echo esc_url( add_query_arg( [ 'page' => 'panel-kinsta-movimientos', 'desde' => $desde, 'hasta' => $hasta ], admin_url( 'admin.php' ) ) ); ?>">Quitar filtros</a>
+		<a class="swpk-filtra-limpiar"
+			href="<?php echo esc_url( add_query_arg( [ 'page' => 'panel-kinsta-movimientos', 'desde' => $desde, 'hasta' => $hasta ], admin_url( 'admin.php' ) ) ); ?>">
+			Limpiar
+		</a>
 	<?php endif; ?>
 </form>
 

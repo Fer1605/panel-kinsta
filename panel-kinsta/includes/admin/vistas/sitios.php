@@ -40,11 +40,25 @@ $filtrados = SWPK_Vista::filtrar( $todos, $tag, $nivel, $busqueda, $versiones['w
 // y sin el orden ese pie sería mentira: la lista venía como la devolvía la
 // base, que es por nombre. A igualdad de nivel, por nombre, para que dos
 // recargas seguidas no barajen la tabla.
+//
+// ─── El peso se calcula ANTES de ordenar, y no dentro de la comparación ───
+//
+// Parece un detalle y era la pantalla entera. nivel_del_sitio() hace consultas
+// y mira el feed de vulnerabilidades; metido dentro del comparador, PHP lo
+// llamaba una vez por cada comparación: con 108 sitios, unas setecientas veces
+// en vez de 108. Medido en el panel de desarrollo con la cartera real, esta
+// pantalla tardaba 4,9 segundos mientras las demás tardaban medio segundo.
+// Ahora se calcula una vez por sitio y se ordena sobre el resultado.
+$peso_de = [];
+foreach ( $filtrados as $s ) {
+	$peso_de[ (string) $s->sitio_id ] = SWPK_Riesgo::peso( SWPK_Riesgo::nivel_del_sitio( (string) $s->sitio_id ) );
+}
+
 usort(
 	$filtrados,
 	static fn( $a, $b ) =>
-		[ SWPK_Riesgo::peso( SWPK_Riesgo::nivel_del_sitio( (string) $b->sitio_id ) ), $a->nombre_visible ]
-		<=> [ SWPK_Riesgo::peso( SWPK_Riesgo::nivel_del_sitio( (string) $a->sitio_id ) ), $b->nombre_visible ]
+		[ $peso_de[ (string) $b->sitio_id ], $a->nombre_visible ]
+		<=> [ $peso_de[ (string) $a->sitio_id ], $b->nombre_visible ]
 );
 [ $pagina_de_sitios, $pagina, $paginas ] = SWPK_Vista::paginar( $filtrados, SWPK_Vista::pagina_pedida() );
 
@@ -134,17 +148,12 @@ $volver = add_query_arg(
 	// barra suelta encima: la maqueta no pone nada entre la cabecera y la
 	// primera tarjeta, y una fila de botones flotando ahí era justo lo que
 	// hacía que esta pantalla no se pareciera.
+	//
+	// Aquí había también un «Revisar todos», que era «Correr ahora» con otro
+	// nombre. Se quitó: el mismo botón en tres pantallas y con tres nombres
+	// distintos es un botón que nadie sabe cuál apretó. Vive en el Resumen.
 	ob_start();
 	SWPK_Admin::boton_exportar( 'sitios' );
-
-	if ( $asignar ) {
-		printf(
-			'<a class="button" href="%s" title="%s" style="margin-left:6px">Revisar todos</a>',
-			esc_url( wp_nonce_url( admin_url( 'admin-post.php?action=swpk_correr' ), 'swpk_correr' ) ),
-			esc_attr( 'Vuelve a revisar los ' . count( $todos ) . ' sitios. Arranca al momento y sigue en el Resumen, donde se ve cómo va.' )
-		);
-	}
-
 	$botones_cartera = ob_get_clean();
 	?>
 
@@ -212,6 +221,7 @@ $volver = add_query_arg(
 			<?php wp_nonce_field( 'swpk_asignar' ); ?>
 		<?php endif; ?>
 
+		<?php SWPK_Vista::paginador( $pagina, $paginas, count( $filtrados ) ); ?>
 		<table class="widefat striped swpk-tabla">
 			<thead>
 				<tr>
@@ -289,7 +299,17 @@ $volver = add_query_arg(
 						?>
 					</td>
 					<td>
-						<?php if ( $asignar ) : ?>
+						<?php if ( $asignar && ! $asesoras ) : ?>
+							<?php
+							// Sin nadie en el Equipo no hay a quién asignar, y un
+							// desplegable vacío no lo explica. Se dice y se enseña
+							// dónde se arregla.
+							printf(
+								'<span class="swpk-gris" style="font-size:12px">Nadie en el <a href="%s">Equipo</a> todavía</span>',
+								esc_url( admin_url( 'admin.php?page=panel-kinsta-equipo' ) )
+							);
+							?>
+						<?php elseif ( $asignar ) : ?>
 							<select name="asesora[<?php echo esc_attr( $s->sitio_id ); ?>]" style="width:100%">
 								<option value="0">— sin asignar —</option>
 								<?php foreach ( $asesoras as $a ) : ?>
@@ -347,7 +367,5 @@ $volver = add_query_arg(
 	// sello solo —que son cuatro renglones de fechas— empujaba la tabla fuera
 	// de la pantalla.
 	?>
-	<?php SWPK_Admin::tira_de_perfil(); ?>
 	<?php SWPK_Admin::aviso_demo(); ?>
-	<?php SWPK_Frescura::sello(); ?>
 </div>

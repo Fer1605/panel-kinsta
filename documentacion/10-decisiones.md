@@ -538,3 +538,110 @@ botón de «Correr ahora»—, así que la regla ya no es una anécdota:
 > Y para una pantalla de entrada, eso significa entrar: escribir la contraseña,
 > esperar el código, escribirlo. No basta con que el archivo no tenga errores
 > de sintaxis.
+
+---
+
+## 28. Un nombre que nadie entiende no es un nombre
+
+Viendo el panel, el jefe se paró en una de las ocho familias de normas y dijo,
+sin rodeos: **«no sé qué significa cómo viaja».** Se llamaba «Cómo viaja el
+sitio» y agrupaba diez normas —HTTPS, HSTS, política de contenido, bloqueo de
+marco, referidos, permisos del navegador—. Para quien conoce el tema es una
+metáfora cómoda. Para quien no, no dice nada, y además suena a transporte.
+
+Ahora se llama **«Lo que el navegador recibe»**, que es literalmente lo que
+miden esas diez normas: lo que el servidor le dice al navegador de cada
+visitante. El nombre viaja en la base de datos, así que cambiarlo obliga a
+subir `SWPK_Normas::VERSION_CATALOGO` —de 10 a 11— para que `sembrar()` repase
+las filas que ya existen. Sin ese número, el código habría dicho una cosa y la
+pantalla habría seguido diciendo la otra.
+
+**La regla que queda:** un nombre de pantalla, de pestaña o de grupo se escribe
+para quien no construyó esto. Si hay que explicarlo, no es un nombre: es una
+adivinanza con etiqueta.
+
+## 29. Seguridad y Vulnerabilidades no son lo mismo, y había que decirlo
+
+La misma grabación, un minuto después: *«aquí veo lo vulnerable y aquí veo lo
+seguro — **no es lo mismo**»*. Tenía razón en las dos mitades: son cosas
+distintas, y ninguna de las dos pantallas lo decía.
+
+- **Seguridad** son **las normas**: lo que todo sitio debería cumplir, tenga lo
+  que tenga instalado. Se incumplen por configuración y se arreglan cambiando
+  esa configuración.
+- **Vulnerabilidades** son **las fallas conocidas** de los plugins y temas que
+  ese sitio tiene puestos. Se arreglan actualizando.
+
+Un sitio puede cumplir las 73 normas y tener diez plugins con falla, y al
+revés. Ahora cada pantalla abre con una línea que dice qué es y enlaza a la
+otra, y las dos llevan la misma burbuja con la explicación larga — la misma a
+propósito: es la misma explicación, y quien la lea en cualquiera de las dos ya
+no vuelve a preguntarlo.
+
+## 30. Una pantalla puede estar rota y parecer entera
+
+Repasando el panel entero contra la grabación apareció algo que no venía de
+esta ronda: la pestaña **«Qué revisamos»** de Seguridad moría con un error
+fatal al abrir el formulario de una norma. Una variable renombrada en un
+commit anterior (`$grupos`, que ahora se llama `$etiquetas`) que nadie volvió a
+tocar.
+
+Lo importante no es el fallo, que son dos palabras: es **por qué no se había
+visto**. El primer barrido de esta sesión revisó desbordes, scrolls internos y
+cajas vacías en las quince pantallas, y dio limpio — incluida esa. El error
+ocurre a media página, después de que el `<div class="wrap">` ya se abrió, así
+que la pantalla tiene su cabecera, sus pestañas y su tabla, y por arriba se ve
+igual que las demás.
+
+**La regla que queda:** revisar la maqueta no es revisar la pantalla. Un
+barrido de pantallas busca además `Fatal error`, `Warning`, `Notice` y
+`Deprecated` en el HTML servido, y lo hace con los parámetros de verdad
+—filtros puestos, página tres, `editar=` con una norma dentro—, porque el
+camino que se rompe casi nunca es la portada de la pantalla.
+
+## 31. Lo que explica una pantalla no se escribe encima de la pantalla
+
+Él lo dijo mirando cuatro pantallas seguidas: *«toda esa información no le
+sirve, hay mucho ruido visual»*, *«es un montón de info que no voy a leer»*,
+*«necesito simpleza»*. Y tenía razón en algo más fino que «sobra texto»:
+el panel estaba contándose a sí mismo en voz alta, cada vez, a alguien que
+entra a mirar un dato.
+
+Eran párrafos de tres y cuatro líneas encima de cada tablero, explicando qué
+decide esa lista, qué pasa al apagar una norma, cuánto tarda un arreglo, qué
+significa cada columna. Todo cierto y todo útil — **una vez**. A partir de la
+segunda, es lo que hay que saltarse para llegar a la tabla.
+
+La regla que queda: **una línea a la vista, el resto en la burbuja.** El
+título de una caja puede llevar su ⓘ pegada (`caja_abrir()` pasa el título por
+`wp_kses_post`, no por `esc_html`, justo para eso), y ahí dentro cabe el
+párrafo entero sin ocupar pantalla. Lo que se pierde es la lectura obligatoria;
+no se pierde la explicación.
+
+De paso salió una cita de la grabación metida en la interfaz —*«Todo lo que sea
+arroba solución se excluye» (01:57)*, con su minuto y todo, en el campo de
+dominios propios—. Las notas de una reunión documentan el código; no se
+publican dentro de él.
+
+## 32. Una barra de filtros que no cabe no es culpa del ancho
+
+«El buscar y el filtrar abajo, cuando debería continuar con la fila; eso cabe
+perfectamente en una.» Cabía: 800 px de campos en 908 px de barra. Se partía de
+todas formas.
+
+La causa es cómo decide envolver un contenedor flexible: mira el ancho del
+**contenido** de cada campo, no el que van a tener después de repartirse el
+espacio. Un desplegable con nombres de sitio mide lo que mida el nombre más
+largo —210 px por un nombre de tres palabras—, cinco campos así suman más de lo
+que hay, y el sexto y el botón se caen al renglón de abajo. Después, ya
+envuelto, cada uno se encoge y queda la fila de arriba con huecos.
+
+Se arregla dándoles una **base corta** (`flex: 1 1 120px`) y `min-width: 0`:
+la cuenta del envolvimiento se hace con 120 px por campo, cabe, y el reparto
+del ancho sobrante ocurre después. El texto largo del desplegable se recorta
+con puntos suspensivos y se ve entero al desplegarlo.
+
+**Cómo se comprueba, y por qué no a ojo.** Contando: altura de la barra contra
+altura del campo más alto. Si la barra mide mucho más que un campo, envolvió.
+Y se mide a **1280 px**, que es la pantalla de trece pulgadas desde la que se
+revisa esto, no a la del que lo escribe.

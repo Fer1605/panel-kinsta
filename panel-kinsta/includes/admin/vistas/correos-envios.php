@@ -18,18 +18,30 @@ $proximos = [
 ];
 
 $accion = static fn( $a ) => wp_nonce_url( admin_url( 'admin-post.php?action=' . $a ), $a );
+
+// «Aquí debería haber un botón que diga ver, editar»: cada aviso abre su
+// plantilla en la otra pestaña, en vez de obligar a buscarla ahí a mano.
+$texto_de = static fn( string $plantilla ) => add_query_arg(
+	[ 'page' => 'panel-kinsta-correos', 'seccion' => 'plantillas', 'plantilla' => $plantilla ],
+	admin_url( 'admin.php' )
+);
 ?>
 
-	<?php SWPK_Vista::rejilla_abrir(); ?>
-
-	<?php SWPK_Vista::caja_abrir( 'El interruptor', '', 'swpk-c5' ); ?>
-
 	<?php
-	// Las dos palancas de la maqueta. Cada una es un enlace que dispara su
-	// acción con su nonce, no un <input>: el estado no se guarda escribiendo
-	// en un formulario, se cambia pulsando. Y la de salir de modo de prueba
-	// pregunta antes, porque al otro lado hay clientes de verdad.
+	// ── Los dos interruptores, arriba y a lo ancho ──────────────────────────
+	//
+	// Estaban en una columna estrecha a la izquierda, y al lado la tabla de
+	// qué sale quedaba apretada y con scroll propio. «Los interruptores no
+	// deben de estar así: eso debe de estar arriba, a la par de las pestañas,
+	// y lo de qué sale y a quién en todo horizontal, para no meterle scrolls
+	// internos a los paneles.»
+	//
+	// Cada palanca es un enlace que dispara su acción con su nonce, no un
+	// <input>: el estado no se guarda escribiendo en un formulario, se cambia
+	// pulsando. Y la de salir de modo de prueba pregunta antes, porque al otro
+	// lado hay clientes de verdad.
 	?>
+	<div class="swpk-interruptores">
 	<a class="swpk-interruptor<?php echo $activos ? ' swpk-encendido' : ''; ?>"
 		href="<?php echo esc_url( $accion( 'swpk_envios' ) ); ?>">
 		<span class="swpk-palanca"></span>
@@ -66,6 +78,7 @@ $accion = static fn( $a ) => wp_nonce_url( admin_url( 'admin-post.php?action=' .
 			</span>
 		</span>
 	</a>
+	</div>
 
 		<?php if ( ! $activos ) : ?>
 		<div class="notice notice-error">
@@ -88,16 +101,17 @@ $accion = static fn( $a ) => wp_nonce_url( admin_url( 'admin-post.php?action=' .
 			<p><strong>Envío real activo.</strong> Los correos salen de verdad a asesoras, clientes y soporte.</p>
 		</div>
 		<?php endif; ?>
-	<?php SWPK_Vista::caja_cerrar(); ?>
 
-	<?php SWPK_Vista::caja_abrir( 'Qué sale, y a quién', esc_html( SWPK_Vista::plural( 3, 'aviso automático', 'avisos automáticos' ) ), 'swpk-c7', true ); ?>
-	<table class="widefat striped swpk-tabla" style="max-width:980px">
+	<?php SWPK_Vista::rejilla_abrir(); ?>
+
+	<?php SWPK_Vista::caja_abrir( 'Qué sale, y a quién', esc_html( SWPK_Vista::plural( count( $proximos ), 'aviso automático', 'avisos automáticos' ) ), 'swpk-c12', true ); ?>
+	<table class="widefat striped swpk-tabla">
 		<thead>
 			<tr>
 				<th style="width:190px">El aviso</th>
 				<th style="width:150px">Cuándo</th>
 				<th>Qué dice</th>
-				<th style="width:160px"></th>
+				<th style="width:300px"></th>
 			</tr>
 		</thead>
 		<tbody>
@@ -111,7 +125,10 @@ $accion = static fn( $a ) => wp_nonce_url( admin_url( 'admin-post.php?action=' .
 					A cada asesora, solo sus sitios con algo pendiente, con el texto listo para reenviarle
 					al cliente. Copia a la dirección de ventas si está configurada.
 				</td>
-				<td><a class="button" href="<?php echo esc_url( $accion( 'swpk_correo_semanal' ) ); ?>">Mandar una prueba</a></td>
+				<td class="swpk-acciones-fila">
+					<a class="button" href="<?php echo esc_url( $texto_de( 'semanal' ) ); ?>">Ver y editar el texto</a>
+					<a class="button" href="<?php echo esc_url( $accion( 'swpk_correo_semanal' ) ); ?>">Mandar una prueba</a>
+				</td>
 			</tr>
 			<tr>
 				<td><strong>Diario a soporte</strong></td>
@@ -120,7 +137,10 @@ $accion = static fn( $a ) => wp_nonce_url( admin_url( 'admin-post.php?action=' .
 					<span class="swpk-gris" style="font-size:12px">próximo: <?php echo $proximos['Diario a soporte'] ? esc_html( SWPK_Frescura::fmt( 'j M, H:i', $proximos['Diario a soporte'] ) ) : '<span style="color:#d63638">sin programar</span>'; ?></span>
 				</td>
 				<td>Lo que cambió en las últimas 24 horas en toda la cartera.</td>
-				<td><a class="button" href="<?php echo esc_url( $accion( 'swpk_correo_diario' ) ); ?>">Mandar una prueba</a></td>
+				<td class="swpk-acciones-fila">
+					<a class="button" href="<?php echo esc_url( $texto_de( 'diario' ) ); ?>">Ver y editar el texto</a>
+					<a class="button" href="<?php echo esc_url( $accion( 'swpk_correo_diario' ) ); ?>">Mandar una prueba</a>
+				</td>
 			</tr>
 			<tr>
 				<td><strong>Mensual a los clientes</strong></td>
@@ -132,7 +152,10 @@ $accion = static fn( $a ) => wp_nonce_url( admin_url( 'admin-post.php?action=' .
 					A los administradores de cada sitio que administramos nosotros, excluyendo las
 					direcciones propias. Cuántas veces se actualizó su sitio y qué se mantuvo al día.
 				</td>
-				<td><a class="button" href="<?php echo esc_url( $accion( 'swpk_correo_mensual' ) ); ?>">Mandar una prueba</a></td>
+				<td class="swpk-acciones-fila">
+					<a class="button" href="<?php echo esc_url( $texto_de( 'mensual' ) ); ?>">Ver y editar el texto</a>
+					<a class="button" href="<?php echo esc_url( $accion( 'swpk_correo_mensual' ) ); ?>">Mandar una prueba</a>
+				</td>
 			</tr>
 			<tr>
 				<td><strong>Resumen de los domingos</strong></td>
@@ -145,7 +168,10 @@ $accion = static fn( $a ) => wp_nonce_url( admin_url( 'admin-post.php?action=' .
 					cada envío. <strong>Sale también cuando no hubo nada</strong> — un domingo sin
 					correo no querría decir «no pasó nada» sino «no sé si el panel corrió».
 				</td>
-				<td><a class="button" href="<?php echo esc_url( $accion( 'swpk_correo_resumen' ) ); ?>">Mandar una prueba</a></td>
+				<td class="swpk-acciones-fila">
+					<a class="button" href="<?php echo esc_url( $texto_de( 'resumen' ) ); ?>">Ver y editar el texto</a>
+					<a class="button" href="<?php echo esc_url( $accion( 'swpk_correo_resumen' ) ); ?>">Mandar una prueba</a>
+				</td>
 			</tr>
 		</tbody>
 	</table>
@@ -231,7 +257,7 @@ $accion = static fn( $a ) => wp_nonce_url( admin_url( 'admin-post.php?action=' .
 		],
 	];
 	?>
-	<table class="widefat striped" style="max-width:900px">
+	<table class="widefat striped swpk-tabla">
 		<tbody>
 		<?php foreach ( $revisiones as $r ) : ?>
 			<tr>
@@ -253,6 +279,6 @@ $accion = static fn( $a ) => wp_nonce_url( admin_url( 'admin-post.php?action=' .
 
 <p class="swpk-nota">
 	"Generarlo ahora" arma el correo con los datos de hoy y lo deja en la
-	<a href="<?php echo esc_url( admin_url( 'admin.php?page=panel-kinsta-bitacora' ) ); ?>">bitácora</a>,
+	<a href="<?php echo esc_url( admin_url( 'admin.php?page=panel-kinsta-correos&seccion=bitacora' ) ); ?>">bitácora</a>,
 	donde se puede abrir y leer completo. En modo de prueba no sale a nadie.
 </p>

@@ -1,10 +1,24 @@
 <?php
 /**
- * La bitácora: la pantalla que contesta la pregunta del minuto 02:48.
+ * La bitácora: qué se le notificó a quién, y cuándo.
  *
- * "Desde tal fecha hasta esta fecha, aquí está, se hicieron 10 notificaciones."
+ * Contesta la pregunta del minuto 02:48: «desde tal fecha hasta esta fecha,
+ * aquí está, se hicieron 10 notificaciones».
+ *
+ * Era una entrada propia del menú y ahora es la tercera pestaña de Correos,
+ * porque el jefe lo dijo igual de claro: «la bitácora no son movimientos, es
+ * la bitácora de los correos que se enviaron; debería estar ahí dentro».
+ *
+ * Este archivo es solo el cuerpo: el recuadro y las pestañas los pone
+ * correos.php.
  */
 defined( 'ABSPATH' ) || exit;
+
+/** La dirección de esta misma pestaña, con lo que se le quiera añadir. */
+$swpk_url_bitacora = static fn( array $extra = [] ) => add_query_arg(
+	array_merge( [ 'page' => 'panel-kinsta-correos', 'seccion' => 'bitacora' ], $extra ),
+	admin_url( 'admin.php' )
+);
 
 $ver = isset( $_GET['ver'] ) ? (int) $_GET['ver'] : 0;
 
@@ -15,8 +29,7 @@ if ( $ver ) {
 	);
 
 	if ( $uno && ( SWPK_Perfiles::puede( SWPK_Perfiles::VER_TODO ) || SWPK_Perfiles::puede_ver_sitio( (string) $uno->sitio_id ) ) ) {
-		echo '<div class="wrap">';
-		SWPK_Vista::volver( esc_url( remove_query_arg( 'ver' ) ), 'Volver a Notificaciones' );
+		SWPK_Vista::volver( esc_url( remove_query_arg( 'ver' ) ), 'Volver a la bitácora' );
 		printf( '<h1>%s</h1>', esc_html( (string) $uno->asunto ) );
 		printf(
 			'<p style="color:#50575e">%s · a %s · <strong>%s</strong></p>',
@@ -34,21 +47,10 @@ if ( $ver ) {
 		echo wp_kses_post( (string) $uno->cuerpo );
 		echo '</div>';
 
-		SWPK_Vista::volver( esc_url( remove_query_arg( 'ver' ) ), 'Volver a Notificaciones' );
-		echo '</div>';
+		SWPK_Vista::volver( esc_url( remove_query_arg( 'ver' ) ), 'Volver a la bitácora' );
 		return;
 	}
 }
-
-// Movimientos se mudó a su propia entrada del menú, así que esta pantalla ya
-// solo es Notificaciones. Las dos pastillas se quedan: son dos preguntas
-// vecinas —«¿qué pasó?» y «¿a quién se le avisó?»— y saltar de una a otra es
-// la mitad del trabajo.
-$seccion = 'notificaciones';
-$url_sec = static fn( string $s ) => add_query_arg(
-	[ 'page' => 'movimientos' === $s ? 'panel-kinsta-movimientos' : 'panel-kinsta-bitacora' ],
-	admin_url( 'admin.php' )
-);
 
 $tipo_filtro = isset( $_GET['tipo'] ) ? sanitize_key( (string) $_GET['tipo'] ) : '';
 $tipos       = SWPK_Bitacora::tipos();
@@ -80,26 +82,6 @@ $registros = array_values( $registros );
 // Para no mentir en la pantalla vacía. Ver abajo.
 $hubo_alguna_vez = SWPK_Bitacora::hay_alguno();
 ?>
-<div class="wrap">
-	<?php
-	// En la maqueta estas dos son páginas distintas, cada una con su título, y
-	// se salta de una a otra con pastillas. Aquí son secciones de la misma
-	// pantalla, así que el título y el subtítulo cambian con la sección.
-	$es_movs = 'movimientos' === $seccion;
-
-	SWPK_Vista::cabecera(
-		$es_movs ? 'Movimientos' : 'Bitácora',
-		$es_movs
-			? 'Qué cambió en los sitios, y cuándo.'
-			: 'Qué se le notificó a quién, y cuándo.',
-		SWPK_Vista::pastillas( [
-			[ 'texto' => 'Movimientos',    'url' => $url_sec( 'movimientos' ),    'activa' => $es_movs ],
-			[ 'texto' => 'Notificaciones', 'url' => $url_sec( 'notificaciones' ), 'activa' => ! $es_movs ],
-		] )
-	);
-	?>
-	<?php SWPK_Admin::mostrar_mensaje(); ?>
-	<?php SWPK_Admin::tira_de_perfil(); ?>
 
 	<p style="max-width:820px;color:#3c434a">
 		Todo lo que el panel notifica queda aquí con su fecha, su destinatario y su contenido. Esto
@@ -109,7 +91,7 @@ $hubo_alguna_vez = SWPK_Bitacora::hay_alguno();
 	<p style="max-width:820px;color:#3c434a">
 		<strong>Ojo con qué es y qué no:</strong> esta pestaña guarda <em>lo que se avisó</em>, no
 		<em>lo que pasó</em>. Si un sitio se actualizó y todavía nadie le escribió al cliente, el
-		cambio está en <a href="<?php echo esc_url( $url_sec( 'movimientos' ) ); ?>">Movimientos</a>
+		cambio está en <a href="<?php echo esc_url( admin_url( 'admin.php?page=panel-kinsta-movimientos' ) ); ?>">Historial</a>
 		y aquí no aparece. Y cada aviso queda tal como salió: si después se corrige el dato que lo
 		originó, el aviso se queda escrito igual — una constancia que se reescribe sola no sirve
 		como constancia.
@@ -130,13 +112,24 @@ $hubo_alguna_vez = SWPK_Bitacora::hay_alguno();
 		<?php endif; ?>
 	</div>
 
-	<form method="get" class="swpk-rango">
-		<input type="hidden" name="page" value="panel-kinsta-bitacora">
-		<input type="hidden" name="seccion" value="notificaciones">
+	<?php // Los mismos campos que las demás barras del panel: «el buscar aquí es
+	// diferente a todos los demás botones». ?>
+	<form method="get" class="swpk-rango swpk-filtra">
+		<input type="hidden" name="page" value="panel-kinsta-correos">
+		<input type="hidden" name="seccion" value="bitacora">
 		<input type="hidden" name="tipo" value="<?php echo esc_attr( $tipo_filtro ); ?>">
-		<label>Desde<br><input type="date" name="desde" value="<?php echo esc_attr( $desde ); ?>"></label>
-		<label>Hasta<br><input type="date" name="hasta" value="<?php echo esc_attr( $hasta ); ?>"></label>
-		<button class="button">Filtrar</button>
+
+		<label class="swpk-campo">
+			<span>Desde</span>
+			<input type="date" name="desde" value="<?php echo esc_attr( $desde ); ?>">
+		</label>
+
+		<label class="swpk-campo">
+			<span>Hasta</span>
+			<input type="date" name="hasta" value="<?php echo esc_attr( $hasta ); ?>">
+		</label>
+
+		<button class="button swpk-filtra-ir">Filtrar</button>
 	</form>
 
 	<div class="swpk-filtros">
@@ -182,7 +175,7 @@ $hubo_alguna_vez = SWPK_Bitacora::hay_alguno();
 			<?php else : ?>
 				<strong>Ningún aviso en este rango de fechas<?php echo '' !== $tipo_filtro ? ' con ese filtro' : ''; ?>.</strong>
 				Sí hay avisos guardados de otras fechas: amplía el rango para verlos.
-				<a href="<?php echo esc_url( add_query_arg( [ 'page' => 'panel-kinsta-bitacora', 'seccion' => 'notificaciones', 'desde' => '2020-01-01', 'hasta' => current_time( 'Y-m-d' ) ], admin_url( 'admin.php' ) ) ); ?>">Ver todos</a>.
+				<a href="<?php echo esc_url( $swpk_url_bitacora( [ 'desde' => '2020-01-01', 'hasta' => current_time( 'Y-m-d' ) ] ) ); ?>">Ver todos</a>.
 			<?php endif; ?>
 		</p></div>
 	<?php else : ?>
@@ -224,7 +217,7 @@ $hubo_alguna_vez = SWPK_Bitacora::hay_alguno();
 					</td>
 					<td>
 						<?php if ( $r->cuerpo ) : ?>
-							<a class="button button-small" href="<?php echo esc_url( add_query_arg( [ 'seccion' => 'notificaciones', 'ver' => (int) $r->id ] ) ); ?>">Leerlo</a>
+							<a class="button button-small" href="<?php echo esc_url( add_query_arg( [ 'seccion' => 'bitacora', 'ver' => (int) $r->id ] ) ); ?>">Leerlo</a>
 						<?php endif; ?>
 					</td>
 				</tr>
@@ -234,12 +227,3 @@ $hubo_alguna_vez = SWPK_Bitacora::hay_alguno();
 		<?php SWPK_Vista::paginador( $pagina, $paginas, count( $registros ), 'avisos', 'aviso' ); ?>
 	<?php endif; ?>
 	<?php SWPK_Vista::caja_cerrar(); ?>
-
-	<?php
-	// El sello de frescura va en TODAS las pantallas, como en la maqueta.
-	// Estaba solo en cuatro, y es justo el dato que convierte una pantalla en
-	// evidencia: de cuándo es lo que se está mirando. Una pantalla sin él
-	// afirma sin fecha.
-	SWPK_Frescura::sello();
-	?>
-</div>

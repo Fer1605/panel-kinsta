@@ -75,16 +75,28 @@ $en_camino       = $conteos_ordenes[ SWPK_Ordenes::PENDIENTE ] + $conteos_ordene
 	<?php
 	SWPK_Admin::mostrar_mensaje();
 	SWPK_Admin::aviso_demo();
-	SWPK_Admin::tira_de_perfil();
 	?>
+
+	<?php
+	// Él preguntó, viendo esta pantalla, qué la diferencia de Vulnerabilidades:
+	// «aquí veo lo vulnerable y aquí veo lo seguro — no es lo mismo». Tenía
+	// razón: son dos cosas distintas y ninguna de las dos pantallas lo decía.
+	// Una línea, y el detalle en la burbuja, para quien no tenga el modelo
+	// mental en la cabeza.
+	?>
+	<p class="swpk-comoasi-linea">
+		Aquí están <strong>las normas</strong>: lo que todo sitio debería cumplir, tenga lo que
+		tenga instalado. Las fallas conocidas de sus plugins y temas están en
+		<a href="<?php echo esc_url( admin_url( 'admin.php?page=panel-kinsta-vulnerabilidades' ) ); ?>">Vulnerabilidades</a>.
+		<?php echo wp_kses_post( SWPK_Vista::ayuda(
+			'No son lo mismo y no se arreglan igual. Una norma la incumple el sitio por cómo está '
+			. 'configurado —no exige HTTPS, publica sus nombres de usuario— y se arregla cambiando '
+			. 'esa configuración. Una vulnerabilidad la trae un plugin o un tema en una versión con '
+			. 'una falla ya descubierta, y se arregla actualizándolo. Un sitio puede cumplir las 73 '
+			. 'normas y tener diez plugins con falla, y al revés.'
+		) ); ?>
+	</p>
 
 	<?php require SWPK_RUTA . 'includes/admin/vistas/seguridad-' . $seccion . '.php'; ?>
 
-	<?php
-	// El sello de frescura va en TODAS las pantallas, como en la maqueta.
-	// Estaba solo en cuatro, y es justo el dato que convierte una pantalla en
-	// evidencia: de cuándo es lo que se está mirando. Una pantalla sin él
-	// afirma sin fecha.
-	SWPK_Frescura::sello();
-	?>
 </div>
