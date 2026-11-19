@@ -205,6 +205,20 @@ class SWA_Reporte {
 			]
 		);
 
+		// Y el primer reporte sale ya, sin esperar al de las 05:00.
+		//
+		// Registrarse solo entregaba el token: hasta el día siguiente el panel
+		// tenía el sitio en su lista pero no sabía nada de él —ni quiénes son
+		// sus administradores, ni cómo cumple las normas—, y en la pantalla de
+		// Sitios ese sitio salía sin contacto. «No puede ser posible que
+		// cuando lo instalamos no llegue esa info de una vez.» Tiene razón: en
+		// el momento de conectar es justo cuando alguien está mirando.
+		//
+		// Si este envío falla, el registro NO se deshace: el sitio ya quedó
+		// dado de alta y el reporte de mañana lo pondrá al día. Por eso el
+		// error se traga aquí en vez de devolverse como fallo de registro.
+		self::enviar();
+
 		return true;
 	}
 
