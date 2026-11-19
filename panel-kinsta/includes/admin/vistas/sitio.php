@@ -439,20 +439,37 @@ $url_pestana = static fn( string $s ) => add_query_arg(
 		// norma cumplida, una sin medir y una que falla, mezcladas. Se entra
 		// aquí a ver qué hay que arreglar: eso va arriba. Después lo que no se
 		// pudo medir, y al final lo que ya está bien.
+		// ── Primero lo que se puede hacer, después lo que falla ─────────
+		//
+		// La primera versión de este orden ponía delante todo lo que falla. Y
+		// como de las 73 el panel solo sabe arreglar cinco —que en un sitio
+		// que todavía no reporta salen «sin medir»—, esas cinco se iban a la
+		// página dos o tres, detrás de un muro de normas que dicen «hay que
+		// hacerlo a mano». Antes no había orden ninguno y salían en el del
+		// catálogo, donde esas cinco son las primeras: por eso el botón de
+		// arreglar estaba a la vista al entrar, y después de mi cambio dejó
+		// de estarlo. «Sigo sin ver dónde puedo arreglar» no era una
+		// impresión: era esto.
+		//
+		// Ahora manda lo accionable: lo que falla Y el panel sabe arreglar,
+		// después lo que falla, después lo que el panel sabría arreglar en
+		// cuanto lo mida, y al final lo que ya está bien.
 		$peso_estado = static function ( $n ) use ( $cumple_sitio ): int {
 			$fila = $cumple_sitio[ (string) $n->clave ] ?? null;
 			$e    = $fila ? (string) $fila->estado : SWPK_Normas::SIN_DATO;
+			$puede = '' !== SWPK_Ordenes::orden_de_la_norma( (string) $n->clave )
+				&& 1 === (int) $n->arreglable;
 
 			if ( SWPK_Normas::FALLA === $e ) {
-				return 0;
+				return $puede ? 0 : 1;
 			}
 			if ( SWPK_Normas::SIN_DATO === $e ) {
-				return 1;
+				return $puede ? 2 : 3;
 			}
 			if ( SWPK_Normas::NO_APLICA === $e ) {
-				return 3;
+				return 5;
 			}
-			return 2;
+			return 4;
 		};
 
 		usort(

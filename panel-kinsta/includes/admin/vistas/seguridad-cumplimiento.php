@@ -607,22 +607,41 @@ $cuenta_vista = [
 	); ?>
 
 	<?php
+	// Los nombres dicen qué va a quedar en la tabla, no cómo se siente el
+	// sitio. «Le falta algo» y «Todo en orden» obligaban a adivinar si
+	// hablaban de normas, de actualizaciones o de las dos.
 	$como_posibles = [
-		'falla'  => 'Le falta algo',
-		'hueco'  => 'Con normas sin revisar',
-		'limpio' => 'Todo en orden',
+		'falla'  => 'Incumple alguna norma',
+		'hueco'  => 'Con normas sin medir',
+		'limpio' => 'Cumple todas',
 	];
 
+	// Y se puede filtrar por grupo, que es como se mira la cartera en el
+	// resto del panel: «si es auto-update, si es no auto-update, si es de
+	// desarrollo; aquí no puedo filtrar por nada, solo por nombre».
+	$grupos_posibles = [];
+	foreach ( $medibles as $f ) {
+		$tag = (string) $f['sitio']->tag;
+		if ( '' !== $tag ) {
+			$grupos_posibles[ $tag ] = SWPK_Etiquetas::nombres()[ $tag ] ?? $tag;
+		}
+	}
+	asort( $grupos_posibles );
+
 	$como_pedido  = SWPK_Vista::opcion_pedida( 'como', $como_posibles );
+	$grupo_pedido_s = SWPK_Vista::opcion_pedida( 'grupo', $grupos_posibles );
 	$busca_sitio  = SWPK_Vista::busqueda_pedida();
 	$medibles_vis = $medibles;
 
-	if ( '' !== $como_pedido || '' !== $busca_sitio ) {
+	if ( '' !== $como_pedido || '' !== $grupo_pedido_s || '' !== $busca_sitio ) {
 		$aguja        = strtolower( remove_accents( $busca_sitio ) );
 		$medibles_vis = array_values(
 			array_filter(
 				$medibles,
-				static function ( $f ) use ( $como_pedido, $aguja, $nombre_de ) {
+				static function ( $f ) use ( $como_pedido, $grupo_pedido_s, $aguja, $nombre_de ) {
+					if ( '' !== $grupo_pedido_s && (string) $f['sitio']->tag !== $grupo_pedido_s ) {
+						return false;
+					}
 					if ( 'falla' === $como_pedido && $f['fallas'] < 1 ) {
 						return false;
 					}
@@ -646,10 +665,16 @@ $cuenta_vista = [
 		'panel-kinsta-seguridad',
 		[
 			'como' => [
-				'etiqueta' => 'Cómo está',
+				'etiqueta' => 'Estado',
 				'opciones' => $como_posibles,
 				'actual'   => $como_pedido,
-				'todas'    => 'Listas y por construir',
+				'todas'    => 'Cualquier estado',
+			],
+			'grupo' => [
+				'etiqueta' => 'Grupo',
+				'opciones' => $grupos_posibles,
+				'actual'   => $grupo_pedido_s,
+				'todas'    => 'Todos los grupos',
 			],
 		],
 		[ 'seccion' => 'cumplimiento', 'vista' => $vista, 'sev' => $sev_pedida, 'norma' => $norma_pedida, 'arreglo' => $arreglo_pedido ],

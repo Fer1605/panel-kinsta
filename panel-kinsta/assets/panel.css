@@ -472,7 +472,10 @@ body[class*="panel-kinsta"] .wrap .swpk-rango {
 	display: flex;
 	flex-wrap: wrap;
 	align-items: flex-start;
-	gap: 10px 14px;
+	/* 14 px entre campos dejaba los desplegables pegados unos a otros y la
+	   barra se leía como un solo bloque: «todos esos filtros están pegados».
+	   Con 22 px cada uno se ve como lo que es, un filtro aparte. */
+	gap: 12px 22px;
 	margin: 0 0 14px;
 	padding: 14px 16px;
 	background: var(--swpk-tarjeta);
@@ -1079,9 +1082,18 @@ body[class*="panel-kinsta"] .swpk-titulin {
 body[class*="panel-kinsta"] .swpk-rejilla > form.swpk-pasa { display: contents; }
 
 /* Lo que caiga dentro de una rejilla sin decir cuánto mide, ocupa el ancho.
-   Pasa con los avisos de «no hay nada todavía», que viven entre tarjetas: sin
-   esto quedarían de una columna de doce, es decir, ilegibles. */
-body[class*="panel-kinsta"] .swpk-rejilla > *:not([class*="swpk-c"]) {
+   Pasa con los avisos de «no hay nada todavía», que viven entre tarjetas, y
+   con cualquier tarjeta a la que se le pase el ancho en blanco.
+
+   Esto estaba escrito como `:not([class*="swpk-c"])` y no se cumplía NUNCA:
+   `swpk-caja` contiene «swpk-c», así que el `:not` excluía todas las
+   tarjetas. Una tarjeta sin ancho caía en una columna de doce —221 px— y la
+   tabla que llevaba dentro, con sus 900 px de mínimo, se salía 680 px por la
+   derecha. Pasaba en el registro de accesos y en el catálogo de normas.
+
+   Ahora el valor por defecto se pone a todo y las clases de ancho lo pisan,
+   porque pesan más: esta regla va sin el prefijo del body a propósito. */
+.swpk-rejilla > * {
 	grid-column: span 12;
 }
 
