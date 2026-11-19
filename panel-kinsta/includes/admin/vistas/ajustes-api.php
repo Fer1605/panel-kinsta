@@ -26,13 +26,15 @@ usort( $llamadas, static fn( $a, $b ) => strcmp( (string) $b->ocurrio_en, (strin
 $llamadas = array_slice( $llamadas, 0, 25 );
 ?>
 
-	<p style="max-width:860px;color:#3c434a">
-		El panel contesta preguntas. Cualquier otro sistema —o Claude, en la Fase 2— le pregunta
-		por la misma puerta que usan estas pantallas y recibe lo mismo que se ve aquí,
-		<strong>incluido lo que vino de <?php echo esc_html( SWPK_Admin::proveedor() ); ?> y ya está
-		guardado</strong>. No hay que ir al hosting por separado, y la llave del hosting no sale de
-		este plugin: si hace falta el dato fresco, se dispara un proceso y el panel pregunta con su
-		propia llave.
+	<p class="swpk-aviso-corto">
+		Otro sistema puede preguntarle al panel lo mismo que enseñan estas pantallas.
+		<?php echo wp_kses_post( SWPK_Vista::ayuda( sprintf(
+			'Pregunta por la misma puerta que usan las pantallas y recibe lo mismo que se ve aquí, '
+			. 'incluido lo que vino de %s y ya está guardado. No hay que ir al hosting por separado, y '
+			. 'la llave del hosting no sale de este plugin: si hace falta el dato fresco, se dispara un '
+			. 'proceso y el panel pregunta con su propia llave.',
+			SWPK_Admin::proveedor()
+		) ) ); ?>
 	</p>
 
 	<?php if ( ! $alcanzable ) : ?>
@@ -52,95 +54,7 @@ $llamadas = array_slice( $llamadas, 0, 25 );
 
 	<?php SWPK_Vista::rejilla_abrir(); ?>
 
-	<?php SWPK_Vista::caja_abrir( 'Conectarlo a Claude', esc_html( SWPK_Vista::plural( count( $catalogo ), 'consulta disponible', 'consultas disponibles' ) ), 'swpk-c6' ); ?>
-
-	<div class="notice notice-warning">
-			<p>
-				<strong>La API ya funciona, pero hoy solo desde esta máquina.</strong>
-				El panel vive en <code><?php echo esc_html( (string) wp_parse_url( home_url(), PHP_URL_HOST ) ); ?></code>,
-				que no existe para nadie más. Todo lo de abajo es real y se puede probar aquí mismo;
-				para que lo consuma otro sistema hace falta que el panel esté en un servidor al que
-				se pueda llegar. Eso no es trabajo de código, es dónde se pone.
-			</p>
-		</div>
-
-	<p style="max-width:860px;color:#3c434a">
-		<strong>No hay nada que bajar ni que instalar.</strong> El panel habla MCP por su cuenta, así
-		que en Claude Desktop se agrega como conector personalizado: se pega una dirección y se le da
-		conectar. Esa dirección sale al crear la llave, aquí arriba, y es lo único que hace falta.
-	</p>
-
-	<ol style="max-width:860px;color:#3c434a;line-height:1.7">
-		<li><strong>Crear una llave</strong> aquí arriba. La ventana entrega la dirección, con su botón
-			de copiar. <strong>Se enseña una sola vez.</strong></li>
-		<li>En Claude Desktop: <strong>Ajustes → Conectores → Agregar conector personalizado</strong>.</li>
-		<li>Ponerle un <strong>nombre</strong> —por ejemplo <em>Panel Kinsta</em>— y pegar la
-			<strong>dirección</strong>.</li>
-		<li><strong>Conectar.</strong> Ya queda; no pide usuario ni contraseña, porque la dirección
-			misma es la llave.</li>
-	</ol>
-
-	<div class="notice notice-warning inline" style="max-width:860px">
-		<p>
-			<strong>Esto exige que el panel esté en internet, con HTTPS. No es opcional y no se puede
-			rodear con código.</strong>
-			Claude Desktop no se conecta desde la computadora de quien lo usa: le manda la dirección a
-			la nube de Anthropic, y es la nube la que abre la conexión al servidor. Una dirección
-			<code>localhost</code> o de red interna la rechaza de entrada.
-		</p>
-		<p>
-			<?php if ( ! $alcanzable ) : ?>
-				Hoy el panel vive en
-				<code><?php echo esc_html( (string) wp_parse_url( home_url(), PHP_URL_HOST ) ); ?></code>,
-				así que <strong>esto todavía no se puede probar</strong> — ni desde esta misma máquina.
-				El día que el panel tenga su dominio, funciona sin tocar una línea.
-			<?php else : ?>
-				Este panel ya está en una dirección pública. Si el cortafuegos del servidor filtra por
-				origen, hay que dejar entrar al rango de salida de Anthropic.
-			<?php endif; ?>
-		</p>
-	</div>
-
-	<p style="max-width:860px;color:#3c434a">
-		Una vez conectado se le pregunta en español y contesta con lo que hay en el panel:
-		<em>¿qué sitios necesitan atención hoy?</em>, <em>¿cuántas veces se actualizó tal proyecto este
-		mes?</em>, <em>¿quién tiene acceso de administrador a este sitio?</em>
-	</p>
-
-	<table class="widefat striped swpk-tabla">
-		<thead>
-			<tr>
-				<th style="width:210px">Lo que puede consultar</th>
-				<th>Qué devuelve</th>
-			</tr>
-		</thead>
-		<tbody>
-		<?php foreach ( SWPK_Mcp::catalogo() as $h ) : ?>
-			<tr>
-				<td><code><?php echo esc_html( $h['nombre'] ); ?></code></td>
-				<td class="swpk-gris"><?php echo esc_html( $h['que'] ); ?></td>
-			</tr>
-		<?php endforeach; ?>
-		</tbody>
-	</table>
-
-	<p class="swpk-nota">
-		<strong>La dirección es la llave: quien la tenga, consulta.</strong> Por eso vale lo mismo que
-		una contraseña — no se manda por chat ni se deja escrita donde la vea cualquiera, y se revoca
-		desde la tabla de arriba en cuanto sobre. En la base de datos no queda guardada: vive su huella,
-		igual que una contraseña, y por eso se enseña una sola vez.
-	</p>
-
-	<p class="swpk-nota">
-		El conector <strong>solo lee</strong>, y tiene el alcance de su llave: una llave de ventas
-		contesta sobre sus sitios y nada más. Las tres rutas que disparan procesos no se le entregan,
-		porque una conversación no debería poder lanzar más de 200 peticiones al hosting a media
-		pregunta. Cada consulta queda escrita abajo, marcada como MCP.
-	</p>
-
-		<?php SWPK_Vista::caja_cerrar(); ?>
-
-	<?php SWPK_Vista::caja_abrir( 'La dirección', '', 'swpk-c6' ); ?>
+	<?php SWPK_Vista::caja_abrir( 'La dirección del panel', '', 'swpk-c12' ); ?>
 
 	<p>Todas las rutas salen de aquí:</p>
 
@@ -158,20 +72,16 @@ $llamadas = array_slice( $llamadas, 0, 25 );
 
 	<?php SWPK_Vista::caja_abrir( 'Las llaves que hay', '<a href="#swpk-crear-llave">Crear una llave</a>', 'swpk-c12' ); ?>
 
-	<p style="max-width:860px;color:#3c434a">
-		Una llave es una cuenta que <strong>solo puede leer</strong>: consulta los sitios, las
-		vulnerabilidades, los usuarios, los movimientos y el historial de envíos, y no puede disparar procesos
-		ni tocar ajustes. Es a propósito — una llave que vive dentro de otro sistema se puede
-		filtrar, y lo que se filtre no debe poder cambiar nada.
-	</p>
-
-	<p style="max-width:860px;color:#3c434a">
-		<strong>Las llaves no salen en Usuarios de WordPress, y no se pueden editar desde ahí.</strong>
-		Esta tabla es su única lista. Nadie —tampoco un administrador— les puede cambiar la
-		contraseña, subirles el perfil ni borrarlas desde la pantalla de usuarios: si se pudiera,
-		una llave de solo lectura se volvería administradora con un desplegable, o alguien la
-		borraría por limpieza sin saber qué estaba rompiendo. Las dos únicas cosas que se le hacen
-		a una llave son crearla y revocarla, y las dos están aquí.
+	<p class="swpk-aviso-corto">
+		Una llave solo puede leer, y esta tabla es su única lista: aquí se crea y aquí se revoca.
+		<?php echo wp_kses_post( SWPK_Vista::ayuda(
+			'Consulta los sitios, las vulnerabilidades, los usuarios, los movimientos y el historial de '
+			. 'envíos, y no puede disparar procesos ni tocar ajustes. Es a propósito: una llave que vive '
+			. 'dentro de otro sistema se puede filtrar, y lo que se filtre no debe poder cambiar nada. '
+			. 'Tampoco salen en Usuarios de WordPress ni se pueden editar desde ahí — si se pudiera, una '
+			. 'llave de solo lectura se volvería administradora con un desplegable, o alguien la '
+			. 'borraría por limpieza sin saber qué estaba rompiendo.'
+		) ); ?>
 	</p>
 
 	<?php if ( $nueva ) : ?>
@@ -416,12 +326,15 @@ $llamadas = array_slice( $llamadas, 0, 25 );
 
 	<?php SWPK_Vista::caja_abrir( 'Qué se puede consultar', esc_html( SWPK_Vista::plural( count( $catalogo ), 'ruta', 'rutas' ) ), 'swpk-c12' ); ?>
 
-	<p style="max-width:860px;color:#3c434a">
-		Cada una envuelve la misma función que alimenta su pantalla. No hay una sola consulta
-		escrita dos veces: es lo que hace imposible que el panel y la API se contradigan.
-		<strong>Toda respuesta trae encima de cuándo es el dato</strong> —cuándo se le preguntó al
-		hosting, cuándo se bajó la lista de vulnerabilidades, si la corrida está al día— por lo mismo
-		que lo traen los Excel y los PDF: un JSON sin fecha es una afirmación sin fecha.
+	<p class="swpk-aviso-corto">
+		Toda respuesta trae encima de cuándo es el dato.
+		<?php echo wp_kses_post( SWPK_Vista::ayuda(
+			'Cada ruta envuelve la misma función que alimenta su pantalla: no hay una sola consulta '
+			. 'escrita dos veces, y por eso el panel y la API no se pueden contradecir. Y cada '
+			. 'respuesta dice cuándo se le preguntó al hosting, cuándo se bajó la lista de '
+			. 'vulnerabilidades y si la corrida está al día, por lo mismo que lo traen los Excel y los '
+			. 'PDF: un dato sin fecha es una afirmación sin fecha.'
+		) ); ?>
 	</p>
 
 	<?php
@@ -498,6 +411,91 @@ $llamadas = array_slice( $llamadas, 0, 25 );
 
 	<?php SWPK_Vista::caja_cerrar(); ?>
 
+	<?php SWPK_Vista::caja_abrir( 'Conectarlo a Claude', esc_html( SWPK_Vista::plural( count( SWPK_Mcp::catalogo() ), 'consulta disponible', 'consultas disponibles' ) ), 'swpk-c12' ); ?>
+
+	<div class="notice notice-warning">
+			<p>
+				<strong>La API ya funciona, pero hoy solo desde esta máquina.</strong>
+				El panel vive en <code><?php echo esc_html( (string) wp_parse_url( home_url(), PHP_URL_HOST ) ); ?></code>,
+				que no existe para nadie más. Todo lo de abajo es real y se puede probar aquí mismo;
+				para que lo consuma otro sistema hace falta que el panel esté en un servidor al que
+				se pueda llegar. Eso no es trabajo de código, es dónde se pone.
+			</p>
+		</div>
+
+	<p class="swpk-aviso-corto">
+		<strong>No hay nada que bajar ni que instalar.</strong> Se agrega como conector personalizado
+		pegando una dirección, la que sale al crear la llave.
+	</p>
+
+	<ol style="max-width:860px;color:#3c434a;line-height:1.7">
+		<li><strong>Crear una llave</strong> aquí arriba. La ventana entrega la dirección, con su botón
+			de copiar. <strong>Se enseña una sola vez.</strong></li>
+		<li>En Claude Desktop: <strong>Ajustes → Conectores → Agregar conector personalizado</strong>.</li>
+		<li>Ponerle un <strong>nombre</strong> —por ejemplo <em>Panel Kinsta</em>— y pegar la
+			<strong>dirección</strong>.</li>
+		<li><strong>Conectar.</strong> Ya queda; no pide usuario ni contraseña, porque la dirección
+			misma es la llave.</li>
+	</ol>
+
+	<div class="notice notice-warning inline" style="max-width:860px">
+		<p>
+			<strong>Esto exige que el panel esté en internet, con HTTPS. No es opcional y no se puede
+			rodear con código.</strong>
+			Claude Desktop no se conecta desde la computadora de quien lo usa: le manda la dirección a
+			la nube de Anthropic, y es la nube la que abre la conexión al servidor. Una dirección
+			<code>localhost</code> o de red interna la rechaza de entrada.
+		</p>
+		<p>
+			<?php if ( ! $alcanzable ) : ?>
+				Hoy el panel vive en
+				<code><?php echo esc_html( (string) wp_parse_url( home_url(), PHP_URL_HOST ) ); ?></code>,
+				así que <strong>esto todavía no se puede probar</strong> — ni desde esta misma máquina.
+				El día que el panel tenga su dominio, funciona sin tocar una línea.
+			<?php else : ?>
+				Este panel ya está en una dirección pública. Si el cortafuegos del servidor filtra por
+				origen, hay que dejar entrar al rango de salida de Anthropic.
+			<?php endif; ?>
+		</p>
+	</div>
+
+	<p class="swpk-aviso-corto">
+		Conectado, se le pregunta en español: <em>¿qué sitios necesitan atención hoy?</em>,
+		<em>¿cuántas veces se actualizó tal proyecto este mes?</em>
+	</p>
+
+	<table class="widefat striped swpk-tabla">
+		<thead>
+			<tr>
+				<th style="width:210px">Lo que puede consultar</th>
+				<th>Qué devuelve</th>
+			</tr>
+		</thead>
+		<tbody>
+		<?php foreach ( SWPK_Mcp::catalogo() as $h ) : ?>
+			<tr>
+				<td><code><?php echo esc_html( $h['nombre'] ); ?></code></td>
+				<td class="swpk-gris"><?php echo esc_html( $h['que'] ); ?></td>
+			</tr>
+		<?php endforeach; ?>
+		</tbody>
+	</table>
+
+	<p class="swpk-aviso-corto">
+		<strong>La dirección es la llave: quien la tenga, consulta.</strong> Y el conector solo lee.
+		<?php echo wp_kses_post( SWPK_Vista::ayuda(
+			'La dirección vale lo mismo que una contraseña: no se manda por chat ni se deja escrita '
+			. 'donde la vea cualquiera, y se revoca desde «Las llaves que hay» en cuanto sobre. En la '
+			. 'base de datos no queda guardada —vive su huella, igual que una contraseña—, y por eso se '
+			. 'enseña una sola vez. El conector tiene el alcance de su llave: una de ventas contesta '
+			. 'sobre sus sitios y nada más, y las rutas que disparan procesos no se le entregan, porque '
+			. 'una conversación no debería poder lanzar doscientas peticiones al hosting a media '
+			. 'pregunta. Cada consulta queda anotada abajo, marcada como MCP.'
+		) ); ?>
+	</p>
+
+		<?php SWPK_Vista::caja_cerrar(); ?>
+
 	<?php SWPK_Vista::caja_abrir( 'Probarlo desde aquí', '', 'swpk-c12' ); ?>
 
 	<p style="max-width:860px;color:#3c434a">
@@ -557,11 +555,14 @@ $llamadas = array_slice( $llamadas, 0, 25 );
 
 		<?php SWPK_Vista::caja_abrir( 'Lo que ya se consultó', '', 'swpk-c12' ); ?>
 
-	<p style="max-width:860px;color:#3c434a">
-		Cada llamada queda escrita, la que pasa y la que se rechaza. Hace falta porque una contraseña
-		de aplicación <strong>se salta la verificación en dos pasos</strong> —no pasa por el
-		formulario de entrada— así que lo único que queda de ella es esta fila. Las entradas de
-		personas están en <a href="<?php echo esc_url( admin_url( 'admin.php?page=panel-kinsta-movimientos&seccion=accesos' ) ); ?>">Historial</a>.
+	<p class="swpk-aviso-corto">
+		Cada llamada queda escrita, la que pasa y la que se rechaza. Las entradas de personas están
+		en <a href="<?php echo esc_url( admin_url( 'admin.php?page=panel-kinsta-movimientos&seccion=accesos' ) ); ?>">Historial</a>.
+		<?php echo wp_kses_post( SWPK_Vista::ayuda(
+			'Hace falta porque una contraseña de aplicación se salta la verificación en dos pasos —no '
+			. 'pasa por el formulario de entrada— así que lo único que queda de esa llamada es esta '
+			. 'fila.'
+		) ); ?>
 	</p>
 
 	<?php if ( ! $llamadas ) : ?>
