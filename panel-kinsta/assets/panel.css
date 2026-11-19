@@ -1822,3 +1822,11 @@ body[class*="panel-kinsta"] .swpk-tarjetas .swpk-tarjeta {
 body[class*="panel-kinsta"] .swpk-filtros {
 	gap: 10px;
 }
+
+/* El contacto que viene del agente va de marcador, no de valor: se lee como
+   dato de fondo, y lo que alguien escriba encima se ve como lo que es, una
+   decisión tomada a mano. */
+body[class*="panel-kinsta"] .swpk-del-agente::placeholder {
+	color: #646970;
+	opacity: 1;
+}

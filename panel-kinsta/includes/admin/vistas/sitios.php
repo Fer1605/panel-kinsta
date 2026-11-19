@@ -62,6 +62,12 @@ usort(
 );
 [ $pagina_de_sitios, $pagina, $paginas ] = SWPK_Vista::paginar( $filtrados, SWPK_Vista::pagina_pedida() );
 
+// A quién le va a llegar el aviso de cada sitio de esta página. Sale de los
+// administradores que reporta el agente, menos los de nuestros dominios, que
+// es la misma cuenta que hace el envío. En dos consultas para las veinte
+// filas, no dos por fila.
+$destinos_pagina = SWPK_Correos::destinatarios_de_varios( $pagina_de_sitios );
+
 // A dónde vuelve el botón de analizar: a esta misma página, con sus filtros.
 // Analizar un sitio desde la página 3 del grupo y aterrizar en el Resumen
 // obliga a volver a buscarlo.
@@ -336,10 +342,39 @@ $volver = add_query_arg(
 					</td>
 					<?php if ( $asignar ) : ?>
 						<td>
+							<?php
+							// El campo se puede escribir SIEMPRE. Lo que trae el agente
+							// va de marcador, no de valor: así se ve a quién le llega sin
+							// entrar a la ficha, y al guardar no se congela una copia que
+							// mañana estaría vieja —el agente actualiza su lista en cuanto
+							// alguien entra o sale del sitio—.
+							//
+							// Vacío: manda la lista del agente. Escrito: manda lo escrito.
+							$del_agente = $destinos_pagina[ (string) $s->sitio_id ] ?? [];
+							$marcador   = $del_agente
+								? implode( ', ', $del_agente )
+								: 'correo del cliente, separados por coma';
+							?>
 							<input type="text" style="width:100%"
+								class="<?php echo $del_agente ? 'swpk-del-agente' : ''; ?>"
 								name="contacto[<?php echo esc_attr( $s->sitio_id ); ?>]"
 								value="<?php echo esc_attr( (string) $s->contacto_cliente ); ?>"
-								placeholder="<?php echo SWPK_Etiquetas::es_nuestro( $tag ) ? 'lo da el agente' : 'correo del cliente'; ?>">
+								placeholder="<?php echo esc_attr( $marcador ); ?>">
+							<?php if ( $del_agente ) : ?>
+								<?php echo wp_kses_post( SWPK_Vista::ayuda(
+									'En gris está lo que dice el agente instalado: los administradores del '
+									. 'sitio, menos los de los dominios de la casa que haya en Ajustes → '
+									. 'Correos. Si lo dejás en blanco, el aviso va a esas direcciones y la '
+									. 'lista se mantiene sola. Si escribís algo, manda lo que escribas; '
+									. 'varias direcciones, separadas por coma.'
+								) ); ?>
+							<?php else : ?>
+								<?php echo wp_kses_post( SWPK_Vista::ayuda(
+									'Este sitio no tiene el agente instalado, así que el panel no puede saber '
+									. 'quiénes son sus administradores: aquí hay que escribirlo a mano. Varias '
+									. 'direcciones, separadas por coma. Si se queda vacío, su aviso no sale.'
+								) ); ?>
+							<?php endif; ?>
 						</td>
 						<td>
 							<a class="button button-small"

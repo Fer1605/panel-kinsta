@@ -153,6 +153,20 @@ class SWPK_Correos {
 		$propios = SWPK_Ajustes::dominios_propios();
 		$correos = [];
 
+		// Lo escrito a mano manda. El campo de Sitios se puede escribir
+		// siempre, y un campo que se puede escribir y no hace nada es una
+		// trampa: si alguien puso ahí una dirección, es porque quiere que el
+		// aviso vaya a esa y no a la que deduce el panel. Vacío, se usa la
+		// lista del agente, que es lo normal.
+		$a_mano = array_values( array_filter( array_map(
+			'trim',
+			explode( ',', (string) ( $sitio->contacto_cliente ?? '' ) )
+		) ) );
+
+		if ( $a_mano ) {
+			return array_values( array_unique( $a_mano ) );
+		}
+
 		$agente = $wpdb->get_row(
 			$wpdb->prepare(
 				'SELECT sitio_url FROM ' . SWPK_Tablas::tabla( 'agentes' ) . ' WHERE sitio_id = %s OR sitio_url LIKE %s',
@@ -181,11 +195,92 @@ class SWPK_Correos {
 			}
 		}
 
-		if ( ! $correos && ! empty( $sitio->contacto_cliente ) ) {
-			$correos = array_filter( array_map( 'trim', explode( ',', (string) $sitio->contacto_cliente ) ) );
+		return array_values( array_unique( $correos ) );
+	}
+
+	/**
+	 * Lo mismo que `destinatarios_cliente()`, pero para muchos sitios de una
+	 * vez y en dos consultas.
+	 *
+	 * La versión de uno en uno hace dos consultas por sitio. Eso está bien al
+	 * enviar —se envía poco y de tarde en tarde— y está mal en una tabla de
+	 * veinte filas, que es donde hace falta enseñar a quién le va a llegar el
+	 * aviso sin tener que entrar a cada ficha.
+	 *
+	 * Devuelve solo los sitios que tienen a alguien: el que no aparece es que
+	 * no tiene agente, o que todos sus administradores son de casa.
+	 *
+	 * @param array<int,object> $sitios
+	 * @return array<string,array<int,string>> sitio_id => correos
+	 */
+	public static function destinatarios_de_varios( array $sitios ): array {
+		global $wpdb;
+
+		if ( ! $sitios ) {
+			return [];
 		}
 
-		return array_values( array_unique( $correos ) );
+		$propios = SWPK_Ajustes::dominios_propios();
+
+		// Los agentes, una vez. La relación con el sitio es por sitio_id
+		// cuando lo trae, y por dominio cuando no: el receptor viejo no lo
+		// rellenaba, así que hay filas de las dos clases.
+		$agentes = $wpdb->get_results(
+			'SELECT sitio_id, sitio_url FROM ' . SWPK_Tablas::tabla( 'agentes' )
+		) ?: [];
+
+		$por_id      = [];
+		$por_dominio = [];
+
+		foreach ( $agentes as $a ) {
+			$url = (string) $a->sitio_url;
+
+			if ( '' !== (string) $a->sitio_id ) {
+				$por_id[ (string) $a->sitio_id ] = $url;
+			}
+
+			$host = (string) wp_parse_url( $url, PHP_URL_HOST );
+			if ( '' !== $host ) {
+				$por_dominio[ strtolower( preg_replace( '/^www\./', '', $host ) ) ] = $url;
+			}
+		}
+
+		// Y los administradores, una vez.
+		$usuarios = $wpdb->get_results(
+			"SELECT sitio_url, correo FROM " . SWPK_Tablas::tabla( 'usuarios' )
+			. " WHERE roles LIKE '%administrator%'"
+		) ?: [];
+
+		$correos_por_url = [];
+
+		foreach ( $usuarios as $u ) {
+			$correo  = (string) $u->correo;
+			$dominio = strtolower( (string) substr( strrchr( $correo, '@' ) ?: '', 1 ) );
+
+			foreach ( $propios as $propio ) {
+				if ( $dominio === $propio || str_ends_with( $dominio, '.' . $propio ) ) {
+					continue 2; // es de los nuestros
+				}
+			}
+
+			$correos_por_url[ (string) $u->sitio_url ][] = $correo;
+		}
+
+		$salida = [];
+
+		foreach ( $sitios as $s ) {
+			$id   = (string) $s->sitio_id;
+			$host = strtolower( preg_replace( '/^www\./', '', (string) $s->dominio ) );
+			$url  = $por_id[ $id ] ?? ( $por_dominio[ $host ] ?? '' );
+
+			if ( '' === $url || empty( $correos_por_url[ $url ] ) ) {
+				continue;
+			}
+
+			$salida[ $id ] = array_values( array_unique( $correos_por_url[ $url ] ) );
+		}
+
+		return $salida;
 	}
 
 	/** @return array<int,string> */
