@@ -98,6 +98,34 @@ class SWPK_Riesgo {
 	 *
 	 * @return array<int,array<string,mixed>>
 	 */
+	/**
+	 * La última fecha con datos de CADA sitio, en una sola consulta.
+	 *
+	 * Sigue siendo el máximo por sitio y no el de la cartera: eso es lo que
+	 * evita que un sitio del que hoy no vino nada se mire contra la fecha de
+	 * hoy y salga «Al día» con sus módulos intactos. Lo único que cambia es
+	 * que se pregunta una vez para los 108 en vez de una vez por sitio.
+	 *
+	 * @return array<string,string> sitio_id => fecha
+	 */
+	private static function ultimas_fotos(): array {
+		static $mapa = null;
+
+		if ( null !== $mapa ) {
+			return $mapa;
+		}
+
+		global $wpdb;
+		$tabla = SWPK_Tablas::tabla( 'fotos' );
+		$mapa  = [];
+
+		foreach ( (array) $wpdb->get_results( "SELECT sitio_id, MAX(fecha) AS fecha FROM {$tabla} GROUP BY sitio_id" ) as $f ) {
+			$mapa[ (string) $f->sitio_id ] = (string) $f->fecha;
+		}
+
+		return $mapa;
+	}
+
 	public static function hallazgos( string $sitio_id, string $fecha = '' ): array {
 		global $wpdb;
 
@@ -115,9 +143,7 @@ class SWPK_Riesgo {
 		// Con el MAX por sitio, ese sitio se mira contra su último dato bueno.
 		// Viejo, sí — y para eso está la columna "Revisado" y la tira de
 		// frescura, que dicen de cuándo es.
-		$fecha = '' !== $fecha
-			? $fecha
-			: (string) $wpdb->get_var( $wpdb->prepare( "SELECT MAX(fecha) FROM {$tabla} WHERE sitio_id = %s", $sitio_id ) );
+		$fecha = '' !== $fecha ? $fecha : ( self::ultimas_fotos()[ $sitio_id ] ?? '' );
 
 		if ( '' === $fecha ) {
 			return [];

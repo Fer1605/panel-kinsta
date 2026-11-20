@@ -574,11 +574,44 @@ class SWPK_Wordfence {
 
 	/** @return array<int,object> */
 	public static function para_slug( string $slug ): array {
+		return self::por_slug()[ $slug ] ?? [];
+	}
+
+	/**
+	 * Toda la lista, agrupada por slug y cargada una sola vez por petición.
+	 *
+	 * ─── Por qué, con los números ───────────────────────────────────────────
+	 *
+	 * Esto era una consulta por slug. Suena inocente hasta que se cuenta:
+	 * `nivel_del_sitio()` pregunta por cada módulo instalado, la pantalla de
+	 * Sitios lo hace para los 108, y la cuenta sale a **1.957 consultas y 1,6
+	 * segundos** solo para pintar la columna de riesgo. Es el N+1 de siempre:
+	 * cada fila de una lista disparando su propia consulta.
+	 *
+	 * La tabla entera son unas 2.200 filas y 230 KB, así que traerla de una
+	 * vez cuesta una consulta y unos milisegundos, y a partir de ahí todas las
+	 * preguntas se contestan de memoria. El mapa vive solo lo que dure la
+	 * petición: no es una caché que haya que invalidar, y si el feed se baja
+	 * de nuevo —cosa que pasa en otra petición— la siguiente lo lee fresco.
+	 *
+	 * @return array<string,array<int,object>>
+	 */
+	private static function por_slug(): array {
+		static $mapa = null;
+
+		if ( null !== $mapa ) {
+			return $mapa;
+		}
+
 		global $wpdb;
 		$tabla = SWPK_Tablas::tabla( 'vulnerabilidades' );
-		return $wpdb->get_results(
-			$wpdb->prepare( "SELECT * FROM {$tabla} WHERE slug = %s AND informativa = 0", $slug )
-		) ?: [];
+		$mapa  = [];
+
+		foreach ( (array) $wpdb->get_results( "SELECT * FROM {$tabla} WHERE informativa = 0" ) as $v ) {
+			$mapa[ (string) $v->slug ][] = $v;
+		}
+
+		return $mapa;
 	}
 
 	/**
