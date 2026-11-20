@@ -716,13 +716,37 @@ class SWPK_Admin {
 
 		$asignaciones = isset( $_POST['asesora'] ) ? (array) wp_unslash( $_POST['asesora'] ) : [];
 		$contactos    = isset( $_POST['contacto'] ) ? (array) wp_unslash( $_POST['contacto'] ) : [];
+		$automaticos  = isset( $_POST['contacto_auto'] ) ? (array) wp_unslash( $_POST['contacto_auto'] ) : [];
+
+		// Las direcciones que trae el agente se dibujan como valor, para poder
+		// leerlas y corregir una sin volver a escribirlas todas. El precio
+		// sería congelar una copia que mañana estaría vieja, porque el agente
+		// rehace su lista en cuanto alguien entra o sale del sitio.
+		//
+		// Por eso se compara: si lo que viene es exactamente lo que decía el
+		// agente, se guarda vacío —que es como se dice «seguí al agente»— y
+		// solo se guarda lo que alguien haya cambiado de verdad. Vaciar el
+		// campo a mano vuelve a seguirlo, que es lo mismo.
+		$misma_lista = static function ( string $a, string $b ): bool {
+			$normalizar = static function ( string $x ): string {
+				$partes = array_filter( array_map( 'trim', explode( ',', strtolower( $x ) ) ) );
+				sort( $partes );
+				return implode( ',', $partes );
+			};
+
+			return $normalizar( $a ) === $normalizar( $b );
+		};
 
 		foreach ( $asignaciones as $sitio_id => $usuario_id ) {
-			SWPK_Perfiles::asignar(
-				sanitize_text_field( (string) $sitio_id ),
-				(int) $usuario_id,
-				sanitize_text_field( (string) ( $contactos[ $sitio_id ] ?? '' ) )
-			);
+			$id       = sanitize_text_field( (string) $sitio_id );
+			$escrito  = sanitize_text_field( (string) ( $contactos[ $sitio_id ] ?? '' ) );
+			$del_agente = sanitize_text_field( (string) ( $automaticos[ $sitio_id ] ?? '' ) );
+
+			if ( '' !== $del_agente && $misma_lista( $escrito, $del_agente ) ) {
+				$escrito = '';
+			}
+
+			SWPK_Perfiles::asignar( $id, (int) $usuario_id, $escrito );
 		}
 
 		wp_safe_redirect( admin_url( 'admin.php?page=' . self::SLUG . '-sitios&swpk_msg=ok:' . rawurlencode( 'Asignaciones guardadas.' ) ) );

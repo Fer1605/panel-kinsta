@@ -232,18 +232,20 @@ $volver = add_query_arg(
 			<thead>
 				<tr>
 					<th>Sitio</th>
-					<th style="width:120px">Grupo</th>
-					<th style="width:95px">Cómo está</th>
-					<th style="width:140px">Pendientes</th>
-					<th style="width:85px">WordPress</th>
-					<th style="width:60px">PHP</th>
+					<th style="width:96px">Grupo</th>
+					<th style="width:82px">Cómo está</th>
+					<th style="width:124px">Pendientes</th>
+					<th style="width:104px">
+						Versiones
+						<?php echo wp_kses_post( SWPK_Vista::ayuda( 'WordPress y PHP, en ese orden.' ) ); ?>
+					</th>
 					<?php if ( SWPK_Etiquetas::es_nuestro( $tag ) ) : ?>
-						<th style="width:120px">Doble paso</th>
+						<th style="width:96px">Doble paso</th>
 					<?php endif; ?>
-					<th style="width:120px">Revisado</th>
+					<th style="width:96px">Revisado</th>
 					<th style="width:165px">Asesora</th>
 					<?php if ( $asignar ) : ?>
-						<th style="width:190px">
+						<th style="width:260px">
 							Contacto del cliente
 							<?php echo wp_kses_post( SWPK_Vista::ayuda(
 								'A quién se le manda el reporte de lo que se hizo. En los sitios que '
@@ -253,7 +255,7 @@ $volver = add_query_arg(
 								. 'son justo los que más hay que avisar.'
 							) ); ?>
 						</th>
-						<th style="width:90px"></th>
+						<th style="width:84px"></th>
 					<?php endif; ?>
 				</tr>
 			</thead>
@@ -293,8 +295,13 @@ $volver = add_query_arg(
 							<?php endif; ?>
 						<?php endif; ?>
 					</td>
-					<td><?php echo esc_html( $s->version_wp ?: '—' ); ?></td>
-					<td><?php echo esc_html( $s->version_php ?: '—' ); ?></td>
+					<td class="swpk-mono"><?php
+						printf(
+							'%s <span class="swpk-gris">·</span> %s',
+							esc_html( $s->version_wp ?: '—' ),
+							esc_html( $s->version_php ?: '—' )
+						);
+					?></td>
 					<?php if ( SWPK_Etiquetas::es_nuestro( $tag ) ) : ?>
 						<td>
 							<?php if ( $s->tiene_2fa ) : ?>
@@ -343,13 +350,16 @@ $volver = add_query_arg(
 					<?php if ( $asignar ) : ?>
 						<td>
 							<?php
-							// El campo se puede escribir SIEMPRE. Lo que trae el agente
-							// va de marcador, no de valor: así se ve a quién le llega sin
-							// entrar a la ficha, y al guardar no se congela una copia que
-							// mañana estaría vieja —el agente actualiza su lista en cuanto
-							// alguien entra o sale del sitio—.
+							// El campo trae la lista del agente como VALOR, no como
+							// marcador. De marcador no se podía leer entera, no se podía
+							// corregir una sola dirección sin volver a escribirlas todas, y
+							// en gris parecía un campo apagado: «deberían aparecer como que
+							// alguien los escribió».
 							//
-							// Vacío: manda la lista del agente. Escrito: manda lo escrito.
+							// Y sigue sin congelarse una copia vieja: al guardar, si lo que
+							// hay en el campo es exactamente lo que dice el agente, se
+							// guarda vacío —o sea, «seguí al agente»—. Solo se guarda lo
+							// que alguien haya cambiado de verdad. Ver accion_asignar().
 							$info       = $destinos_pagina[ (string) $s->sitio_id ] ?? [ 'correos' => [], 'motivo' => 'sin_agente' ];
 							$del_agente = $info['correos'];
 
@@ -360,10 +370,12 @@ $volver = add_query_arg(
 							[ $marcador, $explica ] = $del_agente
 								? [
 									implode( ', ', $del_agente ),
-									'En gris están los administradores que reporta el agente, menos los de los '
-									. 'dominios de la casa que haya en Ajustes → Correos. Si lo dejás en blanco, '
-									. 'el aviso va a esas direcciones y la lista se mantiene sola. Si escribís '
-									. 'algo, manda lo que escribas; varias direcciones, separadas por coma.',
+									'Estas direcciones las reporta el agente del sitio: sus administradores, '
+									. 'menos los de los dominios de la casa que haya en Ajustes → Correos. Si no '
+									. 'las tocás, la lista se mantiene sola y no se guarda ninguna copia. En '
+									. 'cuanto cambies algo, manda lo que dejes escrito y deja de seguir al '
+									. 'agente; para volver a seguirlo, vaciá el campo y guardá. Varias '
+									. 'direcciones, separadas por coma.',
 								]
 								: match ( $info['motivo'] ) {
 									'sin_reporte' => [
@@ -389,10 +401,18 @@ $volver = add_query_arg(
 									],
 								};
 							?>
+							<?php
+							$auto   = $del_agente ? implode( ', ', $del_agente ) : '';
+							$escrito = trim( (string) $s->contacto_cliente );
+							$valor  = '' !== $escrito ? $escrito : $auto;
+							?>
+							<input type="hidden"
+								name="contacto_auto[<?php echo esc_attr( $s->sitio_id ); ?>]"
+								value="<?php echo esc_attr( $auto ); ?>">
 							<input type="text" style="width:100%"
-								class="<?php echo $del_agente ? 'swpk-del-agente' : ''; ?>"
+								title="<?php echo esc_attr( $valor ); ?>"
 								name="contacto[<?php echo esc_attr( $s->sitio_id ); ?>]"
-								value="<?php echo esc_attr( (string) $s->contacto_cliente ); ?>"
+								value="<?php echo esc_attr( $valor ); ?>"
 								placeholder="<?php echo esc_attr( $marcador ); ?>">
 							<?php echo wp_kses_post( SWPK_Vista::ayuda( $explica ) ); ?>
 						</td>

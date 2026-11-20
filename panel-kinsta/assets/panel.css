@@ -1830,3 +1830,20 @@ body[class*="panel-kinsta"] .swpk-del-agente::placeholder {
 	color: #646970;
 	opacity: 1;
 }
+
+/* El contacto y la asesora son los dos campos que se EDITAN en la tabla de
+   sitios, y eran los dos más estrechos: un `input` con `width:100%` no tiene
+   ancho propio, así que su columna se encogía a lo mínimo mientras las de
+   insignias se llevaban el espacio. Con un ancho mínimo en el campo, la
+   columna no puede colapsar y la lista de correos se lee entera.
+
+   No se usa `table-layout: fixed` aquí: esta tabla tiene una columna sin
+   ancho declarado —el nombre del sitio— y con reparto fijo se queda en cero
+   y el nombre cae letra por letra. */
+body[class*="panel-kinsta"] .swpk-tabla input[name^="contacto["] {
+	min-width: 172px;
+}
+
+body[class*="panel-kinsta"] .swpk-tabla select[name^="asesora["] {
+	min-width: 120px;
+}
