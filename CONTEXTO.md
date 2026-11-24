@@ -134,7 +134,7 @@ Reglas de Fer, que valen igual en un chat nuevo:
 | | Versión | Dónde está |
 |---|---|---|
 | Panel Kinsta | **0.6.0** | Desplegado en producción y verificado ahí mismo. |
-| Agente (plugin) | **0.6.4** | En 107 sitios: los 95 de antes mas 12 de los 13 `no_update`. |
+| Agente (plugin) | **0.6.4** | En 106 de los 107 sitios que lo tienen. |
 | Agente (dentro del tema) | **0.6.4-tema** | En el PR, esperando al jefe. |
 | Tema hijo | **2.6.1** | En el PR. |
 
@@ -284,10 +284,20 @@ Y dos cosas que destapó hacerlo:
 
 ### Deudas técnicas, sin urgencia
 
-- **El agente 0.6.4 está en los 13 sitios nuevos, pero los 95 de antes siguen
-  en 0.6.3.** Lo que les falta es el arreglo de `wc_orders`, que solo se nota
-  en tiendas con esquema viejo de WooCommerce; conviene repartirlo, sin prisa.
-  La forma de hacerlo en masa está arriba, en la sección del agente.
+- **El agente 0.6.4 está repartido: 106 de 107 sitios.** Falta uno solo, y no
+  por el agente: su SSH acepta la conexión TCP y luego la corta en el saludo
+  (`kex_exchange_identification: Connection reset by peer`), con el puerto
+  abierto y el sitio sin bloquear según la API. Probado cuatro veces con
+  pausas. Hay que mirarlo en el panel del hosting —puede que tenga el acceso
+  SSH apagado— y volver a correr el reparto solo para él. **Cuál es está en
+  `REUNION-2026-11-23-lo-que-pidio.md`.**
+- **El reparto en masa, por si hace falta otra vez:** se saca la lista de
+  sitios con su `ssh_connection` de la API de Kinsta, se sube el `.tgz` del
+  plugin a `/tmp` de cada sitio, se extrae en `wp-content/plugins` y se
+  comprueba leyendo `SWA_VERSION`. Dos cosas que importan: una pausa corta
+  entre sitios, porque sin ella el hosting corta conexiones por ráfaga; y un
+  `ConnectTimeout` de 25 s y no de 8, porque con 8 fallaron seis sitios que
+  estaban perfectamente bien.
 - Las 8 normas de seguridad nuevas del jefe siguen mostrándose como «Por
   construir».
 - Las 5 decisiones del PDF «Normas de seguridad - el plan».
