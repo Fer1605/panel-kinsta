@@ -534,6 +534,24 @@ class SWPK_Correos {
 				++$resumen['sin_destinatario'];
 			}
 
+			// Y copia para nosotros, que es la mitad que faltaba del pedido.
+			//
+			// «Hoy se actualizó esto, en la semana actualizamos esto, esto y
+			// esto de este sitio. ESTO TANTO AL CLIENTE COMO A NOSOTROS»
+			// (18:27). El mensual solo salía al cliente, así que de lo único
+			// que se le cuenta al cliente no quedaba copia en ninguna bandeja
+			// nuestra — solo en la bitácora, que hay que entrar a mirar.
+			//
+			// Van en el mismo correo y no en uno aparte a propósito: lo que
+			// interesa es leer EXACTAMENTE lo que le llegó al cliente, no un
+			// resumen de que se le escribió. Que la dirección de soporte se
+			// vea en la copia no es un problema: es la nuestra.
+			if ( $destinatarios ) {
+				$destinatarios = array_values(
+					array_unique( array_merge( $destinatarios, self::destinatarios_soporte() ) )
+				);
+			}
+
 			$cuerpo = SWPK_Plantillas::mensual_cliente( $sitio, $veces, $desde, $hasta );
 
 			$r = self::despachar(
