@@ -3,7 +3,7 @@
 Este archivo existe para una sola cosa: **que puedas abrir un chat nuevo,
 pasarle esto, y que arranque sabiendo lo mismo que sabe el chat de hoy.**
 
-Fecha de corte: **23 de noviembre de 2026.** Lo que diga de versiones,
+Fecha de corte: **23 de noviembre de 2026, por la noche.** Lo que diga de versiones,
 cantidades y pendientes era cierto ese día; lo que diga de reglas y de cómo
 está armado el panel no cambia.
 
@@ -133,12 +133,48 @@ Reglas de Fer, que valen igual en un chat nuevo:
 
 | | Versión | Dónde está |
 |---|---|---|
-| Panel Kinsta | **0.5.1** | Desplegado en producción y verificado ahí mismo. |
+| Panel Kinsta | **0.6.0** | Desplegado en producción y verificado ahí mismo. |
 | Agente (plugin) | **0.6.3** | En los 95 sitios. |
 | Agente (dentro del tema) | **0.6.4-tema** | En el PR, esperando al jefe. |
 | Tema hijo | **2.6.1** | En el PR. |
 
-Lo último que se hizo, en orden:
+### Lo de la reunión del 23 por la noche (0.6.0)
+
+Seis cosas, y las dos primeras son las que hacían que el panel no sirviera
+para lo que se construyó. El razonamiento completo está en el commit; aquí
+solo qué cambió y qué quedó pendiente.
+
+1. **El panel no había mandado un solo correo. Nunca.** Dos causas a la vez:
+   `swpk_modo_envio` no existía como opción, así que caía en `MODO_PRUEBA` de
+   fábrica; y `correo_soporte` estaba vacío. La bitácora entera eran siete
+   filas, ninguna enviada. Y una tercera que además mentía: el aviso de caída
+   se iba callado si no había destinatario, sin dejar rastro — por eso el
+   Historial enseñaba la caída y ningún aviso. **Ya está encendido y
+   comprobado: llegó un correo de verdad a una bandeja de verdad.**
+2. **«No puedo confiar en este panel.»** Trataba la etiqueta del hosting y la
+   actualización automática como el mismo dato. El dato correcto estaba
+   guardado desde el primer día en cada foto y no se enseñaba. Ahora se mide
+   y se enseña aparte, en Sitios y en la ficha, y el grupo se puede corregir
+   a mano cuando la etiqueta del hosting está mal.
+3. **El monitor no estaba midiendo nada.** 106 de 109 sitios en 403 porque
+   Cloudflare bloquea las IP de salida de Pantheon. Estado nuevo `ciego`: no
+   cuenta como caída ni avisa. **Esto no arregla la medición, solo deja de
+   mentir sobre ella** — ver el punto 6.
+4. **Paleta para daltónicos.** «Al día» pasa a azul. Los seis colores salen
+   de una búsqueda medida, no de elegirlos a ojo: el primer intento arregló
+   el par del que se quejaba y rompió otro sin que nadie lo notara hasta
+   medirlo. Las tres condiciones están en el comentario de
+   `SWPK_Riesgo::colores()`.
+5. **Sitios que ya no existen.** A las cinco sincronizaciones sin aparecer se
+   dan de baja, dejan de contar y se avisa. No se borra la fila: la evidencia
+   sobrevive al sitio.
+6. **El correo que sabe que ya lo mandó antes.** `SWPK_Insistencia`. La firma
+   de un estado lleva el slug Y las dos versiones, porque «el mismo plugin en
+   otra versión» sí es un cambio y contar pendientes no lo detecta.
+
+Tablas a la versión 14: `grupo_a_mano`, `ausencias`, `de_baja`, `de_baja_en`.
+
+### Lo de antes (0.5.1 y anteriores)
 
 1. **Los 49 pedidos del jefe de la reunión del 19.** Hechos todos los de cómo
    se ve; los de funcionalidad quedaron separados porque son decisiones de Fer
@@ -177,6 +213,35 @@ Están en `REUNION-2026-11-19-lo-que-pidio.md`, sección K:
   quedó.
 - Poder agregar más correos de notificación por sitio.
 - «Arreglar sólo esa parte», con más granularidad que la norma.
+
+### Lo que dejó abierto la reunión del 23
+
+- **El monitor sigue sin poder medir 106 sitios.** Cloudflare bloquea las IP
+  de salida de Pantheon; comprobado desde el servidor (403 con la página de
+  bloqueo) y desde fuera (200). Las salidas son dos: que el hosting deje
+  pasar a Pantheon, o un servicio externo de monitoreo. **Es decisión de
+  Fer**, y hasta que se decida el panel dice honestamente «no se puede
+  medir» en vez de inventarse una caída.
+- **El Equipo sigue vacío y ningún sitio tiene asesora asignada.** El jefe
+  pidió por nombre a Tiffany Ramírez (`tramirez@`), Alejandra López
+  (`alopez@`), él mismo (`jdiaz@`) y Luisa Álvarez (`lalvarez@`, para las
+  caídas). Las direcciones de aviso YA están puestas en Ajustes → Correos,
+  así que los correos a soporte y los de caída salen; **el semanal a las
+  asesoras no tiene a quién salir** hasta que se creen las cuentas en Equipo
+  y se asignen los sitios, que es lo único que no se puede hacer sin saber
+  quién atiende cada cuenta. El escalado de «ya te avisamos N veces» está
+  construido y probado, pero no se verá funcionando hasta entonces.
+- **El mensual a clientes está encendido y sale el 1 de diciembre**, a los
+  administradores de cada sitio nuestro con movimientos en noviembre. Fer
+  decidió encenderlo entero sabiendo que el primer lote va a clientes
+  reales; conviene leer unos cuantos en Correos → Bitácora antes de esa
+  fecha.
+- Del video quedaron sin tocar, por ser maquetado menor: la «i» de
+  información que no parece una «i», la dirección del reporte que va debajo
+  en vez de al lado, las fechas del reporte al cliente que salen todas
+  iguales, el «Analizar este sitio ahora» sin señal de que está trabajando, y
+  el «ver y editar» de Correos que manda a otra pantalla en vez de abrir una
+  ventana.
 
 ### Deudas técnicas, sin urgencia
 
@@ -232,6 +297,8 @@ Los que más vale leer:
 
 | Commit | De qué habla |
 |---|---|
+| `1606a47` | Las dos causas de que el panel no mandara correos, y la tercera que además mentía. Y por qué la etiqueta del hosting no dice si un sitio se actualiza solo. |
+| el de la paleta | Cómo una paleta «arreglada» rompió otro par de colores, y por qué ahora se elige midiendo. |
 | `7a65097` | Las 5.000 consultas, y por qué la solución es un mapa por petición y no una caché. |
 | `a08c10a` | Por qué el contacto escrito a mano le gana al que reporta el agente. |
 | `bdbfa34` | «No tiene agente» y «el agente no ha mandado la lista» no son lo mismo: cuatro motivos distintos. |
