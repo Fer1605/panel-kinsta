@@ -13,6 +13,13 @@ Está escrito para dos lectores a la vez:
   cambio que parece una mejora obvia puede estar rompiendo una promesa que se
   le hizo por escrito a un cliente.
 
+## Si estás arrancando un chat nuevo
+
+Antes que nada, `../CONTEXTO.md`: en un solo archivo, qué es el panel, dónde
+vive, en qué estado está hoy, qué queda pendiente y cuál de estos archivos
+abrir para qué. Está escrito justamente para pasárselo a un chat que empieza
+de cero.
+
 ## Por dónde empezar
 
 Si solo vas a leer tres, que sean estos, en este orden:
