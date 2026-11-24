@@ -216,7 +216,10 @@ class SWPK_Inventario {
 
 		if ( $sitio_ids ) {
 			$en    = implode( ',', array_fill( 0, count( $sitio_ids ), '%s' ) );
-			$donde = "AND sitio_id IN ({$en})";
+			// Con el prefijo `f.`: sin él, `sitio_id` es ambiguo porque la
+			// subconsulta de la derecha también tiene una columna así, y MySQL
+			// rechaza la consulta entera.
+			$donde = "AND f.sitio_id IN ({$en})";
 			$args  = $sitio_ids;
 		}
 
