@@ -216,7 +216,23 @@ class SWA_Tienda {
 		if ( 'yes' === get_option( 'woocommerce_custom_orders_table_enabled' ) ) {
 			$t = $wpdb->prefix . 'wc_orders';
 
-			if ( $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $t ) ) === $t ) {
+			// Que la tabla exista no basta: hay que comprobar la COLUMNA.
+			//
+			// El 23 de noviembre de 2026 esto reventó en dos tiendas al
+			// instalar el agente. Las dos tenían la tabla `wc_orders` —la
+			// opción de HPOS encendida en algún momento— pero con un esquema
+			// viejo, sin `date_paid_gmt`. La consulta moría con «Unknown
+			// column», el error salía impreso en medio del reporte, y lo
+			// único que salvó el registro fue que el fallo venía después de
+			// lo importante.
+			//
+			// WooCommerce renombró esa columna por el camino, así que la
+			// presencia de la tabla no dice nada del esquema que hay dentro.
+			// Sin la columna se cae al conteo por entradas, que funciona en
+			// cualquier versión.
+			$tabla_ok = $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $t ) ) === $t;
+
+			if ( $tabla_ok && $wpdb->get_results( "SHOW COLUMNS FROM {$t} LIKE 'date_paid_gmt'" ) ) {
 				return (int) $wpdb->get_var(
 					"SELECT COUNT(*) FROM {$t}
 					  WHERE status IN ('wc-processing','wc-completed')
