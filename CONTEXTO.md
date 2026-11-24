@@ -134,7 +134,7 @@ Reglas de Fer, que valen igual en un chat nuevo:
 | | Versión | Dónde está |
 |---|---|---|
 | Panel Kinsta | **0.6.0** | Desplegado en producción y verificado ahí mismo. |
-| Agente (plugin) | **0.6.3** | En los 95 sitios. |
+| Agente (plugin) | **0.6.4** | En 107 sitios: los 95 de antes mas 12 de los 13 `no_update`. |
 | Agente (dentro del tema) | **0.6.4-tema** | En el PR, esperando al jefe. |
 | Tema hijo | **2.6.1** | En el PR. |
 
@@ -214,6 +214,36 @@ Están en `REUNION-2026-11-19-lo-que-pidio.md`, sección K:
 - Poder agregar más correos de notificación por sitio.
 - «Arreglar sólo esa parte», con más granularidad que la norma.
 
+### El agente en los sitios del cliente (23 de noviembre, de noche)
+
+El jefe lo pidió en la reunión —«¿te vas a instalarle el plugin? ¿Tienes el
+SSH?» (09:09)— y Fer confirmó que era una orden. **12 de los 13 `no_update`
+quedaron con el agente**, registrados y reportando. El panel ya calcula solo
+el contacto del cliente en 10 de ellos, que antes había que escribir a mano.
+
+Cómo se hizo, por si hay que repetirlo: **los datos de SSH salen de la propia
+API de Kinsta**, en el `ssh_connection` de cada entorno, y el usuario es el
+nombre del sitio — el `web_root` lo dice. La llave de la Mac de Fer ya está
+autorizada en la cuenta, así que no hace falta contraseña ni entrar a MyKinsta
+a copiar nada sitio por sitio.
+
+Y dos cosas que destapó hacerlo:
+
+- **Uno de los trece se quedó fuera, y por una razón que importa.** Corre
+  **PHP 7.4.33** y el agente pide 8.1, así que no se puede instalar. Se le
+  quitó la carpeta y el sitio quedó como estaba. Pero al diagnosticarlo salió
+  algo peor: su `wp-config.php` termina en basura de una edición mal hecha, un
+  fragmento suelto después del `require` de `wp-settings.php`. Hoy solo suelta
+  un *warning* en cada carga porque PHP 7.4 lo tolera. **En PHP 8 eso es error
+  fatal.** O sea que si alguien le sube el PHP para poder instalarle el
+  agente, le tira el sitio. Hay que arreglarlo en ese orden: primero el
+  `wp-config.php`, después el PHP, y con permiso del cliente. **Cuál es está
+  en `REUNION-2026-11-23-lo-que-pidio.md`**, que no va al repositorio.
+- **El agente tenía un fallo que solo se ve en tiendas viejas** (0.6.4 lo
+  arregla): comprobaba que la tabla `wc_orders` existiera y daba por hecho el
+  esquema de dentro. Dos tiendas la tenían sin la columna `date_paid_gmt`, y
+  la consulta moría con «Unknown column» en medio del reporte.
+
 ### Lo que dejó abierto la reunión del 23
 
 - **El monitor sigue sin poder medir 106 sitios.** Cloudflare bloquea las IP
@@ -254,10 +284,10 @@ Están en `REUNION-2026-11-19-lo-que-pidio.md`, sección K:
 
 ### Deudas técnicas, sin urgencia
 
-- El agente 0.6.3 no se ha vuelto a repartir a los 95 sitios. Lo único que
-  cambió es el primer reporte al registrarse, y los 95 ya están registrados,
-  así que no corre prisa. **Ojo:** ese cambio entró sin subirle el número de
-  versión al plugin, mientras la copia del tema ya va en `0.6.4-tema`.
+- **El agente 0.6.4 está en los 13 sitios nuevos, pero los 95 de antes siguen
+  en 0.6.3.** Lo que les falta es el arreglo de `wc_orders`, que solo se nota
+  en tiendas con esquema viejo de WooCommerce; conviene repartirlo, sin prisa.
+  La forma de hacerlo en masa está arriba, en la sección del agente.
 - Las 8 normas de seguridad nuevas del jefe siguen mostrándose como «Por
   construir».
 - Las 5 decisiones del PDF «Normas de seguridad - el plan».
