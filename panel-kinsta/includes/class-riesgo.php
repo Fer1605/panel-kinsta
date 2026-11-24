@@ -69,40 +69,58 @@ class SWPK_Riesgo {
 	 * color [...] verde oscuro y verde claro». La petición fue literal:
 	 * «ponerme amarillo, rojo, azul, colores totalmente contrarios».
 	 *
-	 * El verde y el rojo son justo el par que no se distingue en la
-	 * deficiencia rojo-verde, que es el 95 % de los casos. El azul sí se
-	 * distingue: es el único eje que se conserva. Así que «bien» pasa a ser
-	 * azul, y el rojo se queda para «mal», que es el único sitio donde el rojo
-	 * aporta algo.
+	 * ─── Y por qué esta paleta no se eligió a ojo ───────────────────────────
 	 *
-	 * Las dos reglas que esta paleta cumple, y que hay que mantener si alguien
-	 * la cambia:
+	 * El primer intento cambió el verde por azul y se quedó tan contento. Al
+	 * medirlo salió que había arreglado el par del que se quejaba —al día
+	 * contra crítico pasó de 17 a 145 de separación— y había creado otro:
+	 * `alto` (#bc5b00) y `medio` (#8a6a00) quedaban a 6,8. Naranja y mostaza
+	 * son el mismo color para quien no distingue el rojo del verde. O sea,
+	 * exactamente la queja de Cumplimiento, movida de sitio.
 	 *
-	 *  1. **El tono no es lo único que separa dos niveles: la luminosidad
-	 *     también.** De crítico a al día la luminosidad baja o sube de forma
-	 *     monótona, así que los seis siguen siendo seis en escala de grises —
-	 *     y por tanto para cualquier tipo de daltonismo, no solo el común.
-	 *     Antes `bajo` (#8a8a94) y `sin_datos` (#8c8f94) se diferenciaban en
-	 *     dos puntos de rojo: eran el mismo color para TODO EL MUNDO.
-	 *  2. **Todos aguantan texto blanco encima.** Se usan como fondo de
-	 *     insignia con `color:#fff`, así que un amarillo de verdad —claro—
-	 *     dejaría el texto ilegible. El «amarillo» que pidió es el mostaza
-	 *     oscuro de `medio`: se lee amarillo y el texto blanco encima pasa de
-	 *     4,5:1.
+	 * Así que estos seis valores salen de una búsqueda con tres condiciones a
+	 * la vez, y las tres hay que mantenerlas si alguien los cambia:
 	 *
-	 * Y lo que de verdad hace accesible esto no es el color: es que al lado
-	 * del color siempre va la palabra. Un color que hay que interpretar es un
+	 *  1. **Los seis se distinguen entre sí en los TRES daltonismos** —
+	 *     deuteranopía, protanopía y tritanopía—, simulados con las matrices
+	 *     de Machado. El par más parecido está a 103 de distancia; por debajo
+	 *     de 45 se confunden.
+	 *  2. **Los seis se distinguen en escala de grises**, así que valen
+	 *     también para el daltonismo que no se simuló, para una pantalla mal
+	 *     calibrada y para una impresión en blanco y negro.
+	 *  3. **Cada uno pasa de 4,5:1 con SU color de texto**, que no siempre es
+	 *     el blanco. Ahí estaba la trampa del intento anterior: dar por hecho
+	 *     el texto blanco obliga a que todo sea oscuro, y si todo es oscuro no
+	 *     queda sitio donde separar seis niveles. El amarillo que pidió el
+	 *     jefe existe —`medio` es un ámbar claro de verdad— porque lleva
+	 *     texto oscuro. Ver texto_sobre().
+	 *
+	 * Lo que de verdad hace accesible esto no es el color: es que al lado del
+	 * color siempre va la palabra. Un color que hay que interpretar es un
 	 * color que alguien va a interpretar mal.
 	 */
 	public static function colores(): array {
 		return [
-			self::CRITICO   => '#a4161a', // rojo oscuro   · blanco 8,2:1
-			self::ALTO      => '#bc5b00', // naranja quemado· blanco 4,8:1
-			self::MEDIO     => '#8a6a00', // mostaza        · blanco 5,0:1
-			self::BAJO      => '#5c6670', // pizarra        · blanco 5,3:1
-			self::AL_DIA    => '#0b6ba8', // azul           · blanco 5,4:1
-			self::SIN_DATOS => '#777e85', // gris           · deliberadamente apagado
+			self::CRITICO   => '#7d0f12', // rojo muy oscuro · texto blanco 10,8:1
+			self::ALTO      => '#bc5b00', // naranja oscuro   · texto blanco  4,5:1
+			self::MEDIO     => '#e8b33d', // ámbar claro      · texto oscuro  8,3:1
+			self::BAJO      => '#5c6670', // pizarra          · texto blanco  5,9:1
+			self::AL_DIA    => '#2a96d8', // azul             · texto oscuro  4,9:1
+			self::SIN_DATOS => '#d2d6da', // gris claro       · texto oscuro 10,9:1
 		];
+	}
+
+	/**
+	 * El color de texto que va encima de cada nivel.
+	 *
+	 * No es un detalle: es lo que permite que la paleta use claros y oscuros
+	 * en vez de solo oscuros, y sin eso no caben seis niveles separados. Dar
+	 * por hecho el blanco fue el error del primer intento.
+	 */
+	public static function texto_sobre( string $nivel ): string {
+		return in_array( $nivel, [ self::MEDIO, self::AL_DIA, self::SIN_DATOS ], true )
+			? '#1d2327'
+			: '#ffffff';
 	}
 
 	private static function de_rating( string $rating ): string {

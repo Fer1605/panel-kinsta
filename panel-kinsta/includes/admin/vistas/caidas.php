@@ -288,13 +288,18 @@ $historial = array_filter(
 			<?php foreach ( $en_pantalla as $e ) : ?>
 				<?php
 				$sitio = SWPK_Inventario::obtener( $e->sitio_id );
-				[ $color, $texto ] = match ( $e->estado ) {
-					'abajo'  => [ SWPK_Riesgo::colores()[ SWPK_Riesgo::CRITICO ], 'Sin responder' ],
-					'raro'   => [ SWPK_Riesgo::colores()[ SWPK_Riesgo::MEDIO ], 'Respuesta rara' ],
-					'ciego'  => [ SWPK_Riesgo::colores()[ SWPK_Riesgo::SIN_DATOS ], 'No se puede medir' ],
-					'arriba' => [ SWPK_Riesgo::colores()[ SWPK_Riesgo::AL_DIA ], 'Responde' ],
-					default  => [ SWPK_Riesgo::colores()[ SWPK_Riesgo::SIN_DATOS ], 'Sin datos' ],
+				[ $nivel_e, $texto ] = match ( $e->estado ) {
+					'abajo'  => [ SWPK_Riesgo::CRITICO, 'Sin responder' ],
+					'raro'   => [ SWPK_Riesgo::MEDIO, 'Respuesta rara' ],
+					'ciego'  => [ SWPK_Riesgo::SIN_DATOS, 'No se puede medir' ],
+					'arriba' => [ SWPK_Riesgo::AL_DIA, 'Responde' ],
+					default  => [ SWPK_Riesgo::SIN_DATOS, 'Sin datos' ],
 				};
+				// El texto NO siempre es blanco: la paleta usa claros y
+				// oscuros para que los seis niveles se separen. Ver
+				// SWPK_Riesgo::texto_sobre().
+				$color    = SWPK_Riesgo::colores()[ $nivel_e ];
+				$sobre    = SWPK_Riesgo::texto_sobre( $nivel_e );
 				?>
 				<tr>
 					<td>
@@ -305,7 +310,7 @@ $historial = array_filter(
 					</td>
 					<td><?php echo SWPK_Admin::grupo_badge( $grupo_de[ (string) $e->sitio_id ] ?? '' ); ?></td>
 					<td>
-						<span class="swpk-nivel" style="background:<?php echo esc_attr( $color ); ?>;color:#fff;border-color:<?php echo esc_attr( $color ); ?>"><?php echo esc_html( $texto ); ?></span>
+						<span class="swpk-nivel" style="background:<?php echo esc_attr( $color ); ?>;color:<?php echo esc_attr( $sobre ); ?>;border-color:<?php echo esc_attr( $color ); ?>"><?php echo esc_html( $texto ); ?></span>
 						<?php if ( $e->codigo || $e->motivo ) : ?>
 							<br>
 							<span class="swpk-gris" style="font-size:12px">
