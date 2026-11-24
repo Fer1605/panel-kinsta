@@ -222,15 +222,24 @@ Están en `REUNION-2026-11-19-lo-que-pidio.md`, sección K:
   pasar a Pantheon, o un servicio externo de monitoreo. **Es decisión de
   Fer**, y hasta que se decida el panel dice honestamente «no se puede
   medir» en vez de inventarse una caída.
-- **El Equipo sigue vacío y ningún sitio tiene asesora asignada.** El jefe
-  pidió por nombre a Tiffany Ramírez (`tramirez@`), Alejandra López
-  (`alopez@`), él mismo (`jdiaz@`) y Luisa Álvarez (`lalvarez@`, para las
-  caídas). Las direcciones de aviso YA están puestas en Ajustes → Correos,
-  así que los correos a soporte y los de caída salen; **el semanal a las
-  asesoras no tiene a quién salir** hasta que se creen las cuentas en Equipo
-  y se asignen los sitios, que es lo único que no se puede hacer sin saber
-  quién atiende cada cuenta. El escalado de «ya te avisamos N veces» está
-  construido y probado, pero no se verá funcionando hasta entonces.
+- **El Equipo ya tiene a las cuatro personas, pero NINGÚN sitio tiene asesora
+  asignada**, y eso es lo único que falta para que salga el semanal. Están
+  Alejandra López (`alopez@`, Ventas), Tiffany Ramírez (`tramirez@`, Ventas),
+  Luisa Álvarez (`lalvarez@`, Soporte) y Fer (`mvalle@`, Dirección). Asignar
+  quién atiende cada cuenta es lo único que no se puede hacer sin saberlo:
+  se hace en Sitios, columna Asesora.
+- **Dos cosas que aparecieron al crear el equipo y conviene no olvidar:**
+  - `tramirez@` ya tenía cuenta en el WordPress con el rol `ws_advisor` del
+    sitio. Se le **añadió** el rol del panel con `add_role()` en vez de
+    reemplazarlo: `wp_insert_user` con `role` le habría quitado el que tenía.
+    Cualquier alta futura de alguien que ya exista tiene el mismo cuidado.
+  - **`jdiaz@` es el correo de la cuenta `swadmin`**, el administrador
+    compartido de WordPress, no una cuenta personal del jefe. Por eso no se
+    le pudo crear cuenta propia (el correo ya está tomado) y por eso **no se
+    le tocó**: meterle un rol del panel lo volvería «un miembro del equipo
+    llamado swadmin». No hace falta: ya recibe todo por `correo_soporte` y
+    `correo_ventas`. Si algún día quiere cuenta personal, primero hay que
+    cambiarle el correo a `swadmin`, y eso es decisión suya.
 - **El mensual a clientes está encendido y sale el 1 de diciembre**, a los
   administradores de cada sitio nuestro con movimientos en noviembre. Fer
   decidió encenderlo entero sabiendo que el primer lote va a clientes
