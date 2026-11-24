@@ -1242,20 +1242,28 @@ body[class*="panel-kinsta"] .swpk-nivel {
    de grises. «Al día» es AZUL, no verde — ver el comentario largo de esa
    función, que cuenta además el intento fallido.
 
-   El borde izquierdo es grueso y de color pleno a propósito: un fondo pálido
-   es lo primero que se pierde en una pantalla mal calibrada, y la franja
-   aguanta donde el fondo no. */
-body[class*="panel-kinsta"] .swpk-nivel-critico   { background: #f7e7e8; color: #6b0d10; border-color: #e0b9ba; border-left: 4px solid #7d0f12; }
-body[class*="panel-kinsta"] .swpk-nivel-alto      { background: #fcf0e4; color: #8a4200; border-color: #e8c49b; border-left: 4px solid #bc5b00; }
-body[class*="panel-kinsta"] .swpk-nivel-medio     { background: #fdf3dd; color: #6b4e00; border-color: #eacf93; border-left: 4px solid #e8b33d; }
-body[class*="panel-kinsta"] .swpk-nivel-bajo      { background: #eef0f2; color: #49525b; border-color: #ccd2d8; border-left: 4px solid #5c6670; }
-body[class*="panel-kinsta"] .swpk-nivel-al_dia    { background: #e6f3fb; color: #0a5a8c; border-color: #a8d6ef; border-left: 4px solid #2a96d8; }
-body[class*="panel-kinsta"] .swpk-nivel-sin_datos { background: #f4f6f7; color: #5d646a; border-color: #d2d6da; border-left: 4px solid #d2d6da; }
-body[class*="panel-kinsta"] .swpk-nivel-caido     { background: #f7e7e8; color: #6b0d10; border-color: #e0b9ba; border-left: 4px solid #7d0f12; }
+   Sin franja de color a la izquierda, y esto vale la pena dejarlo escrito
+   para que a nadie se le ocurra volver a ponerla: la llevaron un rato, como
+   apoyo para distinguirlas, y en una píldora redondeada el borde grueso se
+   recorta contra el radio y deja una media luna oscura pegada al lado
+   izquierdo. Se ve a added, se ve mal, y Fer lo paró en cuanto lo vio.
+
+   Lo que de verdad distingue estas insignias no era la franja: es LA PALABRA
+   que llevan dentro. El color acompaña, no informa solo. Por eso quitarla no
+   quita accesibilidad — los fondos pálidos son casi blancos y entre ellos
+   nunca se separaron, ni con franja ni sin ella; quien no distingue los tonos
+   lee «Crítico» o «Al día», que es lo que hay que leer. El borde completo va
+   en un tono medio del propio color, que es lo que da el matiz sin gritar. */
+body[class*="panel-kinsta"] .swpk-nivel-critico   { background: #f7e7e8; color: #6b0d10; border-color: #d89a9c; }
+body[class*="panel-kinsta"] .swpk-nivel-alto      { background: #fcf0e4; color: #8a4200; border-color: #ddb084; }
+body[class*="panel-kinsta"] .swpk-nivel-medio     { background: #fdf3dd; color: #6b4e00; border-color: #d4bd77; }
+body[class*="panel-kinsta"] .swpk-nivel-bajo      { background: #eef0f2; color: #49525b; border-color: #bcc4cb; }
+body[class*="panel-kinsta"] .swpk-nivel-al_dia    { background: #e6f3fb; color: #0a5a8c; border-color: #8fc4e6; }
+body[class*="panel-kinsta"] .swpk-nivel-sin_datos { background: #f4f6f7; color: #5d646a; border-color: #cbd0d4; }
+body[class*="panel-kinsta"] .swpk-nivel-caido     { background: #f7e7e8; color: #6b0d10; border-color: #d89a9c; }
 /* Y el nuevo: el sitio que el cortafuegos de su hosting no deja medir. No es
-   un nivel de riesgo, es la ausencia de dato, así que va en gris como
-   «sin datos» y con la franja a rayas para que no se confunda con ninguno. */
-body[class*="panel-kinsta"] .swpk-nivel-ciego     { background: #f4f6f7; color: #5d646a; border-color: #d2d6da; border-left: 4px dashed #8e979f; }
+   un nivel de riesgo, es la ausencia de dato, así que va en gris apagado. */
+body[class*="panel-kinsta"] .swpk-nivel-ciego     { background: #f4f6f7; color: #5d646a; border-color: #cbd0d4; }
 
 
 /* ── El veredicto ───────────────────────────────────────────────────────── */

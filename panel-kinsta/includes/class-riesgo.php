@@ -98,6 +98,13 @@ class SWPK_Riesgo {
 	 * Lo que de verdad hace accesible esto no es el color: es que al lado del
 	 * color siempre va la palabra. Un color que hay que interpretar es un
 	 * color que alguien va a interpretar mal.
+	 *
+	 * Y eso vale el doble para las insignias pálidas de las tablas, cuyos
+	 * fondos son casi blancos y entre ellos no se separan ni pueden. Llevaron
+	 * un rato una franja gruesa de color a la izquierda, como apoyo. Se quitó:
+	 * en una píldora redondeada el borde grueso se recorta contra el radio y
+	 * deja una media luna oscura pegada al costado. No hacía falta — la
+	 * palabra ya estaba ahí — y se veía mal.
 	 */
 	public static function colores(): array {
 		return [

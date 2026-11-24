@@ -252,12 +252,22 @@ Y dos cosas que destapó hacerlo:
   pasar a Pantheon, o un servicio externo de monitoreo. **Es decisión de
   Fer**, y hasta que se decida el panel dice honestamente «no se puede
   medir» en vez de inventarse una caída.
-- **El Equipo ya tiene a las cuatro personas, pero NINGÚN sitio tiene asesora
-  asignada**, y eso es lo único que falta para que salga el semanal. Están
-  Alejandra López (`alopez@`, Ventas), Tiffany Ramírez (`tramirez@`, Ventas),
-  Luisa Álvarez (`lalvarez@`, Soporte) y Fer (`mvalle@`, Dirección). Asignar
-  quién atiende cada cuenta es lo único que no se puede hacer sin saberlo:
-  se hace en Sitios, columna Asesora.
+- **El semanal a las asesoras ya sale**, con el primer envío el lunes 30 de
+  noviembre a las 07:00. El Equipo son cuatro: dos asesoras en Ventas, y
+  Luisa y Fer en Dirección, que reciben copia de todo.
+- **Las asesoras están asignadas SOLO a los sitios `no_update`, y eso es
+  deliberado.** Es la parte del pedido que entendí al revés la primera vez. El
+  jefe lo dijo claro en el minuto 11:14: «no auto-update [...] **esto es lo
+  que debemos de notificar a las asesoras**». La razón, que da él mismo: los
+  `auto_update` son nuestros, así que un pendiente ahí es culpa nuestra y no
+  hay cliente al que perseguir — «yo no puedo venir al cliente y decir: lo
+  que pasa que usted no actualizó». Los `no_update` son del cliente, y ahí sí
+  hace falta que la asesora lo llame. **Los otros 96 sitios quedan sin asesora
+  a propósito**: si alguien les asigna una, empezarán a generar correo semanal
+  que nadie pidió.
+- **El reparto de los 13 entre las dos asesoras es arbitrario**, porque el
+  hosting no guarda quién atiende cada cuenta. Se corrige en Sitios, columna
+  Asesora.
 - **Dos cosas que aparecieron al crear el equipo y conviene no olvidar:**
   - `tramirez@` ya tenía cuenta en el WordPress con el rol `ws_advisor` del
     sitio. Se le **añadió** el rol del panel con `add_role()` en vez de
