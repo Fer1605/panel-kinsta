@@ -227,12 +227,25 @@ $volver = add_query_arg(
 			<?php wp_nonce_field( 'swpk_asignar' ); ?>
 		<?php endif; ?>
 
+		<?php
+		$auto_de = SWPK_Inventario::auto_update_de_varios(
+			array_map( static fn( $s ) => (string) $s->sitio_id, $pagina_de_sitios )
+		);
+		?>
 		<?php SWPK_Vista::paginador( $pagina, $paginas, count( $filtrados ) ); ?>
 		<table class="widefat striped swpk-tabla">
 			<thead>
 				<tr>
 					<th>Sitio</th>
 					<th style="width:96px">Grupo</th>
+					<th style="width:112px">
+						Se actualiza
+						<?php echo wp_kses_post( SWPK_Vista::ayuda(
+							'Si los módulos del sitio tienen puesta la actualización automática, según el '
+							. 'hosting. Es un dato medido, no la etiqueta: un sitio puede estar etiquetado '
+							. 'como Desarrollo y tener todo en automático, y al revés.'
+						) ); ?>
+					</th>
 					<th style="width:82px">Cómo está</th>
 					<th style="width:124px">Pendientes</th>
 					<th style="width:104px">
@@ -278,18 +291,19 @@ $volver = add_query_arg(
 						</a><br>
 						<span class="swpk-mono" style="color:#50575e"><?php echo esc_html( $s->dominio ); ?></span>
 					</td>
-					<td><?php echo SWPK_Admin::grupo_badge( (string) $s->tag ); ?></td>
+					<td><?php echo SWPK_Admin::grupo_badge( SWPK_Inventario::grupo_de( $s ) ); ?></td>
+					<td><?php echo wp_kses_post( SWPK_Admin::auto_update_badge( $auto_de[ (string) $s->sitio_id ] ?? [ 'con' => 0, 'sin' => 0, 'total' => 0 ] ) ); ?></td>
 					<td><?php echo wp_kses_post( SWPK_Admin::nivel_badge( $nivel_s ) ); ?></td>
 					<td>
 						<?php if ( SWPK_Riesgo::SIN_DATOS === $nivel_s ) : ?>
-							<span style="color:#8c8f94">sin escanear por <?php echo esc_html( SWPK_Admin::proveedor() ); ?></span>
+							<span style="color:#777e85">sin escanear por <?php echo esc_html( SWPK_Admin::proveedor() ); ?></span>
 						<?php else : ?>
 							<?php if ( $vulns ) : ?>
-								<strong style="color:#b32d2e"><?php echo (int) $vulns; ?> con vulnerabilidad</strong><br>
+								<strong style="color:#a4161a"><?php echo (int) $vulns; ?> con vulnerabilidad</strong><br>
 							<?php endif; ?>
 							<?php echo count( $hallazgos ) - $vulns; ?> por actualizar
 							<?php if ( SWPK_Inventario::dato_viejo( $s ) ) : ?>
-								<br><span style="color:#dba617;font-size:12px" title="<?php echo esc_attr( SWPK_Admin::proveedor() . ' no lo revisa desde hace ' . (int) SWPK_Inventario::dias_sin_escanear( $s ) . ' días' ); ?>">
+								<br><span style="color:#8a6a00;font-size:12px" title="<?php echo esc_attr( SWPK_Admin::proveedor() . ' no lo revisa desde hace ' . (int) SWPK_Inventario::dias_sin_escanear( $s ) . ' días' ); ?>">
 									dato de hace <?php echo (int) SWPK_Inventario::dias_sin_escanear( $s ); ?> días
 								</span>
 							<?php endif; ?>
@@ -305,9 +319,9 @@ $volver = add_query_arg(
 					<?php if ( SWPK_Etiquetas::es_nuestro( $tag ) ) : ?>
 						<td>
 							<?php if ( $s->tiene_2fa ) : ?>
-								<span style="color:#008a20">✓ <?php echo esc_html( $s->plugin_2fa ); ?></span>
+								<span style="color:#0b6ba8">✓ <?php echo esc_html( $s->plugin_2fa ); ?></span>
 							<?php else : ?>
-								<span style="color:#d63638">Pendiente</span>
+								<span style="color:#a4161a">Pendiente</span>
 							<?php endif; ?>
 						</td>
 					<?php endif; ?>

@@ -1237,13 +1237,22 @@ body[class*="panel-kinsta"] .swpk-nivel {
 	display: inline-block;
 }
 
-body[class*="panel-kinsta"] .swpk-nivel-critico   { background: #fdecec; color: #a01b1d; border-color: #f3c6c7; }
-body[class*="panel-kinsta"] .swpk-nivel-alto      { background: #fdf2e3; color: #8a4d00; border-color: #f0d9b3; }
-body[class*="panel-kinsta"] .swpk-nivel-medio     { background: #fcf8e3; color: #7a5610; border-color: #e9dcae; }
-body[class*="panel-kinsta"] .swpk-nivel-bajo      { background: #f1f1f5; color: #5c5f6e; border-color: #dcdde6; }
-body[class*="panel-kinsta"] .swpk-nivel-al_dia    { background: #e8f7ec; color: #0a6c22; border-color: #b7e2c2; }
-body[class*="panel-kinsta"] .swpk-nivel-sin_datos { background: #f1f1f5; color: #6b6f80; border-color: #dcdde6; }
-body[class*="panel-kinsta"] .swpk-nivel-caido     { background: #fdecec; color: #a01b1d; border-color: #f3c6c7; }
+/* Las insignias claras, en la misma paleta que SWPK_Riesgo::colores().
+   «Al día» es AZUL, no verde: ver el comentario largo de esa función. Aquí
+   importa además que el borde izquierdo sea grueso y de color pleno, porque
+   un fondo pálido es lo primero que se pierde en una pantalla mal calibrada
+   o en un ojo daltónico: la franja aguanta donde el fondo no. */
+body[class*="panel-kinsta"] .swpk-nivel-critico   { background: #fbeaea; color: #8e1114; border-color: #e8b4b5; border-left: 4px solid #a4161a; }
+body[class*="panel-kinsta"] .swpk-nivel-alto      { background: #fcf0e4; color: #8a4200; border-color: #e8c49b; border-left: 4px solid #bc5b00; }
+body[class*="panel-kinsta"] .swpk-nivel-medio     { background: #faf4df; color: #6b5200; border-color: #ddcb94; border-left: 4px solid #8a6a00; }
+body[class*="panel-kinsta"] .swpk-nivel-bajo      { background: #eef0f2; color: #49525b; border-color: #ccd2d8; border-left: 4px solid #5c6670; }
+body[class*="panel-kinsta"] .swpk-nivel-al_dia    { background: #e7f1f9; color: #08527f; border-color: #a9cde6; border-left: 4px solid #0b6ba8; }
+body[class*="panel-kinsta"] .swpk-nivel-sin_datos { background: #f2f3f4; color: #5d646a; border-color: #d4d8db; border-left: 4px solid #777e85; }
+body[class*="panel-kinsta"] .swpk-nivel-caido     { background: #fbeaea; color: #8e1114; border-color: #e8b4b5; border-left: 4px solid #a4161a; }
+/* Y el nuevo: el sitio que el cortafuegos de su hosting no deja medir. No es
+   un nivel de riesgo, es la ausencia de dato, así que va en gris como
+   «sin datos» y con la franja a rayas para que no se confunda con ninguno. */
+body[class*="panel-kinsta"] .swpk-nivel-ciego     { background: #f2f3f4; color: #5d646a; border-color: #d4d8db; border-left: 4px dashed #777e85; }
 
 
 /* ── El veredicto ───────────────────────────────────────────────────────── */

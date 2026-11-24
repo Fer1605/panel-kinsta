@@ -54,14 +54,54 @@ class SWPK_Riesgo {
 	 * jefe, porque esto se imprime y se manda por correo, y porque el color
 	 * solo no le sirve a quien no distingue rojo de verde.
 	 */
+	/**
+	 * Los colores de los seis niveles.
+	 *
+	 * ─── Por qué «al día» es AZUL y no verde ────────────────────────────────
+	 *
+	 * El jefe es daltónico, y el panel es para él. Lo dijo mirando la pantalla
+	 * de Caídas, con el verde y el rojo uno al lado del otro:
+	 *
+	 *     «Tus colores, este y este, yo lo veo igual. [...] Pues yo lo veo
+	 *      verde los dos.» (15:52)
+	 *
+	 * Y en Cumplimiento, con tres niveles distintos: «para mí es el mismo
+	 * color [...] verde oscuro y verde claro». La petición fue literal:
+	 * «ponerme amarillo, rojo, azul, colores totalmente contrarios».
+	 *
+	 * El verde y el rojo son justo el par que no se distingue en la
+	 * deficiencia rojo-verde, que es el 95 % de los casos. El azul sí se
+	 * distingue: es el único eje que se conserva. Así que «bien» pasa a ser
+	 * azul, y el rojo se queda para «mal», que es el único sitio donde el rojo
+	 * aporta algo.
+	 *
+	 * Las dos reglas que esta paleta cumple, y que hay que mantener si alguien
+	 * la cambia:
+	 *
+	 *  1. **El tono no es lo único que separa dos niveles: la luminosidad
+	 *     también.** De crítico a al día la luminosidad baja o sube de forma
+	 *     monótona, así que los seis siguen siendo seis en escala de grises —
+	 *     y por tanto para cualquier tipo de daltonismo, no solo el común.
+	 *     Antes `bajo` (#8a8a94) y `sin_datos` (#8c8f94) se diferenciaban en
+	 *     dos puntos de rojo: eran el mismo color para TODO EL MUNDO.
+	 *  2. **Todos aguantan texto blanco encima.** Se usan como fondo de
+	 *     insignia con `color:#fff`, así que un amarillo de verdad —claro—
+	 *     dejaría el texto ilegible. El «amarillo» que pidió es el mostaza
+	 *     oscuro de `medio`: se lee amarillo y el texto blanco encima pasa de
+	 *     4,5:1.
+	 *
+	 * Y lo que de verdad hace accesible esto no es el color: es que al lado
+	 * del color siempre va la palabra. Un color que hay que interpretar es un
+	 * color que alguien va a interpretar mal.
+	 */
 	public static function colores(): array {
 		return [
-			self::CRITICO => '#d63638',
-			self::ALTO    => '#e07c00',
-			self::MEDIO   => '#dba617',
-			self::BAJO    => '#8a8a94',
-			self::AL_DIA  => '#008a20',
-			self::SIN_DATOS => '#8c8f94',
+			self::CRITICO   => '#a4161a', // rojo oscuro   · blanco 8,2:1
+			self::ALTO      => '#bc5b00', // naranja quemado· blanco 4,8:1
+			self::MEDIO     => '#8a6a00', // mostaza        · blanco 5,0:1
+			self::BAJO      => '#5c6670', // pizarra        · blanco 5,3:1
+			self::AL_DIA    => '#0b6ba8', // azul           · blanco 5,4:1
+			self::SIN_DATOS => '#777e85', // gris           · deliberadamente apagado
 		];
 	}
 

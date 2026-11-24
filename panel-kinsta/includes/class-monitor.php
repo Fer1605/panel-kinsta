@@ -78,6 +78,37 @@ class SWPK_Monitor {
 	private const MARGEN = 2 * HOUR_IN_SECONDS;
 	private const LENTO_MS       = 5000;
 
+	/**
+	 * Frases con las que el cortafuegos del hosting dice "a ti no te contesto".
+	 *
+	 * ─── Por qué esto merece un estado propio ───────────────────────────────
+	 *
+	 * El 23 de noviembre de 2026, 106 de los 109 sitios figuraban en el panel
+	 * con "Devolvió 403. Puede ser un cortafuegos bloqueando al monitor". El
+	 * jefe abrió uno en el navegador, cargó perfecto, y preguntó lo único que
+	 * se puede preguntar: "entonces, ¿por qué aquí dice que no?" (20:26).
+	 *
+	 * La causa no era de los sitios: el panel vive en Pantheon y los sitios
+	 * están en el hosting vigilado, detrás de Cloudflare, que bloquea las IP
+	 * de salida de Pantheon. La respuesta trae su propia confesión en el
+	 * cuerpo: dice que no se puede acceder al dominio del hosting.
+	 *
+	 * Así que el panel no estaba midiendo nada y lo contaba como un hallazgo.
+	 * Eso es exactamente lo que la regla 3 prohíbe, en espejo: no decir "está
+	 * bien" cuando no se sabe vale también al revés — no decir "algo le pasa"
+	 * cuando lo único que pasa es que desde aquí no se puede ver.
+	 *
+	 * Un sitio así queda en estado `ciego`: no cuenta como caída, no dispara
+	 * aviso y no se pinta como problema. Se dice lo que es.
+	 */
+	private const SENALES_DE_BLOQUEO = [
+		'Attention Required! | Cloudflare',
+		'You are unable to access',
+		'Sorry, you have been blocked',
+		'This website is using a security service to protect itself',
+		'cf-error-details',
+	];
+
 	/** Frases que significan "caído" aunque el servidor conteste 200. */
 	private const SENALES_DE_ERROR = [
 		'Error establishing a database connection',
@@ -424,7 +455,21 @@ class SWPK_Monitor {
 			}
 		}
 
+		// Un 4xx con la firma del cortafuegos no es un hallazgo del sitio: es
+		// que a nosotros no nos dejan mirar. Ver SENALES_DE_BLOQUEO.
 		if ( $codigo >= 400 ) {
+			foreach ( self::SENALES_DE_BLOQUEO as $senal ) {
+				if ( false !== stripos( $cuerpo, $senal ) ) {
+					return [
+						'estado' => 'ciego',
+						'codigo' => $codigo,
+						'ms'     => $ms,
+						'motivo' => 'El hosting del sitio bloquea al monitor del panel, así que desde aquí no se puede medir si está arriba',
+						'url'    => $url,
+					];
+				}
+			}
+
 			return [
 				'estado' => 'raro',
 				'codigo' => $codigo,
@@ -518,10 +563,19 @@ class SWPK_Monitor {
 			$r
 		);
 
-		$soporte = self::destinatarios_soporte();
-		if ( ! $soporte ) {
-			return;
-		}
+		// Y aquí ya NO se vuelve uno callado si no hay a quién avisarle.
+		//
+		// Antes esta función hacía `if ( ! $soporte ) return;`, y el 23 de
+		// noviembre de 2026 eso costó la confianza en el panel: un sitio llevaba
+		// horas caído, el jefe entró al Historial, vio la caída y no vio ni un
+		// aviso, ni uno fallido. En producción `correo_soporte` estaba vacío,
+		// así que el panel se enteró, lo apuntó como evento y se guardó el
+		// aviso para sí mismo. "Sitio caído, pero nunca me avisó. Y aquí no
+		// dice que notificó, no notificó" (16:44).
+		//
+		// Un aviso que no salió es información: `enviar()` lo deja en la
+		// bitácora como `sin_destinatario`. Callarse es lo único que no vale.
+		$soporte = self::destinatarios_caida();
 
 		// El texto sale de la plantilla editable, no de aquí.
 		//
@@ -559,10 +613,10 @@ class SWPK_Monitor {
 			[ 'segundos' => $segundos ]
 		);
 
-		$soporte = self::destinatarios_soporte();
-		if ( ! $soporte ) {
-			return;
-		}
+		// Lo mismo que en avisar_caida(): sin destinatario se registra, no se
+		// calla. Un "volvió a responder" que nadie recibió también hay que
+		// poder verlo.
+		$soporte = self::destinatarios_caida();
 
 		$marcas = [
 			'{{sitio}}'  => esc_html( $nombre ),
@@ -582,6 +636,30 @@ class SWPK_Monitor {
 	private static function destinatarios_soporte(): array {
 		$crudo = (string) SWPK_Ajustes::obtener( 'correo_soporte', '' );
 		return array_values( array_filter( array_map( 'trim', explode( ',', $crudo ) ) ) );
+	}
+
+	/**
+	 * A quién se le avisa de una caída: soporte, más quien esté en la lista
+	 * aparte de caídas.
+	 *
+	 * Son dos listas y no una porque son dos cosas distintas: soporte lee el
+	 * resumen de todos los días, y de una caída hay que enterarse aunque sea
+	 * domingo. El jefe lo pidió con nombre: "y cuando se caiga, agrega a
+	 * Luisa" (18:04).
+	 *
+	 * @return array<int,string>
+	 */
+	private static function destinatarios_caida(): array {
+		$extra = (string) SWPK_Ajustes::obtener( 'correo_caidas', '' );
+
+		return array_values(
+			array_unique(
+				array_merge(
+					self::destinatarios_soporte(),
+					array_filter( array_map( 'trim', explode( ',', $extra ) ) )
+				)
+			)
+		);
 	}
 
 	public static function duracion( int $segundos ): string {

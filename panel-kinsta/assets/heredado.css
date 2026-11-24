@@ -17,7 +17,7 @@
 .swpk-pelota{display:inline-block;min-width:18px;padding:0 5px;border-radius:9px;background:#2271b1;color:#fff;font-size:11px;line-height:18px;text-align:center;font-weight:600}
 .swpk-veredicto{font-size:15px;line-height:1.5;padding:14px 16px;border-radius:6px;margin:18px 0;border:1px solid}
 .swpk-veredicto-mal{background:#fcf0f1;border-color:#e6b3b6}
-.swpk-veredicto-bien{background:#edfaef;border-color:#a3dcb0}
+.swpk-veredicto-bien{background:#e7f1f9;border-color:#a9cde6}
 .swpk-veredicto-mas{display:block;margin-top:4px;color:#50575e;font-size:13px}
 .swpk-norma-bloque{background:#fff;border:1px solid #c3c4c7;border-radius:6px;padding:14px 16px;margin-bottom:16px}
 .swpk-norma-cabeza{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
@@ -44,7 +44,7 @@
 .swpk-filtros-estado a.current{font-weight:700;color:#1d2327}
 /* La frase de la lista de Wordfence, arriba de Vulnerabilidades. */
 .swpk-lista{max-width:900px;font-size:14px;line-height:1.6;margin:14px 0;
-	padding:11px 14px;border-radius:5px;background:#edfaef;border:1px solid #a3dcb0}
+	padding:11px 14px;border-radius:5px;background:#e7f1f9;border:1px solid #a9cde6}
 .swpk-lista-mal{background:#fcf9e8;border-color:#e3cf94}
 .swpk-norma-tabla{border:1px solid #dcdcde}
 .swpk-norma-pie{margin:12px 0 0;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
@@ -66,13 +66,13 @@
 .swpk-matriz-col{height:150px;width:40px;padding:0 !important;vertical-align:bottom}
 .swpk-matriz-col span{display:block;width:150px;transform-origin:bottom left;transform:translateX(26px) rotate(-60deg);font-size:11px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .swpk-celda{text-align:center;font-weight:600;font-size:12px;cursor:help}
-.swpk-celda-cumple{background:#edfaef;color:#0a6c22}
+.swpk-celda-cumple{background:#e7f1f9;color:#08527f}
 .swpk-celda-falla{background:#fcf0f1;color:#8a1f24}
 .swpk-celda-sin_dato{background:#f6f7f7;color:#787c82}
 .swpk-celda-no_aplica{background:#fff;color:#c3c4c7}
 .swpk-orden-pendiente{background:#fcf9e8;color:#7a5610;border-color:#e3cf94}
 .swpk-orden-entregada{background:#f0f6fc;color:#1b5e8f;border-color:#a7cdea}
-.swpk-orden-hecha{background:#edfaef;color:#0a6c22;border-color:#a3dcb0}
+.swpk-orden-hecha{background:#e7f1f9;color:#08527f;border-color:#a9cde6}
 .swpk-orden-fallo,.swpk-orden-vencida{background:#fcf0f1;color:#8a1f24;border-color:#e6b3b6}
 .swpk-orden-cancelada{background:#f0f0f1;color:#50575e;border-color:#c3c4c7}
 .swpk-atribucion{color:#646970;font-size:12px;margin-top:18px;padding-top:12px;border-top:1px solid #dcdcde}

@@ -262,12 +262,12 @@ $hubo_alguna_vez = SWPK_Bitacora::hay_alguno();
 					<td>
 						<?php
 						[ $texto_r, $color_r ] = match ( $r->resultado ) {
-							'enviado'          => [ 'Enviado', '#008a20' ],
+							'enviado'          => [ 'Enviado', '#0b6ba8' ],
 							'simulado'         => [ 'De prueba', '#2271b1' ],
-							'apagado'          => [ 'No salió', '#8c8f94' ],
-							'sin_destinatario' => [ 'Sin destinatario', '#dba617' ],
-							'sin_novedad'      => [ 'Sin novedad', '#8c8f94' ],
-							default            => [ 'Falló', '#d63638' ],
+							'apagado'          => [ 'No salió', '#777e85' ],
+							'sin_destinatario' => [ 'Sin destinatario', '#8a6a00' ],
+							'sin_novedad'      => [ 'Sin novedad', '#777e85' ],
+							default            => [ 'Falló', '#a4161a' ],
 						};
 						?>
 						<span style="color:<?php echo esc_attr( $color_r ); ?>" title="<?php echo esc_attr( (string) $r->error ); ?>">

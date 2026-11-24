@@ -119,7 +119,7 @@ $texto_de = static fn( string $plantilla ) => add_query_arg(
 				<td><strong>Semanal a las asesoras</strong></td>
 				<td>
 					Cada lunes, 7:00<br>
-					<span class="swpk-gris" style="font-size:12px">próximo: <?php echo $proximos['Semanal a las asesoras'] ? esc_html( SWPK_Frescura::fmt( 'j M, H:i', $proximos['Semanal a las asesoras'] ) ) : '<span style="color:#d63638">sin programar</span>'; ?></span>
+					<span class="swpk-gris" style="font-size:12px">próximo: <?php echo $proximos['Semanal a las asesoras'] ? esc_html( SWPK_Frescura::fmt( 'j M, H:i', $proximos['Semanal a las asesoras'] ) ) : '<span style="color:#a4161a">sin programar</span>'; ?></span>
 				</td>
 				<td>
 					A cada asesora, solo sus sitios con algo pendiente, con el texto listo para reenviarle
@@ -134,7 +134,7 @@ $texto_de = static fn( string $plantilla ) => add_query_arg(
 				<td><strong>Diario a soporte</strong></td>
 				<td>
 					Cada día, 7:30<br>
-					<span class="swpk-gris" style="font-size:12px">próximo: <?php echo $proximos['Diario a soporte'] ? esc_html( SWPK_Frescura::fmt( 'j M, H:i', $proximos['Diario a soporte'] ) ) : '<span style="color:#d63638">sin programar</span>'; ?></span>
+					<span class="swpk-gris" style="font-size:12px">próximo: <?php echo $proximos['Diario a soporte'] ? esc_html( SWPK_Frescura::fmt( 'j M, H:i', $proximos['Diario a soporte'] ) ) : '<span style="color:#a4161a">sin programar</span>'; ?></span>
 				</td>
 				<td>Lo que cambió en las últimas 24 horas en toda la cartera.</td>
 				<td class="swpk-acciones-fila">
@@ -146,7 +146,7 @@ $texto_de = static fn( string $plantilla ) => add_query_arg(
 				<td><strong>Mensual a los clientes</strong></td>
 				<td>
 					El día 1, 8:00<br>
-					<span class="swpk-gris" style="font-size:12px">próximo: <?php echo $proximos['Mensual a los clientes'] ? esc_html( SWPK_Frescura::fmt( 'j M, H:i', $proximos['Mensual a los clientes'] ) ) : '<span style="color:#d63638">sin programar</span>'; ?></span>
+					<span class="swpk-gris" style="font-size:12px">próximo: <?php echo $proximos['Mensual a los clientes'] ? esc_html( SWPK_Frescura::fmt( 'j M, H:i', $proximos['Mensual a los clientes'] ) ) : '<span style="color:#a4161a">sin programar</span>'; ?></span>
 				</td>
 				<td>
 					A los administradores de cada sitio que administramos nosotros, excluyendo las
@@ -161,7 +161,7 @@ $texto_de = static fn( string $plantilla ) => add_query_arg(
 				<td><strong>Resumen de los domingos</strong></td>
 				<td>
 					Cada domingo, 18:00<br>
-					<span class="swpk-gris" style="font-size:12px">próximo: <?php echo $proximos['Resumen de los domingos'] ? esc_html( SWPK_Frescura::fmt( 'j M, H:i', $proximos['Resumen de los domingos'] ) ) : '<span style="color:#d63638">sin programar</span>'; ?></span>
+					<span class="swpk-gris" style="font-size:12px">próximo: <?php echo $proximos['Resumen de los domingos'] ? esc_html( SWPK_Frescura::fmt( 'j M, H:i', $proximos['Resumen de los domingos'] ) ) : '<span style="color:#a4161a">sin programar</span>'; ?></span>
 				</td>
 				<td>
 					A soporte: todo lo que el panel notificó durante la semana, con el resultado de
@@ -270,7 +270,7 @@ $texto_de = static fn( string $plantilla ) => add_query_arg(
 		<tbody>
 		<?php foreach ( $revisiones as $r ) : ?>
 			<tr>
-				<td style="width:40px;font-size:18px"><?php echo $r['ok'] ? '<span style="color:#008a20">✓</span>' : '<span style="color:#dba617">!</span>'; ?></td>
+				<td style="width:40px;font-size:18px"><?php echo $r['ok'] ? '<span style="color:#0b6ba8">✓</span>' : '<span style="color:#8a6a00">!</span>'; ?></td>
 				<td><?php echo esc_html( $r['ok'] ? $r['si'] : $r['no'] ); ?></td>
 				<td style="width:120px;text-align:right">
 					<?php if ( ! $r['ok'] ) : ?>

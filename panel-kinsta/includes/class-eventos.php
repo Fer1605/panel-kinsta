@@ -23,6 +23,8 @@ class SWPK_Eventos {
 	public const CORREO_EXTRANO  = 'correo_de_dominio_extrano';
 	public const SITIO_CAIDO     = 'sitio_caido';
 	public const SITIO_REPUESTO  = 'sitio_repuesto';
+	/** El hosting dejó de devolver el sitio. Ver SWPK_Inventario::AUSENCIAS_PARA_BAJA. */
+	public const SITIO_DE_BAJA   = 'sitio_de_baja';
 
 	/**
 	 * Lo que NO hace falta mirar: son buenas noticias.
@@ -55,6 +57,7 @@ class SWPK_Eventos {
 			self::CORREO_EXTRANO => 'Correo de dominio extraño',
 			self::SITIO_CAIDO    => 'Sitio caído',
 			self::SITIO_REPUESTO => 'Sitio repuesto',
+			self::SITIO_DE_BAJA  => 'Sitio dado de baja',
 			'agente_registrado'  => 'Plugin instalado en el sitio',
 			'administrador_eliminado' => 'Administrador eliminado',
 		];

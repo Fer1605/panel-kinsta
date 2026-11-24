@@ -92,7 +92,7 @@ $url_pestana = static fn( string $s ) => add_query_arg(
 			esc_url( 'https://' . ltrim( $sitio->dominio, 'htps:/' ) ),
 			esc_html( $sitio->dominio )
 		),
-		SWPK_Admin::grupo_badge( (string) $sitio->tag )
+		SWPK_Admin::grupo_badge( SWPK_Inventario::grupo_de( $sitio ) )
 		. ' ' . SWPK_Admin::nivel_badge( $nivel )
 		. ' ' . SWPK_Vista::pastillas( [
 			[
@@ -165,7 +165,7 @@ $url_pestana = static fn( string $s ) => add_query_arg(
 	?>
 	<div class="swpk-tarjetas">
 		<a class="swpk-tarjeta swpk-tarjeta-enlace" href="<?php echo esc_url( add_query_arg( 'solo', 'vuln', $url_pestana( 'pendiente' ) ) ); ?>">
-			<div class="swpk-n" style="color:<?php echo count( $con_vuln ) ? '#b32d2e' : '#008a20'; ?>"><?php echo count( $con_vuln ); ?></div>
+			<div class="swpk-n" style="color:<?php echo count( $con_vuln ) ? '#a4161a' : '#0b6ba8'; ?>"><?php echo count( $con_vuln ); ?></div>
 			<div class="swpk-r">Con vulnerabilidad conocida</div>
 		</a>
 		<a class="swpk-tarjeta swpk-tarjeta-enlace" href="<?php echo esc_url( add_query_arg( 'solo', 'act', $url_pestana( 'pendiente' ) ) ); ?>">
@@ -189,7 +189,7 @@ $url_pestana = static fn( string $s ) => add_query_arg(
 		<?php endif; ?>
 		<?php if ( 'datos' !== $seccion && SWPK_Etiquetas::es_nuestro( $sitio->tag ) ) : ?>
 			<div class="swpk-tarjeta">
-				<div class="swpk-n" style="font-size:19px;padding-top:6px;color:<?php echo $sitio->tiene_2fa ? '#008a20' : '#d63638'; ?>">
+				<div class="swpk-n" style="font-size:19px;padding-top:6px;color:<?php echo $sitio->tiene_2fa ? '#0b6ba8' : '#a4161a'; ?>">
 					<?php echo $sitio->tiene_2fa ? '✓ Activa' : 'Pendiente'; ?>
 				</div>
 				<div class="swpk-r">Doble autenticación</div>
@@ -304,20 +304,20 @@ $url_pestana = static fn( string $s ) => add_query_arg(
 						<strong><?php echo esc_html( SWPK_Textos::limpiar_titulo( (string) $h['titulo'] ) ); ?></strong><br>
 						<span class="swpk-mono" style="color:#50575e"><?php echo esc_html( $h['slug'] ); ?></span>
 						<?php if ( '' === $h['auto_update'] ) : ?>
-							<br><span style="color:#dba617;font-size:12px">sin actualización automática</span>
+							<br><span style="color:#8a6a00;font-size:12px">sin actualización automática</span>
 						<?php endif; ?>
 					</td>
 					<td>
 						<span class="swpk-mono"><?php echo esc_html( $h['version'] ); ?></span>
 						<?php if ( '' !== $h['version_disponible'] ) : ?>
-							→ <span class="swpk-mono" style="color:#008a20"><?php echo esc_html( $h['version_disponible'] ); ?></span>
+							→ <span class="swpk-mono" style="color:#0b6ba8"><?php echo esc_html( $h['version_disponible'] ); ?></span>
 						<?php endif; ?>
 					</td>
 					<td><?php echo wp_kses_post( SWPK_Admin::nivel_badge( $h['nivel'] ) ); ?></td>
 					<td>
 						<?php if ( $v ) : ?>
 							<?php $quien = SWPK_Textos::quien_puede( (string) ( $v->cvss_vector ?? '' ), (string) $v->descripcion ); ?>
-							<span style="color:<?php echo $quien['sin_cuenta'] ? '#b32d2e' : '#1d2327'; ?>">
+							<span style="color:<?php echo $quien['sin_cuenta'] ? '#a4161a' : '#1d2327'; ?>">
 								<?php echo esc_html( $quien['frase'] ); ?>
 							</span>
 						<?php else : ?>
@@ -331,7 +331,7 @@ $url_pestana = static fn( string $s ) => add_query_arg(
 								<br><span class="swpk-mono" style="color:#50575e"><?php echo esc_html( (string) $v->cve ); ?></span>
 							<?php endif; ?>
 						<?php elseif ( 'vulnerable_sin_detalle' === $h['motivo'] ) : ?>
-							<span style="color:#d63638">El hosting la marca como vulnerable</span>,
+							<span style="color:#a4161a">El hosting la marca como vulnerable</span>,
 							<span style="color:#50575e">a la espera del detalle público.</span>
 						<?php else : ?>
 							<span style="color:#50575e">Solo actualización pendiente, sin vulnerabilidad conocida.</span>
@@ -677,7 +677,37 @@ $url_pestana = static fn( string $s ) => add_query_arg(
 				esc_url( 'https://' . ltrim( (string) $sitio->dominio, 'htps:/' ) ),
 				esc_html( (string) $sitio->dominio )
 			),
-			'Grupo'                => SWPK_Admin::grupo_badge( (string) $sitio->tag ),
+			'Grupo'                => SWPK_Admin::grupo_badge( SWPK_Inventario::grupo_de( $sitio ) )
+				. ( '' !== (string) ( $sitio->grupo_a_mano ?? '' )
+					? ' ' . wp_kses_post( SWPK_Vista::ayuda(
+						'Este grupo está corregido a mano en el panel. La etiqueta que trae el hosting '
+						. 'es «' . esc_html( SWPK_Etiquetas::nombres()[ (string) $sitio->tag ] ?? (string) $sitio->tag ) . '».'
+					) )
+					: '' ),
+			// Lo medido, al lado de la etiqueta y con el mismo peso.
+			//
+			// La etiqueta y la actualización automática son dos cosas, y
+			// enseñar solo la primera fue lo que hizo que el panel dijera algo
+			// que Kinsta desmentía. Ver SWPK_Admin::auto_update_badge().
+			'Actualización automática' => ( static function () use ( $sitio ) {
+				$a = SWPK_Inventario::auto_update( (string) $sitio->sitio_id );
+
+				return SWPK_Admin::auto_update_badge( $a )
+					. ( $a['total']
+						? ' <span class="swpk-gris" style="font-size:12px">'
+							. sprintf(
+								'%d de %d módulos activos',
+								(int) $a['con'],
+								(int) $a['total']
+							)
+							. '</span>'
+						: '' )
+					. wp_kses_post( SWPK_Vista::ayuda(
+						'Lo que el hosting reporta módulo por módulo, no lo que sugiere la etiqueta. Un '
+						. 'sitio etiquetado como Desarrollo puede tener todo en automático, y uno '
+						. 'etiquetado para automático puede tener módulos a mano.'
+					) );
+			} )(),
 			'WordPress'            => esc_html( $sitio->version_wp ?: '—' ),
 			'PHP'                  => esc_html( $sitio->version_php ?: '—' ),
 			'Última revisión'      => $sitio->inventario_en
@@ -722,7 +752,7 @@ $url_pestana = static fn( string $s ) => add_query_arg(
 					. wp_kses_post( SWPK_Vista::ayuda(
 						'A quién se le manda el reporte de lo que se hizo. Se pone al asignar el sitio, en la pantalla de Sitios. A las asesoras y a soporte se les avisa de lo que falta; al cliente se le cuenta lo que ya se hizo.'
 					) ),
-			'Verificación en dos pasos' => SWPK_Etiquetas::es_nuestro( $sitio->tag )
+			'Verificación en dos pasos' => SWPK_Etiquetas::es_nuestro( SWPK_Inventario::grupo_de( $sitio ) )
 				? ( $sitio->tiene_2fa
 					? '<span style="color:var(--swpk-bien);font-weight:600">activa</span>'
 					: '<span style="color:var(--swpk-critico);font-weight:600">apagada</span>' )

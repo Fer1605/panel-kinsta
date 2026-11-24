@@ -10,10 +10,11 @@ $al_dia  = SWPK_Monitor::esta_al_dia();
 // Son el estado de la cartera, no el de la tabla: si al filtrar «sin
 // responder» la tarjeta de «sin responder» se recalculara sobre lo filtrado,
 // diría el total de lo filtrado y dejaría de ser una alarma.
-$abajo = $raro = $lentos = 0;
+$abajo = $raro = $lentos = $ciegos = 0;
 foreach ( $estados as $e ) {
 	if ( 'abajo' === $e->estado ) { ++$abajo; }
 	if ( 'raro' === $e->estado ) { ++$raro; }
+	if ( 'ciego' === $e->estado ) { ++$ciegos; }
 	if ( 'arriba' === $e->estado && $e->ms > 5000 ) { ++$lentos; }
 }
 
@@ -27,6 +28,10 @@ foreach ( $estados as $e ) {
 $estados_posibles = [
 	'arriba' => 'Responden',
 	'abajo'  => 'No responden',
+	// Tercera opción, y no es un matiz: son los sitios cuyo hosting no deja
+	// pasar al monitor. Del resto se sabe algo; de estos no se sabe nada, y
+	// mezclarlos con «responden» sería decir que están bien.
+	'ciego'  => 'No se pueden medir',
 ];
 
 // Cuánto tarda, en tres tramos. Es el tercer desplegable de la maqueta y
@@ -63,7 +68,10 @@ $filtrados = array_values(
 		static function ( $e ) use ( $estado_pedido, $grupo_pedido, $tramo_pedido, $busca_caida, $grupo_de ) {
 			// «Responden» incluye la respuesta rara: el sitio contesta, aunque
 			// conteste mal. «No responden» es el que no contesta nada.
-			if ( 'arriba' === $estado_pedido && 'abajo' === (string) $e->estado ) {
+			if ( 'arriba' === $estado_pedido && in_array( (string) $e->estado, [ 'abajo', 'ciego' ], true ) ) {
+				return false;
+			}
+			if ( 'ciego' === $estado_pedido && 'ciego' !== (string) $e->estado ) {
 				return false;
 			}
 			if ( 'abajo' === $estado_pedido && 'abajo' !== (string) $e->estado ) {
@@ -199,10 +207,14 @@ $historial = array_filter(
 		// un tercio y la tabla, abajo, todo el ancho.
 		SWPK_Vista::caja_abrir( 'Cómo están ahora', 'sondeo cada hora', 'swpk-c12' );
 
+		// Tres porciones, no dos. Antes «Responden» era todo-menos-los-caídos,
+		// así que los 106 sitios que el cortafuegos no deja medir se contaban
+		// como que respondían. La dona decía 107 de 108 arriba mientras el
+		// panel no había conseguido ver ni uno.
 		SWPK_Vista::dona(
 			[
 				[
-					'n'     => count( $estados ) - (int) $abajo,
+					'n'     => count( $estados ) - (int) $abajo - (int) $ciegos,
 					'color' => SWPK_Riesgo::colores()[ SWPK_Riesgo::AL_DIA ],
 					'texto' => 'Responden',
 				],
@@ -210,6 +222,11 @@ $historial = array_filter(
 					'n'     => (int) $abajo,
 					'color' => SWPK_Riesgo::colores()[ SWPK_Riesgo::CRITICO ],
 					'texto' => 'No responden',
+				],
+				[
+					'n'     => (int) $ciegos,
+					'color' => SWPK_Riesgo::colores()[ SWPK_Riesgo::SIN_DATOS ],
+					'texto' => 'No se pueden medir',
 				],
 			],
 			count( $estados ),
@@ -272,10 +289,11 @@ $historial = array_filter(
 				<?php
 				$sitio = SWPK_Inventario::obtener( $e->sitio_id );
 				[ $color, $texto ] = match ( $e->estado ) {
-					'abajo'  => [ '#b32d2e', 'Sin responder' ],
-					'raro'   => [ '#dba617', 'Respuesta rara' ],
-					'arriba' => [ '#008a20', 'Responde' ],
-					default  => [ '#50575e', 'Sin datos' ],
+					'abajo'  => [ SWPK_Riesgo::colores()[ SWPK_Riesgo::CRITICO ], 'Sin responder' ],
+					'raro'   => [ SWPK_Riesgo::colores()[ SWPK_Riesgo::MEDIO ], 'Respuesta rara' ],
+					'ciego'  => [ SWPK_Riesgo::colores()[ SWPK_Riesgo::SIN_DATOS ], 'No se puede medir' ],
+					'arriba' => [ SWPK_Riesgo::colores()[ SWPK_Riesgo::AL_DIA ], 'Responde' ],
+					default  => [ SWPK_Riesgo::colores()[ SWPK_Riesgo::SIN_DATOS ], 'Sin datos' ],
 				};
 				?>
 				<tr>
@@ -350,9 +368,9 @@ $historial = array_filter(
 					<td><?php echo esc_html( SWPK_Frescura::fmt( 'j M Y, H:i', $h->ocurrio_en ) ); ?></td>
 					<td>
 						<?php if ( SWPK_Eventos::SITIO_CAIDO === $h->tipo ) : ?>
-							<span style="color:#b32d2e">Se cayó</span>
+							<span style="color:#a4161a">Se cayó</span>
 						<?php else : ?>
-							<span style="color:#008a20">Volvió</span>
+							<span style="color:#0b6ba8">Volvió</span>
 						<?php endif; ?>
 					</td>
 					<td><?php echo esc_html( $h->titulo ); ?></td>

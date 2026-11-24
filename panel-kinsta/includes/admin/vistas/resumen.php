@@ -360,7 +360,7 @@ $bien_hoy = $resumen_dia[ $hoy ] ?? [ 'sitios' => 0, 'modulos' => 0 ];
 			foreach ( $estado['por_nivel'] as $nivel => $cuantos ) {
 				$trozos[] = [
 					'n'      => (int) $cuantos,
-					'color'  => $colores[ $nivel ] ?? '#8c8f94',
+					'color'  => $colores[ $nivel ] ?? '#777e85',
 					'texto'  => $nombres[ $nivel ] ?? $nivel,
 				];
 			}

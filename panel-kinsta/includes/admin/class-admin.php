@@ -396,14 +396,70 @@ class SWPK_Admin {
 	 * el `title` lo dice con palabras para quien se detiene, y la leyenda de
 	 * arriba de la tabla lo dice para quien lo ve por primera vez.
 	 */
+	/**
+	 * La actualización automática, medida: cuántos de los módulos del sitio la
+	 * tienen puesta, según el hosting.
+	 *
+	 * Es lo que contesta la pregunta que el panel no contestaba: «¿y cómo sé
+	 * cuál está en auto-update? Puede estar en desarrollo y con actualización
+	 * automática. Pero yo no sé eso, en ningún lado lo dice y tampoco puedo
+	 * saberlo» (09:23).
+	 *
+	 * Tres respuestas posibles, y la tercera no es un adorno: sin foto del
+	 * sitio no se dice «no tiene auto-update», se dice que no se sabe.
+	 *
+	 * @param array{con:int,sin:int,total:int} $a
+	 */
+	public static function auto_update_badge( array $a ): string {
+		if ( 0 === (int) $a['total'] ) {
+			return sprintf(
+				'<span class="swpk-etq swpk-nivel-sin_datos" title="%s">Sin medir</span>',
+				esc_attr( 'El hosting todavía no ha devuelto la lista de módulos de este sitio, así que no se sabe si se actualizan solos.' )
+			);
+		}
+
+		if ( 0 === (int) $a['sin'] ) {
+			return sprintf(
+				'<span class="swpk-etq swpk-nivel-al_dia" title="%s">Todo automático</span>',
+				esc_attr( sprintf( 'Los %d módulos activos tienen actualización automática en el hosting.', (int) $a['total'] ) )
+			);
+		}
+
+		if ( 0 === (int) $a['con'] ) {
+			return sprintf(
+				'<span class="swpk-etq swpk-nivel-alto" title="%s">Todo a mano</span>',
+				esc_attr( sprintf( 'Ninguno de los %d módulos activos tiene actualización automática.', (int) $a['total'] ) )
+			);
+		}
+
+		return sprintf(
+			'<span class="swpk-etq swpk-nivel-medio" title="%s">%d de %d automático</span>',
+			esc_attr( sprintf( '%d módulo(s) se actualizan solos y %d hay que actualizarlos a mano.', (int) $a['con'], (int) $a['sin'] ) ),
+			(int) $a['con'],
+			(int) $a['total']
+		);
+	}
+
 	public static function grupo_badge( string $tag ): string {
 		if ( '' === $tag ) {
 			return '';
 		}
 
+		// ─── Estos globitos ya NO prometen nada sobre las actualizaciones ───
+		//
+		// Decían «lo actualizamos nosotros» y «se actualiza solo», como si la
+		// etiqueta del hosting decidiera eso. No lo decide. Hay sitios con la
+		// etiqueta Desarrollo y todos sus módulos en auto-update; el jefe lo
+		// comprobó en el hosting con uno de ellos y el panel le decía lo
+		// contrario: «no es correcto lo que dice aquí, entonces yo no puedo
+		// confiar en este panel» (20:07).
+		//
+		// La etiqueta dice DE QUIÉN es el sitio. Si se actualiza solo o no es
+		// un dato medido, y se enseña aparte: ver SWPK_Inventario::auto_update()
+		// y auto_update_badge().
 		$motivos = [
-			SWPK_Etiquetas::DESARROLLO => 'Sitio nuestro: lo administramos y lo actualizamos nosotros.',
-			SWPK_Etiquetas::AUTO       => 'Sitio nuestro: se actualiza solo.',
+			SWPK_Etiquetas::DESARROLLO => 'Etiquetado como Desarrollo en el hosting. Es un sitio nuestro. La etiqueta no dice si se actualiza solo: eso se mide aparte.',
+			SWPK_Etiquetas::AUTO       => 'Etiquetado para actualización automática en el hosting. Es un sitio nuestro.',
 			SWPK_Etiquetas::NO_UPDATE  => 'Sitio del cliente: no se le actualiza nada sin pedirlo.',
 			SWPK_Etiquetas::SIN        => 'Sin etiqueta en el hosting: no sabemos en qué grupo va.',
 		];
@@ -924,7 +980,7 @@ class SWPK_Admin {
 			. '<body style="margin:0;background:#f0f0f1">'
 			. '<div style="background:#fff;border-bottom:1px solid #dcdcde;padding:14px 18px;'
 			. 'font:13px -apple-system,system-ui,sans-serif;color:#50575e">'
-			. '<span style="color:#8c8f94">Asunto</span><br>'
+			. '<span style="color:#777e85">Asunto</span><br>'
 			. '<strong style="font-size:15px;color:#1d2327">%s</strong></div>%s</body></html>',
 			esc_html( $previa['asunto'] ),
 			wp_kses_post( $previa['html'] )
@@ -1108,7 +1164,7 @@ class SWPK_Admin {
 
 		$campos = [
 			'modo', 'company_id', 'api_key', 'wordfence_key', 'correo_soporte',
-			'correo_ventas', 'dominios_propios',
+			'correo_ventas', 'correo_caidas', 'dominios_propios',
 		];
 
 		$nuevos = [];

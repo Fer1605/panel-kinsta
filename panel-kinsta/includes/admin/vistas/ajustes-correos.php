@@ -43,6 +43,22 @@ $a = SWPK_Ajustes::todos();
 			</td>
 		</tr>
 		<tr>
+			<th scope="row"><label for="correo_caidas">Avisos de caída</label></th>
+			<td>
+				<input type="text" class="regular-text" name="correo_caidas" id="correo_caidas" value="<?php echo esc_attr( $a['correo_caidas'] ); ?>">
+				<p class="description">
+					Además de soporte, a quién hay que despertar si un sitio se cae.
+					<?php echo wp_kses_post( SWPK_Vista::ayuda(
+						'Es una lista aparte de soporte a propósito: el resumen diario se lee en horario '
+						. 'de oficina, y de una caída hay que enterarse aunque sea domingo. Lo que se '
+						. 'escriba aquí se SUMA a soporte, no lo reemplaza. También recibe el aviso de '
+						. 'que un sitio volvió, y el de que un sitio se dio de baja porque el hosting ya '
+						. 'no lo devuelve. Varias direcciones separadas por coma.'
+					) ); ?>
+				</p>
+			</td>
+		</tr>
+		<tr>
 			<th scope="row"><label for="correo_ventas">Copia a ventas</label></th>
 			<td>
 				<input type="text" class="regular-text" name="correo_ventas" id="correo_ventas" value="<?php echo esc_attr( $a['correo_ventas'] ); ?>">

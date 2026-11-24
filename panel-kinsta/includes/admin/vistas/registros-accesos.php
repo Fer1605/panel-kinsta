@@ -13,12 +13,12 @@
 defined( 'ABSPATH' ) || exit;
 
 $etiquetas = [
-	SWPK_Accesos::ENTRADA => [ 'Entró', '#008a20' ],
+	SWPK_Accesos::ENTRADA => [ 'Entró', '#0b6ba8' ],
 	SWPK_Accesos::SALIDA  => [ 'Salió', '#50575e' ],
-	SWPK_Accesos::FALLIDO => [ 'Intento fallido', '#d63638' ],
-	SWPK_Accesos::BLOQUEO => [ 'Bloqueado por intentos', '#b32d2e' ],
+	SWPK_Accesos::FALLIDO => [ 'Intento fallido', '#a4161a' ],
+	SWPK_Accesos::BLOQUEO => [ 'Bloqueado por intentos', '#a4161a' ],
 	SWPK_Accesos::API     => [ 'Consulta por API', '#2271b1' ],
-	SWPK_Accesos::API_NEGADO => [ 'API rechazada', '#d63638' ],
+	SWPK_Accesos::API_NEGADO => [ 'API rechazada', '#a4161a' ],
 ];
 
 // Lo que ofrece el desplegable es el nombre de cada cosa, no su clave interna.

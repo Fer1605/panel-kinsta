@@ -33,6 +33,11 @@ class SWPK_Ajustes {
 			'wordfence_key'     => '',
 			'correo_soporte'    => '',
 			'correo_ventas'     => '',
+			// A quién se avisa cuando un sitio deja de responder. Es una lista
+			// aparte de soporte porque una caída despierta a gente que no lee
+			// el resumen diario: "y cuando se caiga, agrega a Luisa" (18:04).
+			// Vacía, el aviso va solo a soporte.
+			'correo_caidas'     => '',
 			'dominios_propios'  => 'solucionweb.com',
 			'etiqueta_desarrollo' => '',
 			'etiqueta_auto'       => '',

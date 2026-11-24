@@ -306,6 +306,35 @@ class SWPK_Correos {
 		return $salida;
 	}
 
+	/**
+	 * Avisa de que un sitio se dio de baja porque el hosting ya no lo devuelve.
+	 *
+	 * Lo pidió con las dos mitades juntas, y la segunda es la que importa:
+	 * «decir: hemos dado de baja, se queda en el historial [...] y se manda un
+	 * correo que se dio de baja ese sitio porque ya no existe» (02:23).
+	 *
+	 * Lo llama SWPK_Inventario al sincronizar. Ver AUSENCIAS_PARA_BAJA.
+	 */
+	public static function avisar_de_baja( string $sitio_id, string $nombre, int $veces ): string {
+		// Y la cuenta de insistencia de ese sitio se borra: no tiene sentido
+		// seguir contando «es la cuarta vez que avisamos» de un sitio que ya
+		// no existe.
+		SWPK_Insistencia::olvidar( $sitio_id );
+
+		return self::despachar(
+			SWPK_Bitacora::CAIDA,
+			self::destinatarios_soporte(),
+			SWPK_Plantillas::asunto( 'de_baja', [ '{{sitio}}' => $nombre ] ),
+			SWPK_Plantillas::de_baja(
+				[
+					'{{sitio}}' => esc_html( $nombre ),
+					'{{veces}}' => (string) $veces,
+				]
+			),
+			$sitio_id
+		);
+	}
+
 	/** @return array<int,string> */
 	public static function destinatarios_soporte(): array {
 		$crudo = (string) SWPK_Ajustes::obtener( 'correo_soporte', '' );

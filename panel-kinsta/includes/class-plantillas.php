@@ -18,8 +18,10 @@ defined( 'ABSPATH' ) || exit;
 class SWPK_Plantillas {
 
 	private const AZUL  = '#2271b1';
-	private const ROJO  = '#b32d2e';
+	private const ROJO  = '#a4161a';
 	private const GRIS  = '#646970';
+	/** El mostaza de SWPK_Riesgo: el recuadro de «ya te avisamos N veces». */
+	private const MOSTAZA = '#8a6a00';
 
 	/** Donde se guarda lo que se edite. Lo que no esté aquí, sale de fábrica. */
 	public const OPCION = 'swpk_plantillas';
@@ -60,7 +62,7 @@ class SWPK_Plantillas {
 					'{{asesora}}'  => 'El nombre de la asesora',
 					'{{cuantos}}'  => 'Cuántos de sus sitios tienen algo pendiente',
 					'{{criticos}}' => 'La coletilla «, y N en estado alto o crítico». Si no hay ninguno, se queda en blanco sola.',
-					'{{sitios}}'   => 'EL BLOQUE: un recuadro por sitio, con el texto listo para copiarle al cliente.',
+					'{{sitios}}'   => 'EL BLOQUE: un recuadro por sitio, con el texto listo para copiarle al cliente. Dentro de cada recuadro, el panel añade solo la frase de insistencia cuando toca: «es la tercera vez seguida que avisamos y sigue igual», o qué se movió desde el aviso anterior.',
 				],
 			],
 			'diario'  => [
@@ -122,6 +124,23 @@ class SWPK_Plantillas {
 				'marcas' => [
 					'{{sitio}}'  => 'El nombre del sitio',
 					'{{cuanto}}' => 'Cuánto tiempo estuvo caído, ya en palabras: «12 minutos», «2 horas»',
+				],
+			],
+			'de_baja' => [
+				'nombre' => 'Sitio dado de baja',
+				'quien'  => 'A soporte, cuando el hosting deja de devolver un sitio cinco veces seguidas.',
+				'titulo' => 'Un sitio se dio de baja',
+				'asunto' => '[De baja] {{sitio}}',
+				'cuerpo' => "{{sitio}} se dio de baja del panel.\n\n"
+					. "El hosting dejó de devolverlo en la lista de sitios, y ya van {{veces}} comprobaciones "
+					. "seguidas sin que apareciera. Lo normal es que lo hayan borrado de la cuenta.\n\n"
+					. "Lo que se midió de este sitio NO se borra: sus datos, sus avisos y su historial se "
+					. "quedan en el panel. Lo único que cambia es que deja de contar en los totales y de "
+					. "generar alarmas.\n\n"
+					. 'Si vuelve a aparecer en el hosting, el panel le quita la baja solo.',
+				'marcas' => [
+					'{{sitio}}' => 'El nombre del sitio',
+					'{{veces}}' => 'Cuántas comprobaciones seguidas pasó sin aparecer',
 				],
 			],
 			'mensual' => [
@@ -347,7 +366,7 @@ class SWPK_Plantillas {
 	/** El marco común: cabecera, contenido y pie. */
 	public static function envolver( string $titulo, string $contenido, bool $con_atribucion = false ): string {
 		$pie = $con_atribucion
-			? '<p style="color:#8c8f94;font-size:11px;line-height:1.5;margin:16px 0 0">'
+			? '<p style="color:#777e85;font-size:11px;line-height:1.5;margin:16px 0 0">'
 				. 'Los datos de vulnerabilidades provienen de Wordfence Intelligence (Defiant, Inc.), '
 				. 'usados bajo su licencia. Los identificadores CVE son de MITRE.</p>'
 			: '';
@@ -423,10 +442,17 @@ class SWPK_Plantillas {
 
 			$vulns = count( array_filter( $hallazgos, static fn( $h ) => 'actualizacion_pendiente' !== $h['motivo'] ) );
 
+			// La insistencia: cuántas veces seguidas se avisa de este sitio y
+			// qué se movió desde la vez anterior. Apuntar tiene efecto —sube el
+			// contador—, así que va aquí, una sola vez por sitio y por correo.
+			// Ver SWPK_Insistencia.
+			$insiste = SWPK_Insistencia::frase( SWPK_Insistencia::apuntar( (string) $sitio->sitio_id, $hallazgos ) );
+
 			$bloque .= sprintf(
 				'<div style="border:1px solid #dcdcde;border-radius:6px;padding:16px 18px;margin:18px 0">'
 				. '<p style="margin:0 0 4px;font-size:15px;font-weight:600">%s</p>'
 				. '<p style="margin:0 0 12px;color:%s;font-size:13px"><strong>%s</strong> · %d con vulnerabilidad · %d por actualizar</p>'
+				. '%s'
 				. '<p style="margin:0 0 6px;font-size:13px;color:%s">Para copiar y mandarle al cliente:</p>'
 				. '<div style="background:#f6f7f7;border-radius:4px;padding:14px;white-space:pre-wrap;font-size:13px;line-height:1.55">%s</div>'
 				. '</div>',
@@ -435,6 +461,13 @@ class SWPK_Plantillas {
 				esc_html( SWPK_Riesgo::nombres()[ $nivel ] ?? '' ),
 				$vulns,
 				count( $hallazgos ) - $vulns,
+				'' !== $insiste
+					? sprintf(
+						'<p style="margin:0 0 12px;padding:10px 12px;background:#faf4df;border-left:4px solid %s;font-size:13px;line-height:1.5">%s</p>',
+						self::MOSTAZA,
+						esc_html( $insiste )
+					)
+					: '',
 				self::GRIS,
 				esc_html( $texto )
 			);
@@ -466,8 +499,8 @@ class SWPK_Plantillas {
 			$sitio = SWPK_Inventario::obtener( (string) $e->sitio_id );
 			$color = match ( $e->severidad ) {
 				'critico' => self::ROJO,
-				'alto'    => '#d63638',
-				'ok'      => '#008a20',
+				'alto'    => '#a4161a',
+				'ok'      => '#0b6ba8',
 				default   => self::GRIS,
 			};
 
@@ -541,6 +574,13 @@ class SWPK_Plantillas {
 	}
 
 	/** El aviso de que un sitio volvió. */
+	public static function de_baja( array $marcas ): string {
+		return self::envolver(
+			self::catalogo()['de_baja']['titulo'],
+			self::cuerpo( 'de_baja', $marcas )
+		);
+	}
+
 	public static function repuesto( array $marcas ): string {
 		return self::envolver(
 			self::catalogo()['repuesto']['titulo'],
@@ -619,7 +659,7 @@ class SWPK_Plantillas {
 				. '<td style="padding:6px 0 6px 10px;border-bottom:1px solid #f0f0f1;text-align:right;color:%s">%s</td></tr>',
 				esc_html( wp_date( 'j/n H:i', strtotime( (string) $f->enviado_en ) ) ),
 				esc_html( (string) $f->asunto ),
-				'enviado' === $f->resultado ? '#008a20' : '#d63638',
+				'enviado' === $f->resultado ? '#0b6ba8' : '#a4161a',
 				esc_html( (string) $f->resultado )
 			);
 		}
@@ -717,7 +757,7 @@ class SWPK_Plantillas {
 		$html .= '</table>';
 
 		if ( $graves ) {
-			$html .= '<p style="margin:0 0 8px;font-weight:600;color:#d63638">Lo que no es rutina</p>';
+			$html .= '<p style="margin:0 0 8px;font-weight:600;color:#a4161a">Lo que no es rutina</p>';
 			$html .= '<table role="presentation" style="width:100%;border-collapse:collapse;font-size:13px;margin:0 0 22px">';
 
 			foreach ( array_slice( $graves, 0, 25 ) as $e ) {
