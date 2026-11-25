@@ -165,7 +165,7 @@ $url_pestana = static fn( string $s ) => add_query_arg(
 	?>
 	<div class="swpk-tarjetas">
 		<a class="swpk-tarjeta swpk-tarjeta-enlace" href="<?php echo esc_url( add_query_arg( 'solo', 'vuln', $url_pestana( 'pendiente' ) ) ); ?>">
-			<div class="swpk-n" style="color:<?php echo count( $con_vuln ) ? '#a4161a' : '#0b6ba8'; ?>"><?php echo count( $con_vuln ); ?></div>
+			<div class="swpk-n" style="color:<?php echo count( $con_vuln ) ? '#9e0b10' : '#0b5ed7'; ?>"><?php echo count( $con_vuln ); ?></div>
 			<div class="swpk-r">Con vulnerabilidad conocida</div>
 		</a>
 		<a class="swpk-tarjeta swpk-tarjeta-enlace" href="<?php echo esc_url( add_query_arg( 'solo', 'act', $url_pestana( 'pendiente' ) ) ); ?>">
@@ -189,7 +189,7 @@ $url_pestana = static fn( string $s ) => add_query_arg(
 		<?php endif; ?>
 		<?php if ( 'datos' !== $seccion && SWPK_Etiquetas::es_nuestro( $sitio->tag ) ) : ?>
 			<div class="swpk-tarjeta">
-				<div class="swpk-n" style="font-size:19px;padding-top:6px;color:<?php echo $sitio->tiene_2fa ? '#0b6ba8' : '#a4161a'; ?>">
+				<div class="swpk-n" style="font-size:19px;padding-top:6px;color:<?php echo $sitio->tiene_2fa ? '#0b5ed7' : '#9e0b10'; ?>">
 					<?php echo $sitio->tiene_2fa ? '✓ Activa' : 'Pendiente'; ?>
 				</div>
 				<div class="swpk-r">Doble autenticación</div>
@@ -310,14 +310,14 @@ $url_pestana = static fn( string $s ) => add_query_arg(
 					<td>
 						<span class="swpk-mono"><?php echo esc_html( $h['version'] ); ?></span>
 						<?php if ( '' !== $h['version_disponible'] ) : ?>
-							→ <span class="swpk-mono" style="color:#0b6ba8"><?php echo esc_html( $h['version_disponible'] ); ?></span>
+							→ <span class="swpk-mono" style="color:#0b5ed7"><?php echo esc_html( $h['version_disponible'] ); ?></span>
 						<?php endif; ?>
 					</td>
 					<td><?php echo wp_kses_post( SWPK_Admin::nivel_badge( $h['nivel'] ) ); ?></td>
 					<td>
 						<?php if ( $v ) : ?>
 							<?php $quien = SWPK_Textos::quien_puede( (string) ( $v->cvss_vector ?? '' ), (string) $v->descripcion ); ?>
-							<span style="color:<?php echo $quien['sin_cuenta'] ? '#a4161a' : '#1d2327'; ?>">
+							<span style="color:<?php echo $quien['sin_cuenta'] ? '#9e0b10' : '#1d2327'; ?>">
 								<?php echo esc_html( $quien['frase'] ); ?>
 							</span>
 						<?php else : ?>
@@ -331,7 +331,7 @@ $url_pestana = static fn( string $s ) => add_query_arg(
 								<br><span class="swpk-mono" style="color:#50575e"><?php echo esc_html( (string) $v->cve ); ?></span>
 							<?php endif; ?>
 						<?php elseif ( 'vulnerable_sin_detalle' === $h['motivo'] ) : ?>
-							<span style="color:#a4161a">El hosting la marca como vulnerable</span>,
+							<span style="color:#9e0b10">El hosting la marca como vulnerable</span>,
 							<span style="color:#50575e">a la espera del detalle público.</span>
 						<?php else : ?>
 							<span style="color:#50575e">Solo actualización pendiente, sin vulnerabilidad conocida.</span>

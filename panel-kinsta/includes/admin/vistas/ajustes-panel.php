@@ -363,7 +363,7 @@ $a = SWPK_Ajustes::todos();
 				<tr>
 					<td>Avisos perdidos</td>
 					<td>
-						<strong style="color:#a4161a"><?php echo esc_html( SWPK_Vista::plural( count( $perdidos ), 'evento no se pudo guardar', 'eventos no se pudieron guardar' ) ); ?>.</strong>
+						<strong style="color:#9e0b10"><?php echo esc_html( SWPK_Vista::plural( count( $perdidos ), 'evento no se pudo guardar', 'eventos no se pudieron guardar' ) ); ?>.</strong>
 						<br><span style="font-size:12px">
 							Un panel que avisa no puede perder avisos callado. El último fue
 							<?php echo esc_html( SWPK_Frescura::fecha( (string) $perdidos[0]['cuando'] ) ); ?>:
@@ -377,10 +377,10 @@ $a = SWPK_Ajustes::todos();
 				<td>
 					<?php echo esc_html( SWPK_Frescura::fecha_y_edad( SWPK_Frescura::corrida() ) ); ?>
 					<?php if ( ! SWPK_Frescura::corrida_al_dia() ) : ?>
-						<br><strong style="color:#a4161a">La corrida diaria no está pasando.</strong>
+						<br><strong style="color:#9e0b10">La corrida diaria no está pasando.</strong>
 					<?php endif; ?>
 					<?php if ( SWPK_Frescura::corrida_fallo() ) : ?>
-						<br><span style="color:#a4161a;font-size:12px">
+						<br><span style="color:#9e0b10;font-size:12px">
 							Hubo un intento posterior, el <?php echo esc_html( SWPK_Frescura::fecha( SWPK_Frescura::intento() ) ); ?>,
 							que arrancó y no trajo nada.
 						</span>
@@ -401,7 +401,7 @@ $a = SWPK_Ajustes::todos();
 						: 'nunca se ha descargado';
 					?>
 					<?php if ( '' !== $wf && ! SWPK_Frescura::feed_al_dia() ) : ?>
-						<br><strong style="color:#a4161a">La lista está vieja.</strong>
+						<br><strong style="color:#9e0b10">La lista está vieja.</strong>
 						<span style="font-size:12px">Una vulnerabilidad publicada estos días todavía no aparece marcada.</span>
 					<?php endif; ?>
 					<?php $proxima = SWPK_Wordfence::proxima_descarga(); ?>
@@ -430,7 +430,7 @@ $a = SWPK_Ajustes::todos();
 					<?php if ( SWPK_Ajustes::llaves_en_claro() ) : ?>
 						<span style="color:#8a6a00">Hay alguna sin cifrar</span>
 					<?php else : ?>
-						<span style="color:#0b6ba8">✓ Cifradas en la base de datos</span>
+						<span style="color:#0b5ed7">✓ Cifradas en la base de datos</span>
 						<br><span style="color:#50575e;font-size:12px">
 							Se cifran con las claves de seguridad de este WordPress, que están en
 							<code>wp-config.php</code> y no en la base. Un respaldo de la base de datos,

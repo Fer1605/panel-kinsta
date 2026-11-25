@@ -18,7 +18,7 @@ defined( 'ABSPATH' ) || exit;
 class SWPK_Plantillas {
 
 	private const AZUL  = '#2271b1';
-	private const ROJO  = '#a4161a';
+	private const ROJO  = '#9e0b10';
 	private const GRIS  = '#646970';
 	/** El mostaza de SWPK_Riesgo: el recuadro de «ya te avisamos N veces». */
 	private const MOSTAZA = '#8a6a00';
@@ -366,7 +366,7 @@ class SWPK_Plantillas {
 	/** El marco común: cabecera, contenido y pie. */
 	public static function envolver( string $titulo, string $contenido, bool $con_atribucion = false ): string {
 		$pie = $con_atribucion
-			? '<p style="color:#777e85;font-size:11px;line-height:1.5;margin:16px 0 0">'
+			? '<p style="color:#6b7280;font-size:11px;line-height:1.5;margin:16px 0 0">'
 				. 'Los datos de vulnerabilidades provienen de Wordfence Intelligence (Defiant, Inc.), '
 				. 'usados bajo su licencia. Los identificadores CVE son de MITRE.</p>'
 			: '';
@@ -463,7 +463,7 @@ class SWPK_Plantillas {
 				count( $hallazgos ) - $vulns,
 				'' !== $insiste
 					? sprintf(
-						'<p style="margin:0 0 12px;padding:10px 12px;background:#faf4df;border-left:4px solid %s;font-size:13px;line-height:1.5">%s</p>',
+						'<p style="margin:0 0 12px;padding:10px 12px;background:#faf4df;border:1px solid #e3d3a0;border-radius:4px;color:%s;font-size:13px;line-height:1.5">%s</p>',
 						self::MOSTAZA,
 						esc_html( $insiste )
 					)
@@ -499,8 +499,8 @@ class SWPK_Plantillas {
 			$sitio = SWPK_Inventario::obtener( (string) $e->sitio_id );
 			$color = match ( $e->severidad ) {
 				'critico' => self::ROJO,
-				'alto'    => '#a4161a',
-				'ok'      => '#0b6ba8',
+				'alto'    => '#9e0b10',
+				'ok'      => '#0b5ed7',
 				default   => self::GRIS,
 			};
 
@@ -659,7 +659,7 @@ class SWPK_Plantillas {
 				. '<td style="padding:6px 0 6px 10px;border-bottom:1px solid #f0f0f1;text-align:right;color:%s">%s</td></tr>',
 				esc_html( wp_date( 'j/n H:i', strtotime( (string) $f->enviado_en ) ) ),
 				esc_html( (string) $f->asunto ),
-				'enviado' === $f->resultado ? '#0b6ba8' : '#a4161a',
+				'enviado' === $f->resultado ? '#0b5ed7' : '#9e0b10',
 				esc_html( (string) $f->resultado )
 			);
 		}
@@ -757,7 +757,7 @@ class SWPK_Plantillas {
 		$html .= '</table>';
 
 		if ( $graves ) {
-			$html .= '<p style="margin:0 0 8px;font-weight:600;color:#a4161a">Lo que no es rutina</p>';
+			$html .= '<p style="margin:0 0 8px;font-weight:600;color:#9e0b10">Lo que no es rutina</p>';
 			$html .= '<table role="presentation" style="width:100%;border-collapse:collapse;font-size:13px;margin:0 0 22px">';
 
 			foreach ( array_slice( $graves, 0, 25 ) as $e ) {

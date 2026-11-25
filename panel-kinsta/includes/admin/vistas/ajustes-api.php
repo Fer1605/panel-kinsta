@@ -123,7 +123,7 @@ $llamadas = array_slice( $llamadas, 0, 25 );
 			font-size: 13px; background: #f6f7f7;
 		}
 		.swpk-fila .button { flex: 0 0 auto; }
-		.swpk-copiado { background: #0b6ba8 !important; border-color: #0b6ba8 !important; color: #fff !important; }
+		.swpk-copiado { background: #0b5ed7 !important; border-color: #0b5ed7 !important; color: #fff !important; }
 		.swpk-dos { display: flex; gap: 14px; flex-wrap: wrap; }
 		.swpk-dos > .swpk-campo { flex: 1 1 220px; margin-bottom: 0; }
 		.swpk-modal-pie { margin: 22px 0 0; text-align: right; }
@@ -392,7 +392,7 @@ $llamadas = array_slice( $llamadas, 0, 25 );
 		<tbody>
 		<?php foreach ( $rutas_vis as $r ) : ?>
 			<tr>
-				<td><strong style="color:<?php echo 'GET' === $r['metodo'] ? '#2271b1' : '#a4161a'; ?>"><?php echo esc_html( $r['metodo'] ); ?></strong></td>
+				<td><strong style="color:<?php echo 'GET' === $r['metodo'] ? '#2271b1' : '#9e0b10'; ?>"><?php echo esc_html( $r['metodo'] ); ?></strong></td>
 				<td><code><?php echo esc_html( $r['ruta'] ); ?></code></td>
 				<td><?php echo esc_html( $r['que'] ); ?></td>
 				<td class="swpk-gris"><?php echo esc_html( $r['quien'] ); ?></td>

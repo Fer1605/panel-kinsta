@@ -50,9 +50,9 @@
 .swpk-norma-pie{margin:12px 0 0;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 /* La gravedad se dice con color Y con palabra: el color solo no
    sirve a quien no distingue rojo de verde, y esto se imprime. */
-.swpk-sev-alta{background:#fcf0f1;color:#8a1f24;border-color:#e6b3b6}
-.swpk-sev-media{background:#fcf9e8;color:#7a5610;border-color:#e3cf94}
-.swpk-sev-baja{background:#f0f0f1;color:#50575e;border-color:#c3c4c7}
+.swpk-sev-alta{background:#9e0b10;color:#fff;border-color:#9e0b10}
+.swpk-sev-media{background:#fbc02d;color:#1d2327;border-color:#fbc02d}
+.swpk-sev-baja{background:#5c6670;color:#fff;border-color:#5c6670}
 .swpk-mudo{color:#787c82;font-size:12px}
 .swpk-bien-lista{margin:8px 0 0;max-width:900px}
 .swpk-bien-lista li{margin-bottom:5px;color:#3c434a}
@@ -66,13 +66,13 @@
 .swpk-matriz-col{height:150px;width:40px;padding:0 !important;vertical-align:bottom}
 .swpk-matriz-col span{display:block;width:150px;transform-origin:bottom left;transform:translateX(26px) rotate(-60deg);font-size:11px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .swpk-celda{text-align:center;font-weight:600;font-size:12px;cursor:help}
-.swpk-celda-cumple{background:#e7f1f9;color:#08527f}
-.swpk-celda-falla{background:#fcf0f1;color:#8a1f24}
-.swpk-celda-sin_dato{background:#f6f7f7;color:#787c82}
+.swpk-celda-cumple{background:#0d6efd;color:#fff;border-color:#0d6efd}
+.swpk-celda-falla{background:#9e0b10;color:#fff;border-color:#9e0b10}
+.swpk-celda-sin_dato{background:#d6dbe0;color:#1d2327;border-color:#d6dbe0}
 .swpk-celda-no_aplica{background:#fff;color:#c3c4c7}
 .swpk-orden-pendiente{background:#fcf9e8;color:#7a5610;border-color:#e3cf94}
 .swpk-orden-entregada{background:#f0f6fc;color:#1b5e8f;border-color:#a7cdea}
-.swpk-orden-hecha{background:#e7f1f9;color:#08527f;border-color:#a9cde6}
+.swpk-orden-hecha{background:#e7f1f9;color:#0a58ca;border-color:#a9cde6}
 .swpk-orden-fallo,.swpk-orden-vencida{background:#fcf0f1;color:#8a1f24;border-color:#e6b3b6}
 .swpk-orden-cancelada{background:#f0f0f1;color:#50575e;border-color:#c3c4c7}
 .swpk-atribucion{color:#646970;font-size:12px;margin-top:18px;padding-top:12px;border-top:1px solid #dcdcde}

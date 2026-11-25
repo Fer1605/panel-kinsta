@@ -296,10 +296,10 @@ $volver = add_query_arg(
 					<td><?php echo wp_kses_post( SWPK_Admin::nivel_badge( $nivel_s ) ); ?></td>
 					<td>
 						<?php if ( SWPK_Riesgo::SIN_DATOS === $nivel_s ) : ?>
-							<span style="color:#777e85">sin escanear por <?php echo esc_html( SWPK_Admin::proveedor() ); ?></span>
+							<span style="color:#6b7280">sin escanear por <?php echo esc_html( SWPK_Admin::proveedor() ); ?></span>
 						<?php else : ?>
 							<?php if ( $vulns ) : ?>
-								<strong style="color:#a4161a"><?php echo (int) $vulns; ?> con vulnerabilidad</strong><br>
+								<strong style="color:#9e0b10"><?php echo (int) $vulns; ?> con vulnerabilidad</strong><br>
 							<?php endif; ?>
 							<?php echo count( $hallazgos ) - $vulns; ?> por actualizar
 							<?php if ( SWPK_Inventario::dato_viejo( $s ) ) : ?>
@@ -319,9 +319,9 @@ $volver = add_query_arg(
 					<?php if ( SWPK_Etiquetas::es_nuestro( $tag ) ) : ?>
 						<td>
 							<?php if ( $s->tiene_2fa ) : ?>
-								<span style="color:#0b6ba8">✓ <?php echo esc_html( $s->plugin_2fa ); ?></span>
+								<span style="color:#0b5ed7">✓ <?php echo esc_html( $s->plugin_2fa ); ?></span>
 							<?php else : ?>
-								<span style="color:#a4161a">Pendiente</span>
+								<span style="color:#9e0b10">Pendiente</span>
 							<?php endif; ?>
 						</td>
 					<?php endif; ?>

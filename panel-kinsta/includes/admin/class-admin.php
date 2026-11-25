@@ -980,7 +980,7 @@ class SWPK_Admin {
 			. '<body style="margin:0;background:#f0f0f1">'
 			. '<div style="background:#fff;border-bottom:1px solid #dcdcde;padding:14px 18px;'
 			. 'font:13px -apple-system,system-ui,sans-serif;color:#50575e">'
-			. '<span style="color:#777e85">Asunto</span><br>'
+			. '<span style="color:#6b7280">Asunto</span><br>'
 			. '<strong style="font-size:15px;color:#1d2327">%s</strong></div>%s</body></html>',
 			esc_html( $previa['asunto'] ),
 			wp_kses_post( $previa['html'] )

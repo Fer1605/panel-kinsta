@@ -139,7 +139,7 @@ $hay_filtro_equipo = ( '' !== $perfil_pedido || '' !== $busca_persona );
 					<td><?php echo esc_html( $roles[ $perfil ] ?? '—' ); ?></td>
 					<td>
 						<?php if ( SWPK_Perfiles::VENTAS === $perfil ) : ?>
-							<?php echo $asignados ? esc_html( SWPK_Vista::plural( (int) $asignados, 'sitio', 'sitios' ) ) : '<span style="color:#a4161a">ninguno todavía</span>'; ?>
+							<?php echo $asignados ? esc_html( SWPK_Vista::plural( (int) $asignados, 'sitio', 'sitios' ) ) : '<span style="color:#9e0b10">ninguno todavía</span>'; ?>
 						<?php else : ?>
 							<span style="color:#50575e">todos</span>
 						<?php endif; ?>

@@ -83,7 +83,7 @@ class SWPK_Riesgo {
 	 *
 	 *  1. **Los seis se distinguen entre sí en los TRES daltonismos** —
 	 *     deuteranopía, protanopía y tritanopía—, simulados con las matrices
-	 *     de Machado. El par más parecido está a 103 de distancia; por debajo
+	 *     de Machado. El par más parecido está a 100 de distancia; por debajo
 	 *     de 45 se confunden.
 	 *  2. **Los seis se distinguen en escala de grises**, así que valen
 	 *     también para el daltonismo que no se simuló, para una pantalla mal
@@ -99,21 +99,37 @@ class SWPK_Riesgo {
 	 * color siempre va la palabra. Un color que hay que interpretar es un
 	 * color que alguien va a interpretar mal.
 	 *
-	 * Y eso vale el doble para las insignias pálidas de las tablas, cuyos
-	 * fondos son casi blancos y entre ellos no se separan ni pueden. Llevaron
-	 * un rato una franja gruesa de color a la izquierda, como apoyo. Se quitó:
-	 * en una píldora redondeada el borde grueso se recorta contra el radio y
-	 * deja una media luna oscura pegada al costado. No hacía falta — la
-	 * palabra ya estaba ahí — y se veía mal.
+	 * ─── Y por qué son VIVOS y no pasteles ─────────────────────────────────
+	 *
+	 * Hubo un intento que pintó las insignias de las tablas en tonos pálidos,
+	 * con la palabra dentro. Medido, esos fondos quedaban a 1,7 de distancia
+	 * entre sí: para un daltónico, el mismo color. Pasó por bueno porque la
+	 * palabra estaba ahí, y eso no es lo que se pidió. Se pidió dos veces,
+	 * con las mismas palabras:
+	 *
+	 *     «Ponerme amarillo, rojo, azul, COLORES TOTALMENTE CONTRARIOS.»
+	 *     (12:35)
+	 *     «Porque no hay colores contrarios, totalmente.» (15:56)
+	 *
+	 * Un pastel es exactamente lo contrario de un color contrario. Así que
+	 * las insignias van en el color pleno, y entre todas las paletas que
+	 * pasaban las tres pruebas se eligió LA MÁS VIVA, midiendo el croma.
+	 *
+	 * Tampoco se sabe qué tipo de daltonismo tiene, y no hace falta
+	 * preguntárselo: se comprueba contra los tres, así que da igual cuál sea.
+	 *
+	 * Y nada de franjas de color a un lado. Se probaron como apoyo y en una
+	 * píldora redondeada el borde grueso se recorta contra el radio y deja
+	 * una media luna oscura pegada al costado. Se ve mal y no hacen falta.
 	 */
 	public static function colores(): array {
 		return [
-			self::CRITICO   => '#7d0f12', // rojo muy oscuro · texto blanco 10,8:1
-			self::ALTO      => '#bc5b00', // naranja oscuro   · texto blanco  4,5:1
-			self::MEDIO     => '#e8b33d', // ámbar claro      · texto oscuro  8,3:1
-			self::BAJO      => '#5c6670', // pizarra          · texto blanco  5,9:1
-			self::AL_DIA    => '#2a96d8', // azul             · texto oscuro  4,9:1
-			self::SIN_DATOS => '#d2d6da', // gris claro       · texto oscuro 10,9:1
+			self::CRITICO   => '#9e0b10', // rojo fuerte · texto blanco  8,4:1
+			self::ALTO      => '#e0700f', // naranja     · texto oscuro  4,9:1
+			self::MEDIO     => '#fbc02d', // amarillo    · texto oscuro  9,6:1
+			self::BAJO      => '#5c6670', // pizarra     · texto blanco  5,9:1
+			self::AL_DIA    => '#0d6efd', // azul fuerte · texto blanco  4,5:1
+			self::SIN_DATOS => '#d6dbe0', // gris claro  · texto oscuro 11,4:1
 		];
 	}
 
@@ -125,7 +141,7 @@ class SWPK_Riesgo {
 	 * por hecho el blanco fue el error del primer intento.
 	 */
 	public static function texto_sobre( string $nivel ): string {
-		return in_array( $nivel, [ self::MEDIO, self::AL_DIA, self::SIN_DATOS ], true )
+		return in_array( $nivel, [ self::ALTO, self::MEDIO, self::SIN_DATOS ], true )
 			? '#1d2327'
 			: '#ffffff';
 	}

@@ -200,7 +200,7 @@ SWPK_Vista::caja_abrir(
 				</a>
 
 				<?php if ( (int) $n->de_fabrica !== 1 ) : ?>
-					<a class="button button-small" style="color:#a4161a"
+					<a class="button button-small" style="color:#9e0b10"
 						href="<?php echo esc_url( SWPK_Admin::url_borrar_norma( (string) $n->clave ) ); ?>"
 						onclick="return confirm('Se borra la norma «<?php echo esc_js( (string) $n->nombre ); ?>» y todo lo que se midió de ella. Esto no se puede deshacer. ¿Seguimos?')">Borrar</a>
 				<?php endif; ?>

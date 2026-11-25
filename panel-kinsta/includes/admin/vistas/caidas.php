@@ -373,9 +373,9 @@ $historial = array_filter(
 					<td><?php echo esc_html( SWPK_Frescura::fmt( 'j M Y, H:i', $h->ocurrio_en ) ); ?></td>
 					<td>
 						<?php if ( SWPK_Eventos::SITIO_CAIDO === $h->tipo ) : ?>
-							<span style="color:#a4161a">Se cayó</span>
+							<span style="color:#9e0b10">Se cayó</span>
 						<?php else : ?>
-							<span style="color:#0b6ba8">Volvió</span>
+							<span style="color:#0b5ed7">Volvió</span>
 						<?php endif; ?>
 					</td>
 					<td><?php echo esc_html( $h->titulo ); ?></td>

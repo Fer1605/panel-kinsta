@@ -46,7 +46,7 @@ class SWPK_Vista {
 					href="<?php echo esc_url( $es ? remove_query_arg( [ 'tag', 'nivel', 'p', 'q', 'wp', 'php' ], $base ) : add_query_arg( 'tag', $tag, $base ) ); ?>">
 
 					<?php if ( $det ) : ?>
-						<span class="swpk-grupo-n" style="color:<?php echo $det['n'] ? '#a4161a' : '#0b6ba8'; ?>">
+						<span class="swpk-grupo-n" style="color:<?php echo $det['n'] ? '#9e0b10' : '#0b5ed7'; ?>">
 							<?php echo (int) $det['n']; ?><span class="swpk-grupo-de">de <?php echo (int) ( $det['de'] ?? 0 ); ?></span>
 						</span>
 					<?php else : ?>
