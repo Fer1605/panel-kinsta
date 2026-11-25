@@ -38,8 +38,10 @@ PRUEBAS.md
 # Copias del panel empaquetadas para mandar a alguien
 *.zip
 
-# Notas de reunión: transcripciones, nombres de clientes y de personas
+# Notas de reunión e informes internos: transcripciones, nombres de clientes
+# y de personas
 REUNION-*.md
+INFORME-*.md
 *.mov
 
 # Catálogo de normas: trae mediciones con dominios de clientes

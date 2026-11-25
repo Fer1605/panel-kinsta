@@ -74,9 +74,16 @@ y cuatro de sus archivos están a propósito distintos de los del plugin —
 Trae nombres de clientes, transcripciones de reuniones o contraseñas. Está en
 la máquina y nada más:
 
-- `REUNION-2026-11-19-lo-que-pidio.md` — **los 49 pedidos del jefe**, uno por
-  uno, textuales, cada uno con su estado (hecho / pendiente / es
-  funcionalidad). Si alguien pregunta «¿qué pidió exactamente?», es este.
+- `REUNION-2026-11-23-lo-que-pidio.md` — **lo último que pidió el jefe**, punto
+  por punto, con la cita textual y el minuto de la grabación, agrupado en ocho
+  secciones (A a H). Si alguien pregunta «¿qué pidió exactamente?», es este.
+- `INFORME-2026-11-25-que-estaba-roto.md` — **la explicación de qué estaba roto
+  y cómo quedó**, en nueve capítulos, escrita para leerse de corrido. Es el
+  mismo texto del PDF «Panel Kinsta - que estaba roto y como quedo.pdf». Si
+  alguien pregunta «¿por qué no funcionaba?», es este. Trae al principio un
+  bloque «para arrancar un chat nuevo» y al final la lista de lo que falta.
+- `REUNION-2026-11-19-lo-que-pidio.md` — **los 49 pedidos del jefe** de la
+  reunión anterior, uno por uno, textuales, cada uno con su estado.
 - `REUNION-2026-11-18-panel.md`, `REUNION-2026-11-18-gustavo.md` — las dos
   reuniones anteriores.
 - `NORMAS-catalogo.md` — las 73 normas con mediciones reales, por dominio.
@@ -129,14 +136,41 @@ Reglas de Fer, que valen igual en un chat nuevo:
 
 ---
 
-## 5. Estado al 23 de noviembre de 2026
+## 5. Estado al 25 de noviembre de 2026
 
 | | Versión | Dónde está |
 |---|---|---|
-| Panel Kinsta | **0.6.0** | Desplegado en producción y verificado ahí mismo. |
+| Panel Kinsta | **0.6.3** | Desplegado en producción y verificado ahí mismo. |
 | Agente (plugin) | **0.6.4** | En 106 de los 107 sitios que lo tienen. |
 | Agente (dentro del tema) | **0.6.4-tema** | En el PR, esperando al jefe. |
 | Tema hijo | **2.6.1** | En el PR. |
+
+### Lo del 24 y 25: los colores y la letra (0.6.1 → 0.6.3)
+
+El jefe es daltónico y lo dijo tres veces en la grabación: «ponerme amarillo,
+rojo, azul, **colores totalmente contrarios**». Costó tres intentos.
+
+- **0.6.1** — primera paleta. Arreglaba el verde/rojo del que se quejaba y
+  creaba un par nuevo: naranja y mostaza a 6,8 de distancia. Fallida.
+- **0.6.2** — tonos pálidos con la palabra dentro de la insignia, y una franja
+  de color a la izquierda. Los fondos quedaban a 1,7 de distancia:
+  prácticamente idénticos. Fallida, y las franjas se quitaron porque Fer las
+  rechazó de plano. **Un pastel es lo contrario de un color contrario.**
+- **0.6.3** — la definitiva. Seis colores sacados de una búsqueda con tres
+  condiciones a la vez (separados en los tres daltonismos, separados en escala
+  de grises, y cada uno legible con su propio color de texto). El par más
+  parecido quedó a 100; por debajo de 45 se confunden. Y de paso las insignias
+  pasaron a 12 px / peso 700 y se arreglaron dos grises de texto que llevaban
+  **desde siempre** por debajo del mínimo legible: 3,24:1 y 4,20:1, cuando el
+  mínimo es 4,5:1.
+
+La paleta, con hex y contrastes, está en
+`panel-kinsta/includes/class-riesgo.php` y explicada en
+`INFORME-2026-11-25-que-estaba-roto.md`, capítulo 4.
+
+**Lección que se repitió dos veces:** el panel numera su hoja de estilos con
+`SWPK_VERSION`, así que **un cambio de CSS sin subir la versión del plugin es
+un cambio que nadie ve**. Se perdió un rato buscando un fallo que no existía.
 
 ### Lo de la reunión del 23 por la noche (0.6.0)
 
