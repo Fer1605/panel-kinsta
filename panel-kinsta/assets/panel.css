@@ -326,17 +326,19 @@ body[class*="panel-kinsta"] .swpk-filtro-activo {
 /* Las insignias de nivel: fondo suave y borde, no color pleno. En una tabla
    densa, cinco colores plenos pelean entre ellos y no gana ninguno. */
 body[class*="panel-kinsta"] .swpk-nivel {
-	padding: 3px 10px;
+	padding: 3px 11px;
 	border: 1px solid;
-	font-size: 11px;
-	font-weight: 600;
+	font-size: 12px;
+	line-height: 17px;
+	font-weight: 700;
 }
 
 body[class*="panel-kinsta"] .swpk-etq {
 	border-radius: 999px;
-	padding: 3px 10px;
-	font-size: 11px;
-	font-weight: 600;
+	padding: 3px 11px;
+	font-size: 12px;
+	line-height: 17px;
+	font-weight: 700;
 }
 
 /* El sello de frescura: deja de ser un recuadro y pasa a ser un pie discreto. */
@@ -1225,14 +1227,19 @@ body[class*="panel-kinsta"] .swpk-perfil .swpk-titulin { margin-bottom: 4px; }
    tabla de veinticinco renglones sin que la pantalla se vuelva un semáforo.
    El rojo sigue siendo rojo; lo que baja es el volumen, no el significado.
    Y la palabra va siempre al lado del color, que es regla y no se toca. */
+/* Las insignias se leen antes que nada en esta pantalla, así que van a 12 px
+   y en 700. Estaban a 11 px y 600, y con el color pleno detrás el texto fino
+   se emborronaba: «solo que los textos se lean mejor». El interlineado fijo
+   evita que crezcan de alto al subir el tamaño. */
 body[class*="panel-kinsta"] .swpk-nivel {
 	background: #f1f1f5;
 	color: #5c5f6e;
 	border: 1px solid #dcdde6;
 	border-radius: 999px;
-	padding: 3px 10px;
-	font-size: 11px;
-	font-weight: 600;
+	padding: 3px 11px;
+	font-size: 12px;
+	line-height: 17px;
+	font-weight: 700;
 	white-space: nowrap;
 	display: inline-block;
 }
