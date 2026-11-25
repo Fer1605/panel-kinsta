@@ -496,32 +496,28 @@ class SWPK_Correos {
 			static fn( $e ) => $e->ocurrio_en >= $desde
 		);
 
-		// Un día sin cambios NO se va callado. Antes esta función se salía por
-		// aquí sin escribir nada, y en la bitácora ese día simplemente no
-		// existía: imposible distinguir "el panel miró y no había nada" de "el
-		// panel no corrió". En una pantalla que es evidencia, eso es lo peor
-		// que puede pasar. El 12 de noviembre de 2026 no quedó constancia del
-		// correo diario por esta razón.
-		if ( ! $eventos ) {
-			SWPK_Bitacora::registrar(
-				SWPK_Bitacora::SOPORTE,
-				self::destinatarios_soporte(),
-				'Resumen del día: sin cambios en la cartera',
-				'',
-				'',
-				'sin_novedad',
-				'El panel revisó y no hubo cambios que contar en las últimas 24 horas.'
-			);
-
-			return [ 'eventos' => 0, 'resultado' => 'sin_novedad' ];
-		}
-
-		$cuerpo = SWPK_Plantillas::diario_soporte( $eventos );
+		// ── Un día sin cambios tampoco se va callado, y ahora SE ENVÍA ──────
+		//
+		// Antes, un día sin movimientos solo dejaba una línea en la bitácora y
+		// no salía ningún correo. La intención era buena —que quedara
+		// constancia— pero el efecto no: el jefe pidió enterarse DEL DÍA A DÍA
+		// («yo no voy a ver este panel… lo que necesito es que me notifique el
+		// día a día», 18:04) y un día tranquilo era un día en el que no recibía
+		// nada. Peor: podía haber un sitio sin responder y doce en rojo, y como
+		// ninguno de esos hechos era NUEVO, no había correo.
+		//
+		// El correo lleva ahora un bloque de cómo está la cartera HOY, que
+		// tiene sentido se haya movido algo o no. Así que sale igual, con la
+		// lista de cambios o con «ningún cambio en 24 horas». Ver
+		// SWPK_Plantillas::estado_de_hoy().
+		$cuerpo = SWPK_Plantillas::diario_soporte( array_values( $eventos ) );
 
 		$r = self::despachar(
 			SWPK_Bitacora::SOPORTE,
 			self::destinatarios_soporte(),
-			SWPK_Plantillas::asunto( 'diario', [ '{{cuantos}}' => (string) count( $eventos ) ] ),
+			$eventos
+				? SWPK_Plantillas::asunto( 'diario', [ '{{cuantos}}' => (string) count( $eventos ) ] )
+				: 'Resumen del día: sin cambios en la cartera',
 			$cuerpo
 		);
 

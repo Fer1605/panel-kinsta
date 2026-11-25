@@ -120,6 +120,7 @@ SWPK_Vista::caja_abrir(
 	<?php foreach ( $en_pantalla as $n ) : ?>
 		<?php
 		$apagada     = (int) $n->activa !== 1;
+		$en_pausa    = 1 === (int) ( $n->aplazada ?? 0 );
 		$declarativa = 'declarativa' === (string) $n->comprobador;
 		$aplica      = trim( (string) $n->aplica_a );
 		$su_grupo    = (string) ( $n->grupo ?? '' );
@@ -132,6 +133,17 @@ SWPK_Vista::caja_abrir(
 				<?php endif; ?>
 				<?php if ( $apagada ) : ?>
 					<span class="swpk-etq swpk-sev-baja">Apagada</span>
+				<?php endif; ?>
+				<?php if ( $en_pausa ) : ?>
+					<span class="swpk-etq swpk-celda-aplazada">En pausa</span>
+					<?php echo wp_kses_post( SWPK_Vista::ayuda(
+						'Se sigue midiendo, pero lo que no la cumpla NO cuenta como incumplimiento: sale '
+						. 'como «en pausa». Es para lo que está pendiente por una decisión y no por un '
+						. 'descuido. El día que un sitio la cumpla, ese sitio pasa a «cumple» solo.'
+						. ( '' !== trim( (string) ( $n->aplazada_porque ?? '' ) )
+							? ' Motivo: ' . (string) $n->aplazada_porque
+							: '' )
+					) ); ?>
 				<?php endif; ?>
 				<?php if ( ! $hay_grupo && '' !== $su_grupo ) : ?>
 					<br><a class="swpk-mudo" href="<?php echo esc_url( $url_grupo( $su_grupo ) ); ?>"><?php echo esc_html( $su_grupo ); ?></a>
@@ -198,6 +210,17 @@ SWPK_Vista::caja_abrir(
 				<a class="button button-small" href="<?php echo esc_url( SWPK_Admin::url_encender_norma( (string) $n->clave, $apagada ) ); ?>">
 					<?php echo $apagada ? 'Encender' : 'Apagar'; ?>
 				</a>
+
+				<?php if ( $en_pausa ) : ?>
+					<a class="button button-small" href="<?php echo esc_url( SWPK_Admin::url_aplazar_norma( (string) $n->clave, false ) ); ?>">
+						Quitar la pausa
+					</a>
+				<?php else : ?>
+					<a class="button button-small" href="#"
+						onclick="var m=prompt('¿Por qué queda en pausa esta norma? Se escribe en cada sitio donde aparezca.');if(!m){return false;}this.href='<?php echo esc_js( SWPK_Admin::url_aplazar_norma( (string) $n->clave, true ) ); ?>'+'&amp;porque='+encodeURIComponent(m);return true;">
+						Pausar
+					</a>
+				<?php endif; ?>
 
 				<?php if ( (int) $n->de_fabrica !== 1 ) : ?>
 					<a class="button button-small" style="color:#9e0b10"

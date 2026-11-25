@@ -90,6 +90,56 @@ class SWPK_Monitor {
 
 	/** De qué agentes callados ya se avisó hoy. sitio_url => 'Y-m-d'. */
 	private const OPCION_CALLADOS = 'swpk_agentes_avisados';
+
+	/**
+	 * A partir de qué proporción de bloqueados la corrida habla de NOSOTROS.
+	 *
+	 * ─── El hallazgo que obliga a esto ──────────────────────────────────────
+	 *
+	 * Medido el 25 de noviembre de 2026, desde el propio servidor del panel y
+	 * contra los MISMOS catorce sitios, dos veces seguidas:
+	 *
+	 *   saliendo por 34.46.111.53  →  403 en los catorce
+	 *   saliendo por 35.239.102.121 →  200 en los catorce
+	 *
+	 * O sea: los sitios no bloquean al panel. Cloudflare tiene UNA de las IP
+	 * de salida de Pantheon en su lista negra y la otra limpia, y Pantheon no
+	 * garantiza desde cuál sale cada contenedor — su documentación dice que
+	 * las IP de salida son dinámicas y que no publican rangos. Así que cada
+	 * corrida es una moneda al aire.
+	 *
+	 * Lo que eso significa para el panel es concreto: una corrida que sale por
+	 * la IP mala no mide nada, y hasta hoy esa corrida PISABA lo que había
+	 * medido la corrida buena de hace una hora. Un dato bueno de hace una hora
+	 * vale infinitamente más que un «no se pudo ver» de ahora.
+	 *
+	 * Así que cuando casi todo vuelve bloqueado, la conclusión no es «la
+	 * cartera está tapada»: es «salimos por la IP mala». Se dice así, no se
+	 * escribe nada encima, y a la hora siguiente se vuelve a intentar.
+	 *
+	 * 60 % y no 100 %: puede haber a la vez sitios bloqueados de verdad.
+	 */
+	private const CIEGOS_PARA_DUDAR = 0.6;
+
+	/**
+	 * Por qué IP salió esta petición.
+	 *
+	 * Es el dato que pide soporte del hosting para mirar su lista de bloqueo,
+	 * y el único que el panel no puede saber por su cuenta: desde dentro, un
+	 * contenedor no ve su propia IP pública. Solo se pregunta cuando una
+	 * corrida vuelve casi entera bloqueada, que es cuando hace falta.
+	 */
+	public static function ip_de_salida(): string {
+		$r = wp_remote_get( 'https://api.ipify.org', [ 'timeout' => 8 ] );
+
+		if ( is_wp_error( $r ) ) {
+			return '';
+		}
+
+		$ip = trim( (string) wp_remote_retrieve_body( $r ) );
+
+		return filter_var( $ip, FILTER_VALIDATE_IP ) ? $ip : '';
+	}
 	private const LENTO_MS       = 5000;
 
 	/**
@@ -191,25 +241,89 @@ class SWPK_Monitor {
 	 */
 	public static function sondear_todos(): array {
 		$objetivos = [];
+		$ausentes  = [];
 
 		foreach ( SWPK_Inventario::todos() as $sitio ) {
 			$dominio = trim( (string) $sitio->dominio );
 			if ( '' === $dominio ) {
 				continue;
 			}
+
+			// ── Un sitio borrado no es un sitio caído ───────────────────────
+			//
+			// «El sitio ya no existe. Lo sabemos porque lo borramos.
+			//  Claramente el panel no lo va a saber, solo lo ve, está entre
+			//  los registros, pero simplemente no responde.»
+			//
+			// Sí lo sabe, y lo sabía desde el primer día: cuando el hosting
+			// deja de devolver un sitio, el panel se lo apunta en
+			// `ausencias`. Lo que no hacía era CREERSE ese dato aquí, así
+			// que seguía tocándole la puerta a un dominio borrado, no le
+			// contestaba nadie, y lo contaba como caída. Dos pantallas del
+			// panel diciendo cosas distintas del mismo sitio: una «se cayó»
+			// y la otra «va por 3 de 5 para darlo de baja».
+			//
+			// La cuenta de cinco sigue igual, porque así lo pidió el jefe
+			// —«si después de cinco intentos de estar verificando que el
+			// dominio no existe, no responde, decir: hemos dado de baja»
+			// (02:19)— y porque una API que falla un día no puede borrar un
+			// sitio vivo. Lo que cambia es QUÉ SE DICE mientras tanto: «el
+			// hosting ya no lo devuelve, 3 de 5» en vez de «sin responder».
+			// Ni cuenta como caída, ni dispara aviso, ni ensucia la dona.
+			if ( (int) ( $sitio->ausencias ?? 0 ) > 0 ) {
+				$ausentes[ (string) $sitio->sitio_id ] = [
+					'estado' => 'ausente',
+					'codigo' => 0,
+					'ms'     => 0,
+					'motivo' => sprintf(
+						'El hosting ya no devuelve este sitio (%d de %d comprobaciones). No se sondea: lo más probable es que lo hayan borrado.',
+						(int) $sitio->ausencias,
+						SWPK_Inventario::AUSENCIAS_PARA_BAJA
+					),
+					'url'    => self::url( $dominio ),
+				];
+				continue;
+			}
+
 			$objetivos[ (string) $sitio->sitio_id ] = self::url( $dominio );
 		}
 
-		if ( ! $objetivos ) {
+		if ( ! $objetivos && ! $ausentes ) {
 			return [ 'sondeados' => 0, 'abajo' => 0, 'cambios' => 0 ];
 		}
 
-		$resultados = self::confirmar( self::sondear( $objetivos ), $objetivos );
+		$resultados = $objetivos
+			? self::confirmar( self::sondear( $objetivos ), $objetivos )
+			: [];
+
+		// Los ausentes entran en el mismo saco para que su fila se escriba y
+		// la pantalla los enseñe por lo que son, no por lo que eran.
+		$resultados += $ausentes;
 
 		$abajo   = 0;
 		$cambios = 0;
+		$ciegos  = 0;
+
+		foreach ( $resultados as $r ) {
+			if ( 'ciego' === ( $r['estado'] ?? '' ) ) {
+				++$ciegos;
+			}
+		}
+
+		// ¿Esta corrida habla de los sitios, o de por dónde salimos?
+		// Ver CIEGOS_PARA_DUDAR.
+		$sondeados   = max( 1, count( $objetivos ) );
+		$corrida_mal = $ciegos >= $sondeados * self::CIEGOS_PARA_DUDAR;
+		$ip          = $corrida_mal ? self::ip_de_salida() : '';
 
 		foreach ( $resultados as $sitio_id => $r ) {
+			// En una corrida mala, lo bloqueado NO se escribe: se deja lo que
+			// midió la última corrida buena, que es un dato de verdad. Lo que
+			// sí contestó se guarda, porque eso sí se midió.
+			if ( $corrida_mal && 'ciego' === ( $r['estado'] ?? '' ) ) {
+				continue;
+			}
+
 			if ( 'abajo' === $r['estado'] ) {
 				++$abajo;
 			}
@@ -218,7 +332,14 @@ class SWPK_Monitor {
 
 		update_option(
 			'swpk_ultimo_sondeo',
-			[ 'cuando' => current_time( 'mysql' ), 'sondeados' => count( $resultados ), 'abajo' => $abajo ],
+			[
+				'cuando'       => current_time( 'mysql' ),
+				'sondeados'    => count( $resultados ),
+				'abajo'        => $abajo,
+				'ciegos'       => $ciegos,
+				'corrida_mal'  => $corrida_mal,
+				'ip_de_salida' => $ip,
+			],
 			false
 		);
 
@@ -233,7 +354,10 @@ class SWPK_Monitor {
 		// que puede no estar puesto.
 		//
 		// Cada uno se manda una vez al día: ellos mismos llevan la cuenta.
-		self::recordar_caidas();
+		if ( ! $corrida_mal ) {
+			self::recordar_caidas();
+		}
+
 		self::avisar_agentes_callados();
 
 		return [ 'sondeados' => count( $resultados ), 'abajo' => $abajo, 'cambios' => $cambios ];
@@ -566,6 +690,14 @@ class SWPK_Monitor {
 			if ( 'abajo' === $estado_publico ) {
 				$datos['caidas_mes'] = (int) $previo->caidas_mes + 1;
 				self::avisar_caida( $sitio_id, $r );
+			} elseif ( 'ausente' === $estado_publico ) {
+				// De «caído» a «ya no está en el hosting» NO es una
+				// recuperación: el sitio no volvió, es que dejamos de
+				// preguntarle. Mandar «volvió a responder» aquí sería
+				// mentir, y además es el correo que menos se quiere recibir
+				// de un sitio que se acaba de borrar. El de baja sale solo
+				// cuando toque, desde SWPK_Inventario.
+				SWPK_Insistencia::olvidar( $sitio_id );
 			} elseif ( 'abajo' === $antes ) {
 				$segundos = max( 0, strtotime( $ahora ) - strtotime( (string) $previo->desde ) );
 				$datos['segundos_caido'] = (int) $previo->segundos_caido + $segundos;
@@ -862,7 +994,7 @@ class SWPK_Monitor {
 	public static function estados(): array {
 		global $wpdb;
 		$tabla = SWPK_Tablas::tabla( 'monitor' );
-		return $wpdb->get_results( "SELECT * FROM {$tabla} ORDER BY FIELD(estado,'abajo','raro','desconocido','arriba'), ms DESC" ) ?: [];
+		return $wpdb->get_results( "SELECT * FROM {$tabla} ORDER BY FIELD(estado,'abajo','raro','desconocido','arriba','ciego','ausente'), ms DESC" ) ?: [];
 	}
 
 	public static function ultimo_sondeo(): array {

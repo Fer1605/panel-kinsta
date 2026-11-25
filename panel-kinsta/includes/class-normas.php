@@ -55,6 +55,35 @@ class SWPK_Normas {
 	public const SIN_DATO  = 'sin_dato';
 	public const NO_APLICA = 'no_aplica';
 
+	/**
+	 * La norma se mide, no se cumple, y eso ESTÁ DECIDIDO ASÍ.
+	 *
+	 * ─── Por qué hace falta un quinto estado ────────────────────────────────
+	 *
+	 * «Esa norma debería estar pendiente, no fallando.»
+	 *
+	 * El caso concreto es la verificación en dos pasos. Está apagada en los
+	 * 83 sitios de auto-update a propósito y por una razón que no es pereza:
+	 * aquí se entra a todos los sitios con un mismo usuario, `SW-admin`, cuyo
+	 * correo es el del jefe. Encenderla significaría que cada vez que
+	 * cualquiera entra a cualquier sitio, a cualquier hora, le llega el
+	 * código a él y hay que molestarlo para que lo pase. Queda apagada hasta
+	 * que exista la excepción que él mismo dijo que iba a dar.
+	 *
+	 * Mientras tanto no es un incumplimiento: es un pendiente con dueño y con
+	 * motivo. Contarlo como `falla` tiene dos costes y los dos son caros:
+	 * el 100 % pasa a ser inalcanzable por definición, y 83 filas rojas tapan
+	 * las que sí hay que arreglar.
+	 *
+	 * Y `no_aplica` tampoco sirve: no aplica es «esta norma no es para este
+	 * sitio». Aquí sí es, y algún día se va a cumplir.
+	 *
+	 * La norma SE SIGUE MIDIENDO. El día que se encienda en un sitio, ese
+	 * sitio pasa a `cumple` solo, sin que nadie toque nada. Lo único que
+	 * cambia es cómo se cuenta el «todavía no».
+	 */
+	public const APLAZADA = 'aplazada';
+
 	public const OPCION_SEMBRADO = 'swpk_normas_sembradas';
 
 	/** Cada vez que cambie el catálogo de fábrica, este número sube. */
@@ -1306,6 +1335,42 @@ class SWPK_Normas {
 		);
 	}
 
+	/**
+	 * Pone o quita la pausa de una norma. Ver APLAZADA.
+	 *
+	 * El motivo es obligatorio al pausar, y no por formalismo: una norma en
+	 * pausa sin motivo escrito es una norma que dentro de seis meses nadie
+	 * sabe por qué no se cuenta, y acaba quedándose así para siempre. El
+	 * motivo sale escrito en cada sitio donde esa norma aparece.
+	 */
+	public static function aplazar( string $clave, bool $aplazada, string $porque = '' ): void {
+		global $wpdb;
+
+		$wpdb->update(
+			SWPK_Tablas::tabla( 'normas' ),
+			[
+				'aplazada'        => $aplazada ? 1 : 0,
+				'aplazada_porque' => $aplazada ? mb_substr( sanitize_text_field( $porque ), 0, 190 ) : '',
+			],
+			[ 'clave' => $clave ]
+		);
+
+		// Y se re-escribe lo ya medido, sin esperar al reporte de mañana.
+		// Si no, la pantalla seguiría enseñando 83 filas rojas hasta que
+		// cada sitio volviera a reportar, y el cambio parecería no haber
+		// hecho nada.
+		$tabla = SWPK_Tablas::tabla( 'cumplimiento' );
+
+		$wpdb->query(
+			$wpdb->prepare(
+				"UPDATE {$tabla} SET estado = %s WHERE norma = %s AND estado = %s",
+				$aplazada ? self::APLAZADA : self::FALLA,
+				$clave,
+				$aplazada ? self::FALLA : self::APLAZADA
+			)
+		);
+	}
+
 	private static function limpiar_aplica_a( string $crudo ): string {
 		$validos = array_keys( SWPK_Etiquetas::nombres() );
 		$pedidos = array_filter( array_map( 'sanitize_key', explode( ',', $crudo ) ) );
@@ -1388,6 +1453,20 @@ class SWPK_Normas {
 			}
 
 			$r = self::comprobar( (string) $norma->comprobador, $reporte, $sitio );
+
+			// Una norma en pausa que NO se cumple no es un incumplimiento:
+			// es un pendiente decidido. Ver APLAZADA. Si se cumple, se
+			// cuenta como cumplida y en paz — la pausa no esconde lo bueno.
+			if ( self::FALLA === $r['estado'] && 1 === (int) ( $norma->aplazada ?? 0 ) ) {
+				$porque = trim( (string) ( $norma->aplazada_porque ?? '' ) );
+
+				$r = [
+					'estado'  => self::APLAZADA,
+					'detalle' => '' !== $porque
+						? 'En pausa por decisión: ' . $porque
+						: 'En pausa por decisión. Se sigue midiendo; cuando se cumpla, cambia solo.',
+				];
+			}
 
 			// Una norma declarativa la contesta una persona, no el agente. Si
 			// se midiera aquí, cada reporte diario borraría el «revisado» que
@@ -3662,6 +3741,7 @@ class SWPK_Normas {
 			self::CUMPLE    => 'Cumple',
 			self::FALLA     => 'No cumple',
 			self::NO_APLICA => 'No aplica',
+			self::APLAZADA  => 'En pausa',
 			default         => 'Sin medir',
 		};
 	}

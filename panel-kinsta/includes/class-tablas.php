@@ -33,7 +33,7 @@ defined( 'ABSPATH' ) || exit;
 
 class SWPK_Tablas {
 
-	public const VERSION = 15;
+	public const VERSION = 16;
 
 	public static function tabla( string $nombre ): string {
 		global $wpdb;
@@ -273,6 +273,8 @@ class SWPK_Tablas {
 				severidad VARCHAR(16) NOT NULL DEFAULT 'media',
 				arreglable TINYINT(1) NOT NULL DEFAULT 0,
 				activa TINYINT(1) NOT NULL DEFAULT 1,
+				aplazada TINYINT(1) NOT NULL DEFAULT 0,
+				aplazada_porque VARCHAR(191) NOT NULL DEFAULT '',
 				de_fabrica TINYINT(1) NOT NULL DEFAULT 0,
 				orden SMALLINT UNSIGNED NOT NULL DEFAULT 50,
 				creada_en DATETIME NULL,

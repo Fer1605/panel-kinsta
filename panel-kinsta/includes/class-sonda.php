@@ -262,6 +262,32 @@ class SWPK_Sonda {
 	public static function correr(): array {
 		$resumen = self::sondear_todos();
 
+		// ── Una corrida que no vio nada no borra la que sí vio ──────────────
+		//
+		// Es el mismo caso que el del monitor, y aquí cuesta mucho más caro:
+		// de esta corrida salen 24 normas de seguridad, y hasta hoy una
+		// corrida que salía por una IP bloqueada las ponía las 24 en «sin
+		// dato» en los 107 sitios. Es decir, 2.500 mediciones buenas borradas
+		// por una moneda al aire. Ver SWPK_Monitor::CIEGOS_PARA_DUDAR, donde
+		// está la medición que lo demuestra.
+		//
+		// Si casi todo vino sin rutas fiables, se deja lo de ayer y se dice
+		// por qué. Mañana se vuelve a intentar.
+		$sondeados = max( 1, (int) ( $resumen['sondeados'] ?? 0 ) );
+		$no_fiables = (int) ( $resumen['rutas_no_fiables'] ?? 0 );
+
+		if ( $no_fiables >= $sondeados * 0.6 ) {
+			$resumen['corrida_mal']  = true;
+			$resumen['ip_de_salida'] = SWPK_Monitor::ip_de_salida();
+			$resumen['medidos']      = 0;
+
+			update_option( 'swpk_ultima_sonda', [ 'cuando' => current_time( 'mysql' ) ] + $resumen, false );
+
+			return $resumen;
+		}
+
+		$resumen['corrida_mal'] = false;
+
 		$medidos = 0;
 
 		foreach ( SWPK_Inventario::todos() as $sitio ) {

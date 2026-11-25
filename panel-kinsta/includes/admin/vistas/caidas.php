@@ -10,11 +10,12 @@ $al_dia  = SWPK_Monitor::esta_al_dia();
 // Son el estado de la cartera, no el de la tabla: si al filtrar «sin
 // responder» la tarjeta de «sin responder» se recalculara sobre lo filtrado,
 // diría el total de lo filtrado y dejaría de ser una alarma.
-$abajo = $raro = $lentos = $ciegos = 0;
+$abajo = $raro = $lentos = $ciegos = $ausentes = 0;
 foreach ( $estados as $e ) {
 	if ( 'abajo' === $e->estado ) { ++$abajo; }
 	if ( 'raro' === $e->estado ) { ++$raro; }
 	if ( 'ciego' === $e->estado ) { ++$ciegos; }
+	if ( 'ausente' === $e->estado ) { ++$ausentes; }
 	if ( 'arriba' === $e->estado && $e->ms > 5000 ) { ++$lentos; }
 }
 
@@ -32,6 +33,10 @@ $estados_posibles = [
 	// pasar al monitor. Del resto se sabe algo; de estos no se sabe nada, y
 	// mezclarlos con «responden» sería decir que están bien.
 	'ciego'  => 'No se pueden medir',
+	// Cuarta, y no es un matiz tampoco: el hosting dejó de devolver este
+	// sitio. No es que no conteste — es que ya no está. Mezclarlo con «no
+	// responden» manda a alguien a revisar un sitio borrado.
+	'ausente' => 'Ya no están en el hosting',
 ];
 
 // Cuánto tarda, en tres tramos. Es el tercer desplegable de la maqueta y
@@ -68,10 +73,13 @@ $filtrados = array_values(
 		static function ( $e ) use ( $estado_pedido, $grupo_pedido, $tramo_pedido, $busca_caida, $grupo_de ) {
 			// «Responden» incluye la respuesta rara: el sitio contesta, aunque
 			// conteste mal. «No responden» es el que no contesta nada.
-			if ( 'arriba' === $estado_pedido && in_array( (string) $e->estado, [ 'abajo', 'ciego' ], true ) ) {
+			if ( 'arriba' === $estado_pedido && in_array( (string) $e->estado, [ 'abajo', 'ciego', 'ausente' ], true ) ) {
 				return false;
 			}
 			if ( 'ciego' === $estado_pedido && 'ciego' !== (string) $e->estado ) {
+				return false;
+			}
+			if ( 'ausente' === $estado_pedido && 'ausente' !== (string) $e->estado ) {
 				return false;
 			}
 			if ( 'abajo' === $estado_pedido && 'abajo' !== (string) $e->estado ) {
@@ -168,6 +176,14 @@ $historial = array_filter(
 			después, y solo cuenta si falla las dos veces. Un fallo suelto casi siempre es la red
 			y no el sitio.
 		</p>
+		<?php if ( $ausentes ) : ?>
+			<p>
+				<strong><?php echo esc_html( SWPK_Vista::plural( (int) $ausentes, 'sitio ya no está', 'sitios ya no están' ) ); ?></strong>
+				en el hosting: dejó de devolverlos y el panel ya no les toca la puerta. No cuentan
+				como caída. A las <?php echo (int) SWPK_Inventario::AUSENCIAS_PARA_BAJA; ?> comprobaciones
+				seguidas sin aparecer se dan de baja solos y sale el correo.
+			</p>
+		<?php endif; ?>
 		<?php if ( ! empty( $ultimo['cuando'] ) ) : ?>
 			<p>
 				<strong>Última revisión:</strong>
@@ -180,6 +196,40 @@ $historial = array_filter(
 			</p>
 		<?php endif; ?>
 	</div>
+
+	<?php if ( ! empty( $ultimo['corrida_mal'] ) ) : ?>
+		<?php
+		// ── La corrida salió por una IP bloqueada ───────────────────────────
+		//
+		// No es un problema de los sitios y es importante no leerlo así. El
+		// hosting de los clientes tiene una de las IP de salida de este
+		// servidor en su lista negra y otra limpia, y no se puede elegir por
+		// cuál sale cada corrida. La que sale por la mala no mide nada.
+		//
+		// Lo que ve en pantalla es la ÚLTIMA MEDICIÓN BUENA de cada sitio:
+		// desde esta vuelta no se escribió nada encima. La columna «Revisado»
+		// dice de cuándo es cada una.
+		?>
+		<div class="notice notice-warning">
+			<p>
+				<strong>La última vuelta no pudo medir casi nada, y no es culpa de los sitios.</strong>
+				<?php echo esc_html( sprintf( '%d de %d respondieron con la página de bloqueo del hosting.', (int) ( $ultimo['ciegos'] ?? 0 ), (int) ( $ultimo['sondeados'] ?? 0 ) ) ); ?>
+			</p>
+			<p>
+				Este panel sale a internet por una dirección que cambia sola, y el hosting de los
+				clientes tiene una de esas direcciones en su lista de bloqueo y otra limpia. Cuando la
+				vuelta sale por la bloqueada, no ve nada.
+				<?php if ( ! empty( $ultimo['ip_de_salida'] ) ) : ?>
+					Esta salió por <code><?php echo esc_html( (string) $ultimo['ip_de_salida'] ); ?></code>.
+				<?php endif; ?>
+			</p>
+			<p>
+				<strong>Lo que estás viendo abajo no se borró:</strong> es la última medición buena de
+				cada sitio, y la columna «Revisado» dice de cuándo es cada una. La vuelta siguiente lo
+				intenta otra vez.
+			</p>
+		</div>
+	<?php endif; ?>
 
 	<?php if ( ! $al_dia ) : ?>
 		<div class="notice notice-error">
@@ -225,7 +275,7 @@ $historial = array_filter(
 		SWPK_Vista::dona(
 			[
 				[
-					'n'     => count( $estados ) - (int) $abajo - (int) $ciegos,
+					'n'     => count( $estados ) - (int) $abajo - (int) $ciegos - (int) $ausentes,
 					'color' => SWPK_Riesgo::colores()[ SWPK_Riesgo::AL_DIA ],
 					'texto' => 'Responden',
 				],
@@ -238,6 +288,11 @@ $historial = array_filter(
 					'n'     => (int) $ciegos,
 					'color' => SWPK_Riesgo::colores()[ SWPK_Riesgo::SIN_DATOS ],
 					'texto' => 'No se pueden medir',
+				],
+				[
+					'n'     => (int) $ausentes,
+					'color' => SWPK_Riesgo::colores()[ SWPK_Riesgo::BAJO ],
+					'texto' => 'Ya no están en el hosting',
 				],
 			],
 			count( $estados ),
@@ -314,6 +369,7 @@ $historial = array_filter(
 				$sitio = SWPK_Inventario::obtener( $e->sitio_id );
 				[ $nivel_e, $texto ] = match ( $e->estado ) {
 					'abajo'  => [ SWPK_Riesgo::CRITICO, 'Sin responder' ],
+					'ausente' => [ SWPK_Riesgo::BAJO, 'Ya no está en el hosting' ],
 					'raro'   => [ SWPK_Riesgo::MEDIO, 'Respuesta rara' ],
 					'ciego'  => [ SWPK_Riesgo::SIN_DATOS, 'No se puede medir' ],
 					'arriba' => [ SWPK_Riesgo::AL_DIA, 'Responde' ],

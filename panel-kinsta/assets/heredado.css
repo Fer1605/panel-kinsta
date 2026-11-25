@@ -70,6 +70,9 @@
 .swpk-celda-falla{background:#9e0b10;color:#fff;border-color:#9e0b10}
 .swpk-celda-sin_dato{background:#d6dbe0;color:#1d2327;border-color:#d6dbe0}
 .swpk-celda-no_aplica{background:#fff;color:#c3c4c7}
+/* En pausa: ni azul de cumple ni rojo de falla. Mostaza, que es el color con
+   el que el panel dice «esto está pendiente y alguien lo sabe». */
+.swpk-celda-aplazada{background:#fbc02d;color:#1d2327;border-color:#fbc02d}
 .swpk-orden-pendiente{background:#fcf9e8;color:#7a5610;border-color:#e3cf94}
 .swpk-orden-entregada{background:#f0f6fc;color:#1b5e8f;border-color:#a7cdea}
 .swpk-orden-hecha{background:#e7f1f9;color:#0a58ca;border-color:#a9cde6}

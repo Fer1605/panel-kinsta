@@ -85,10 +85,12 @@ class SWPK_Plantillas {
 				'quien'  => 'A la dirección de soporte, todos los días: lo que cambió en 24 horas.',
 				'titulo' => 'Resumen del día',
 				'asunto' => 'Resumen del día: {{cuantos}} cambios en la cartera',
-				'cuerpo' => "Esto cambió en las últimas 24 horas ({{cuantos}} en total):\n\n"
+				'cuerpo' => "{{estado}}\n\n"
+					. "Esto cambió en las últimas 24 horas ({{cuantos}} en total):\n\n"
 					. '{{cambios}}',
 				'marcas' => [
 					'{{cuantos}}' => 'Cuántos cambios hubo',
+					'{{estado}}'  => 'EL BLOQUE: cómo está la cartera HOY — qué sitios no responden, cuáles están en rojo y por qué, y cuántos no se pueden medir. Es lo que pasa ahora, no lo que cambió.',
 					'{{cambios}}' => 'EL BLOQUE: la tabla de qué cambió, en qué sitio y cuándo.',
 				],
 			],
@@ -672,6 +674,216 @@ class SWPK_Plantillas {
 	}
 
 	/**
+	 * Cómo está la cartera HOY. Va arriba del resumen diario.
+	 *
+	 * ─── Por qué un correo de «lo que cambió» no era suficiente ─────────────
+	 *
+	 * Porque son dos preguntas y el correo solo contestaba una.
+	 *
+	 *   «A él le llega ese correo y viene como que todo, pero no puede ver
+	 *    exactamente: mira, este sitio dice que tiene esta vulnerabilidad,
+	 *    este dice que se cayó por tal cosa.»
+	 *
+	 * El diario listaba los MOVIMIENTOS de las últimas 24 horas. Eso no es el
+	 * estado: un sitio puede llevar doce días caído y tres semanas con una
+	 * vulnerabilidad crítica sin generar un solo movimiento nuevo, y entonces
+	 * el correo de hoy no lo nombra. Peor todavía, un día tranquilo salía
+	 * «sin cambios en la cartera» con un sitio sin responder y doce en rojo.
+	 *
+	 * Eso es la regla 3 otra vez, en su forma más cara: no decir «está bien»
+	 * cuando lo que se midió es otra cosa.
+	 *
+	 * Lo que cambió sigue estando, debajo. Primero qué pasa, después qué se
+	 * movió.
+	 *
+	 * ─── Por qué no usa SWPK_Estado::calcular() ─────────────────────────────
+	 *
+	 * Porque esa función filtra por lo que puede ver el usuario de la sesión,
+	 * y en el cron no hay usuario: devolvería los sitios sin asesora y cero
+	 * caídos. Este correo va a soporte y tiene que ver la cartera entera.
+	 */
+	private static function estado_de_hoy(): string {
+		$caidos   = [];
+		$ausentes = 0;
+		$ciegos   = 0;
+
+		foreach ( SWPK_Monitor::estados() as $e ) {
+			if ( 'ciego' === $e->estado ) {
+				++$ciegos;
+				continue;
+			}
+
+			if ( 'ausente' === $e->estado ) {
+				++$ausentes;
+				continue;
+			}
+
+			if ( 'abajo' !== $e->estado ) {
+				continue;
+			}
+
+			$sitio    = SWPK_Inventario::obtener( (string) $e->sitio_id );
+			$caidos[] = [
+				'nombre' => (string) ( $sitio->nombre_visible ?? $e->sitio_id ),
+				'url'    => (string) $e->url,
+				'desde'  => (string) $e->desde,
+				'motivo' => (string) $e->motivo,
+			];
+		}
+
+		// Los sitios en rojo, con SU peor hallazgo nombrado. «12 sitios en
+		// crítico» no sirve para nada; «este plugin, esta versión» sí.
+		$rojos = [];
+		$por_nivel = [];
+
+		foreach ( SWPK_Inventario::todos() as $sitio ) {
+			$id    = (string) $sitio->sitio_id;
+			$nivel = SWPK_Riesgo::nivel_del_sitio( $id );
+
+			$por_nivel[ $nivel ] = ( $por_nivel[ $nivel ] ?? 0 ) + 1;
+
+			if ( ! in_array( $nivel, [ SWPK_Riesgo::CRITICO, SWPK_Riesgo::ALTO ], true ) ) {
+				continue;
+			}
+
+			$hallazgos = SWPK_Riesgo::hallazgos( $id );
+			$peor      = null;
+
+			foreach ( $hallazgos as $h ) {
+				if ( null === $peor || SWPK_Riesgo::peso( $h['nivel'] ) > SWPK_Riesgo::peso( $peor['nivel'] ) ) {
+					$peor = $h;
+				}
+			}
+
+			$rojos[] = [
+				'nombre'  => (string) $sitio->nombre_visible,
+				'nivel'   => $nivel,
+				'cuantos' => count( $hallazgos ),
+				'peor'    => $peor ? SWPK_Textos::limpiar_titulo( (string) $peor['titulo'] ) : '',
+			];
+		}
+
+		usort(
+			$rojos,
+			static fn( $a, $b ) => [ SWPK_Riesgo::peso( $b['nivel'] ), $b['cuantos'] ]
+				<=> [ SWPK_Riesgo::peso( $a['nivel'] ), $a['cuantos'] ]
+		);
+
+		$html = '<p style="margin:0 0 10px;font-weight:600;font-size:14px">Cómo está la cartera hoy</p>';
+
+		// ── Lo que no responde, arriba del todo y en rojo ───────────────────
+		if ( $caidos ) {
+			$html .= sprintf(
+				'<div style="background:#fcf0f1;border:1px solid #ecc7c9;border-radius:6px;padding:14px 16px;margin:0 0 16px">'
+				. '<p style="margin:0 0 8px;font-weight:700;color:%s">%s sin responder ahora mismo</p>',
+				self::ROJO,
+				esc_html( SWPK_Vista::plural( count( $caidos ), 'sitio', 'sitios' ) )
+			);
+
+			foreach ( $caidos as $c ) {
+				$html .= sprintf(
+					'<p style="margin:0 0 6px;font-size:13px;line-height:1.5">'
+					. '<strong>%s</strong> — %s<br>'
+					. '<span style="color:%s">Desde el %s · %s</span></p>',
+					esc_html( $c['nombre'] ),
+					esc_html( $c['url'] ),
+					self::GRIS,
+					esc_html( SWPK_Frescura::fmt( 'j \d\e F, H:i', $c['desde'] ) ),
+					esc_html( $c['motivo'] ?: 'No contesta' )
+				);
+			}
+
+			$html .= '</div>';
+		} else {
+			$html .= sprintf(
+				'<p style="background:#f0f6fc;border:1px solid #c9ddf2;border-radius:6px;padding:12px 14px;margin:0 0 16px;font-size:13px">'
+				. '<strong>Ningún sitio sin responder ahora mismo.</strong>%s</p>',
+				$ciegos
+					? sprintf(
+						' De %d el hosting no deja medirlo desde aquí, así que de esos no se sabe.',
+						(int) $ciegos
+					)
+					: ''
+			);
+		}
+
+		// ── Lo que está en rojo, con el porqué ──────────────────────────────
+		if ( $rojos ) {
+			$html .= sprintf(
+				'<p style="margin:0 0 8px;font-weight:600;font-size:13px">%s en estado alto o crítico</p>',
+				esc_html( SWPK_Vista::plural( count( $rojos ), 'sitio', 'sitios' ) )
+			);
+
+			$html .= '<table role="presentation" style="width:100%;border-collapse:collapse;margin:0 0 16px">';
+
+			foreach ( array_slice( $rojos, 0, 15 ) as $r ) {
+				$html .= sprintf(
+					'<tr>'
+					. '<td style="padding:7px 10px 7px 0;border-bottom:1px solid #f0f0f1;font-size:13px;'
+					. 'font-weight:600;vertical-align:top">%s</td>'
+					. '<td style="padding:7px 10px;border-bottom:1px solid #f0f0f1;font-size:12px;'
+					. 'color:%s;white-space:nowrap;vertical-align:top">%s</td>'
+					. '<td style="padding:7px 0;border-bottom:1px solid #f0f0f1;font-size:13px;vertical-align:top">%s</td>'
+					. '</tr>',
+					esc_html( $r['nombre'] ),
+					SWPK_Riesgo::CRITICO === $r['nivel'] ? self::ROJO : '#b35309',
+					esc_html( SWPK_Riesgo::nombres()[ $r['nivel'] ] ?? $r['nivel'] ),
+					esc_html(
+						'' !== $r['peor']
+							? $r['peor'] . ( $r['cuantos'] > 1 ? sprintf( ' (y %d más)', $r['cuantos'] - 1 ) : '' )
+							: sprintf( '%d pendientes', $r['cuantos'] )
+					)
+				);
+			}
+
+			$html .= '</table>';
+
+			if ( count( $rojos ) > 15 ) {
+				$html .= sprintf(
+					'<p style="color:%s;font-size:13px;margin:-8px 0 16px">Y %d más en el panel.</p>',
+					self::GRIS,
+					count( $rojos ) - 15
+				);
+			}
+		}
+
+		// ── Y lo que el panel NO sabe, dicho como lo que es ─────────────────
+		$avisos = [];
+
+		if ( $ciegos ) {
+			$avisos[] = sprintf(
+				'De <strong>%d</strong> el hosting no deja que el panel los mire desde fuera, así que de esos no se sabe si responden ni se pueden revisar sus normas de seguridad.',
+				(int) $ciegos
+			);
+		}
+
+		if ( $ausentes ) {
+			$avisos[] = sprintf(
+				'<strong>%d</strong> ya no aparecen en el hosting. Si siguen sin aparecer, se dan de baja solos y sale su correo.',
+				(int) $ausentes
+			);
+		}
+
+		if ( ! empty( $por_nivel[ SWPK_Riesgo::SIN_DATOS ] ) ) {
+			$avisos[] = sprintf(
+				'De <strong>%d</strong> no hay inventario todavía, así que no se pueden clasificar.',
+				(int) $por_nivel[ SWPK_Riesgo::SIN_DATOS ]
+			);
+		}
+
+		if ( $avisos ) {
+			$html .= sprintf(
+				'<p style="background:#f6f7f7;border:1px solid #e6e7eb;border-radius:6px;padding:12px 14px;'
+				. 'margin:0 0 6px;font-size:13px;line-height:1.5;color:%s">Lo que el panel no puede afirmar: %s</p>',
+				self::GRIS,
+				implode( ' ', $avisos )
+			);
+		}
+
+		return $html;
+	}
+
+	/**
 	 * Resumen diario a soporte: lo que cambió, sin adornos.
 	 *
 	 * ─── Por qué la tabla está ordenada por sitio y no por hora ─────────────
@@ -731,6 +943,24 @@ class SWPK_Plantillas {
 				return strcmp( (string) $b->ocurrio_en, (string) $a->ocurrio_en );
 			}
 		);
+
+		// "Cero cambios" es el mensaje más peligroso que este correo puede dar.
+		// Leído rápido significa "todo tranquilo", y puede significar "no
+		// miramos". Si la corrida no trajo datos, eso va arriba y en rojo, antes
+		// que cualquier número, porque el número es lo que engaña.
+		$c = '';
+		if ( ! SWPK_Frescura::corrida_al_dia() || SWPK_Frescura::corrida_fallo() ) {
+			$c .= sprintf(
+				'<p style="background:#fcf0f1;border:1px solid #ecc7c9;border-radius:6px;padding:12px 14px;margin:0 0 18px">'
+				. '<strong>Ojo: este resumen no es de hoy.</strong><br>'
+				. 'El último dato bueno entró el %s. Lo de abajo es ese inventario, no el de ahora, '
+				. 'así que "cero cambios" aquí no quiere decir que no haya pasado nada: quiere '
+				. 'decir que el panel no pudo mirar. Hay que revisar la tarea programada.</p>',
+				'' === SWPK_Frescura::corrida()
+					? 'nunca'
+					: esc_html( SWPK_Frescura::fmt( 'j \d\e F, g:i a', SWPK_Frescura::corrida() ) . ', ' . SWPK_Frescura::hace( SWPK_Frescura::corrida() ) )
+			);
+		}
 
 		// ── El recuento por tipo ────────────────────────────────────────────
 		$por_tipo = [];
@@ -826,6 +1056,30 @@ class SWPK_Plantillas {
 			);
 		}
 
+		if ( ! $ordenados ) {
+			// Un día sin movimientos no es un día sin correo: el bloque de
+			// arriba sigue diciendo cómo está la cartera, que es lo que de
+			// verdad se quiere saber. Lo que no puede pasar es que el correo
+			// no salga, porque entonces no hay forma de distinguir «no pasó
+			// nada» de «el panel no corrió».
+			$resumen = '';
+			$tabla   = '<div style="background:#f0f6fc;border:1px solid #c9ddf2;border-radius:6px;'
+				. 'padding:14px 16px;margin:0"><strong>Ningún cambio en las últimas 24 horas.</strong><br>'
+				. 'Nada se actualizó, nada se instaló y nadie cambió de rol en ningún sitio de la '
+				. 'cartera. Lo de arriba sí es de ahora mismo.</div>';
+
+			return self::envolver(
+				self::catalogo()['diario']['titulo'],
+				$c . self::cuerpo(
+					'diario',
+					[ '{{cuantos}}' => '<strong>0</strong>' ],
+					[ '{{estado}}' => self::estado_de_hoy(), '{{cambios}}' => $tabla ]
+				),
+				false,
+				self::boton_de( 'diario' )
+			);
+		}
+
 		$tabla = '<p style="margin:0 0 8px;font-weight:600;font-size:14px">Sitio por sitio</p>'
 			. '<table role="presentation" style="width:100%;border-collapse:collapse">'
 			. '<thead><tr>'
@@ -855,24 +1109,6 @@ class SWPK_Plantillas {
 			);
 		}
 
-		// "Cero cambios" es el mensaje más peligroso que este correo puede dar.
-		// Leído rápido significa "todo tranquilo", y puede significar "no
-		// miramos". Si la corrida no trajo datos, eso va arriba y en rojo, antes
-		// que cualquier número, porque el número es lo que engaña.
-		$c = '';
-		if ( ! SWPK_Frescura::corrida_al_dia() || SWPK_Frescura::corrida_fallo() ) {
-			$c .= sprintf(
-				'<p style="background:#fcf0f1;border:1px solid #ecc7c9;border-radius:6px;padding:12px 14px;margin:0 0 18px">'
-				. '<strong>Ojo: este resumen no es de hoy.</strong><br>'
-				. 'El último dato bueno entró el %s. Lo de abajo es ese inventario, no el de ahora, '
-				. 'así que "cero cambios" aquí no quiere decir que no haya pasado nada: quiere '
-				. 'decir que el panel no pudo mirar. Hay que revisar la tarea programada.</p>',
-				'' === SWPK_Frescura::corrida()
-					? 'nunca'
-					: esc_html( SWPK_Frescura::fmt( 'j \d\e F, g:i a', SWPK_Frescura::corrida() ) . ', ' . SWPK_Frescura::hace( SWPK_Frescura::corrida() ) )
-			);
-		}
-
 		// El aviso de «este resumen no es de hoy» va antes de la plantilla y
 		// fuera de ella: no es prosa que se pueda reescribir ni quitar desde el
 		// panel. Es la advertencia que impide leer «cero cambios» como «todo
@@ -882,7 +1118,10 @@ class SWPK_Plantillas {
 			$c . self::cuerpo(
 				'diario',
 				[ '{{cuantos}}' => '<strong>' . count( $eventos ) . '</strong>' ],
-				[ '{{cambios}}' => $resumen . $tabla ]
+				[
+					'{{estado}}'  => self::estado_de_hoy(),
+					'{{cambios}}' => $resumen . $tabla,
+				]
 			),
 			false,
 			self::boton_de( 'diario' )

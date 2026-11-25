@@ -41,6 +41,7 @@ class SWPK_Admin {
 		add_action( 'admin_post_swpk_revocar_llave', [ __CLASS__, 'accion_revocar_llave' ] );
 		add_action( 'admin_post_swpk_guardar_norma', [ __CLASS__, 'accion_guardar_norma' ] );
 		add_action( 'admin_post_swpk_encender_norma', [ __CLASS__, 'accion_encender_norma' ] );
+		add_action( 'admin_post_swpk_aplazar_norma', [ __CLASS__, 'accion_aplazar_norma' ] );
 		add_action( 'admin_post_swpk_borrar_norma', [ __CLASS__, 'accion_borrar_norma' ] );
 		add_action( 'admin_post_swpk_marcar_norma', [ __CLASS__, 'accion_marcar_norma' ] );
 		add_action( 'admin_post_swpk_arreglar', [ __CLASS__, 'accion_arreglar' ] );
@@ -1243,6 +1244,16 @@ class SWPK_Admin {
 		);
 	}
 
+	public static function url_aplazar_norma( string $clave, bool $aplazar ): string {
+		return wp_nonce_url(
+			add_query_arg(
+				[ 'action' => 'swpk_aplazar_norma', 'norma' => $clave, 'aplazar' => $aplazar ? '1' : '0' ],
+				admin_url( 'admin-post.php' )
+			),
+			'swpk_norma_' . $clave
+		);
+	}
+
 	public static function url_borrar_norma( string $clave ): string {
 		return wp_nonce_url(
 			add_query_arg(
@@ -1325,6 +1336,40 @@ class SWPK_Admin {
 			self::url_seguridad(
 				'normas',
 				'ok:' . rawurlencode( $encender ? 'Norma encendida. Se empieza a medir en el siguiente reporte de cada sitio.' : 'Norma apagada. Deja de medirse y sale del tablero.' )
+			)
+		);
+		exit;
+	}
+
+	/**
+	 * Pausar una norma: se sigue midiendo, pero no cuenta como incumplimiento.
+	 *
+	 * No es lo mismo que apagarla. Apagada desaparece del tablero y deja de
+	 * medirse; en pausa se mide igual y el día que un sitio la cumpla, ese
+	 * sitio pasa a «cumple» solo. Ver SWPK_Normas::APLAZADA.
+	 */
+	public static function accion_aplazar_norma(): void {
+		if ( ! self::puede_administrar() ) {
+			wp_die( 'Sin permiso.' );
+		}
+
+		$clave = isset( $_GET['norma'] ) ? sanitize_key( (string) $_GET['norma'] ) : '';
+		check_admin_referer( 'swpk_norma_' . $clave );
+
+		$aplazar = ! empty( $_GET['aplazar'] );
+		$porque  = isset( $_GET['porque'] ) ? sanitize_text_field( wp_unslash( (string) $_GET['porque'] ) ) : '';
+
+		SWPK_Normas::aplazar( $clave, $aplazar, $porque );
+		SWPK_Estado::olvidar();
+
+		wp_safe_redirect(
+			self::url_seguridad(
+				'normas',
+				'ok:' . rawurlencode(
+					$aplazar
+						? 'Norma en pausa. Se sigue midiendo, pero deja de contar como incumplimiento hasta que la quites de pausa.'
+						: 'Norma otra vez en cuenta. Lo que no la cumpla vuelve a salir como incumplimiento.'
+				)
 			)
 		);
 		exit;
