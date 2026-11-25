@@ -64,6 +64,9 @@ class SWPK_Revision {
 	public const HOOK = 'swpk_revision_diaria';
 
 	private const CACHE = 'swpk_revision_';
+
+	/** Por qué sitio iba la última vuelta. Ver correr(). */
+	private const CURSOR = 'swpk_revision_cursor';
 	private const VIDA  = 25 * HOUR_IN_SECONDS;
 
 	/**
@@ -151,14 +154,75 @@ class SWPK_Revision {
 	 */
 	public static function correr(): array {
 		if ( ! self::disponible() ) {
+			update_option(
+				'swpk_ultima_revision',
+				[ 'cuando' => current_time( 'mysql' ), 'estado' => 'saltada', 'saltado' => 'La fuente no es la API de Kinsta.' ],
+				false
+			);
+
 			return [ 'saltado' => 'La fuente no es la API de Kinsta.' ];
 		}
 
+		$todos = array_values(
+			array_filter(
+				SWPK_Inventario::todos(),
+				static fn( $s ) => '' !== trim( (string) $s->entorno_id )
+			)
+		);
+
 		$resumen = [ 'revisados' => 0, 'fallos' => 0, 'medidos' => 0 ];
 
-		foreach ( SWPK_Inventario::todos() as $sitio ) {
-			if ( '' === trim( (string) $sitio->entorno_id ) ) {
-				continue;
+		// ── Que se note si esto se muere a medio camino ─────────────────────
+		//
+		// Hasta hoy, lo único que esta función escribía era `swpk_ultima_revision`
+		// Y AL FINAL DEL TODO. O sea: si se moría antes de llegar, no quedaba
+		// ni rastro de que lo hubiera intentado.
+		//
+		// Y se moría. El 25 de noviembre de 2026 la opción NO EXISTÍA en
+		// producción, con la tarea programada y corriendo a diario desde
+		// hacía días. De las nueve normas que salen de aquí, 86 de los 109
+		// sitios estaban en «sin dato» y 23 medidos: justo lo que cabe en el
+		// tiempo que PHP le da a una petición antes de matarla.
+		//
+		// Son trece llamadas a la API de Kinsta POR SITIO, una detrás de
+		// otra. Con 109 sitios son más de mil, y esta función era la única
+		// tarea larga del panel que no volvía a pedir tiempo por el camino
+		// —la sonda y la corrida sí lo hacen—. Dos arreglos, y hacen falta
+		// los dos:
+		//
+		//   1. Pedir tiempo otra vez en cada sitio, como la sonda.
+		//   2. Si aun así se muere, que la próxima vuelta SIGA DONDE SE QUEDÓ
+		//      en vez de volver a empezar por el principio. Sin esto, los
+		//      mismos 23 sitios se medían todos los días y los otros 86 no
+		//      se iban a medir nunca.
+		$desde = (int) get_option( self::CURSOR, 0 );
+		$desde = ( $desde >= 0 && $desde < count( $todos ) ) ? $desde : 0;
+
+		update_option(
+			'swpk_ultima_revision',
+			[
+				'cuando'  => current_time( 'mysql' ),
+				'estado'  => 'corriendo',
+				'arranco_en' => $desde,
+				'total'   => count( $todos ),
+			],
+			false
+		);
+
+		// Se recorre la cartera entera empezando por donde se quedó la vez
+		// pasada y dando la vuelta: así, muera donde muera, en unos días los
+		// ha visto todos.
+		$orden = array_merge(
+			array_slice( $todos, $desde ),
+			array_slice( $todos, 0, $desde )
+		);
+
+		foreach ( $orden as $i => $sitio ) {
+			// Cada sitio vuelve a pedir tiempo. Trece llamadas a una API de
+			// fuera pueden tardar diez segundos largos, y treinta segundos de
+			// límite dan para tres sitios.
+			if ( function_exists( 'set_time_limit' ) ) {
+				@set_time_limit( 60 ); // phpcs:ignore WordPress.PHP.NoSilencedErrors
 			}
 
 			$r = self::revisar_uno( (string) $sitio->sitio_id, (string) $sitio->entorno_id );
@@ -168,6 +232,11 @@ class SWPK_Revision {
 
 			SWPK_Normas::medir( (string) $sitio->sitio_id, [], SWPK_Normas::COMPROBADORES_DE_REVISION );
 			++$resumen['medidos'];
+
+			// El cursor se guarda SOBRE LA MARCHA, no al final: guardarlo al
+			// final es justo lo que no sirve cuando el problema es que no se
+			// llega al final.
+			update_option( self::CURSOR, ( $desde + $i + 1 ) % max( 1, count( $todos ) ), false );
 		}
 
 		// Estas tres salen del inventario y no de la API, así que se miden
@@ -176,7 +245,11 @@ class SWPK_Revision {
 			SWPK_Normas::medir( (string) $sitio->sitio_id, [], SWPK_Normas::COMPROBADORES_DE_INVENTARIO );
 		}
 
-		update_option( 'swpk_ultima_revision', [ 'cuando' => current_time( 'mysql' ) ] + $resumen, false );
+		update_option(
+			'swpk_ultima_revision',
+			[ 'cuando' => current_time( 'mysql' ), 'estado' => 'terminada', 'total' => count( $todos ) ] + $resumen,
+			false
+		);
 
 		SWPK_Estado::olvidar();
 

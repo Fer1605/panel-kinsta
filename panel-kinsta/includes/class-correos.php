@@ -50,6 +50,26 @@ class SWPK_Correos {
 		add_action( self::HOOK_DIARIO, [ __CLASS__, 'diario_soporte' ] );
 		add_action( self::HOOK_MENSUAL, [ __CLASS__, 'mensual_clientes' ] );
 		add_action( self::HOOK_RESUMEN, [ __CLASS__, 'resumen_semanal' ] );
+
+		// Y se programa aquí además de en la activación, igual que el monitor
+		// y la revisión diaria. No es por gusto: EL MENSUAL A LOS CLIENTES NO
+		// ESTABA PROGRAMADO, y lo estuvo así desde que existe el panel.
+		//
+		// Es el mismo fallo que ya se había visto en el sondeo, calcado.
+		// `wp_schedule_event()` comprueba que la recurrencia exista en
+		// `wp_get_schedules()`, y si no existe devuelve `false` sin decir
+		// nada: ni excepción, ni aviso, ni registro. `monthly` no es de
+		// WordPress, la mete el filtro `horarios()` de aquí arriba — y ese
+		// filtro cuelga de `init()`, que corre en `plugins_loaded`. Al
+		// ACTIVAR el plugin, `plugins_loaded` ya pasó. Así que el único de
+		// los cuatro correos con recurrencia propia es el único que no quedó
+		// puesto. Los otros tres usan `daily` y `weekly`, que sí trae
+		// WordPress.
+		//
+		// Comprobado en producción el 25/11/2026: `wp cron event list`
+		// devolvía los otros tres y no este. Ese correo iba a salir el 1 de
+		// diciembre a clientes reales y no iba a salir nunca.
+		self::programar();
 	}
 
 	public static function programar(): void {

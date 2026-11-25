@@ -76,6 +76,20 @@ class SWPK_Monitor {
 
 	/** Cuánto puede pasar sin sondeo antes de decir que no está corriendo. */
 	private const MARGEN = 2 * HOUR_IN_SECONDS;
+
+	/**
+	 * Cuántas horas sin reporte hacen que un agente cuente como callado.
+	 *
+	 * 48 y no 26: el agente reporta una vez al día, así que un día perdido
+	 * puede ser el reloj del sitio yendo flojo. Dos ya no.
+	 */
+	private const HORAS_PARA_CALLADO = 48;
+
+	/** De qué sitios caídos ya se avisó hoy. sitio_id => 'Y-m-d'. */
+	private const OPCION_RECORDADOS = 'swpk_caidas_recordadas';
+
+	/** De qué agentes callados ya se avisó hoy. sitio_url => 'Y-m-d'. */
+	private const OPCION_CALLADOS = 'swpk_agentes_avisados';
 	private const LENTO_MS       = 5000;
 
 	/**
@@ -207,6 +221,20 @@ class SWPK_Monitor {
 			[ 'cuando' => current_time( 'mysql' ), 'sondeados' => count( $resultados ), 'abajo' => $abajo ],
 			false
 		);
+
+		// Los dos recordatorios diarios viajan con la corrida del sondeo, y no
+		// con un cron propio, a propósito.
+		//
+		// Esta corrida está COMPROBADO que pasa: es la que escribió la línea de
+		// arriba. Un `wp_schedule_event()` nuevo no tiene esa garantía — en
+		// este mismo panel el sondeo de cinco minutos no quedó programado
+		// NUNCA y nadie se enteró durante semanas (ver programar()). Un aviso
+		// que existe para que no se pierda nada no puede colgar de un reloj
+		// que puede no estar puesto.
+		//
+		// Cada uno se manda una vez al día: ellos mismos llevan la cuenta.
+		self::recordar_caidas();
+		self::avisar_agentes_callados();
 
 		return [ 'sondeados' => count( $resultados ), 'abajo' => $abajo, 'cambios' => $cambios ];
 	}
@@ -630,6 +658,162 @@ class SWPK_Monitor {
 			SWPK_Plantillas::repuesto( $marcas ),
 			$sitio_id
 		);
+	}
+
+	/**
+	 * El recordatorio de que un sitio SIGUE caído.
+	 *
+	 * ─── Por qué hacía falta ────────────────────────────────────────────────
+	 *
+	 * Porque el aviso de caída sale UNA vez, en el momento en que el sitio
+	 * cambia de estado, y no vuelve a salir nunca. Un sitio que lleva dos días
+	 * sin responder es, desde el punto de vista del correo, un sitio del que
+	 * no se ha vuelto a saber nada.
+	 *
+	 * Pasó de verdad: un sitio de la cartera dejó de responder el 23 de
+	 * noviembre de 2026 a las 15:35. El aviso de ese momento ni siquiera
+	 * salió, porque aún no había destinatario de soporte configurado. Y como
+	 * el aviso solo se dispara en el cambio de estado, nunca iba a volver a
+	 * intentarlo. Dos días después el panel lo seguía sondeando cada hora, lo
+	 * seguía viendo caído, y no lo había dicho ni una sola vez.
+	 *
+	 * Es el mismo razonamiento que el jefe pidió para las asesoras —«ya te
+	 * notificamos primera vez… segunda vez… tercera vez» (19:20)— aplicado a
+	 * lo que más urge.
+	 *
+	 * Una vez al día y no una por hora: veinticuatro correos diarios del mismo
+	 * sitio caído se convierten en una regla de bandeja a los dos días, y
+	 * entonces el aviso de verdad tampoco se lee.
+	 */
+	private static function recordar_caidas(): void {
+		global $wpdb;
+
+		$tabla = SWPK_Tablas::tabla( 'monitor' );
+		$hoy   = SWPK_Frescura::fmt( 'Y-m-d', current_time( 'mysql' ) );
+
+		$caidos = $wpdb->get_results( "SELECT * FROM {$tabla} WHERE estado = 'abajo'" ) ?: [];
+
+		if ( ! $caidos ) {
+			// Y se limpia la cuenta: si no hay nada caído, no hay de qué
+			// acordarse. Así un sitio que se cae otra vez dentro de un mes
+			// recibe su recordatorio el primer día, no al siguiente.
+			delete_option( self::OPCION_RECORDADOS );
+			return;
+		}
+
+		$recordados = get_option( self::OPCION_RECORDADOS, [] );
+		$recordados = is_array( $recordados ) ? $recordados : [];
+		$nuevos     = [];
+
+		foreach ( $caidos as $c ) {
+			$id    = (string) $c->sitio_id;
+			$desde = (string) $c->desde;
+
+			// El día en que se cayó NO lleva recordatorio: ese día ya salió el
+			// aviso de caída, y dos correos del mismo sitio el mismo día es
+			// justo el ruido que hace que se dejen de leer.
+			$el_dia_que_cayo = SWPK_Frescura::fmt( 'Y-m-d', $desde );
+			$ya_hoy          = ( $recordados[ $id ] ?? '' ) === $hoy;
+
+			$nuevos[ $id ] = $recordados[ $id ] ?? '';
+
+			if ( $hoy === $el_dia_que_cayo || $ya_hoy ) {
+				continue;
+			}
+
+			$sitio  = SWPK_Inventario::obtener( $id );
+			$nombre = $sitio->nombre_visible ?? $id;
+			$cuanto = self::duracion( max( 0, SWPK_Frescura::ahora_ts() - strtotime( $desde ) ) );
+
+			$marcas = [
+				'{{sitio}}'    => esc_html( (string) $nombre ),
+				'{{url}}'      => esc_html( (string) $c->url ),
+				'{{cuanto}}'   => esc_html( $cuanto ),
+				'{{desde}}'    => esc_html( SWPK_Frescura::fmt( 'j \d\e F, H:i', $desde ) ),
+				'{{revisado}}' => esc_html( SWPK_Frescura::fmt( 'j \d\e F, H:i', (string) $c->ultimo_sondeo ) ),
+				'{{motivo}}'   => esc_html( (string) $c->motivo ),
+			];
+
+			SWPK_Bitacora::enviar(
+				SWPK_Bitacora::CAIDA,
+				self::destinatarios_caida(),
+				SWPK_Plantillas::asunto(
+					'sigue_caido',
+					[ '{{sitio}}' => (string) $nombre, '{{cuanto}}' => $cuanto ]
+				),
+				SWPK_Plantillas::sigue_caido( $marcas ),
+				$id
+			);
+
+			$nuevos[ $id ] = $hoy;
+		}
+
+		update_option( self::OPCION_RECORDADOS, $nuevos, false );
+	}
+
+	/**
+	 * El aviso de que el agente de un sitio dejó de reportar.
+	 *
+	 * ─── Por qué esto es un aviso y no una fila más de una pantalla ─────────
+	 *
+	 * `SWPK_Receptor::callados()` existía desde hace tiempo y se usaba en un
+	 * solo sitio: la respuesta de la API. O sea, en ninguno — nadie entra a
+	 * mirar la API por gusto. El 25 de noviembre de 2026 el agente de un sitio
+	 * llevaba CINCO DÍAS callado y nadie lo sabía.
+	 *
+	 * Un agente callado no es una caída: el sitio puede estar perfecto y
+	 * respondiendo. Es peor en una cosa concreta y mejor en otra. Peor, porque
+	 * de ese sitio el panel deja de saber lo que solo sabe por el agente —sus
+	 * administradores, la verificación en dos pasos, las normas de dentro— y
+	 * lo que enseñe en pantalla es una foto vieja que no se presenta como
+	 * vieja. Mejor, porque no urge igual.
+	 *
+	 * Eso es la regla 3 otra vez: no decir «está bien» cuando lo que pasa es
+	 * «hace cinco días que no lo miro».
+	 */
+	private static function avisar_agentes_callados(): void {
+		$hoy = SWPK_Frescura::fmt( 'Y-m-d', current_time( 'mysql' ) );
+
+		$avisados = get_option( self::OPCION_CALLADOS, [] );
+		$avisados = is_array( $avisados ) ? $avisados : [];
+
+		$callados = SWPK_Receptor::callados( self::HORAS_PARA_CALLADO );
+		$nuevos   = [];
+
+		foreach ( $callados as $a ) {
+			$clave         = (string) $a->sitio_url;
+			$nuevos[ $clave ] = $avisados[ $clave ] ?? '';
+
+			if ( ( $avisados[ $clave ] ?? '' ) === $hoy ) {
+				continue;
+			}
+
+			$ultimo = (string) ( $a->ultimo_reporte ?? '' );
+			$cuanto = '' === $ultimo
+				? 'desde que se instaló'
+				: self::duracion( max( 0, SWPK_Frescura::ahora_ts() - strtotime( $ultimo ) ) );
+
+			$marcas = [
+				'{{sitio}}'  => esc_html( (string) ( $a->nombre ?: $a->sitio_url ) ),
+				'{{url}}'    => esc_html( (string) $a->sitio_url ),
+				'{{cuanto}}' => esc_html( $cuanto ),
+				'{{ultimo}}' => esc_html(
+					'' === $ultimo ? 'nunca' : SWPK_Frescura::fmt( 'j \d\e F \d\e Y, H:i', $ultimo )
+				),
+			];
+
+			SWPK_Bitacora::enviar(
+				SWPK_Bitacora::CAIDA,
+				self::destinatarios_caida(),
+				SWPK_Plantillas::asunto( 'agente_callado', [ '{{sitio}}' => (string) ( $a->nombre ?: $a->sitio_url ) ] ),
+				SWPK_Plantillas::agente_callado( $marcas ),
+				(string) $a->sitio_id
+			);
+
+			$nuevos[ $clave ] = $hoy;
+		}
+
+		update_option( self::OPCION_CALLADOS, $nuevos, false );
 	}
 
 	/** @return array<int,string> */

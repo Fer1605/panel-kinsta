@@ -20,10 +20,12 @@ $proximos = [
 $accion = static fn( $a ) => wp_nonce_url( admin_url( 'admin-post.php?action=' . $a ), $a );
 
 // «Aquí debería haber un botón que diga ver, editar»: cada aviso abre su
-// plantilla en la otra pestaña, en vez de obligar a buscarla ahí a mano.
-$texto_de = static fn( string $plantilla ) => add_query_arg(
-	[ 'page' => 'panel-kinsta-correos', 'seccion' => 'plantillas', 'plantilla' => $plantilla ],
-	admin_url( 'admin.php' )
+// plantilla. Y la abre ENCIMA, no en otra pestaña — «levantalo en un modal,
+// no me mandes a pantallitas de pantallitas» (17:11). Las ventanas las dibuja
+// correos-editor.php, al final de esta pantalla.
+$texto_de = static fn( string $plantilla ) => sprintf(
+	'<button type="button" class="button" data-swpk-editar="%s">Ver y editar el texto</button>',
+	esc_attr( $plantilla )
 );
 ?>
 
@@ -126,7 +128,7 @@ $texto_de = static fn( string $plantilla ) => add_query_arg(
 					al cliente. Copia a la dirección de ventas si está configurada.
 				</td>
 				<td class="swpk-acciones-fila">
-					<a class="button" href="<?php echo esc_url( $texto_de( 'semanal' ) ); ?>">Ver y editar el texto</a>
+					<?php echo wp_kses_post( $texto_de( 'semanal' ) ); ?>
 					<a class="button" href="<?php echo esc_url( $accion( 'swpk_correo_semanal' ) ); ?>">Mandar una prueba</a>
 				</td>
 			</tr>
@@ -138,7 +140,7 @@ $texto_de = static fn( string $plantilla ) => add_query_arg(
 				</td>
 				<td>Lo que cambió en las últimas 24 horas en toda la cartera.</td>
 				<td class="swpk-acciones-fila">
-					<a class="button" href="<?php echo esc_url( $texto_de( 'diario' ) ); ?>">Ver y editar el texto</a>
+					<?php echo wp_kses_post( $texto_de( 'diario' ) ); ?>
 					<a class="button" href="<?php echo esc_url( $accion( 'swpk_correo_diario' ) ); ?>">Mandar una prueba</a>
 				</td>
 			</tr>
@@ -153,7 +155,7 @@ $texto_de = static fn( string $plantilla ) => add_query_arg(
 					direcciones propias. Cuántas veces se actualizó su sitio y qué se mantuvo al día.
 				</td>
 				<td class="swpk-acciones-fila">
-					<a class="button" href="<?php echo esc_url( $texto_de( 'mensual' ) ); ?>">Ver y editar el texto</a>
+					<?php echo wp_kses_post( $texto_de( 'mensual' ) ); ?>
 					<a class="button" href="<?php echo esc_url( $accion( 'swpk_correo_mensual' ) ); ?>">Mandar una prueba</a>
 				</td>
 			</tr>
@@ -169,10 +171,80 @@ $texto_de = static fn( string $plantilla ) => add_query_arg(
 					correo no querría decir «no pasó nada» sino «no sé si el panel corrió».
 				</td>
 				<td class="swpk-acciones-fila">
-					<a class="button" href="<?php echo esc_url( $texto_de( 'resumen' ) ); ?>">Ver y editar el texto</a>
+					<?php echo wp_kses_post( $texto_de( 'resumen' ) ); ?>
 					<a class="button" href="<?php echo esc_url( $accion( 'swpk_correo_resumen' ) ); ?>">Mandar una prueba</a>
 				</td>
 			</tr>
+		</tbody>
+	</table>
+	<?php SWPK_Vista::caja_cerrar(); ?>
+
+	<?php
+	// ── Los avisos que no esperan a un horario ──────────────────────────────
+	//
+	// Faltaban en esta pantalla, y eran justo los que el jefe echaba en falta
+	// —«sitio caído, pero nunca me avisó»—. Si la tabla de arriba era «los
+	// avisos», no estar en ella se lee como no existir.
+	//
+	// El de «sigue caído» es nuevo (25/11/2026) y tapa un agujero que se vio
+	// en producción: el aviso de caída sale una vez, en el momento del
+	// cambio, y nunca más. Un sitio lleva dos días sin responder y del correo
+	// no se vuelve a saber.
+	SWPK_Vista::caja_abrir( 'Los avisos del momento', 'no esperan a un horario', 'swpk-c12', true );
+
+	$del_momento = [
+		[
+			'nombre'   => 'Sitio caído',
+			'cuando'   => 'En cuanto deja de responder',
+			'que'      => 'Un sitio dejó de responder dos veces seguidas. Va a soporte y a la lista de avisos de caída.',
+			'plantilla' => 'caida',
+		],
+		[
+			'nombre'   => 'Sigue caído',
+			'cuando'   => 'Una vez al día, mientras no vuelva',
+			'que'      => 'El recordatorio de que un sitio caído <strong>sigue</strong> caído, con cuánto lleva y cuándo se comprobó por última vez. No sale el mismo día de la caída: ese día ya salió el aviso de arriba.',
+			'plantilla' => 'sigue_caido',
+		],
+		[
+			'nombre'   => 'Sitio repuesto',
+			'cuando'   => 'En cuanto vuelve',
+			'que'      => 'El sitio volvió a responder, y cuánto estuvo caído.',
+			'plantilla' => 'repuesto',
+		],
+		[
+			'nombre'   => 'El agente se calló',
+			'cuando'   => 'A las 48 horas sin reporte',
+			'que'      => 'El sitio puede estar perfecto, pero de él ya no entra nada nuevo: ni administradores, ni dos pasos, ni normas. Lo que el panel enseñe de ese sitio es una foto vieja.',
+			'plantilla' => 'agente_callado',
+		],
+		[
+			'nombre'   => 'Sitio dado de baja',
+			'cuando'   => 'A las 5 sincronizaciones sin aparecer',
+			'que'      => 'El hosting dejó de devolverlo. Deja de contar en totales y alarmas; sus datos y sus avisos se quedan.',
+			'plantilla' => 'de_baja',
+		],
+	];
+	?>
+	<table class="widefat striped swpk-tabla">
+		<thead>
+			<tr>
+				<th style="width:190px">El aviso</th>
+				<th style="width:150px">Cuándo</th>
+				<th>Qué dice</th>
+				<th style="width:300px"></th>
+			</tr>
+		</thead>
+		<tbody>
+		<?php foreach ( $del_momento as $m ) : ?>
+			<tr>
+				<td><strong><?php echo esc_html( $m['nombre'] ); ?></strong></td>
+				<td><?php echo esc_html( $m['cuando'] ); ?></td>
+				<td><?php echo wp_kses_post( $m['que'] ); ?></td>
+				<td class="swpk-acciones-fila">
+					<?php echo wp_kses_post( $texto_de( $m['plantilla'] ) ); ?>
+				</td>
+			</tr>
+		<?php endforeach; ?>
 		</tbody>
 	</table>
 	<?php SWPK_Vista::caja_cerrar(); ?>
@@ -197,6 +269,16 @@ $texto_de = static fn( string $plantilla ) => add_query_arg(
 			<td>
 				<code><?php echo esc_html( $aj['correo_soporte'] ?: '— sin poner —' ); ?></code>
 				<p class="description">Le llega el diario con todo lo técnico.</p>
+			</td>
+		</tr>
+		<tr>
+			<th scope="row">Avisos de caída</th>
+			<td>
+				<code><?php echo esc_html( $aj['correo_caidas'] ?: '— sin poner —' ); ?></code>
+				<p class="description">
+					Se <strong>suma</strong> a soporte cuando un sitio se cae, cuando vuelve, cuando
+					se da de baja y cuando el agente de un sitio se calla.
+				</p>
 			</td>
 		</tr>
 		<tr>
@@ -291,3 +373,5 @@ $texto_de = static fn( string $plantilla ) => add_query_arg(
 	<a href="<?php echo esc_url( admin_url( 'admin.php?page=panel-kinsta-correos&seccion=bitacora' ) ); ?>">el historial de envíos</a>,
 	donde se puede abrir y leer completo. En modo de prueba no sale a nadie.
 </p>
+
+<?php require SWPK_RUTA . 'includes/admin/vistas/correos-editor.php'; ?>

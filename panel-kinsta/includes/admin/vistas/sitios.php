@@ -423,12 +423,26 @@ $volver = add_query_arg(
 							<input type="hidden"
 								name="contacto_auto[<?php echo esc_attr( $s->sitio_id ); ?>]"
 								value="<?php echo esc_attr( $auto ); ?>">
-							<input type="text" style="width:100%"
-								title="<?php echo esc_attr( $valor ); ?>"
-								name="contacto[<?php echo esc_attr( $s->sitio_id ); ?>]"
-								value="<?php echo esc_attr( $valor ); ?>"
-								placeholder="<?php echo esc_attr( $marcador ); ?>">
-							<?php echo wp_kses_post( SWPK_Vista::ayuda( $explica ) ); ?>
+							<?php
+							// La burbuja va A LA PAR del campo, no debajo.
+							//
+							// El campo era `width:100%`, así que ocupaba la
+							// celda entera y la «i» caía en el renglón
+							// siguiente, suelta y sin nada que la explicara:
+							// «no entiendo dónde está esto, la i al lado de
+							// los correos». La caja flexible le deja a la
+							// burbuja sus 16 px y el campo se queda con el
+							// resto — o sea, el campo se angosta lo justo
+							// para que quepan los dos en la misma línea.
+							?>
+							<span class="swpk-campo-con-ayuda">
+								<input type="text"
+									title="<?php echo esc_attr( $valor ); ?>"
+									name="contacto[<?php echo esc_attr( $s->sitio_id ); ?>]"
+									value="<?php echo esc_attr( $valor ); ?>"
+									placeholder="<?php echo esc_attr( $marcador ); ?>">
+								<?php echo wp_kses_post( SWPK_Vista::ayuda( $explica ) ); ?>
+							</span>
 						</td>
 						<td>
 							<a class="button button-small"

@@ -37,6 +37,9 @@ class SWPK_Inventario {
 				'estado'         => $sitio['estado'],
 				'dominio'        => $sitio['dominio'],
 				'etiquetas'      => wp_json_encode( $sitio['etiquetas'] ),
+				// La fuente demo y los agentes no traen entornos: sin esto,
+				// una fuente que no los conoce borraría los que sí hay.
+				'entornos'       => wp_json_encode( $sitio['entornos'] ?? [] ),
 				'tag'            => SWPK_Etiquetas::clasificar( $sitio['etiquetas'] ),
 				'version_wp'     => $sitio['version_wp'],
 				'version_php'    => $sitio['version_php'],
@@ -284,6 +287,32 @@ class SWPK_Inventario {
 	 * y el panel mira una parte. Arreglarlo en Kinsta rompería lo que la
 	 * etiqueta significa allá, así que la corrección vive aquí.
 	 */
+	/**
+	 * Los entornos que el hosting tiene para este sitio.
+	 *
+	 * Devuelve siempre el vivo primero. Vacío significa «no lo sabemos»: la
+	 * fuente demo no los trae, y los sitios guardados antes de la versión 15
+	 * tampoco hasta la siguiente sincronización.
+	 *
+	 * @return array<int,array{id:string,nombre:string,dominio:string,vivo:bool}>
+	 */
+	public static function entornos( object $sitio ): array {
+		$crudo = json_decode( (string) ( $sitio->entornos ?? '' ), true );
+
+		if ( ! is_array( $crudo ) ) {
+			return [];
+		}
+
+		usort( $crudo, static fn( $a, $b ) => ( empty( $b['vivo'] ) ? 0 : 1 ) <=> ( empty( $a['vivo'] ) ? 0 : 1 ) );
+
+		return $crudo;
+	}
+
+	/** Los entornos que NO son el vivo: el staging y lo que haya. */
+	public static function otros_entornos( object $sitio ): array {
+		return array_values( array_filter( self::entornos( $sitio ), static fn( $e ) => empty( $e['vivo'] ) ) );
+	}
+
 	public static function grupo_de( object $sitio ): string {
 		$a_mano = (string) ( $sitio->grupo_a_mano ?? '' );
 

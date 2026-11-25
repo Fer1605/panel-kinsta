@@ -246,7 +246,7 @@ class SWPK_Admin {
 	 *   panel.css     el diseño nuevo, que va encima
 	 *   filtros.js    que los desplegables de filtro se apliquen al elegir
 	 *   ayuda.js      que la burbujita de ⓘ no salga cortada
-	 *   previa.js     la ventana con la vista previa de un correo
+	 *   editor.js     la ventana del editor de plantillas y su vista previa
 	 *
 	 * Solo se cargan en las pantallas del panel. Una hoja que reescribe tablas
 	 * y botones no tiene por qué andar suelta por el escritorio de alguien.
@@ -265,7 +265,7 @@ class SWPK_Admin {
 		wp_enqueue_script( 'swpk-filtros', $base . 'filtros.js', [], SWPK_VERSION, true );
 		wp_enqueue_script( 'swpk-progreso', $base . 'progreso.js', [], SWPK_VERSION, true );
 		wp_enqueue_script( 'swpk-ayuda', $base . 'ayuda.js', [], SWPK_VERSION, true );
-		wp_enqueue_script( 'swpk-previa', $base . 'previa.js', [], SWPK_VERSION, true );
+		wp_enqueue_script( 'swpk-editor', $base . 'editor.js', [], SWPK_VERSION, true );
 	}
 
 	public static function aviso_demo(): void {
@@ -921,13 +921,21 @@ class SWPK_Admin {
 		exit;
 	}
 
-	/** Vuelve a la plantilla que se estaba editando, no al principio. */
-	private static function volver_a_plantilla( string $cual, string $mensaje, bool $error = false ): void {
+	/**
+	 * Vuelve a la plantilla que se estaba editando, no al principio.
+	 *
+	 * Y a la PESTAÑA desde la que se abrió la ventana, que no siempre es la de
+	 * plantillas: el editor se abre también desde «Los avisos». Volver siempre
+	 * a la otra pestaña sería exactamente el viaje de pantallas que la ventana
+	 * vino a quitar. El `?plantilla=` del final es lo que hace que la ventana
+	 * se vuelva a abrir sola con el mensaje dentro (ver editor.js).
+	 */
+	private static function volver_a_plantilla( string $cual, string $mensaje, bool $error = false, string $seccion = '' ): void {
 		wp_safe_redirect(
 			add_query_arg(
 				[
 					'page'      => self::SLUG . '-correos',
-					'seccion'   => 'plantillas',
+					'seccion'   => in_array( $seccion, [ 'envios', 'plantillas' ], true ) ? $seccion : 'plantillas',
 					'plantilla' => $cual,
 					'swpk_msg'  => ( $error ? 'error:' : 'ok:' ) . $mensaje,
 				],
@@ -1019,7 +1027,9 @@ class SWPK_Admin {
 
 		self::volver_a_plantilla(
 			$cual,
-			'Redacción guardada. Desde el próximo envío, este aviso sale con este texto.'
+			'Redacción guardada. Desde el próximo envío, este aviso sale con este texto.',
+			false,
+			isset( $_POST['volver_a'] ) ? sanitize_key( (string) $_POST['volver_a'] ) : ''
 		);
 	}
 
@@ -1184,6 +1194,16 @@ class SWPK_Admin {
 		}
 
 		SWPK_Ajustes::guardar( $nuevos );
+
+		// El logo de los correos va en su propia opción y no dentro de
+		// `swpk_ajustes`: ese arreglo pasa por el cifrado de las llaves y por
+		// `sanitize_text_field`, y una dirección web no es ninguna de las dos
+		// cosas. Vacío significa «usá el de fábrica», así que sí se guarda
+		// vacío — al revés que las llaves.
+		if ( isset( $_POST['logo_correo'] ) ) {
+			$logo = esc_url_raw( trim( wp_unslash( (string) $_POST['logo_correo'] ) ) );
+			update_option( SWPK_Plantillas::OPCION_LOGO, $logo, false );
+		}
 
 		// De vuelta a la pestaña desde la que se guardó, no siempre a la
 		// primera: ahora los ajustes están repartidos en tres.

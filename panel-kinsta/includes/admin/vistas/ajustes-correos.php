@@ -74,6 +74,23 @@ $a = SWPK_Ajustes::todos();
 			</td>
 		</tr>
 		<tr>
+			<th scope="row"><label for="logo_correo">Logo de los correos</label></th>
+			<td>
+				<input type="url" class="regular-text" name="logo_correo" id="logo_correo"
+					value="<?php echo esc_attr( (string) get_option( SWPK_Plantillas::OPCION_LOGO, '' ) ); ?>"
+					placeholder="<?php echo esc_attr( SWPK_Plantillas::LOGO_DE_FABRICA ); ?>">
+				<p class="description">
+					Va arriba de todos los avisos. En blanco, el de la casa.
+					<?php echo wp_kses_post( SWPK_Vista::ayuda(
+						'Tiene que ser un PNG o un JPG, y tiene que estar colgado en una dirección pública: '
+						. 'el correo lo carga desde ahí cada vez que alguien lo abre. Un SVG no sirve aunque '
+						. 'sea el logo oficial —Gmail y Outlook no dibujan SVG y queda un hueco—, así que si '
+						. 'se escribe uno, el panel lo ignora y usa el de fábrica.'
+					) ); ?>
+				</p>
+			</td>
+		</tr>
+		<tr>
 			<th scope="row"><label for="dominios_propios">Dominios de la casa</label></th>
 			<td>
 				<input type="text" class="regular-text" name="dominios_propios" id="dominios_propios" value="<?php echo esc_attr( $a['dominios_propios'] ); ?>">
@@ -122,7 +139,19 @@ $a = SWPK_Ajustes::todos();
 			</tr>
 			<tr>
 				<td>Sitio caído, y sitio repuesto</td>
-				<td>Soporte, en el momento</td>
+				<td>Soporte <strong>más</strong> avisos de caída, en el momento</td>
+			</tr>
+			<tr>
+				<td>Sigue caído, cada día a las 7:30</td>
+				<td>Soporte <strong>más</strong> avisos de caída</td>
+			</tr>
+			<tr>
+				<td>Sitio dado de baja</td>
+				<td>Soporte <strong>más</strong> avisos de caída</td>
+			</tr>
+			<tr>
+				<td>El agente de un sitio se calló</td>
+				<td>Soporte <strong>más</strong> avisos de caída</td>
 			</tr>
 		</tbody>
 	</table>

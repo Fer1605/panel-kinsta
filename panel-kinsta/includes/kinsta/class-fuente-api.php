@@ -86,9 +86,45 @@ class SWPK_Fuente_Api implements SWPK_Fuente {
 			}
 		}
 
+		// ── Los OTROS entornos ──────────────────────────────────────────────
+		//
+		// El panel mide el entorno vivo y hasta ahora tiraba el resto, y eso
+		// es justo lo que hizo que el jefe creyera que un sitio salía dos
+		// veces: en el hosting ese sitio tiene un `live` con el dominio de
+		// verdad y un `staging`, la etiqueta «Desarrollo» está puesta en el
+		// SITIO —que cubre los dos— y el panel enseñaba el dominio de
+		// producción con el cartel de desarrollo. No era un sitio repetido:
+		// era un sitio con dos entornos y un panel que solo sabía de uno.
+		//
+		// Ahora se guardan los nombres de todos. El que manda sigue siendo el
+		// vivo: lo que se mide, lo que se sondea y lo que sale en las tablas
+		// es el de producción. Los demás solo se NOMBRAN, para que la ficha
+		// pueda decir «este sitio además tiene un staging» y la etiqueta deje
+		// de parecer una contradicción.
+		$entornos = [];
+		foreach ( (array) ( $sitio['environments'] ?? [] ) as $e ) {
+			$nombre_e = trim( (string) ( $e['name'] ?? '' ) );
+
+			if ( '' === $nombre_e ) {
+				continue;
+			}
+
+			$entornos[] = [
+				'id'      => (string) ( $e['id'] ?? '' ),
+				'nombre'  => $nombre_e,
+				'dominio' => (string) (
+					$e['primaryDomain']['name']
+					?? $e['primary_domain']['name']
+					?? ( $e['domains'][0]['name'] ?? '' )
+				),
+				'vivo'    => in_array( strtolower( $nombre_e ), [ 'live', 'production' ], true ),
+			];
+		}
+
 		return [
 			'sitio_id'       => (string) ( $sitio['id'] ?? '' ),
 			'entorno_id'     => (string) ( $entorno['id'] ?? '' ),
+			'entornos'       => $entornos,
 			'nombre'         => (string) ( $sitio['name'] ?? '' ),
 			'nombre_visible' => (string) ( $sitio['display_name'] ?? $sitio['name'] ?? '' ),
 			'estado'         => (string) ( $sitio['status'] ?? '' ),

@@ -23,6 +23,21 @@ class SWPK_Plantillas {
 	/** El mostaza de SWPK_Riesgo: el recuadro de «ya te avisamos N veces». */
 	private const MOSTAZA = '#8a6a00';
 
+	/**
+	 * El logo que va arriba de todos los correos.
+	 *
+	 * Es un PNG y no el SVG del tema a propósito: Gmail, Outlook y la app de
+	 * correo del teléfono NO dibujan SVG — lo dejan como un hueco o como el
+	 * icono de imagen rota. El logo del tema de solucionweb.com es
+	 * `logo-azul-sw.svg`, así que no sirve aquí por mucho que sea el oficial.
+	 *
+	 * Se puede cambiar en Ajustes → Correos sin tocar código. Si alguien pone
+	 * ahí un SVG, se ignora y se usa este: ver `logo()`.
+	 */
+	public const LOGO_DE_FABRICA = 'https://www.solucionweb.com/wp-content/uploads/2026/11/logo-solucion-web-azul-.png';
+
+	public const OPCION_LOGO = 'swpk_logo_correo';
+
 	/** Donde se guarda lo que se edite. Lo que no esté aquí, sale de fábrica. */
 	public const OPCION = 'swpk_plantillas';
 
@@ -113,6 +128,49 @@ class SWPK_Plantillas {
 					'{{motivo}}' => 'Qué contestó el servidor, en palabras: «el dominio no resuelve», «rechazó la conexión»…',
 				],
 			],
+			'sigue_caido' => [
+				'nombre' => 'Sigue caído',
+				'quien'  => 'A soporte y a avisos de caída, una vez al día mientras el sitio no vuelva.',
+				'titulo' => 'Un sitio sigue sin responder',
+				'asunto' => '[Sigue caído] {{sitio}} — {{cuanto}}',
+				'cuerpo' => "{{sitio}} sigue sin responder.\n\n"
+					. "Dirección: {{url}}\n"
+					. "Lleva caído: {{cuanto}}\n"
+					. "Dejó de responder: {{desde}}\n"
+					. "Última revisión: {{revisado}}\n"
+					. "Qué contesta: {{motivo}}\n\n"
+					. 'Este aviso se repite una vez al día hasta que el sitio vuelva, o hasta que se dé '
+					. 'de baja del panel.',
+				'marcas' => [
+					'{{sitio}}'    => 'El nombre del sitio',
+					'{{url}}'      => 'La dirección que se sondeó',
+					'{{cuanto}}'   => 'Cuánto lleva caído, en palabras: «2 días», «14 horas»',
+					'{{desde}}'    => 'Cuándo dejó de responder',
+					'{{revisado}}' => 'Cuándo fue la última vez que el panel lo comprobó',
+					'{{motivo}}'   => 'Qué contestó el servidor, en palabras',
+				],
+			],
+			'agente_callado' => [
+				'nombre' => 'El agente de un sitio se calló',
+				'quien'  => 'A soporte y a avisos de caída: un sitio lleva más de 48 horas sin reportar.',
+				'titulo' => 'Un sitio dejó de reportar',
+				'asunto' => '[Sin reportar] {{sitio}}',
+				'cuerpo' => "El agente de {{sitio}} lleva {{cuanto}} sin mandar su reporte.\n\n"
+					. "Dirección: {{url}}\n"
+					. "Último reporte: {{ultimo}}\n\n"
+					. "Esto no quiere decir que el sitio esté caído. Quiere decir que de ese sitio el "
+					. "panel ya no sabe nada nuevo: ni sus administradores, ni su verificación en dos "
+					. "pasos, ni sus normas de seguridad. Lo que se vea de él en el panel es de hace "
+					. "{{cuanto}}.\n\n"
+					. 'Lo normal es que alguien haya desactivado el plugin, que el sitio esté en '
+					. 'mantenimiento, o que el reloj del sitio dejara de correr.',
+				'marcas' => [
+					'{{sitio}}'  => 'El nombre del sitio',
+					'{{url}}'    => 'La dirección del sitio',
+					'{{cuanto}}' => 'Cuánto lleva sin reportar, en palabras',
+					'{{ultimo}}' => 'Cuándo fue su último reporte',
+				],
+			],
 			'repuesto' => [
 				'nombre' => 'Aviso de recuperación',
 				'quien'  => 'A soporte, en el momento: un sitio que estaba caído volvió.',
@@ -164,6 +222,109 @@ class SWPK_Plantillas {
 				],
 			],
 		];
+	}
+
+	/**
+	 * La dirección del logo que se pinta arriba del correo.
+	 *
+	 * Un SVG guardado a mano se descarta en vez de usarse: no se ve en ningún
+	 * cliente de correo serio, y un logo que no se ve es peor que el de
+	 * fábrica. Vacío también cae en el de fábrica.
+	 */
+	public static function logo(): string {
+		$url = trim( (string) get_option( self::OPCION_LOGO, '' ) );
+
+		if ( '' === $url || str_ends_with( strtolower( $url ), '.svg' ) ) {
+			return self::LOGO_DE_FABRICA;
+		}
+
+		return $url;
+	}
+
+	/**
+	 * La dirección de una pantalla del panel, para el botón del correo.
+	 *
+	 * Se fuerza a https: `admin_url()` devuelve lo que diga la opción `home`
+	 * de WordPress, y en este panel esa opción está en http. Un botón que
+	 * manda a http desde un correo lo marcan como inseguro los clientes de
+	 * correo y lo reescribe medio mundo por el camino.
+	 *
+	 * @param array<string,string> $args
+	 */
+	public static function url_panel( string $pagina = 'panel-kinsta-movimientos', array $args = [] ): string {
+		return set_url_scheme(
+			add_query_arg(
+				array_merge( [ 'page' => $pagina ], $args ),
+				admin_url( 'admin.php' )
+			),
+			'https'
+		);
+	}
+
+	/**
+	 * El botón que le toca a cada aviso.
+	 *
+	 * Vive aquí y no repartido por las seis funciones para que la respuesta a
+	 * «¿a dónde lleva este correo?» esté en una sola tabla que se pueda leer
+	 * entera. El mensual al cliente NO lleva botón, y es el único: el cliente
+	 * no tiene usuario en el panel, así que un botón ahí es un enlace a una
+	 * pantalla de login que no le va a dejar entrar.
+	 *
+	 * @return array{texto:string,url:string}|array{}
+	 */
+	public static function boton_de( string $clave ): array {
+		$destinos = [
+			'diario'   => [ 'Ver todos los cambios en el panel', 'panel-kinsta-movimientos' ],
+			'semanal'  => [ 'Ver estos sitios en el panel', 'panel-kinsta-sitios' ],
+			'resumen'  => [ 'Ver el historial completo en el panel', 'panel-kinsta-correos' ],
+			'caida'       => [ 'Ver el estado de los sitios', 'panel-kinsta-caidas' ],
+			'sigue_caido' => [ 'Ver el estado de los sitios', 'panel-kinsta-caidas' ],
+			'agente_callado' => [ 'Ver el sitio en el panel', 'panel-kinsta-sitios' ],
+			'repuesto' => [ 'Ver el estado de los sitios', 'panel-kinsta-caidas' ],
+			'de_baja'  => [ 'Ver el sitio en el panel', 'panel-kinsta-sitios' ],
+		];
+
+		if ( ! isset( $destinos[ $clave ] ) ) {
+			return [];
+		}
+
+		[ $texto, $pagina ] = $destinos[ $clave ];
+
+		return [
+			'texto' => $texto,
+			'url'   => self::url_panel(
+				$pagina,
+				'resumen' === $clave ? [ 'seccion' => 'bitacora' ] : []
+			),
+		];
+	}
+
+	/**
+	 * El botón azul del final del correo.
+	 *
+	 * «Y abajo un botón con url hacia dónde ver esto.» Va armado con una tabla
+	 * y no con un `<a>` suelto porque Outlook de escritorio ignora el relleno
+	 * de un enlace y lo deja del alto de la letra: con la tabla el botón tiene
+	 * el tamaño de un botón en todas partes.
+	 */
+	public static function boton( string $texto, string $url ): string {
+		if ( '' === trim( $texto ) || '' === trim( $url ) ) {
+			return '';
+		}
+
+		return sprintf(
+			'<table role="presentation" cellpadding="0" cellspacing="0" border="0" '
+			. 'style="margin:26px auto 6px"><tr>'
+			. '<td align="center" bgcolor="%1$s" style="border-radius:6px">'
+			. '<a href="%2$s" style="display:inline-block;padding:13px 30px;'
+			. 'font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;'
+			. 'font-size:14px;font-weight:600;line-height:1;color:#ffffff;'
+			. 'text-decoration:none;border-radius:6px">%3$s</a>'
+			. '</td></tr></table>',
+			self::AZUL,
+			esc_url( $url ),
+			esc_html( $texto )
+		);
 	}
 
 	/** Lo guardado, o lo de fábrica si nadie lo ha tocado. */
@@ -356,15 +517,28 @@ class SWPK_Plantillas {
 
 		return [
 			'asunto' => trim( str_replace( array_keys( $muestra ), array_values( $muestra ), $asunto ) ),
+			// Con su logo y su botón: la vista previa que no enseña el botón
+			// es una vista previa de otro correo.
 			'html'   => self::envolver(
 				(string) $ficha['titulo'],
-				self::armar( $cuerpo, $enlinea, $bloques )
+				self::armar( $cuerpo, $enlinea, $bloques ),
+				false,
+				self::boton_de( $clave )
 			),
 		];
 	}
 
-	/** El marco común: cabecera, contenido y pie. */
-	public static function envolver( string $titulo, string $contenido, bool $con_atribucion = false ): string {
+	/**
+	 * El marco común: logo, cabecera, contenido, botón y pie.
+	 *
+	 * El logo va en una banda BLANCA encima de la franja azul, y no dentro de
+	 * ella, por una razón de bulto: el logo de la casa es azul. Puesto sobre
+	 * la franja azul del título desaparece. La banda blanca es además lo que
+	 * hace que el correo se reconozca de un vistazo en la bandeja.
+	 *
+	 * @param array{texto?:string,url?:string} $boton El botón del final, si lo lleva.
+	 */
+	public static function envolver( string $titulo, string $contenido, bool $con_atribucion = false, array $boton = [] ): string {
 		$pie = $con_atribucion
 			? '<p style="color:#6b7280;font-size:11px;line-height:1.5;margin:16px 0 0">'
 				. 'Los datos de vulnerabilidades provienen de Wordfence Intelligence (Defiant, Inc.), '
@@ -374,17 +548,23 @@ class SWPK_Plantillas {
 		return sprintf(
 			'<div style="background:#f6f7f7;padding:24px 12px;font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif">'
 			. '<div style="max-width:640px;margin:0 auto;background:#fff;border-radius:8px;overflow:hidden;border:1px solid #dcdcde">'
+			. '<div style="padding:20px 26px 16px;background:#fff;text-align:left">'
+			. '<img src="%s" alt="Solución Web" width="150" height="41" '
+			. 'style="display:block;width:150px;height:auto;border:0;outline:none;text-decoration:none">'
+			. '</div>'
 			. '<div style="background:%s;padding:18px 26px">'
 			. '<p style="margin:0;color:#fff;font-size:16px;font-weight:600">%s</p>'
 			. '</div>'
-			. '<div style="padding:26px;color:#1d2327;font-size:14px;line-height:1.6">%s</div>'
+			. '<div style="padding:26px;color:#1d2327;font-size:14px;line-height:1.6">%s%s</div>'
 			. '<div style="padding:16px 26px;border-top:1px solid #f0f0f1;background:#fafafa">'
 			. '<p style="margin:0;color:%s;font-size:12px">Este mensaje lo generó automáticamente el panel de mantenimiento. '
 			. 'Queda registrado con su fecha y su destinatario.<br>%s</p>%s'
 			. '</div></div></div>',
+			esc_url( self::logo() ),
 			self::AZUL,
 			esc_html( $titulo ),
 			$contenido,
+			self::boton( (string) ( $boton['texto'] ?? '' ), (string) ( $boton['url'] ?? '' ) ),
 			self::GRIS,
 			esc_html( self::de_cuando() ),
 			$pie
@@ -486,34 +666,192 @@ class SWPK_Plantillas {
 				],
 				[ '{{sitios}}' => $bloque ]
 			),
-			true
+			true,
+			self::boton_de( 'semanal' )
 		);
 	}
 
-	/** Resumen diario a soporte: lo que cambió, sin adornos. */
+	/**
+	 * Resumen diario a soporte: lo que cambió, sin adornos.
+	 *
+	 * ─── Por qué la tabla está ordenada por sitio y no por hora ─────────────
+	 *
+	 * «Esto que sea una tabla ordenada» (jefe, 25/11/2026, sobre el correo de
+	 * las 158 filas). La tabla salía sin encabezados y ordenada por hora, que
+	 * es el orden en que el panel las apunta y el único que no le sirve a
+	 * nadie: el mismo sitio aparecía en la fila 3, en la 40 y en la 112, así
+	 * que para saber qué le pasó a un sitio había que recorrer las 158.
+	 *
+	 * Ahora va por sitio en orden alfabético, y dentro de cada sitio lo grave
+	 * antes que la rutina. Con eso, las cuatro líneas de un sitio quedan
+	 * juntas y se lee de un vistazo.
+	 *
+	 * Y encima va el recuento por tipo, que contesta la pregunta con la que
+	 * uno abre este correo —«¿esto son 158 actualizaciones de plugin o pasó
+	 * algo?»— sin leer una sola fila.
+	 *
+	 * @param array<int,object> $eventos
+	 */
 	public static function diario_soporte( array $eventos ): string {
 		$etiquetas = SWPK_Eventos::etiquetas();
 
-		$filas = '';
-		foreach ( array_slice( $eventos, 0, 60 ) as $e ) {
-			$sitio = SWPK_Inventario::obtener( (string) $e->sitio_id );
+		// El nombre del sitio de cada evento, una sola vez por sitio: dentro
+		// del bucle de ordenación serían cientos de consultas repetidas.
+		$nombre_de = [];
+		foreach ( $eventos as $e ) {
+			$id = (string) $e->sitio_id;
+			if ( ! isset( $nombre_de[ $id ] ) ) {
+				$sitio             = '' !== $id ? SWPK_Inventario::obtener( $id ) : null;
+				$nombre_de[ $id ] = (string) ( $sitio->nombre_visible ?? '—' );
+			}
+		}
+
+		// Lo que no es rutina, primero dentro de cada sitio. Una vulnerabilidad
+		// detectada y una actualización de plugin no pesan lo mismo, y en una
+		// tabla larga lo que va abajo no se lee.
+		$peso = static fn( $e ) => SWPK_Eventos::es_rutinario( (string) $e->tipo ) ? 1 : 0;
+
+		$ordenados = $eventos;
+		usort(
+			$ordenados,
+			static function ( $a, $b ) use ( $nombre_de, $peso ) {
+				$na = $nombre_de[ (string) $a->sitio_id ] ?? '';
+				$nb = $nombre_de[ (string) $b->sitio_id ] ?? '';
+
+				$cmp = strcasecmp( $na, $nb );
+				if ( 0 !== $cmp ) {
+					return $cmp;
+				}
+
+				$cmp = $peso( $a ) <=> $peso( $b );
+				if ( 0 !== $cmp ) {
+					return $cmp;
+				}
+
+				return strcmp( (string) $b->ocurrio_en, (string) $a->ocurrio_en );
+			}
+		);
+
+		// ── El recuento por tipo ────────────────────────────────────────────
+		$por_tipo = [];
+		foreach ( $ordenados as $e ) {
+			$t              = (string) $e->tipo;
+			$por_tipo[ $t ] = ( $por_tipo[ $t ] ?? 0 ) + 1;
+		}
+		// Lo que no es rutina, arriba del recuento, aunque sea uno y las
+		// actualizaciones sean ciento cincuenta. La pregunta que contesta
+		// este bloque es «¿pasó algo?», y una vulnerabilidad detectada
+		// escondida debajo de «se actualizó: 152» no la contesta.
+		uksort(
+			$por_tipo,
+			static function ( $a, $b ) use ( $por_tipo ) {
+				$ra = SWPK_Eventos::es_rutinario( (string) $a ) ? 1 : 0;
+				$rb = SWPK_Eventos::es_rutinario( (string) $b ) ? 1 : 0;
+
+				return $ra === $rb
+					? $por_tipo[ $b ] <=> $por_tipo[ $a ]
+					: $ra <=> $rb;
+			}
+		);
+
+		$resumen = '<p style="margin:0 0 8px;font-weight:600;font-size:14px">En resumen</p>'
+			. '<table role="presentation" style="width:100%;border-collapse:collapse;margin:0 0 24px">';
+
+		foreach ( $por_tipo as $tipo => $cuantos ) {
+			$resumen .= sprintf(
+				'<tr>'
+				. '<td style="padding:7px 0;border-bottom:1px solid #e6e7eb;font-size:13px">%s</td>'
+				. '<td style="padding:7px 0;border-bottom:1px solid #e6e7eb;text-align:right;'
+				. 'font-size:13px;font-weight:700;white-space:nowrap">%d</td>'
+				. '</tr>',
+				esc_html( $etiquetas[ (string) $tipo ] ?? (string) $tipo ),
+				(int) $cuantos
+			);
+		}
+
+		$resumen .= '</table>';
+
+		// ── El detalle, sitio por sitio ─────────────────────────────────────
+		//
+		// El nombre del sitio se repite en todas sus filas a propósito, en vez
+		// de escribirlo solo en la primera. Escribirlo una vez queda más
+		// limpio en pantalla y se rompe en el correo: basta con que alguien
+		// reenvíe un recorte, o que el cliente de correo parta la tabla, para
+		// que media lista quede sin dueño.
+		$filas  = '';
+		$cebra  = false;
+		$previo = null;
+
+		foreach ( array_slice( $ordenados, 0, 60 ) as $e ) {
+			$id = (string) $e->sitio_id;
+
+			// La cebra cambia por SITIO y no por fila: así se ve dónde empieza
+			// y dónde acaba cada sitio, que es justo lo que se pedía.
+			if ( null !== $previo && $previo !== $id ) {
+				$cebra = ! $cebra;
+			}
+			$previo = $id;
+
 			$color = match ( $e->severidad ) {
 				'critico' => self::ROJO,
-				'alto'    => '#9e0b10',
+				'alto'    => self::ROJO,
 				'ok'      => '#0b5ed7',
 				default   => self::GRIS,
 			};
 
+			$fondo = $cebra ? '#fafafa' : '#ffffff';
+			$borde = '1px solid #e6e7eb';
+
 			$filas .= sprintf(
-				'<tr>'
-				. '<td style="padding:7px 10px;border-bottom:1px solid #f0f0f1;color:%s;font-size:12px;white-space:nowrap">%s</td>'
-				. '<td style="padding:7px 10px;border-bottom:1px solid #f0f0f1;font-size:12px">%s</td>'
-				. '<td style="padding:7px 10px;border-bottom:1px solid #f0f0f1;font-size:13px">%s</td>'
+				'<tr style="background:%s">'
+				. '<td style="padding:9px 10px 9px 0;border-bottom:%s;font-size:13px;'
+				. 'font-weight:600;vertical-align:top">%s</td>'
+				. '<td style="padding:9px 10px;border-bottom:%s;color:%s;font-size:12px;'
+				. 'white-space:nowrap;vertical-align:top">%s</td>'
+				. '<td style="padding:9px 10px;border-bottom:%s;font-size:13px;vertical-align:top">%s</td>'
+				. '<td style="padding:9px 0 9px 10px;border-bottom:%s;color:%s;font-size:12px;'
+				. 'text-align:right;white-space:nowrap;vertical-align:top">%s</td>'
 				. '</tr>',
+				$fondo,
+				$borde,
+				esc_html( $nombre_de[ $id ] ?? '—' ),
+				$borde,
 				$color,
 				esc_html( $etiquetas[ $e->tipo ] ?? $e->tipo ),
-				esc_html( $sitio->nombre_visible ?? '—' ),
-				esc_html( $e->titulo )
+				$borde,
+				esc_html( $e->titulo ),
+				$borde,
+				self::GRIS,
+				esc_html( SWPK_Frescura::fmt( 'j/n H:i', (string) $e->ocurrio_en ) )
+			);
+		}
+
+		$tabla = '<p style="margin:0 0 8px;font-weight:600;font-size:14px">Sitio por sitio</p>'
+			. '<table role="presentation" style="width:100%;border-collapse:collapse">'
+			. '<thead><tr>'
+			. sprintf(
+				'<th style="padding:0 10px 7px 0;border-bottom:2px solid #c3c4c7;text-align:left;'
+				. 'color:%1$s;font-size:11px;font-weight:700;text-transform:uppercase;'
+				. 'letter-spacing:.04em">Sitio</th>'
+				. '<th style="padding:0 10px 7px;border-bottom:2px solid #c3c4c7;text-align:left;'
+				. 'color:%1$s;font-size:11px;font-weight:700;text-transform:uppercase;'
+				. 'letter-spacing:.04em">Qué pasó</th>'
+				. '<th style="padding:0 10px 7px;border-bottom:2px solid #c3c4c7;text-align:left;'
+				. 'color:%1$s;font-size:11px;font-weight:700;text-transform:uppercase;'
+				. 'letter-spacing:.04em">Detalle</th>'
+				. '<th style="padding:0 0 7px 10px;border-bottom:2px solid #c3c4c7;text-align:right;'
+				. 'color:%1$s;font-size:11px;font-weight:700;text-transform:uppercase;'
+				. 'letter-spacing:.04em">Cuándo</th>',
+				self::GRIS
+			)
+			. '</tr></thead><tbody>' . $filas . '</tbody></table>';
+
+		if ( count( $ordenados ) > 60 ) {
+			$tabla .= sprintf(
+				'<p style="color:%s;font-size:13px;margin:14px 0 0">Y %d más. Están todos en el panel, '
+				. 'con el botón de abajo.</p>',
+				self::GRIS,
+				count( $ordenados ) - 60
 			);
 		}
 
@@ -535,12 +873,6 @@ class SWPK_Plantillas {
 			);
 		}
 
-		$tabla = '<table style="width:100%;border-collapse:collapse">' . $filas . '</table>';
-
-		if ( count( $eventos ) > 60 ) {
-			$tabla .= sprintf( '<p style="color:%s">Y %d más, en el panel.</p>', self::GRIS, count( $eventos ) - 60 );
-		}
-
 		// El aviso de «este resumen no es de hoy» va antes de la plantilla y
 		// fuera de ella: no es prosa que se pueda reescribir ni quitar desde el
 		// panel. Es la advertencia que impide leer «cero cambios» como «todo
@@ -550,8 +882,10 @@ class SWPK_Plantillas {
 			$c . self::cuerpo(
 				'diario',
 				[ '{{cuantos}}' => '<strong>' . count( $eventos ) . '</strong>' ],
-				[ '{{cambios}}' => $tabla ]
-			)
+				[ '{{cambios}}' => $resumen . $tabla ]
+			),
+			false,
+			self::boton_de( 'diario' )
 		);
 	}
 
@@ -569,7 +903,9 @@ class SWPK_Plantillas {
 	public static function caida( array $marcas ): string {
 		return self::envolver(
 			self::catalogo()['caida']['titulo'],
-			self::cuerpo( 'caida', $marcas )
+			self::cuerpo( 'caida', $marcas ),
+			false,
+			self::boton_de( 'caida' )
 		);
 	}
 
@@ -577,14 +913,38 @@ class SWPK_Plantillas {
 	public static function de_baja( array $marcas ): string {
 		return self::envolver(
 			self::catalogo()['de_baja']['titulo'],
-			self::cuerpo( 'de_baja', $marcas )
+			self::cuerpo( 'de_baja', $marcas ),
+			false,
+			self::boton_de( 'de_baja' )
+		);
+	}
+
+	/** El recordatorio diario de que un sitio sigue sin responder. */
+	public static function sigue_caido( array $marcas ): string {
+		return self::envolver(
+			self::catalogo()['sigue_caido']['titulo'],
+			self::cuerpo( 'sigue_caido', $marcas ),
+			false,
+			self::boton_de( 'sigue_caido' )
+		);
+	}
+
+	/** El aviso de que un sitio lleva días sin mandar su reporte. */
+	public static function agente_callado( array $marcas ): string {
+		return self::envolver(
+			self::catalogo()['agente_callado']['titulo'],
+			self::cuerpo( 'agente_callado', $marcas ),
+			false,
+			self::boton_de( 'agente_callado' )
 		);
 	}
 
 	public static function repuesto( array $marcas ): string {
 		return self::envolver(
 			self::catalogo()['repuesto']['titulo'],
-			self::cuerpo( 'repuesto', $marcas )
+			self::cuerpo( 'repuesto', $marcas ),
+			false,
+			self::boton_de( 'repuesto' )
 		);
 	}
 
@@ -632,7 +992,12 @@ class SWPK_Plantillas {
 				. 'avisarle a nadie. Este correo sale igual para que quede constancia de eso.'
 				. '</div>';
 
-			return self::envolver( self::catalogo()['resumen']['titulo'], $html );
+			return self::envolver(
+				self::catalogo()['resumen']['titulo'],
+				$html,
+				false,
+				self::boton_de( 'resumen' )
+			);
 		}
 
 		$html .= '<p style="margin:0 0 10px;font-weight:600">Lo que avisamos</p>';
@@ -670,7 +1035,12 @@ class SWPK_Plantillas {
 			$html .= sprintf( '<p style="color:#50575e;font-size:13px">Y %d más, en el historial de envíos del panel.</p>', count( $filas ) - 60 );
 		}
 
-		return self::envolver( self::catalogo()['resumen']['titulo'], $html );
+		return self::envolver(
+			self::catalogo()['resumen']['titulo'],
+			$html,
+			false,
+			self::boton_de( 'resumen' )
+		);
 	}
 
 	/**

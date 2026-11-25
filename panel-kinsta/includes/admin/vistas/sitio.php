@@ -708,6 +708,57 @@ $url_pestana = static fn( string $s ) => add_query_arg(
 						. 'etiquetado para automático puede tener módulos a mano.'
 					) );
 			} )(),
+			// ── Los entornos, y por qué esto importa ────────────────────
+			//
+			// «Y aquí dice que es [el dominio real] pero están en desarrollo.
+			// Eso es imposible» (03:35). No era imposible y tampoco era un
+			// sitio repetido: en el hosting ese sitio tiene DOS entornos, uno
+			// vivo y uno de pruebas, la etiqueta está puesta en el sitio —que
+			// cubre los dos— y el panel mide el vivo. Enseñaba, con razón, el
+			// dominio de producción con el cartel de desarrollo.
+			//
+			// La etiqueta no se puede arreglar en el hosting sin romper lo
+			// que significa allá, así que lo que se arregla es el panel: aquí
+			// se dice cuántos entornos hay y cuál se está midiendo. El que
+			// manda en todas las pantallas sigue siendo el vivo.
+			'Entornos en el hosting' => ( static function () use ( $sitio ) {
+				$todos = SWPK_Inventario::entornos( $sitio );
+
+				if ( ! $todos ) {
+					return '<span class="swpk-gris">sin medir</span>'
+						. wp_kses_post( SWPK_Vista::ayuda(
+							'El hosting todavía no ha dicho qué entornos tiene este sitio. Llega con la '
+							. 'próxima sincronización.'
+						) );
+				}
+
+				$lineas = [];
+				foreach ( $todos as $e ) {
+					$lineas[] = sprintf(
+						'<strong>%s</strong>%s%s',
+						esc_html( (string) $e['nombre'] ),
+						'' !== (string) $e['dominio']
+							? ' <span class="swpk-mono swpk-gris">' . esc_html( (string) $e['dominio'] ) . '</span>'
+							: '',
+						! empty( $e['vivo'] )
+							? ' <span class="swpk-gris">— es el que mide el panel</span>'
+							: ' <span class="swpk-gris">— no se mide</span>'
+					);
+				}
+
+				return implode( '<br>', $lineas )
+					. ( count( $todos ) > 1
+						? wp_kses_post( SWPK_Vista::ayuda(
+							'Este sitio tiene más de un entorno en el hosting, y la etiqueta está puesta '
+							. 'en el SITIO: cubre a los dos. Por eso un sitio ya en producción puede '
+							. 'seguir saliendo con la etiqueta «Desarrollo» — la dejó puesta el entorno '
+							. 'de pruebas. Todo lo que el panel mide, sondea y cuenta es el entorno '
+							. 'vivo; los demás solo se nombran aquí. Si la etiqueta no corresponde, se '
+							. 'corrige el grupo a mano desde Sitios y la corrección aguanta la '
+							. 'sincronización.'
+						) )
+						: '' );
+			} )(),
 			'WordPress'            => esc_html( $sitio->version_wp ?: '—' ),
 			'PHP'                  => esc_html( $sitio->version_php ?: '—' ),
 			'Última revisión'      => $sitio->inventario_en

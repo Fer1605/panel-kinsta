@@ -168,6 +168,17 @@ $historial = array_filter(
 			después, y solo cuenta si falla las dos veces. Un fallo suelto casi siempre es la red
 			y no el sitio.
 		</p>
+		<?php if ( ! empty( $ultimo['cuando'] ) ) : ?>
+			<p>
+				<strong>Última revisión:</strong>
+				<?php echo esc_html( SWPK_Frescura::fmt( 'j \d\e F, H:i', (string) $ultimo['cuando'] ) ); ?>
+				(<?php echo esc_html( SWPK_Frescura::hace( (string) $ultimo['cuando'] ) ); ?>),
+				<?php echo esc_html( SWPK_Vista::plural( (int) ( $ultimo['sondeados'] ?? 0 ), 'sitio comprobado', 'sitios comprobados' ) ); ?>.
+				<?php if ( $abajo ) : ?>
+					Mientras un sitio siga sin responder sale un recordatorio por correo una vez al día.
+				<?php endif; ?>
+			</p>
+		<?php endif; ?>
 	</div>
 
 	<?php if ( ! $al_dia ) : ?>
@@ -280,6 +291,19 @@ $historial = array_filter(
 					<th>Sitio</th>
 					<th style="width:120px">Grupo</th>
 					<th style="width:190px">Ahora</th>
+					<?php
+					// ── «¿Cuándo se revisó?» ────────────────────────────────
+					//
+					// Faltaba, y sin ella la pantalla no se podía leer. La
+					// celda de «Ahora» decía «Sin responder · desde 23 nov»
+					// y nada más, así que un sitio caído hace dos días se veía
+					// exactamente igual tanto si el panel lo acababa de
+					// comprobar como si el monitor llevaba dos días parado.
+					// «No veo que se haya actualizado la info hoy y que me
+					// diga sigue caído.» El dato estaba guardado desde
+					// siempre, en `ultimo_sondeo`: solo no se enseñaba.
+					?>
+					<th style="width:130px">Revisado</th>
 					<th style="width:80px">Tarda</th>
 					<th style="width:110px">Caídas este mes</th>
 				</tr>
@@ -327,6 +351,14 @@ $historial = array_filter(
 							<br><span class="swpk-gris" style="font-size:12px">desde <?php echo esc_html( SWPK_Frescura::fmt( 'j M, H:i', $e->desde ) ); ?></span>
 						<?php endif; ?>
 					</td>
+					<td>
+						<?php if ( $e->ultimo_sondeo ) : ?>
+							<?php echo esc_html( SWPK_Frescura::fmt( 'j M, H:i', (string) $e->ultimo_sondeo ) ); ?>
+							<br><span class="swpk-gris" style="font-size:12px"><?php echo esc_html( SWPK_Frescura::hace( (string) $e->ultimo_sondeo ) ); ?></span>
+						<?php else : ?>
+							<span class="swpk-gris">nunca</span>
+						<?php endif; ?>
+					</td>
 					<td class="swpk-mono"><?php echo $e->ms ? esc_html( number_format( $e->ms / 1000, 1 ) ) . ' s' : '—'; ?></td>
 					<td>
 						<?php echo (int) $e->caidas_mes; ?>
@@ -351,7 +383,18 @@ $historial = array_filter(
 		</p></div>
 	<?php endif; ?>
 
-	<?php SWPK_Vista::caja_abrir( 'El historial', '', 'swpk-c12', ! empty( $historial ) ); ?>
+	<?php
+	// El historial guarda CAMBIOS de estado, no revisiones. Un sitio que
+	// lleva dos días caído aparece una sola vez, el día que se cayó, y eso
+	// se presta a leerlo como «hace dos días que no se mira». Por eso lo
+	// dice el subtítulo, y por eso la columna «Revisado» de arriba.
+	SWPK_Vista::caja_abrir(
+		'El historial',
+		'se apunta cuando un sitio cambia de estado, no en cada revisión',
+		'swpk-c12',
+		! empty( $historial )
+	);
+	?>
 	<?php if ( ! $historial ) : ?>
 		<p style="color:#50575e">
 			No se ha caído nada desde que el monitor está encendido. Cada caída y cada recuperación
