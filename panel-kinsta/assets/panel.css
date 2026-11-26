@@ -27,11 +27,19 @@
 
 :root {
 	/* Era #1f7ae0 y con texto blanco daba 4,27:1 — por debajo del mínimo de
-	   4,5:1, y es el fondo de TODOS los botones principales del panel. Un 3 %
-	   más oscuro llega a 4,52:1 y a ojo es el mismo azul: el cambio no se ve,
-	   la diferencia sí se lee. Arregla de una vez el botón principal, el
-	   filtro activo y los dos estados de hover que colgaban de esta variable. */
-	--swpk-marca: #1e76d9;
+	   4,5:1, y es el fondo de TODOS los botones principales del panel.
+
+	   El primer intento lo bajó a #1e76d9, que da 4,52:1 SOBRE BLANCO. Medido
+	   en el navegador, seguía fallando: este azul también se usa como TEXTO,
+	   y ahí casi nunca cae sobre blanco puro sino sobre el gris de las
+	   tarjetas (#f5f7fa) o el de los interruptores (#f0f0f1), donde bajaba a
+	   4,21:1 y 3,97:1. Un color de marca hay que medirlo contra todos los
+	   fondos sobre los que se posa, no contra el más favorable.
+
+	   #1c6dc7 pasa en los cuatro: 5,17:1 sobre blanco, 4,82:1 sobre la
+	   tarjeta, 4,54:1 sobre el gris, y 5,17:1 con texto blanco encima cuando
+	   hace de fondo. */
+	--swpk-marca: #1c6dc7;
 	--swpk-marca-suave: #e7f1fd;
 	--swpk-fondo: #f5f7fa;
 	--swpk-tarjeta: #fff;
