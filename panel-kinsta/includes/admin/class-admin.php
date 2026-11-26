@@ -442,23 +442,32 @@ class SWPK_Admin {
 
 		if ( 0 === (int) $a['sin'] ) {
 			return sprintf(
-				'<span class="swpk-etq swpk-nivel-al_dia" title="%s">Todo automático</span>',
+				'<span class="swpk-etq swpk-nivel-al_dia" title="%s">Automático</span>',
 				esc_attr( sprintf( 'Los %d módulos activos tienen actualización automática en el hosting.', (int) $a['total'] ) )
 			);
 		}
 
+		// ── «A mano» ya no se llama así ─────────────────────────────────────
+		//
+		// «Menos los que dicen a mano, porque viste que él dijo cómo hacía a
+		// mano. Utilicemos otro tipo de terminología.» A mano suena a que
+		// alguien edita archivos; lo que pasa es que hay que entrar y pulsar
+		// Actualizar. Eso es un ajuste manual.
+		//
+		// Y lo que se enseña es LO QUE FALTA, no lo que ya está. «19 de 21
+		// automático» obliga a restar para saber que el trabajo son 2. El
+		// número que importa es el 2.
 		if ( 0 === (int) $a['con'] ) {
 			return sprintf(
-				'<span class="swpk-etq swpk-nivel-alto" title="%s">Todo a mano</span>',
-				esc_attr( sprintf( 'Ninguno de los %d módulos activos tiene actualización automática.', (int) $a['total'] ) )
+				'<span class="swpk-etq swpk-nivel-medio" title="%s">Ajuste manual</span>',
+				esc_attr( sprintf( 'Ninguno de los %d módulos activos tiene actualización automática. Hay que entrar al sitio y actualizarlos.', (int) $a['total'] ) )
 			);
 		}
 
 		return sprintf(
-			'<span class="swpk-etq swpk-nivel-medio" title="%s">%d de %d automático</span>',
-			esc_attr( sprintf( '%d módulo(s) se actualizan solos y %d hay que actualizarlos a mano.', (int) $a['con'], (int) $a['sin'] ) ),
-			(int) $a['con'],
-			(int) $a['total']
+			'<span class="swpk-etq swpk-nivel-medio" title="%s">%d en manual</span>',
+			esc_attr( sprintf( '%d módulo(s) se actualizan solos. Los otros %d hay que entrar a actualizarlos.', (int) $a['con'], (int) $a['sin'] ) ),
+			(int) $a['sin']
 		);
 	}
 
@@ -486,11 +495,25 @@ class SWPK_Admin {
 			SWPK_Etiquetas::SIN        => 'Sin etiqueta en el hosting: no sabemos en qué grupo va.',
 		];
 
+		// ── Una bolita y una palabra, no una píldora con una frase ──────────
+		//
+		// «No quiero… ponerle una bolita, para que esto sea más limpio.» Eran
+		// píldoras con «No auto update» y «Auto update» dentro: dos renglones
+		// de texto en una columna de 96px, repetidos 109 veces. La bolita dice
+		// lo mismo de un vistazo y la palabra corta lo confirma sin que haya
+		// que adivinar el color.
+		$cortos = [
+			SWPK_Etiquetas::DESARROLLO => 'Desarrollo',
+			SWPK_Etiquetas::AUTO       => 'Automático',
+			SWPK_Etiquetas::NO_UPDATE  => 'Del cliente',
+			SWPK_Etiquetas::SIN        => 'Sin etiqueta',
+		];
+
 		return sprintf(
-			'<span class="swpk-etq swpk-etq-%s" title="%s">%s</span>',
+			'<span class="swpk-grupo swpk-grupo-%s" title="%s"><i class="swpk-punto"></i>%s</span>',
 			esc_attr( $tag ),
 			esc_attr( $motivos[ $tag ] ?? '' ),
-			esc_html( SWPK_Etiquetas::nombres()[ $tag ] ?? $tag )
+			esc_html( $cortos[ $tag ] ?? $tag )
 		);
 	}
 
@@ -1537,7 +1560,7 @@ class SWPK_Admin {
 			wp_safe_redirect(
 				self::url_seguridad(
 					'cumplimiento',
-					'error:' . rawurlencode( 'Esa norma no se puede arreglar desde el panel: hay que hacerlo a mano.' )
+					'error:' . rawurlencode( 'Esa norma no se puede arreglar desde el panel: es un ajuste manual en el sitio.' )
 				)
 			);
 			exit;

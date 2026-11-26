@@ -228,7 +228,7 @@ $norma_pedida = SWPK_Vista::opcion_pedida( 'norma', $normas_malas );
 // mano», y como las que fallan en más sitios son justo de esas, se puede
 // recorrer la pantalla entera sin tropezarse con un botón de «Arreglarlo».
 // Este filtro deja a la vista solo lo que sí se puede pedir desde aquí.
-$arreglables = [ 'si' => 'Solo lo que podemos arreglar', 'no' => 'Solo lo que va a mano' ];
+$arreglables = [ 'si' => 'Solo lo que podemos arreglar', 'no' => 'Solo lo de ajuste manual' ];
 $puede_arreglar = static fn( $norma ): bool => '' !== SWPK_Ordenes::orden_de_la_norma( (string) $norma->clave )
 	&& 1 === (int) $norma->arreglable;
 
@@ -506,7 +506,7 @@ $cuenta_vista = [
 							<?php elseif ( SWPK_Etiquetas::NO_UPDATE === (string) $item['sitio']->tag ) : ?>
 								<span class="swpk-mudo" title="Es un sitio que administra el cliente: lo revisamos, pero no le cambiamos nada sin que lo pida.">Lo lleva el cliente</span>
 							<?php else : ?>
-								<span class="swpk-mudo" title="Esto no lo puede cambiar el panel: hay que entrar a hacerlo.">Hay que hacerlo a mano</span>
+								<span class="swpk-mudo" title="Esto no lo puede cambiar el panel: hay que entrar a hacerlo.">Ajuste manual</span>
 							<?php endif; ?>
 						</td>
 					</tr>

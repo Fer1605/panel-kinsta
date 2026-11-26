@@ -367,16 +367,10 @@ $volver = add_query_arg(
 							?>
 						<?php elseif ( $asignar && ! $nuestro ) : ?>
 							<?php
-							// A estos no se les asigna, pero algunos YA tienen a
-							// alguien de antes. Si se enseñara «no lleva asesora»
-							// el panel estaría mintiendo. Se enseña lo que hay y
-							// se dice que no se cambia desde aquí.
-							//
-							// No se borran solos: esa asignación es también lo que
-							// decide qué sitios ve cada persona al entrar, y
-							// quitarla de golpe le cerraría la puerta a alguien sin
-							// avisar. Lo que no sale es el correo, y eso ya lo
-							// frena el interruptor del aviso semanal.
+							// A los del cliente no se les asigna. Si alguno ya
+							// tiene a alguien de antes se enseña el nombre en
+							// gris y nada más: el porqué va en el title, no en
+							// tres renglones dentro de la celda.
 							$nombres = [];
 							foreach ( $suyas as $id_a ) {
 								$u = get_user_by( 'id', $id_a );
@@ -385,47 +379,41 @@ $volver = add_query_arg(
 								}
 							}
 							?>
-							<span class="swpk-gris" style="font-size:12px">
-								<?php if ( $nombres ) : ?>
-									<?php echo esc_html( implode( ', ', $nombres ) ); ?><br>
-									<em>de antes; no se cambia desde aquí porque es
-									<?php echo esc_html( SWPK_Etiquetas::nombres()[ $s->tag ] ?? $s->tag ); ?></em>
-								<?php else : ?>
-									No lleva asesora: es <?php echo esc_html( SWPK_Etiquetas::nombres()[ $s->tag ] ?? $s->tag ); ?>
-								<?php endif; ?>
+							<span class="swpk-gris" style="font-size:12px"
+								title="A los sitios del cliente no se les asigna asesora desde aquí.">
+								<?php echo $nombres ? esc_html( implode( ', ', $nombres ) ) : '—'; ?>
 							</span>
 						<?php elseif ( $asignar ) : ?>
 							<div class="swpk-asesoras">
 								<?php foreach ( $asesoras as $a ) : ?>
-									<label style="display:block;font-size:12px;line-height:1.7">
+									<?php
+									// Solo el nombre de pila. En una columna de
+									// 165px «Luisa Fernanda Álvarez» parte en tres
+									// renglones, y con cuatro personas cada fila de
+									// la tabla crecía doce renglones. El nombre
+									// entero está en el title y en la ficha.
+									$partes = explode( ' ', (string) $a->display_name );
+									?>
+									<label title="<?php echo esc_attr( $a->display_name ); ?>">
 										<input type="checkbox"
 											name="asesora[<?php echo esc_attr( $s->sitio_id ); ?>][]"
 											value="<?php echo (int) $a->ID; ?>"
 											<?php checked( in_array( (int) $a->ID, $suyas, true ) ); ?>>
-										<?php echo esc_html( $a->display_name ); ?>
+										<?php echo esc_html( $partes[0] ); ?>
 									</label>
 								<?php endforeach; ?>
-								<?php
-								// Sin esto, desmarcar a todas no manda nada para este
-								// sitio y el panel no se enteraría de que hay que
-								// dejarlo sin nadie.
-								?>
 								<input type="hidden" name="asesora_vista[<?php echo esc_attr( $s->sitio_id ); ?>]" value="1">
 							</div>
 						<?php else : ?>
 							<?php
-							if ( ! $suyas ) {
-								echo '—';
-							} else {
-								$nombres = [];
-								foreach ( $suyas as $id ) {
-									$u = get_user_by( 'id', $id );
-									if ( $u ) {
-										$nombres[] = $u->display_name;
-									}
+							$nombres = [];
+							foreach ( $suyas as $id_a ) {
+								$u = get_user_by( 'id', $id_a );
+								if ( $u ) {
+									$nombres[] = $u->display_name;
 								}
-								echo esc_html( implode( ', ', $nombres ) );
 							}
+							echo $nombres ? esc_html( implode( ', ', $nombres ) ) : '—';
 							?>
 						<?php endif; ?>
 					</td>

@@ -124,10 +124,12 @@ class SWPK_Riesgo {
 	 */
 	public static function colores(): array {
 		return [
+			// Un solo color cálido en la pantalla. Ver el comentario de
+			// .swpk-nivel-* en panel.css: tres cálidos juntos se leen como uno.
 			self::CRITICO   => '#9e0b10', // rojo fuerte · texto blanco  8,4:1
-			self::ALTO      => '#e0700f', // naranja     · texto oscuro  4,9:1
-			self::MEDIO     => '#fbc02d', // amarillo    · texto oscuro  9,6:1
-			self::BAJO      => '#5c6670', // pizarra     · texto blanco  5,9:1
+			self::ALTO      => '#9e0b10', // el mismo rojo; se distingue por hueco, no por tono
+			self::MEDIO     => '#8a93a3', // gris neutro · texto blanco  4,6:1
+			self::BAJO      => '#aab2bf', // gris claro  · texto oscuro  7,1:1
 			self::AL_DIA    => '#0d6efd', // azul fuerte · texto blanco  4,5:1
 			self::SIN_DATOS => '#d6dbe0', // gris claro  · texto oscuro 11,4:1
 		];

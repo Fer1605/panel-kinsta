@@ -669,7 +669,7 @@ $url_pestana = static fn( string $s ) => add_query_arg(
 					<?php elseif ( $puede_el_panel ) : ?>
 						<span class="swpk-mudo" title="El panel sabe arreglarla, y aquí ya está bien.">El panel la sabe arreglar</span>
 					<?php elseif ( SWPK_Normas::FALLA === $estado ) : ?>
-						<span class="swpk-mudo" title="Esto no lo puede cambiar el panel: hay que entrar al sitio a hacerlo.">Hay que hacerlo a mano</span>
+						<span class="swpk-mudo" title="Esto no lo puede cambiar el panel: hay que entrar al sitio a hacerlo.">Ajuste manual</span>
 					<?php endif; ?>
 					</td>
 				</tr>
@@ -806,39 +806,46 @@ $url_pestana = static fn( string $s ) => add_query_arg(
 						? 'sin asignar'
 						: 'no lleva asesora: es ' . esc_html( SWPK_Etiquetas::nombres()[ $sitio->tag ] ?? $sitio->tag ) )
 					. '</span>',
-			'A quién le llega el correo' => ( static function () use ( $sitio ) {
-				// «Dice: lo da el agente. ¿Y por qué no lo estoy viendo?»
-				// Porque el panel lo calculaba solo en el momento de enviar y
-				// no lo enseñaba en ningún sitio. Es la misma cuenta que hace
-				// el envío, así que lo que sale aquí es exactamente a quién le
-				// va a llegar.
-				$destinos = SWPK_Correos::destinatarios_cliente( $sitio );
+			// ── UN solo renglón de correo, no dos que se contradicen ────────
+			//
+			// Había dos: «A quién le llega el correo», con direcciones puestas,
+			// y justo debajo «Contacto del cliente: sin contacto». Las dos
+			// hablan de lo mismo y dicen cosas opuestas: «¿estos correos de
+			// quién son? Mauro Hernández… ¿esos quiénes son? No son clientes,
+			// entonces. ¿Por qué dice cliente sin contacto?».
+			//
+			// Son los administradores del sitio que reporta el agente, quitando
+			// los de nuestros dominios: o sea, la gente del cliente. Eso es el
+			// contacto del cliente. El otro campo solo existe para corregirlo a
+			// mano cuando el agente no está o se equivoca.
+			//
+			// Ahora es un renglón: a quién le llega, y de dónde salió.
+			'Correo del cliente'   => ( static function () use ( $sitio, $contacto ) {
+				$del_agente = SWPK_Correos::destinatarios_cliente( $sitio );
+				$escrito    = '' !== $contacto;
+				$ayuda      = 'Lo único que sale hacia el cliente es el reporte mensual de '
+					. 'mantenimiento, y hoy está apagado. Ningún otro aviso del panel llega aquí.';
 
-				if ( ! $destinos ) {
-					return '<span class="swpk-gris">a nadie todavía</span>'
-						. wp_kses_post( SWPK_Vista::ayuda(
-							'El panel saca los destinatarios de los administradores que reporta el '
-							. 'agente, quitando los de nuestros propios dominios. Si no sale ninguno es '
-							. 'porque el agente aún no ha mandado su lista de usuarios, porque todos los '
-							. 'administradores son nuestros, o porque el sitio no tiene agente. En ese '
-							. 'último caso se usa el contacto escrito a mano, aquí abajo.'
-						) );
+				if ( $escrito ) {
+					return '<span class="swpk-mono">' . esc_html( $contacto ) . '</span>'
+						. '<br><span class="swpk-gris" style="font-size:12px">escrito a mano en la pantalla de Sitios</span>'
+						. wp_kses_post( SWPK_Vista::ayuda( $ayuda ) );
 				}
 
-				return '<span class="swpk-mono">' . esc_html( implode( ', ', $destinos ) ) . '</span>'
+				if ( $del_agente ) {
+					return '<span class="swpk-mono">' . esc_html( implode( ', ', $del_agente ) ) . '</span>'
+						. '<br><span class="swpk-gris" style="font-size:12px">'
+						. 'los administradores del sitio, según el agente, quitando los nuestros'
+						. '</span>'
+						. wp_kses_post( SWPK_Vista::ayuda( $ayuda ) );
+				}
+
+				return '<span class="swpk-gris">no hay a quién</span>'
 					. wp_kses_post( SWPK_Vista::ayuda(
-						'Lo único que les llega es el reporte mensual de mantenimiento: qué se actualizó '
-						. 'en su sitio y qué se mantuvo al día. Ningún otro aviso del panel sale hacia '
-						. 'ellos. Son los administradores que reporta el agente, menos los de nuestros '
-						. 'dominios.'
+						'Ni el agente ha mandado administradores que no sean nuestros, ni hay un '
+						. 'contacto escrito a mano. Se escribe en la pantalla de Sitios.'
 					) );
 			} )(),
-			'Contacto del cliente' => '' !== $contacto
-				? esc_html( $contacto )
-				: '<span class="swpk-gris">sin contacto</span>'
-					. wp_kses_post( SWPK_Vista::ayuda(
-						'A quién se le manda el reporte de lo que se hizo. Se pone al asignar el sitio, en la pantalla de Sitios. A las asesoras y a soporte se les avisa de lo que falta; al cliente se le cuenta lo que ya se hizo.'
-					) ),
 			'Verificación en dos pasos' => SWPK_Etiquetas::es_nuestro( SWPK_Inventario::grupo_de( $sitio ) )
 				? ( $sitio->tiene_2fa
 					? '<span style="color:var(--swpk-bien);font-weight:600">activa</span>'
