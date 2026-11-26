@@ -342,7 +342,7 @@ $url_pestana = static fn( string $s ) => add_query_arg(
 						<?php
 						// Qué se puede hacer con ella: hay parche, no lo hay
 						// todavía, o el plugin está cerrado y no lo habrá.
-						$pildora = SWPK_Admin::parche_badge( $v, (string) $h['slug'] );
+						$pildora = SWPK_Admin::parche_badge( $v ? (bool) (int) ( $v->parcheada ?? 0 ) : null, (string) $h['slug'] );
 						if ( '' !== $pildora ) :
 							?>
 							<div style="margin-top:6px"><?php echo wp_kses_post( $pildora ); ?></div>

@@ -83,6 +83,13 @@ if ( ! is_array( $todas ) ) {
 				'titulo_vuln'  => $v ? (string) ( $v->titulo ?? '' ) : '',
 				'cve'          => $v ? (string) ( $v->cve ?? '' ) : '',
 				'cuantas'      => count( $h['vulnerabilidades'] ),
+				// Dos campos más para la píldora de qué se puede hacer. Se
+				// guarda el booleano y el slug, no el objeto entero de la
+				// vulnerabilidad: estas filas van a un transient y meterles
+				// la descripción completa de 459 hallazgos lo engorda sin
+				// que nadie lo lea desde aquí.
+				'slug'         => (string) $h['slug'],
+				'parcheada'    => $v ? (bool) (int) ( $v->parcheada ?? 0 ) : null,
 			];
 		}
 	}
@@ -145,13 +152,11 @@ $filas = array_values( array_filter(
 			return false;
 		}
 		if ( '' !== $parche_filtro ) {
-			$v_f = $f['vulnerabilidades'][0] ?? null;
-
-			if ( ! $v_f ) {
+			if ( null === ( $f['parcheada'] ?? null ) ) {
 				return false;
 			}
 
-			if ( (int) ( $v_f->parcheada ?? 0 ) ) {
+			if ( $f['parcheada'] ) {
 				$caso = 'hay';
 			} elseif ( SWPK_Repositorio::CERRADO === SWPK_Repositorio::estado( (string) $f['slug'] ) ) {
 				$caso = 'cerrado';
@@ -420,7 +425,7 @@ $nombres = SWPK_Riesgo::nombres();
 						<?php if ( 'actualizacion_pendiente' === $f['motivo'] ) : ?>
 							<br><span class="swpk-gris">solo actualización</span>
 						<?php else : ?>
-							<?php $pild = SWPK_Admin::parche_badge( $f['vulnerabilidades'][0] ?? null, (string) $f['slug'] ); ?>
+							<?php $pild = SWPK_Admin::parche_badge( $f['parcheada'] ?? null, (string) ( $f['slug'] ?? '' ) ); ?>
 							<?php if ( '' !== $pild ) : ?>
 								<div style="margin-top:6px"><?php echo wp_kses_post( $pild ); ?></div>
 							<?php endif; ?>

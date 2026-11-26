@@ -494,12 +494,12 @@ class SWPK_Admin {
 	 *
 	 * @param object|null $v La fila de la vulnerabilidad, si la hay.
 	 */
-	public static function parche_badge( ?object $v, string $slug = '' ): string {
-		if ( ! $v ) {
+	public static function parche_badge( ?bool $parcheada, string $slug = '' ): string {
+		if ( null === $parcheada ) {
 			return '';
 		}
 
-		if ( (int) ( $v->parcheada ?? 0 ) ) {
+		if ( $parcheada ) {
 			return '<span class="swpk-parche swpk-parche-hay" title="'
 				. esc_attr( 'El autor ya sacó la versión arreglada. Se resuelve actualizando el módulo.' )
 				. '">Hay parche</span>';
