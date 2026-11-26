@@ -1517,14 +1517,23 @@ body[class*="panel-kinsta"] .swpk-sale-si {
    un enlace visitado y uno enfocado traen su propio color, y basta con que
    uno de los cuatro estados se escape para que la píldora vuelva a quedarse
    sin texto. Blanco sobre #0d6efd son 4,5:1 — el mínimo para letra pequeña, y
-   el mismo par que ya usa «al día» en todo el panel. */
+   el mismo par que ya usa «al día» en todo el panel.
+
+   ─── Y el orden de estas dos reglas NO es cosmético ─────────────────────
+   La píldora encendida lleva las DOS clases, `swpk-sale swpk-sale-si`, y los
+   dos selectores pesan exactamente lo mismo. A igualdad de peso gana el que
+   está más abajo. Escritas al revés —la blanca arriba y la gris debajo— la
+   gris ganaba y la píldora se quedaba con texto #50575e sobre azul: 1,63:1.
+   Comprobado en el navegador con la hoja ya desplegada, porque leyendo el
+   archivo parecía correcto. El `:not()` lo deja atado aunque alguien las
+   reordene. */
+body[class*="panel-kinsta"] .wrap a.swpk-sale:not(.swpk-sale-si),
+body[class*="panel-kinsta"] .wrap a.swpk-sale:not(.swpk-sale-si):visited { color: #50575e; }
+
 body[class*="panel-kinsta"] .wrap a.swpk-sale-si,
 body[class*="panel-kinsta"] .wrap a.swpk-sale-si:hover,
 body[class*="panel-kinsta"] .wrap a.swpk-sale-si:focus,
 body[class*="panel-kinsta"] .wrap a.swpk-sale-si:visited { color: #fff; }
-
-body[class*="panel-kinsta"] .wrap a.swpk-sale,
-body[class*="panel-kinsta"] .wrap a.swpk-sale:visited { color: #50575e; }
 
 body[class*="panel-kinsta"] .swpk-sale-si:hover { background: #0b5ed7; color: #fff; }
 
