@@ -420,7 +420,17 @@ $historial = array_filter(
 					<td>
 						<?php echo (int) $e->caidas_mes; ?>
 						<?php if ( $e->segundos_caido ) : ?>
-							<br><span style="color:#50575e;font-size:12px"><?php echo esc_html( SWPK_Monitor::duracion( (int) $e->segundos_caido ) ); ?> en total</span>
+							<?php
+							// «Como mucho» y no «en total»: el sondeo es cada
+							// hora, así que lo que se suma es la distancia
+							// entre la revisión que falló y la que ya no, no
+							// el tiempo que el sitio estuvo caído. Decirlo
+							// como un total es presentar una resta de relojes
+							// como una medición.
+							?>
+							<br><span style="color:#50575e;font-size:12px" title="El monitor revisa una vez por hora, así que esto es la distancia entre la revisión que falló y la siguiente que ya respondió. El sitio pudo estar caído mucho menos.">
+								como mucho <?php echo esc_html( SWPK_Monitor::duracion( (int) $e->segundos_caido ) ); ?>
+							</span>
 						<?php endif; ?>
 					</td>
 				</tr>

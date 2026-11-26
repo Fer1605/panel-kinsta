@@ -121,13 +121,16 @@ class SWPK_Plantillas {
 				'cuerpo' => "{{sitio}} no está respondiendo.\n\n"
 					. "Dirección: {{url}}\n"
 					. "Detectado: {{cuando}}\n"
-					. "Qué pasó: {{motivo}}\n\n"
-					. 'El monitor revisa cada hora. Cuando vuelva, les llega otro correo con cuánto estuvo caído.',
+					. "Qué pasó: {{motivo}}\n"
+					. "Intentos: {{intentos}}\n\n"
+					. 'El monitor vuelve a revisar dentro de una hora. Si para entonces ya responde, '
+					. 'les llega otro correo.',
 				'marcas' => [
-					'{{sitio}}'  => 'El nombre del sitio',
-					'{{url}}'    => 'La dirección que se sondeó',
-					'{{cuando}}' => 'Cuándo se detectó',
-					'{{motivo}}' => 'Qué contestó el servidor, en palabras: «el dominio no resuelve», «rechazó la conexión»…',
+					'{{sitio}}'    => 'El nombre del sitio',
+					'{{url}}'      => 'La dirección que se sondeó',
+					'{{cuando}}'   => 'Cuándo se detectó, en hora de Guatemala',
+					'{{motivo}}'   => 'Qué contestó el servidor, en palabras: «el dominio no resuelve», «rechazó la conexión»…',
+					'{{intentos}}' => 'Cuántas veces seguidas se le preguntó antes de avisar, y en cuánto tiempo',
 				],
 			],
 			'sigue_caido' => [
@@ -178,12 +181,29 @@ class SWPK_Plantillas {
 				'quien'  => 'A soporte, en el momento: un sitio que estaba caído volvió.',
 				'titulo' => 'Un sitio volvió a responder',
 				'asunto' => '[Repuesto] {{sitio}}',
+				// ─── Por qué ya no dice «estuvo caído 1h 1min» ──────────────
+				//
+				// Porque el panel no lo sabe y lo estaba diciendo igual.
+				// Revisa UNA VEZ POR HORA: lo único que midió es que a las
+				// 8:33 no contestó y a las 9:33 sí. Entre esas dos horas pudo
+				// estar caído un segundo o los sesenta minutos enteros.
+				//
+				// Decir «1h 1min» es coger la distancia entre dos revisiones
+				// y presentarla como una medición. El 26 de noviembre de 2026
+				// eso mandó un correo diciendo que un sitio había estado una
+				// hora caído cuando se podía entrar sin problema. Es la regla
+				// 3 otra vez: no afirmar lo que no se midió.
 				'cuerpo' => "{{sitio}} volvió a responder.\n\n"
-					. "Estuvo caído {{cuanto}}.\n\n"
-					. 'Queda anotado en Caídas, con la hora exacta en que dejó de responder y la hora en que volvió.',
+					. "No respondió en la revisión de las {{fallo}}.\n"
+					. "En la siguiente, a las {{vuelta}}, ya respondía.\n\n"
+					. "Entre las dos revisiones pasaron {{cuanto}}, pero eso NO es lo que estuvo "
+					. "caído: el monitor mira una vez por hora, así que pudo ser un segundo o pudo "
+					. "ser todo ese rato. Lo que sí se midió está en Caídas.",
 				'marcas' => [
 					'{{sitio}}'  => 'El nombre del sitio',
-					'{{cuanto}}' => 'Cuánto tiempo estuvo caído, ya en palabras: «12 minutos», «2 horas»',
+					'{{fallo}}'  => 'La hora de la revisión en la que no contestó',
+					'{{vuelta}}' => 'La hora de la revisión en la que ya contestaba',
+					'{{cuanto}}' => 'Lo que pasó ENTRE las dos revisiones: «1h 1min». No es lo que estuvo caído, es el máximo que pudo estarlo.',
 				],
 			],
 			'de_baja' => [

@@ -71,8 +71,39 @@ class SWPK_Monitor {
 	 */
 	private const FALLOS_PARA_AVISAR = 1;
 
-	/** Cuánto se espera antes de preguntar por segunda vez. */
-	private const ESPERA_CONFIRMAR = 8;
+	/**
+	 * Cuánto se espera antes de volver a preguntarle al que no contestó.
+	 *
+	 * ─── Por qué son tres intentos repartidos y no dos pegados ──────────────
+	 *
+	 * Esto era un solo reintento ocho segundos después, y el 26 de noviembre
+	 * de 2026 mandó la primera falsa alarma: un sitio que responde en 90 ms
+	 * falló dos sondeos seguidos a las 14:33 y salió el correo de «no está
+	 * respondiendo». Una hora después contestaba perfecto, y mientras tanto
+	 * se podía entrar desde el navegador sin problema.
+	 *
+	 * Dos intentos separados por ocho segundos no distinguen un sitio caído de
+	 * un tropiezo de veinte segundos — y un tropiezo de veinte segundos no es
+	 * una caída, es un contenedor reciclándose, una purga de caché o la red.
+	 *
+	 * Ahora son tres intentos repartidos en minuto y medio. Un sitio caído de
+	 * verdad falla los tres; un tropiezo pasa en el segundo o el tercero. Y
+	 * solo cuesta ese minuto y medio cuando hay algo que parece caído: si no
+	 * hay ninguno —que es lo normal— esto no se ejecuta.
+	 *
+	 * @var array<int,int> segundos de espera antes de cada reintento
+	 */
+	private const ESPERAS_CONFIRMAR = [ 10, 35, 50 ];
+
+	/**
+	 * El tiempo de espera de los reintentos, más generoso que el del primero.
+	 *
+	 * El primer sondeo va contra 109 sitios a la vez y tiene que acabar
+	 * rápido. Un reintento va contra uno o dos, así que puede permitirse
+	 * esperar lo que esperaría una persona antes de decir «este sitio no
+	 * carga».
+	 */
+	private const TIMEOUT_REINTENTO = 25;
 
 	/** Cuánto puede pasar sin sondeo antes de decir que no está corriendo. */
 	private const MARGEN = 2 * HOUR_IN_SECONDS;
@@ -393,10 +424,37 @@ class SWPK_Monitor {
 			return $resultados;
 		}
 
-		sleep( self::ESPERA_CONFIRMAR );
+		// Se le pregunta otra vez a los que fallaron, y en cuanto uno conteste
+		// se le deja en paz: lo que importa no es que falle siempre, es que
+		// conteste UNA vez. Quien contesta no está caído.
+		foreach ( self::ESPERAS_CONFIRMAR as $espera ) {
+			if ( ! $dudosos ) {
+				break;
+			}
 
-		foreach ( self::sondear( $dudosos ) as $sitio_id => $segundo ) {
-			$resultados[ $sitio_id ] = $segundo;
+			// Minuto y medio durmiendo más lo que tarde el sondeo se pasa del
+			// tiempo que PHP le da a una petición. Se vuelve a pedir en cada
+			// vuelta, como hacen la sonda y la corrida.
+			if ( function_exists( 'set_time_limit' ) ) {
+				@set_time_limit( 120 ); // phpcs:ignore WordPress.PHP.NoSilencedErrors
+			}
+
+			sleep( $espera );
+
+			foreach ( self::sondear( $dudosos, self::TIMEOUT_REINTENTO ) as $sitio_id => $otra ) {
+				$resultados[ $sitio_id ] = $otra;
+
+				if ( 'abajo' !== ( $otra['estado'] ?? '' ) ) {
+					unset( $dudosos[ $sitio_id ] );
+				}
+			}
+		}
+
+		// Cuántas veces seguidas falló, para poder decirlo en el aviso: no es
+		// lo mismo «no contestó una vez» que «no contestó cuatro veces en
+		// minuto y medio».
+		foreach ( array_keys( $dudosos ) as $sitio_id ) {
+			$resultados[ $sitio_id ]['intentos'] = 1 + count( self::ESPERAS_CONFIRMAR );
 		}
 
 		return $resultados;
@@ -449,9 +507,11 @@ class SWPK_Monitor {
 	 * @param array<string,string> $objetivos sitio_id => url
 	 * @return array<string,array<string,mixed>>
 	 */
-	public static function sondear( array $objetivos ): array {
+	public static function sondear( array $objetivos, int $timeout = 0 ): array {
+		$timeout = $timeout > 0 ? $timeout : self::TIMEOUT;
+
 		if ( ! function_exists( 'curl_multi_init' ) ) {
-			return self::sondear_uno_por_uno( $objetivos );
+			return self::sondear_uno_por_uno( $objetivos, $timeout );
 		}
 
 		$resultados = [];
@@ -469,7 +529,7 @@ class SWPK_Monitor {
 						CURLOPT_RETURNTRANSFER => true,
 						CURLOPT_FOLLOWLOCATION => true,
 						CURLOPT_MAXREDIRS      => 4,
-						CURLOPT_TIMEOUT        => self::TIMEOUT,
+						CURLOPT_TIMEOUT        => $timeout,
 						CURLOPT_CONNECTTIMEOUT => 8,
 						CURLOPT_SSL_VERIFYPEER => true,
 						CURLOPT_USERAGENT      => 'PanelKinsta/' . SWPK_VERSION . ' (monitor de disponibilidad)',
@@ -526,12 +586,13 @@ class SWPK_Monitor {
 	}
 
 	/** @param array<string,string> $objetivos */
-	private static function sondear_uno_por_uno( array $objetivos ): array {
+	private static function sondear_uno_por_uno( array $objetivos, int $timeout = 0 ): array {
+		$timeout    = $timeout > 0 ? $timeout : self::TIMEOUT;
 		$resultados = [];
 
 		foreach ( $objetivos as $sitio_id => $url ) {
 			$inicio = microtime( true );
-			$r      = wp_remote_get( $url, [ 'timeout' => self::TIMEOUT, 'redirection' => 4 ] );
+			$r      = wp_remote_get( $url, [ 'timeout' => $timeout, 'redirection' => 4 ] );
 			$ms     = (int) round( ( microtime( true ) - $inicio ) * 1000 );
 
 			$resultados[ $sitio_id ] = is_wp_error( $r )
@@ -701,7 +762,7 @@ class SWPK_Monitor {
 			} elseif ( 'abajo' === $antes ) {
 				$segundos = max( 0, strtotime( $ahora ) - strtotime( (string) $previo->desde ) );
 				$datos['segundos_caido'] = (int) $previo->segundos_caido + $segundos;
-				self::avisar_recuperacion( $sitio_id, $segundos );
+				self::avisar_recuperacion( $sitio_id, $segundos, (string) $previo->desde );
 			}
 		}
 
@@ -757,11 +818,23 @@ class SWPK_Monitor {
 		// pantalla de Plantillas: era el único correo que el panel manda y que
 		// nadie podía cambiar sin tocar código. Los avisos de caída son los que
 		// más se leen a deshoras, así que conviene poder ajustarles el tono.
+		$intentos = (int) ( $r['intentos'] ?? 1 );
+		$reparto  = array_sum( self::ESPERAS_CONFIRMAR );
+
 		$marcas = [
 			'{{sitio}}'  => esc_html( $nombre ),
 			'{{url}}'    => esc_html( (string) $r['url'] ),
 			'{{cuando}}' => esc_html( SWPK_Frescura::fmt( 'j \d\e F, H:i', current_time( 'mysql' ) ) ),
 			'{{motivo}}' => esc_html( (string) $r['motivo'] ),
+			// Cuántas veces se le preguntó antes de molestar a nadie. Es lo
+			// que separa «no contestó una vez» de «no contestó cuatro veces
+			// en minuto y medio», y es lo primero que uno quiere saber al
+			// recibir el aviso y comprobar que el sitio carga.
+			'{{intentos}}' => esc_html(
+				$intentos > 1
+					? sprintf( 'no contestó %d veces seguidas en %d segundos', $intentos, $reparto )
+					: 'no contestó'
+			),
 		];
 
 		SWPK_Bitacora::enviar(
@@ -773,18 +846,34 @@ class SWPK_Monitor {
 		);
 	}
 
-	private static function avisar_recuperacion( string $sitio_id, int $segundos ): void {
+	/**
+	 * @param string $desde El `desde` de la fila: la revisión en que falló.
+	 */
+	private static function avisar_recuperacion( string $sitio_id, int $segundos, string $desde = '' ): void {
 		$sitio  = SWPK_Inventario::obtener( $sitio_id );
 		$nombre = $sitio->nombre_visible ?? $sitio_id;
 		$cuanto = self::duracion( $segundos );
+		$ahora  = current_time( 'mysql' );
 
+		$h_fallo  = '' !== $desde ? SWPK_Frescura::fmt( 'H:i', $desde ) : '—';
+		$h_vuelta = SWPK_Frescura::fmt( 'H:i', $ahora );
+
+		// Ni aquí ni en el correo se dice «estuvo caído N»: el monitor mira
+		// una vez por hora, así que lo único medido son las dos revisiones.
+		// Ver el comentario de la plantilla 'repuesto'.
 		SWPK_Eventos::registrar(
 			SWPK_Eventos::SITIO_REPUESTO,
 			$sitio_id,
-			sprintf( '%s volvió a responder. Estuvo caído %s', $nombre, $cuanto ),
+			sprintf(
+				'%s volvió a responder. No contestó en la revisión de las %s; en la de las %s ya sí (%s entre las dos)',
+				$nombre,
+				$h_fallo,
+				$h_vuelta,
+				$cuanto
+			),
 			'ok',
 			'',
-			[ 'segundos' => $segundos ]
+			[ 'segundos_entre_revisiones' => $segundos ]
 		);
 
 		// Lo mismo que en avisar_caida(): sin destinatario se registra, no se
@@ -799,6 +888,8 @@ class SWPK_Monitor {
 		$marcas = [
 			'{{sitio}}'  => esc_html( $nombre ),
 			'{{cuanto}}' => esc_html( $cuanto ),
+			'{{fallo}}'  => esc_html( $h_fallo ),
+			'{{vuelta}}' => esc_html( $h_vuelta ),
 		];
 
 		SWPK_Bitacora::enviar(
