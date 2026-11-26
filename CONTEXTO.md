@@ -80,6 +80,14 @@ la máquina y nada más:
   cita textual con el minuto, qué significa, qué se propone y la maqueta. Más
   las cuatro contradicciones de datos comprobadas contra la base, el panel que
   el jefe enseñó como modelo (su «Panel DMM») y un plan de 18 cambios en orden.
+  Al lado va `Panel Kinsta - respuesta a tus correcciones.pdf` (34 páginas), que
+  contesta las ocho correcciones de Fer a ese plan: el plugin de auto-update que
+  recordaba —es **PRO Elements**, en 81 de los 83 sitios de auto-update, con su
+  propio actualizador contra GitHub—, por qué el verde es el peor color que
+  podemos elegir, las asesoras por sitio, el correo de prueba, y el diseño
+  completo del registro de actividad dentro del agente (tabla, retención, cómo
+  se lee desde el panel sin abrirle una puerta al sitio, y la pega del child
+  theme: un tema no tiene activación, así que la tabla se crea por versión).
   **No va al repositorio**: las capturas llevan nombres y correos de clientes.
 - `REUNION-2026-11-23-lo-que-pidio.md` — **lo último que pidió el jefe**, punto
   por punto, con la cita textual y el minuto de la grabación, agrupado en ocho
