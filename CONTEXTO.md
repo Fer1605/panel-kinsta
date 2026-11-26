@@ -156,8 +156,8 @@ Reglas de Fer, que valen igual en un chat nuevo:
 | | Versión | Dónde está |
 |---|---|---|
 | Panel Kinsta | **0.9.5** | Desplegado en producción y verificado ahí mismo. |
-| Agente (plugin) | **0.6.4** | En 106 de los 107 sitios que lo tienen. |
-| Agente (dentro del tema) | **0.6.4-tema** | PR #1 **unido** el 19/11. Ojo: la rama declara 0.6.4-tema y lleva el código de 0.6.3. Ver abajo. |
+| Agente (plugin) | **0.7.0** | 0.6.4 está en 106 de 107. La 0.7.0 trae el registro de actividad y **no está repartida**. |
+| Agente (dentro del tema) | **0.7.0-tema** | La rama unida del jefe sigue en 0.6.4-tema con código de 0.6.3. La corrección + el registro están en una rama lista, **sin PR abierto**. |
 | Tema hijo | **2.6.1** | En el PR. |
 
 ### Lo del 25 y 26 (0.6.3 → 0.9.5)

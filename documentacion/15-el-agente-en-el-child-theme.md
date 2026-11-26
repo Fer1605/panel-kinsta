@@ -180,3 +180,65 @@ activo:
 2. **El interruptor `panel_activo`.** No existe en el plugin, porque el plugin
    solo se instala donde se quiere que reporte. El tema va en sitios que no
    están en este servidor, y ahí no tiene a quién reportarle.
+
+---
+
+# 2.6.3 — el registro de actividad
+
+El agente ahora lleva el registro de quién entró al sitio y qué tocó. Es lo
+que pedía la norma «el sitio guarda quién entró y qué tocó», que hasta hoy
+solo se podía cumplir instalando un plugin de registro más en cada sitio.
+
+## Qué hace
+
+Crea una tabla **dentro de este sitio**, `wp_swa_bitacora`, y anota:
+
+- quién entró, quién salió y quién intentó entrar y falló;
+- usuarios creados, borrados y cambios de rol;
+- plugins y temas activados, desactivados, actualizados y borrados;
+- contenido publicado, editado y mandado a la papelera;
+- cambios en cinco ajustes que son normas de seguridad (si cualquiera puede
+  registrarse, con qué rol, la URL del sitio y el correo de administración);
+- y lo que hace el propio agente cuando el panel le manda una orden.
+
+## Qué NO guarda, a propósito
+
+- Contraseñas. Ni las que se escriben mal al entrar.
+- La IP entera: se le quita el último trozo (`181.174.23.0`). Sirve igual
+  para ver que alguien entró desde otra red, y deja de identificar a una
+  persona concreta.
+- Nada de lo que hacen los visitantes: páginas vistas, formularios, pedidos
+  de la tienda. Eso es información del cliente y de sus clientes.
+
+## Dónde vive y cuánto ocupa
+
+Todo se queda en el sitio. Son unos 250 bytes por anotación, **doce meses** de
+historial con un tope de 120.000 filas — unos 30 MB en el peor caso — y una
+limpieza que corre sola cada noche.
+
+Al Panel Kinsta sube **solo un resumen**, pegado al reporte que ya viaja todos
+los días: las cuentas, no las filas. En este sitio de prueba pesa **231
+bytes**. El detalle se queda aquí y solo sube si alguien lo pide desde el
+panel, con una orden nueva (`traer_bitacora`) que llega por el mismo camino
+firmado de siempre.
+
+**El sitio sigue sin abrir ninguna puerta.** No hay una ruta nueva esperando
+peticiones de internet, que para un registro de accesos sería justo lo más
+apetecible de todo el sitio.
+
+## La pega del tema, otra vez
+
+Un plugin crea sus tablas al activarse. **Un tema no tiene activación.** Si
+esto se escribiera como el resto del agente, al vivir dentro del tema la tabla
+no se crearía nunca y el registro no anotaría nada, en silencio.
+
+Por eso la tabla se crea comparando un número de versión guardado, en cada
+carga. Comparar dos enteros en memoria no cuesta nada; solo cuando no
+coinciden se toca la base de datos.
+
+## Lo que esto no promete
+
+Si alguien desactiva el agente, el registro **deja de anotar**. Por eso el
+panel dice «lo lleva el agente» y no «el sitio lo guarda»: son cosas
+distintas, y el día que haga falta el registro esa diferencia es justo la que
+importa. Y de antes de instalarlo no hay nada.
