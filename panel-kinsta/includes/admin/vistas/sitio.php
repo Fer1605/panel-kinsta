@@ -328,7 +328,7 @@ $url_pestana = static fn( string $s ) => add_query_arg(
 						<strong><?php echo esc_html( SWPK_Textos::limpiar_titulo( (string) $h['titulo'] ) ); ?></strong><br>
 						<span class="swpk-mono" style="color:#50575e"><?php echo esc_html( $h['slug'] ); ?></span>
 						<?php if ( '' === $h['auto_update'] ) : ?>
-							<br><span style="color:#8a6a00;font-size:12px">sin actualización automática</span>
+							<br><span style="color:#6b7280;font-size:12px">sin actualización automática</span>
 						<?php endif; ?>
 					</td>
 					<td>

@@ -256,7 +256,7 @@ $volver = add_query_arg(
 						<th style="width:96px">Doble paso</th>
 					<?php endif; ?>
 					<th style="width:96px">Revisado</th>
-					<th style="width:165px">Asesora</th>
+					<th style="width:200px">Asesora</th>
 					<?php if ( $asignar ) : ?>
 						<th style="width:260px">
 							Contacto del cliente
@@ -303,7 +303,7 @@ $volver = add_query_arg(
 							<?php endif; ?>
 							<?php echo count( $hallazgos ) - $vulns; ?> por actualizar
 							<?php if ( SWPK_Inventario::dato_viejo( $s ) ) : ?>
-								<br><span style="color:#8a6a00;font-size:12px" title="<?php echo esc_attr( SWPK_Admin::proveedor() . ' no lo revisa desde hace ' . (int) SWPK_Inventario::dias_sin_escanear( $s ) . ' días' ); ?>">
+								<br><span style="color:#6b7280;font-size:12px" title="<?php echo esc_attr( SWPK_Admin::proveedor() . ' no lo revisa desde hace ' . (int) SWPK_Inventario::dias_sin_escanear( $s ) . ' días' ); ?>">
 									dato de hace <?php echo (int) SWPK_Inventario::dias_sin_escanear( $s ); ?> días
 								</span>
 							<?php endif; ?>

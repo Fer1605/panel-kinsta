@@ -406,7 +406,7 @@ $texto_de = static fn( string $plantilla ) => sprintf(
 		<tbody>
 		<?php foreach ( $revisiones as $r ) : ?>
 			<tr>
-				<td style="width:40px;font-size:18px"><?php echo $r['ok'] ? '<span style="color:#0b5ed7">✓</span>' : '<span style="color:#8a6a00">!</span>'; ?></td>
+				<td style="width:40px;font-size:18px"><?php echo $r['ok'] ? '<span style="color:#0b5ed7">✓</span>' : '<span style="color:#9e0b10">!</span>'; ?></td>
 				<td><?php echo esc_html( $r['ok'] ? $r['si'] : $r['no'] ); ?></td>
 				<td style="width:120px;text-align:right">
 					<?php if ( ! $r['ok'] ) : ?>

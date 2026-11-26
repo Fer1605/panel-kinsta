@@ -1488,7 +1488,6 @@ body[class*="panel-kinsta"] .swpk-ayuda {
 	color: #6b7280;
 	font-size: 11px;
 	font-weight: 700;
-	font-family: Georgia, "Times New Roman", serif;
 	font-style: normal;
 	line-height: 1;
 	cursor: help;
@@ -1496,7 +1495,11 @@ body[class*="panel-kinsta"] .swpk-ayuda {
 	user-select: none;
 }
 
-body[class*="panel-kinsta"] .swpk-ayuda::before { content: "i"; }
+/* Una «?» y no una «i». «Los palitos que no son is»: una i minúscula dentro
+   de un círculo de 16px es un palito con un punto encima, y a ese tamaño el
+   punto se pierde. La interrogación no se confunde con nada, y además dice
+   mejor lo que hace: abre una explicación. */
+body[class*="panel-kinsta"] .swpk-ayuda::before { content: "?"; }
 
 /* Un campo con su burbuja AL LADO, no debajo.
    Un `width:100%` dentro de una celda empuja la burbuja al renglón de abajo,
@@ -2096,12 +2099,14 @@ body[class*="panel-kinsta"] .swpk-tabla select[name^="asesora["] {
 }
 
 /* ── El grupo del sitio: una bolita y una palabra ─────────────────────────
-   Sustituye a .swpk-etq-* en la columna Grupo. La píldora con «No auto
+   Sustituye a .swpk-etq-* en la columna Grupo. Se llama swpk-tag y no
+   swpk-grupo porque esa clase ya existe arriba: es una tarjeta con borde y
+   sombra, y heredarla metía una caja blanca de 18px alrededor del punto. La píldora con «No auto
    update» dentro ocupaba dos renglones en una columna estrecha, 109 veces.
    Aquí el color lo lleva un punto de 8px y la palabra va en texto normal:
    pesa menos, se lee igual, y deja de competir con las insignias de estado
    que sí tienen que llamar la atención. */
-body[class*="panel-kinsta"] .swpk-grupo {
+body[class*="panel-kinsta"] .swpk-tag {
 	display: inline-flex;
 	align-items: center;
 	gap: 7px;
@@ -2112,7 +2117,7 @@ body[class*="panel-kinsta"] .swpk-grupo {
 	cursor: help;
 }
 
-body[class*="panel-kinsta"] .swpk-grupo .swpk-punto {
+body[class*="panel-kinsta"] .swpk-tag .swpk-tag-punto {
 	flex: 0 0 auto;
 	width: 9px;
 	height: 9px;
@@ -2124,10 +2129,10 @@ body[class*="panel-kinsta"] .swpk-grupo .swpk-punto {
 	color: #aab2bf;
 }
 
-body[class*="panel-kinsta"] .swpk-grupo-auto_update .swpk-punto     { color: #1c6dc7; }
-body[class*="panel-kinsta"] .swpk-grupo-desarrollo .swpk-punto      { color: #6b7280; }
-body[class*="panel-kinsta"] .swpk-grupo-no_update .swpk-punto       { color: #fff; box-shadow: inset 0 0 0 2px #3a4250; }
-body[class*="panel-kinsta"] .swpk-grupo-sin_etiqueta .swpk-punto    { color: #d6dbe0; }
+body[class*="panel-kinsta"] .swpk-tag-auto_update .swpk-tag-punto     { color: #1c6dc7; }
+body[class*="panel-kinsta"] .swpk-tag-desarrollo .swpk-tag-punto      { color: #6b7280; }
+body[class*="panel-kinsta"] .swpk-tag-no_update .swpk-tag-punto       { color: #fff; box-shadow: inset 0 0 0 2px #3a4250; }
+body[class*="panel-kinsta"] .swpk-tag-sin_etiqueta .swpk-tag-punto    { color: #d6dbe0; }
 
 /* ── Las asesoras, en una línea ───────────────────────────────────────────
    Se metieron como una casilla por persona, una debajo de otra: con cuatro

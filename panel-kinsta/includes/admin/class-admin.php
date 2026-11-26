@@ -510,7 +510,7 @@ class SWPK_Admin {
 		];
 
 		return sprintf(
-			'<span class="swpk-grupo swpk-grupo-%s" title="%s"><i class="swpk-punto"></i>%s</span>',
+			'<span class="swpk-tag swpk-tag-%s" title="%s"><i class="swpk-tag-punto"></i>%s</span>',
 			esc_attr( $tag ),
 			esc_attr( $motivos[ $tag ] ?? '' ),
 			esc_html( $cortos[ $tag ] ?? $tag )

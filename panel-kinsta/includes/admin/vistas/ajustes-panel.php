@@ -428,7 +428,7 @@ $a = SWPK_Ajustes::todos();
 				<td>Llaves</td>
 				<td>
 					<?php if ( SWPK_Ajustes::llaves_en_claro() ) : ?>
-						<span style="color:#8a6a00">Hay alguna sin cifrar</span>
+						<span style="color:#6b7280">Hay alguna sin cifrar</span>
 					<?php else : ?>
 						<span style="color:#0b5ed7">✓ Cifradas en la base de datos</span>
 						<br><span style="color:#50575e;font-size:12px">
