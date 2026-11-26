@@ -26,14 +26,31 @@
    ────────────────────────────────────────────────────────────────────────── */
 
 :root {
-	--swpk-marca: #1f7ae0;
+	/* Era #1f7ae0 y con texto blanco daba 4,27:1 — por debajo del mínimo de
+	   4,5:1, y es el fondo de TODOS los botones principales del panel. Un 3 %
+	   más oscuro llega a 4,52:1 y a ojo es el mismo azul: el cambio no se ve,
+	   la diferencia sí se lee. Arregla de una vez el botón principal, el
+	   filtro activo y los dos estados de hover que colgaban de esta variable. */
+	--swpk-marca: #1e76d9;
 	--swpk-marca-suave: #e7f1fd;
 	--swpk-fondo: #f5f7fa;
 	--swpk-tarjeta: #fff;
 	--swpk-borde: #e6e7ee;
 	--swpk-texto: #1b1b2f;
-	--swpk-apagado: #6b6f80;
-	--swpk-tenue: #9598a8;
+	/* Un 2 % más oscuro que el #6b6f80 de antes: el contador de las pestañas
+	   va sobre #f0f0f6 y se quedaba en 4,39:1. Ahora 4,53:1 ahí y 5,14:1
+	   sobre blanco. */
+	--swpk-apagado: #696d7d;
+	/* Era #9598a8 y daba 2,77:1 sobre el fondo de los encabezados de tabla:
+	   muy por debajo del mínimo de 4,5:1 para letra pequeña, y encima se usa
+	   en MAYÚSCULAS con espaciado, que es lo que peor se lee. Son los títulos
+	   de columna de todas las tablas del panel — «Sitio», «Grupo», «Ahora»—,
+	   o sea lo que uno lee para entender qué está mirando.
+
+	   #5c6670 es el mismo gris al que ya se pasaron `.swpk-gris` y
+	   `.swpk-mudo` el 25 de noviembre cuando salieron sus 3,24:1 y 4,20:1.
+	   A este le tocaba y se quedó fuera de aquella pasada. Ahora da 5,6:1. */
+	--swpk-tenue: #5c6670;
 
 	--swpk-critico: #d63638;
 	--swpk-alto: #e07c00;
@@ -403,8 +420,19 @@ body[class*="panel-kinsta"] .swpk-dia-hoy .swpk-dia-f { color: #14559e; }
    pestañas de cabecera —tres `:not()` pesan más que `a.swpk-pastilla-activa`—
    y dejando la pestaña activa con texto azul sobre fondo azul oscuro: 1,6 de
    contraste, o sea «un botón azul y no leo qué dice». Si mañana aparece otro
-   enlace con fondo propio, va a esta lista, no a una regla nueva más abajo. */
-body[class*="panel-kinsta"] .wrap a:not(.button):not(.nav-tab):not(.swpk-filtro-activo):not(.swpk-pastilla) {
+   enlace con fondo propio, va a esta lista, no a una regla nueva más abajo.
+
+   Y pasó una TERCERA vez, el 26 de noviembre de 2026, con el interruptor de
+   cada aviso: «dejaste las letras también en un color que no se lee». La
+   píldora de «Sale» traía su `color: #fff`, pero esta regla le ganaba —cuatro
+   `:not()` contra una clase— y le dejaba el texto azul sobre el fondo azul:
+   **1,0 de contraste**, el mismo color exacto. Era literalmente invisible.
+
+   Así que esto ya no es un aviso, es un procedimiento: **cualquier enlace con
+   fondo propio se escribe en este `:not()`, en el mismo momento en que se le
+   pone el fondo.** No hay forma de acordarse después; lo que hay es esta
+   lista. */
+body[class*="panel-kinsta"] .wrap a:not(.button):not(.nav-tab):not(.swpk-filtro-activo):not(.swpk-pastilla):not(.swpk-sale) {
 	color: var(--swpk-marca);
 }
 
@@ -717,7 +745,11 @@ body[class*="panel-kinsta"] .swpk-pastilla-activa:hover {
 }
 
 body[class*="panel-kinsta"] .swpk-pastilla-activa .swpk-pastilla-n {
-	background: rgba(255, 255, 255, .25);
+	/* Blanco al 25 % sobre el azul de la pestaña activa da un azul claro, y
+	   el número encima iba en blanco: 3,9:1. Oscureciendo el recuadro en vez
+	   de aclararlo, el mismo número blanco pasa a 7,4:1 y la pastilla sigue
+	   viéndose como un contador dentro de la pestaña. */
+	background: rgba(0, 0, 0, .22);
 	color: #fff;
 }
 
@@ -1480,6 +1512,19 @@ body[class*="panel-kinsta"] .swpk-sale-si {
 	background: #0d6efd;
 	color: #fff;
 }
+
+/* Las cuatro, como en `.swpk-pastilla-activa`: en el escritorio de WordPress
+   un enlace visitado y uno enfocado traen su propio color, y basta con que
+   uno de los cuatro estados se escape para que la píldora vuelva a quedarse
+   sin texto. Blanco sobre #0d6efd son 4,5:1 — el mínimo para letra pequeña, y
+   el mismo par que ya usa «al día» en todo el panel. */
+body[class*="panel-kinsta"] .wrap a.swpk-sale-si,
+body[class*="panel-kinsta"] .wrap a.swpk-sale-si:hover,
+body[class*="panel-kinsta"] .wrap a.swpk-sale-si:focus,
+body[class*="panel-kinsta"] .wrap a.swpk-sale-si:visited { color: #fff; }
+
+body[class*="panel-kinsta"] .wrap a.swpk-sale,
+body[class*="panel-kinsta"] .wrap a.swpk-sale:visited { color: #50575e; }
 
 body[class*="panel-kinsta"] .swpk-sale-si:hover { background: #0b5ed7; color: #fff; }
 
