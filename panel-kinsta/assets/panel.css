@@ -1446,6 +1446,33 @@ body[class*="panel-kinsta"] .swpk-ayuda::before { content: "i"; }
    donde queda suelta y no se entiende de qué habla. Aquí el campo se queda
    con el hueco que sobra —`min-width:0` es lo que le permite encogerse
    dentro de una caja flexible— y la burbuja mantiene sus 16 px. */
+/* El interruptor de cada aviso: una pastilla que se pulsa, no una casilla.
+   Azul es «sale» y gris es «apagado» — el rojo se queda para lo que está mal,
+   y un aviso apagado a propósito no está mal. */
+body[class*="panel-kinsta"] .swpk-sale {
+	display: inline-block;
+	padding: 3px 11px;
+	border: 1px solid #c3c4c7;
+	border-radius: 999px;
+	background: #f0f0f1;
+	color: #50575e;
+	font-size: 12px;
+	font-weight: 700;
+	line-height: 17px;
+	text-decoration: none;
+	white-space: nowrap;
+}
+
+body[class*="panel-kinsta"] .swpk-sale:hover { border-color: #8c8f94; }
+
+body[class*="panel-kinsta"] .swpk-sale-si {
+	border-color: #0d6efd;
+	background: #0d6efd;
+	color: #fff;
+}
+
+body[class*="panel-kinsta"] .swpk-sale-si:hover { background: #0b5ed7; color: #fff; }
+
 body[class*="panel-kinsta"] .swpk-campo-con-ayuda {
 	display: flex;
 	align-items: center;

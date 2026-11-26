@@ -126,6 +126,68 @@ class SWPK_Correos {
 	}
 
 	/**
+	 * Qué avisos están apagados, uno por uno.
+	 *
+	 * ─── Por qué hace falta, además del interruptor general ─────────────────
+	 *
+	 * El jefe lo pidió así el 19 de noviembre: «esto es un switch, deberían de
+	 * ser switch nada más» — uno por cada aviso, no uno para todos.
+	 *
+	 * Y el caso que lo obliga apareció hoy: el reporte mensual sale a los
+	 * CLIENTES, y todavía no hay autorización para escribirles. Hasta ahora
+	 * las únicas dos formas de pararlo eran apagar todos los correos —y
+	 * entonces tampoco nos enteramos de una caída— o quitar su tarea
+	 * programada, que no sirve: el panel la vuelve a poner sola en la
+	 * siguiente carga, justamente porque hoy se arregló que FALTABA.
+	 *
+	 * Así que el interruptor vive en una opción y lo mira cada aviso antes de
+	 * armarse. El reloj puede seguir corriendo; lo que no sale, no sale.
+	 *
+	 * Apagar un aviso NO lo esconde: sigue dejando su fila en la bitácora con
+	 * resultado `apagado`, para que dentro de tres meses se pueda demostrar
+	 * que ese día tocaba y no salió a propósito.
+	 *
+	 * @return array<int,string>
+	 */
+	public static function apagados(): array {
+		$v = get_option( 'swpk_avisos_apagados', [] );
+
+		return is_array( $v ) ? array_values( array_filter( array_map( 'strval', $v ) ) ) : [];
+	}
+
+	public static function encendido( string $aviso ): bool {
+		return ! in_array( $aviso, self::apagados(), true );
+	}
+
+	public static function encender( string $aviso, bool $encender ): void {
+		$apagados = self::apagados();
+
+		$apagados = $encender
+			? array_values( array_diff( $apagados, [ $aviso ] ) )
+			: array_values( array_unique( array_merge( $apagados, [ $aviso ] ) ) );
+
+		update_option( 'swpk_avisos_apagados', $apagados, false );
+	}
+
+	/**
+	 * Deja constancia de un aviso que tocaba y no salió porque está apagado.
+	 *
+	 * Se registra una sola vez por corrida, no una por sitio: el mensual
+	 * recorre 83 sitios y 83 filas iguales no son evidencia, son ruido.
+	 */
+	private static function anotar_apagado( string $tipo, string $que ): void {
+		SWPK_Bitacora::registrar(
+			$tipo,
+			[],
+			$que,
+			'',
+			'',
+			'apagado',
+			'Este aviso está apagado en Correos → Los avisos. Tocaba y no se envió, a propósito.'
+		);
+	}
+
+	/**
 	 * Arma y registra un correo. Lo envía de verdad solo si toca.
 	 *
 	 * Siempre queda en la bitácora, se mande o no: un correo que se generó y no
@@ -336,6 +398,11 @@ class SWPK_Correos {
 	 * Lo llama SWPK_Inventario al sincronizar. Ver AUSENCIAS_PARA_BAJA.
 	 */
 	public static function avisar_de_baja( string $sitio_id, string $nombre, int $veces ): string {
+		if ( ! self::encendido( 'de_baja' ) ) {
+			self::anotar_apagado( SWPK_Bitacora::CAIDA, sprintf( 'Sitio dado de baja (%s): aviso apagado', $nombre ) );
+			return 'apagado';
+		}
+
 		// Y la cuenta de insistencia de ese sitio se borra: no tiene sentido
 		// seguir contando «es la cuarta vez que avisamos» de un sitio que ya
 		// no existe.
@@ -375,6 +442,11 @@ class SWPK_Correos {
 	 * @return array<string,mixed>
 	 */
 	public static function semanal_asesoras(): array {
+		if ( ! self::encendido( 'semanal' ) ) {
+			self::anotar_apagado( SWPK_Bitacora::ASESORA, 'Semanal a las asesoras: apagado' );
+			return [ 'asesoras' => 0, 'sitios' => 0, 'resultados' => [], 'apagado' => true ];
+		}
+
 		$resumen = [ 'asesoras' => 0, 'sitios' => 0, 'resultados' => [] ];
 
 		foreach ( SWPK_Perfiles::del_equipo() as $persona ) {
@@ -445,6 +517,11 @@ class SWPK_Correos {
 	 * @return array<string,mixed>
 	 */
 	public static function resumen_semanal(): array {
+		if ( ! self::encendido( 'resumen' ) ) {
+			self::anotar_apagado( SWPK_Bitacora::RESUMEN, 'Resumen de los domingos: apagado' );
+			return [ 'apagado' => true ];
+		}
+
 		$hasta = current_time( 'Y-m-d' );
 		$desde = wp_date( 'Y-m-d', strtotime( '-6 days', (int) current_time( 'timestamp' ) ) );
 
@@ -490,6 +567,11 @@ class SWPK_Correos {
 
 	/** Resumen diario a soporte: qué cambió ayer. */
 	public static function diario_soporte(): array {
+		if ( ! self::encendido( 'diario' ) ) {
+			self::anotar_apagado( SWPK_Bitacora::SOPORTE, 'Resumen del día: apagado' );
+			return [ 'eventos' => 0, 'resultado' => 'apagado' ];
+		}
+
 		$desde   = SWPK_Frescura::limite( DAY_IN_SECONDS );
 		$eventos = array_filter(
 			SWPK_Eventos::recientes( 200 ),
@@ -526,6 +608,13 @@ class SWPK_Correos {
 
 	/** Resumen mensual a los clientes de los sitios que sí administramos. */
 	public static function mensual_clientes(): array {
+		// Este es el único que escribe a gente de fuera de la casa, así que es
+		// el que más importa poder parar. Ver apagados().
+		if ( ! self::encendido( 'mensual' ) ) {
+			self::anotar_apagado( SWPK_Bitacora::CLIENTE, 'Reporte mensual a los clientes: apagado' );
+			return [ 'enviados' => 0, 'sin_destinatario' => 0, 'sin_novedad' => 0, 'apagado' => true ];
+		}
+
 		// El mes pasado según el reloj de aquí, no según UTC: si no, el 1 a las
 		// 00:30 de Guatemala el panel creería que todavía es el mes anterior.
 		$ahora = SWPK_Frescura::ahora_ts();

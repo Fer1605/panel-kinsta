@@ -23,6 +23,31 @@ $accion = static fn( $a ) => wp_nonce_url( admin_url( 'admin-post.php?action=' .
 // plantilla. Y la abre ENCIMA, no en otra pestaña — «levantalo en un modal,
 // no me mandes a pantallitas de pantallitas» (17:11). Las ventanas las dibuja
 // correos-editor.php, al final de esta pantalla.
+// ── El interruptor de cada aviso ───────────────────────────────────────────
+//
+// «Esto es un switch, deberían de ser switch nada más» (19/11). Hasta hoy el
+// único interruptor era el general, y eso obliga a elegir entre que salga todo
+// o que no salga nada — cuando lo normal es querer parar UNO. El caso real:
+// el reporte mensual sale a clientes y todavía no hay autorización.
+$interruptor_de = static function ( string $aviso ): string {
+	$encendido = SWPK_Correos::encendido( $aviso );
+
+	return sprintf(
+		'<a class="swpk-sale%1$s" href="%2$s">%3$s</a>',
+		$encendido ? ' swpk-sale-si' : '',
+		esc_url(
+			wp_nonce_url(
+				add_query_arg(
+					[ 'action' => 'swpk_aviso', 'aviso' => $aviso, 'encender' => $encendido ? '0' : '1' ],
+					admin_url( 'admin-post.php' )
+				),
+				'swpk_aviso_' . $aviso
+			)
+		),
+		$encendido ? 'Sale' : 'Apagado'
+	);
+};
+
 $texto_de = static fn( string $plantilla ) => sprintf(
 	'<button type="button" class="button" data-swpk-editar="%s">Ver y editar el texto</button>',
 	esc_attr( $plantilla )
@@ -82,6 +107,28 @@ $texto_de = static fn( string $plantilla ) => sprintf(
 	</a>
 	</div>
 
+		<?php
+		$apagados_ahora = SWPK_Correos::apagados();
+		if ( $apagados_ahora ) :
+			$nombres_apagados = [];
+			foreach ( $apagados_ahora as $a ) {
+				$nombres_apagados[] = (string) ( SWPK_Plantillas::catalogo()[ $a ]['nombre'] ?? $a );
+			}
+			?>
+		<div class="notice notice-warning">
+			<p>
+				<strong><?php echo esc_html( SWPK_Vista::plural( count( $nombres_apagados ), 'aviso apagado', 'avisos apagados' ) ); ?>:</strong>
+				<?php echo esc_html( implode( ', ', $nombres_apagados ) ); ?>.
+				Cuando les toque no salen, y queda anotado en el historial que tocaba.
+				<?php echo wp_kses_post( SWPK_Vista::ayuda(
+					'Apagar un aviso no lo esconde: su fila sigue apareciendo en el historial de envíos '
+					. 'con resultado «apagado», para poder demostrar dentro de tres meses que ese día '
+					. 'tocaba y no salió a propósito. El reloj sigue corriendo; lo que no sale, no sale.'
+				) ); ?>
+			</p>
+		</div>
+		<?php endif; ?>
+
 		<?php if ( ! $activos ) : ?>
 		<div class="notice notice-error">
 			<p><strong>Los envíos están apagados.</strong> No sale ningún correo, ni de prueba ni real.</p>
@@ -111,6 +158,7 @@ $texto_de = static fn( string $plantilla ) => sprintf(
 		<thead>
 			<tr>
 				<th style="width:190px">El aviso</th>
+				<th style="width:90px">¿Sale?</th>
 				<th style="width:150px">Cuándo</th>
 				<th>Qué dice</th>
 				<th style="width:300px"></th>
@@ -119,6 +167,7 @@ $texto_de = static fn( string $plantilla ) => sprintf(
 		<tbody>
 			<tr>
 				<td><strong>Semanal a las asesoras</strong></td>
+				<td><?php echo wp_kses_post( $interruptor_de( 'semanal' ) ); ?></td>
 				<td>
 					Cada lunes, 7:00<br>
 					<span class="swpk-gris" style="font-size:12px">próximo: <?php echo $proximos['Semanal a las asesoras'] ? esc_html( SWPK_Frescura::fmt( 'j M, H:i', $proximos['Semanal a las asesoras'] ) ) : '<span style="color:#9e0b10">sin programar</span>'; ?></span>
@@ -134,6 +183,7 @@ $texto_de = static fn( string $plantilla ) => sprintf(
 			</tr>
 			<tr>
 				<td><strong>Diario a soporte</strong></td>
+				<td><?php echo wp_kses_post( $interruptor_de( 'diario' ) ); ?></td>
 				<td>
 					Cada día, 7:30<br>
 					<span class="swpk-gris" style="font-size:12px">próximo: <?php echo $proximos['Diario a soporte'] ? esc_html( SWPK_Frescura::fmt( 'j M, H:i', $proximos['Diario a soporte'] ) ) : '<span style="color:#9e0b10">sin programar</span>'; ?></span>
@@ -146,6 +196,7 @@ $texto_de = static fn( string $plantilla ) => sprintf(
 			</tr>
 			<tr>
 				<td><strong>Mensual a los clientes</strong></td>
+				<td><?php echo wp_kses_post( $interruptor_de( 'mensual' ) ); ?></td>
 				<td>
 					El día 1, 8:00<br>
 					<span class="swpk-gris" style="font-size:12px">próximo: <?php echo $proximos['Mensual a los clientes'] ? esc_html( SWPK_Frescura::fmt( 'j M, H:i', $proximos['Mensual a los clientes'] ) ) : '<span style="color:#9e0b10">sin programar</span>'; ?></span>
@@ -161,6 +212,7 @@ $texto_de = static fn( string $plantilla ) => sprintf(
 			</tr>
 			<tr>
 				<td><strong>Resumen de los domingos</strong></td>
+				<td><?php echo wp_kses_post( $interruptor_de( 'resumen' ) ); ?></td>
 				<td>
 					Cada domingo, 18:00<br>
 					<span class="swpk-gris" style="font-size:12px">próximo: <?php echo $proximos['Resumen de los domingos'] ? esc_html( SWPK_Frescura::fmt( 'j M, H:i', $proximos['Resumen de los domingos'] ) ) : '<span style="color:#9e0b10">sin programar</span>'; ?></span>
@@ -229,6 +281,7 @@ $texto_de = static fn( string $plantilla ) => sprintf(
 		<thead>
 			<tr>
 				<th style="width:190px">El aviso</th>
+				<th style="width:90px">¿Sale?</th>
 				<th style="width:150px">Cuándo</th>
 				<th>Qué dice</th>
 				<th style="width:300px"></th>
@@ -238,6 +291,7 @@ $texto_de = static fn( string $plantilla ) => sprintf(
 		<?php foreach ( $del_momento as $m ) : ?>
 			<tr>
 				<td><strong><?php echo esc_html( $m['nombre'] ); ?></strong></td>
+				<td><?php echo wp_kses_post( $interruptor_de( (string) $m['plantilla'] ) ); ?></td>
 				<td><?php echo esc_html( $m['cuando'] ); ?></td>
 				<td><?php echo wp_kses_post( $m['que'] ); ?></td>
 				<td class="swpk-acciones-fila">

@@ -29,6 +29,7 @@ class SWPK_Admin {
 		add_action( 'admin_post_swpk_crear_acceso', [ __CLASS__, 'accion_crear_acceso' ] );
 		add_action( 'admin_post_swpk_modo_envio', [ __CLASS__, 'accion_modo_envio' ] );
 		add_action( 'admin_post_swpk_envios', [ __CLASS__, 'accion_envios' ] );
+		add_action( 'admin_post_swpk_aviso', [ __CLASS__, 'accion_aviso' ] );
 		add_action( 'admin_post_swpk_guardar_plantilla', [ __CLASS__, 'accion_guardar_plantilla' ] );
 		add_action( 'admin_post_swpk_plantilla_fabrica', [ __CLASS__, 'accion_plantilla_fabrica' ] );
 		add_action( 'admin_post_swpk_vista_previa', [ __CLASS__, 'accion_vista_previa' ] );
@@ -1077,6 +1078,37 @@ class SWPK_Admin {
 		update_option( 'swpk_envios_activos', $nuevo, false );
 
 		self::volver_a_correos( $nuevo ? 'Envíos encendidos.' : 'Envíos apagados: no sale nada.' );
+	}
+
+	/**
+	 * Encender o apagar UN aviso.
+	 *
+	 * «Esto es un switch, deberían de ser switch nada más» (19/11). Y el caso
+	 * que lo hizo urgente: el reporte mensual sale a clientes y todavía no hay
+	 * autorización para escribirles. Ver SWPK_Correos::apagados().
+	 */
+	public static function accion_aviso(): void {
+		if ( ! self::puede_administrar() ) {
+			wp_die( 'Sin permiso.' );
+		}
+
+		$aviso = isset( $_GET['aviso'] ) ? sanitize_key( (string) $_GET['aviso'] ) : '';
+		check_admin_referer( 'swpk_aviso_' . $aviso );
+
+		if ( ! isset( SWPK_Plantillas::catalogo()[ $aviso ] ) ) {
+			self::volver_a_correos( 'Ese aviso no existe.', true );
+		}
+
+		$encender = ! empty( $_GET['encender'] );
+		SWPK_Correos::encender( $aviso, $encender );
+
+		$nombre = (string) SWPK_Plantillas::catalogo()[ $aviso ]['nombre'];
+
+		self::volver_a_correos(
+			$encender
+				? sprintf( '«%s» encendido. Vuelve a salir cuando le toque.', $nombre )
+				: sprintf( '«%s» apagado. Cuando le toque no sale, y queda anotado en el historial que tocaba.', $nombre )
+		);
 	}
 
 	public static function accion_correo_semanal(): void {

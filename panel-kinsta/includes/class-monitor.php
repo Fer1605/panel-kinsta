@@ -737,6 +737,20 @@ class SWPK_Monitor {
 		// bitácora como `sin_destinatario`. Callarse es lo único que no vale.
 		$soporte = self::destinatarios_caida();
 
+		if ( ! SWPK_Correos::encendido( 'caida' ) ) {
+			SWPK_Bitacora::registrar(
+				SWPK_Bitacora::CAIDA,
+				$soporte,
+				sprintf( '[Caído] %s — aviso apagado', $nombre ),
+				'',
+				$sitio_id,
+				'apagado',
+				'El aviso de caída está apagado en Correos → Los avisos. La caída sí quedó anotada.'
+			);
+
+			return;
+		}
+
 		// El texto sale de la plantilla editable, no de aquí.
 		//
 		// Estaba escrito a mano en este archivo, y eso lo dejaba fuera de la
@@ -777,6 +791,10 @@ class SWPK_Monitor {
 		// calla. Un "volvió a responder" que nadie recibió también hay que
 		// poder verlo.
 		$soporte = self::destinatarios_caida();
+
+		if ( ! SWPK_Correos::encendido( 'repuesto' ) ) {
+			return;
+		}
 
 		$marcas = [
 			'{{sitio}}'  => esc_html( $nombre ),
@@ -819,6 +837,10 @@ class SWPK_Monitor {
 	 */
 	private static function recordar_caidas(): void {
 		global $wpdb;
+
+		if ( ! SWPK_Correos::encendido( 'sigue_caido' ) ) {
+			return;
+		}
 
 		$tabla = SWPK_Tablas::tabla( 'monitor' );
 		$hoy   = SWPK_Frescura::fmt( 'Y-m-d', current_time( 'mysql' ) );
@@ -904,6 +926,10 @@ class SWPK_Monitor {
 	 * «hace cinco días que no lo miro».
 	 */
 	private static function avisar_agentes_callados(): void {
+		if ( ! SWPK_Correos::encendido( 'agente_callado' ) ) {
+			return;
+		}
+
 		$hoy = SWPK_Frescura::fmt( 'Y-m-d', current_time( 'mysql' ) );
 
 		$avisados = get_option( self::OPCION_CALLADOS, [] );
