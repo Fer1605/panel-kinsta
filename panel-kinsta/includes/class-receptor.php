@@ -188,6 +188,24 @@ class SWPK_Receptor {
 			$campos['xmlrpc_abierto'] = $datos['xmlrpc_abierto'] ? 1 : 0;
 		}
 
+		// ── El resumen del registro de actividad ────────────────────────────
+		//
+		// Son las cuentas del día, no las filas: dos o tres kilobytes. Se
+		// guarda en una opción por sitio y no en una tabla porque es UNA fila
+		// que se reescribe cada día, que es justo para lo que sirve una
+		// opción. El detalle no está aquí: vive en el sitio y se pide con el
+		// verbo `traer_bitacora` cuando alguien lo necesita.
+		if ( isset( $datos['bitacora'] ) && is_array( $datos['bitacora'] ) ) {
+			update_option(
+				'swpk_bitacora_' . md5( (string) $agente->sitio_url ),
+				[
+					'recibido' => current_time( 'mysql' ),
+					'resumen'  => $datos['bitacora'],
+				],
+				false
+			);
+		}
+
 		$wpdb->update( $tabla, $campos, [ 'id' => (int) $agente->id ] );
 
 		$cambios = isset( $datos['usuarios'] ) && is_array( $datos['usuarios'] )

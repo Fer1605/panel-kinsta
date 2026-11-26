@@ -337,7 +337,17 @@ $url_pestana = static fn( string $s ) => add_query_arg(
 							→ <span class="swpk-mono" style="color:#0b5ed7"><?php echo esc_html( $h['version_disponible'] ); ?></span>
 						<?php endif; ?>
 					</td>
-					<td><?php echo wp_kses_post( SWPK_Admin::nivel_badge( $h['nivel'] ) ); ?></td>
+					<td>
+						<?php echo wp_kses_post( SWPK_Admin::nivel_badge( $h['nivel'] ) ); ?>
+						<?php
+						// Qué se puede hacer con ella: hay parche, no lo hay
+						// todavía, o el plugin está cerrado y no lo habrá.
+						$pildora = SWPK_Admin::parche_badge( $v, (string) $h['slug'] );
+						if ( '' !== $pildora ) :
+							?>
+							<div style="margin-top:6px"><?php echo wp_kses_post( $pildora ); ?></div>
+						<?php endif; ?>
+					</td>
 					<td>
 						<?php if ( $v ) : ?>
 							<?php $quien = SWPK_Textos::quien_puede( (string) ( $v->cvss_vector ?? '' ), (string) $v->descripcion ); ?>
@@ -851,6 +861,41 @@ $url_pestana = static fn( string $s ) => add_query_arg(
 					? '<span style="color:var(--swpk-bien);font-weight:600">activa</span>'
 					: '<span style="color:var(--swpk-critico);font-weight:600">apagada</span>' )
 				: '<span class="swpk-gris">no se mide: el sitio es del cliente</span>',
+			// ── El registro de actividad, con lo que de verdad se sabe ──────
+			'Registro de actividad' => ( static function () use ( $sitio ) {
+				$g = get_option( 'swpk_bitacora_' . md5( (string) $sitio->dominio ), [] );
+				$g = is_array( $g ) ? $g : [];
+				$r = (array) ( $g['resumen'] ?? [] );
+
+				if ( empty( $r['hay_tabla'] ) ) {
+					return '<span class="swpk-gris">no lo lleva</span>'
+						. wp_kses_post( SWPK_Vista::ayuda(
+							'Hace falta una versión del agente que lleve el registro. Sin él, lo único que '
+							. 'queda es el registro del hosting, que no ve lo que pasa dentro de WordPress.'
+						) );
+				}
+
+				$hoy = (int) ( $r['filas'] ?? 0 );
+
+				// Se dice «lo lleva el agente» y no «el sitio lo guarda»,
+				// porque son cosas distintas: si alguien desactiva el agente,
+				// el registro deja de anotar. El día que haga falta el
+				// registro, esa diferencia es justo la que importa.
+				return sprintf(
+					'<span style="color:var(--swpk-bien);font-weight:600">lo lleva el agente</span> '
+					. '<span class="swpk-gris">· %d anotacion%s en 24 h · %d guardadas · %d días de historial</span>',
+					$hoy,
+					1 === $hoy ? '' : 'es',
+					(int) ( $r['total'] ?? 0 ),
+					(int) ( $r['dias_que_guarda'] ?? 0 )
+				)
+				. wp_kses_post( SWPK_Vista::ayuda(
+					'El detalle se queda DENTRO del sitio; al panel solo sube este resumen cada día. '
+					. 'Para ver quién entró y qué tocó, se le pide el detalle al sitio y llega en los '
+					. 'siguientes cinco minutos. Lo que no se guarda: contraseñas, la IP entera —se le '
+					. 'quita el último trozo— ni lo que hacen los visitantes del sitio.'
+				) );
+			} )(),
 			'Agente instalado'     => (int) $sitio->cobertura_agente
 				? '<span style="color:var(--swpk-bien);font-weight:600">sí</span>'
 				: '<span class="swpk-gris">no</span>'

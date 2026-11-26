@@ -3009,9 +3009,41 @@ class SWPK_Normas {
 
 		$hay = (array) ( $g['plugins'] ?? [] );
 
-		return $hay
-			? [ 'estado' => self::CUMPLE, 'detalle' => sprintf( 'Guarda el rastro con %s.', implode( ', ', $hay ) ) ]
-			: [ 'estado' => self::FALLA, 'detalle' => 'No hay nada instalado que guarde quién entró y qué tocó. El registro de la plataforma no ve lo que pasa dentro de WordPress.' ];
+		if ( $hay ) {
+			return [ 'estado' => self::CUMPLE, 'detalle' => sprintf( 'Guarda el rastro con %s.', implode( ', ', $hay ) ) ];
+		}
+
+		// ── El agente también cuenta, y de hecho es el camino bueno ─────────
+		//
+		// Antes esta norma solo se podía cumplir instalando un plugin de
+		// registro, y por eso la incumplían todos: nadie iba a meter un plugin
+		// más en 108 sitios. Ahora lo lleva el agente, que ya está dentro.
+		//
+		// Se mira que la tabla exista Y que haya escrito algo en los últimos
+		// siete días. Una tabla creada y vacía no es un registro: es una tabla.
+		$b = (array) ( $r['bitacora'] ?? [] );
+
+		if ( ! empty( $b['hay_tabla'] ) ) {
+			$dias = (int) ( $b['dias_que_guarda'] ?? 0 );
+
+			// Ojo con la promesa: esto lo lleva el AGENTE. Si alguien lo
+			// desactiva, el registro deja de escribir. Decir «el sitio lo
+			// guarda» sería prometer de más, y el día que importe la
+			// diferencia es justo el día en que haga falta el registro.
+			return [
+				'estado'  => self::CUMPLE,
+				'detalle' => sprintf(
+					'Lo lleva el agente, dentro del sitio: %d anotaciones guardadas, %d días de historial. Si se desactiva el agente, deja de anotar.',
+					(int) ( $b['total'] ?? 0 ),
+					$dias
+				),
+			];
+		}
+
+		return [
+			'estado'  => self::FALLA,
+			'detalle' => 'No hay nada que guarde quién entró y qué tocó. El registro de la plataforma no ve lo que pasa dentro de WordPress. Se arregla con una versión del agente que lo lleve.',
+		];
 	}
 
 	// ─────────────────────────────────────────────────────────────────────────

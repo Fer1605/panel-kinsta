@@ -127,11 +127,41 @@ asort( $sitios_opciones, SORT_NATURAL | SORT_FLAG_CASE );
 
 $sitio_filtro = SWPK_Vista::opcion_pedida( 'sitio_f', $sitios_opciones );
 
+// ── Filtrar por qué se puede hacer con ella ─────────────────────────────────
+//
+// Es la pregunta con la que se abre esta pantalla un lunes: «¿qué puedo
+// arreglar hoy?». Las que tienen parche se resuelven actualizando; las que no,
+// no hay nada que hacer todavía; las de un plugin cerrado hay que
+// reemplazarlas. Mezcladas en una sola lista de 2.755 no se distinguen.
+$parche_filtro = SWPK_Vista::opcion_pedida(
+	'parche',
+	[ 'hay' => 'Hay parche', 'sin' => 'Sin parche todavía', 'cerrado' => 'Cerrado por WordPress' ]
+);
+
 $filas = array_values( array_filter(
 	$del_grupo,
-	static function ( $f ) use ( $nivel, $modulo, $busqueda, $sitio_filtro ) {
+	static function ( $f ) use ( $nivel, $modulo, $busqueda, $sitio_filtro, $parche_filtro ) {
 		if ( '' !== $sitio_filtro && $f['sitio_id'] !== $sitio_filtro ) {
 			return false;
+		}
+		if ( '' !== $parche_filtro ) {
+			$v_f = $f['vulnerabilidades'][0] ?? null;
+
+			if ( ! $v_f ) {
+				return false;
+			}
+
+			if ( (int) ( $v_f->parcheada ?? 0 ) ) {
+				$caso = 'hay';
+			} elseif ( SWPK_Repositorio::CERRADO === SWPK_Repositorio::estado( (string) $f['slug'] ) ) {
+				$caso = 'cerrado';
+			} else {
+				$caso = 'sin';
+			}
+
+			if ( $caso !== $parche_filtro ) {
+				return false;
+			}
 		}
 		if ( '' !== $nivel && $f['nivel'] !== $nivel ) {
 			return false;
@@ -282,6 +312,16 @@ $nombres = SWPK_Riesgo::nombres();
 				'actual'   => $modulo,
 				'todas'    => 'Todos los módulos',
 			],
+			'parche' => [
+				'etiqueta' => 'Qué se puede hacer',
+				'opciones' => [
+					'hay'     => 'Hay parche: actualizar',
+					'sin'     => 'Sin parche todavía',
+					'cerrado' => 'Cerrado por WordPress',
+				],
+				'actual'   => $parche_filtro,
+				'todas'    => 'Qué se puede hacer',
+			],
 		],
 		[],
 		$busqueda,
@@ -379,6 +419,11 @@ $nombres = SWPK_Riesgo::nombres();
 						<?php echo wp_kses_post( SWPK_Admin::nivel_badge( (string) $f['nivel'] ) ); ?>
 						<?php if ( 'actualizacion_pendiente' === $f['motivo'] ) : ?>
 							<br><span class="swpk-gris">solo actualización</span>
+						<?php else : ?>
+							<?php $pild = SWPK_Admin::parche_badge( $f['vulnerabilidades'][0] ?? null, (string) $f['slug'] ); ?>
+							<?php if ( '' !== $pild ) : ?>
+								<div style="margin-top:6px"><?php echo wp_kses_post( $pild ); ?></div>
+							<?php endif; ?>
 						<?php endif; ?>
 					</td>
 					<td class="swpk-gris">

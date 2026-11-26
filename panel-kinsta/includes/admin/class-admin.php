@@ -91,6 +91,10 @@ class SWPK_Admin {
 
 		add_submenu_page( self::SLUG, 'Resumen', 'Resumen', $ver, self::SLUG, [ __CLASS__, 'pantalla_resumen' ] );
 		add_submenu_page( self::SLUG, 'Sitios', 'Sitios', $ver, self::SLUG . '-sitios', [ __CLASS__, 'pantalla_sitios' ] );
+		// «Lo que toca» va justo después de Sitios, antes de Vulnerabilidades:
+		// es la pantalla con la que se empieza el día. Las demás contestan
+		// «cómo está la cartera»; esta contesta «qué hago ahora».
+		add_submenu_page( self::SLUG, 'Lo que toca', 'Lo que toca', $ver, self::SLUG . '-toca', [ __CLASS__, 'pantalla_toca' ] );
 		add_submenu_page( self::SLUG, 'Vulnerabilidades', 'Vulnerabilidades', $ver, self::SLUG . '-vulnerabilidades', [ __CLASS__, 'pantalla_vulnerabilidades' ] );
 		add_submenu_page( self::SLUG, 'Seguridad', 'Seguridad', $ver, self::SLUG . '-seguridad', [ __CLASS__, 'pantalla_seguridad' ] );
 		add_submenu_page( self::SLUG, 'Caídas', 'Caídas', $tecnico, self::SLUG . '-caidas', [ __CLASS__, 'pantalla_caidas' ] );
@@ -471,6 +475,47 @@ class SWPK_Admin {
 		);
 	}
 
+	/**
+	 * Qué se puede hacer con una vulnerabilidad: la píldora de tres casos.
+	 *
+	 * ─── Por qué por relleno y no por color ─────────────────────────────────
+	 *
+	 * Los tres casos son igual de graves. No son tres niveles, son tres
+	 * situaciones distintas, y cada una tiene una acción distinta:
+	 *
+	 *   - Hay parche            → actualizar. Se arregla hoy.
+	 *   - Sin parche todavía    → esperar, o desactivar mientras tanto.
+	 *   - Cerrado por WordPress → no va a haber arreglo. Hay que reemplazarlo.
+	 *
+	 * Pintarlos de tres tonos sería volver al problema de siempre: tres
+	 * colores juntos que se leen como uno. Se distinguen por RELLENO —lleno,
+	 * hueco, oscuro—, y eso se ve igual con cualquier daltonismo y en blanco y
+	 * negro. Es lo que ya funciona en las etiquetas de estado.
+	 *
+	 * @param object|null $v La fila de la vulnerabilidad, si la hay.
+	 */
+	public static function parche_badge( ?object $v, string $slug = '' ): string {
+		if ( ! $v ) {
+			return '';
+		}
+
+		if ( (int) ( $v->parcheada ?? 0 ) ) {
+			return '<span class="swpk-parche swpk-parche-hay" title="'
+				. esc_attr( 'El autor ya sacó la versión arreglada. Se resuelve actualizando el módulo.' )
+				. '">Hay parche</span>';
+		}
+
+		if ( '' !== $slug && SWPK_Repositorio::CERRADO === SWPK_Repositorio::estado( $slug ) ) {
+			return '<span class="swpk-parche swpk-parche-cerrado" title="'
+				. esc_attr( 'WordPress sacó este plugin del repositorio. No va a haber arreglo: hay que reemplazarlo por otro.' )
+				. '">Cerrado por WordPress</span>';
+		}
+
+		return '<span class="swpk-parche swpk-parche-sin" title="'
+			. esc_attr( 'El autor todavía no ha sacado el arreglo. Hay que esperarlo, o desactivar el módulo mientras tanto.' )
+			. '">Sin parche todavía</span>';
+	}
+
 	public static function grupo_badge( string $tag ): string {
 		if ( '' === $tag ) {
 			return '';
@@ -531,6 +576,13 @@ class SWPK_Admin {
 			wp_die( 'Sin permiso.' );
 		}
 		require SWPK_RUTA . 'includes/admin/vistas/sitios.php';
+	}
+
+	public static function pantalla_toca(): void {
+		if ( ! self::puede_ver() ) {
+			wp_die( 'Sin permiso.' );
+		}
+		require SWPK_RUTA . 'includes/admin/vistas/toca.php';
 	}
 
 	public static function pantalla_vulnerabilidades(): void {

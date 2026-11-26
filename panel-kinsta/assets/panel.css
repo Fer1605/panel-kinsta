@@ -2157,3 +2157,40 @@ body[class*="panel-kinsta"] .swpk-asesoras label {
 body[class*="panel-kinsta"] .swpk-asesoras input[type="checkbox"] {
 	margin: 0;
 }
+
+/* ── Los tres casos de una vulnerabilidad, por relleno ────────────────────
+   No son tres niveles, son tres situaciones con tres acciones distintas, y
+   las tres igual de graves. Por eso NO van en tres tonos: tres colores
+   juntos vuelven al problema de siempre. Van en el mismo rojo, y lo que las
+   separa es el relleno —lleno, hueco, oscuro—, que se distingue con
+   cualquier daltonismo y también en blanco y negro. */
+body[class*="panel-kinsta"] .swpk-parche {
+	display: inline-block;
+	white-space: nowrap;
+	font: 800 11.5px/1 -apple-system, "Segoe UI", Roboto, sans-serif;
+	padding: 5px 11px;
+	border-radius: 999px;
+	letter-spacing: .01em;
+}
+
+/* Hay parche: se arregla hoy, actualizando. */
+body[class*="panel-kinsta"] .swpk-parche-hay {
+	background: #9e0b10;
+	color: #fff;
+	border: 2px solid #9e0b10;
+}
+
+/* Sin parche todavía: hay que esperar o desactivar. Hueco porque falta algo. */
+body[class*="panel-kinsta"] .swpk-parche-sin {
+	background: #fff;
+	color: #9e0b10;
+	border: 2px solid #9e0b10;
+}
+
+/* Cerrado por WordPress: no va a haber arreglo. Sale del rojo a propósito —
+   no es una urgencia que se resuelva actualizando, es un reemplazo. */
+body[class*="panel-kinsta"] .swpk-parche-cerrado {
+	background: #2b313a;
+	color: #fff;
+	border: 2px solid #2b313a;
+}

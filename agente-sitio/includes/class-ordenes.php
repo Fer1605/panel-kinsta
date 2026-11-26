@@ -214,14 +214,53 @@ class SWA_Ordenes {
 
 			if ( is_wp_error( $r ) ) {
 				self::anotar_resultado( $id, false, $r->get_error_message() );
+				SWA_Bitacora::anotar_orden( $tipo, false, $r->get_error_message() );
 				continue;
 			}
 
 			self::anotar_resultado( $id, true, (string) $r );
+			// Lo que hace el agente queda escrito igual que lo que hace una
+			// persona: un registro donde no aparecen las acciones automáticas
+			// miente por omisión.
+			SWA_Bitacora::anotar_orden( $tipo, true, (string) $r );
 			++$hechas;
 		}
 
 		return $hechas;
+	}
+
+	/**
+	 * El séptimo verbo: traer el detalle del registro de actividad.
+	 *
+	 * ─── Por qué un verbo y no una ruta nueva ───────────────────────────────
+	 *
+	 * El principio del agente es que el sitio del cliente NO abre ninguna
+	 * puerta: es él quien llama al panel, nunca al revés. Una ruta nueva
+	 * esperando peticiones de internet para entregar un registro de accesos
+	 * sería justo lo contrario, y además la cosa más apetecible de todo el
+	 * sitio para quien ande buscando.
+	 *
+	 * Así que va por donde van las demás órdenes: el panel la deja apuntada,
+	 * el sitio la recoge en su siguiente pregunta —como mucho cinco minutos
+	 * después— y la respuesta vuelve firmada por el mismo camino.
+	 *
+	 * Lo que devuelve NO se queda en el panel para siempre: se enseña, y se
+	 * borra a los siete días. El original vive en el sitio doce meses.
+	 */
+	private static function hacer_traer_bitacora( array $carga ): string|WP_Error {
+		if ( ! SWA_Bitacora::hay_tabla() ) {
+			return new WP_Error( 'swa_sin_bitacora', 'Este sitio todavía no tiene el registro de actividad.' );
+		}
+
+		$filas = SWA_Bitacora::detalle(
+			(string) ( $carga['desde'] ?? '' ),
+			(string) ( $carga['hasta'] ?? '' ),
+			(int) ( $carga['tope'] ?? 500 )
+		);
+
+		// Viaja en el resultado de la orden, que es el camino que ya existe
+		// para contarle al panel cómo fue. No hace falta inventar otro.
+		return wp_json_encode( [ 'filas' => $filas, 'cuantas' => count( $filas ) ] );
 	}
 
 	private static function hacer_activar_dos_pasos( array $carga ): string|WP_Error {

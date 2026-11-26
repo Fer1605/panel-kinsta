@@ -138,6 +138,14 @@ class SWA_Reporte {
 				'probado'      => (string) ( $correo['probado'] ?? '' ),
 			],
 			'xmlrpc_abierto' => (bool) apply_filters( 'xmlrpc_enabled', true ),
+			// ── El registro de actividad, EN RESUMEN ────────────────────────
+			//
+			// Dos o tres kilobytes: las cuentas del día, no las filas. El
+			// detalle se queda en el sitio y solo sube si alguien lo pide, con
+			// el verbo `traer_bitacora`. Mandarlo entero cada día sería subirle
+			// al panel el historial de 108 sitios para enseñar uno de vez en
+			// cuando.
+			'bitacora'      => SWA_Bitacora::resumen( 24 ),
 			// Lo del audio de normas de seguridad. Son cosas que solo se saben
 			// estando dentro del sitio: el panel no las puede ver desde fuera.
 			'normas'        => SWA_Normas::medir(),

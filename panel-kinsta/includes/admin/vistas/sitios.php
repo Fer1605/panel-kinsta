@@ -36,6 +36,63 @@ $por_nivel = SWPK_Vista::conteo_por_nivel(
 
 $filtrados = SWPK_Vista::filtrar( $todos, $tag, $nivel, $busqueda, $versiones['wp'], $versiones['php'] );
 
+// ── Tres filtros más, que son los que faltaban ──────────────────────────────
+//
+// «Aquí, como él dijo, esto no se puede filtrar.» Había cuatro —grupo, cómo
+// está, y las dos versiones— y ninguno contestaba las preguntas con las que
+// de verdad se abre esta pantalla:
+//
+//   «enseñame mis sitios»            → por asesora
+//   «cuáles tengo que ir a actualizar a mano» → por cómo se actualiza
+//   «cuáles no tienen agente»        → por agente
+//
+// Los tres se calculan sobre la lista YA filtrada por lo demás, así se pueden
+// combinar: los sitios de Tiffany que además están en ajuste manual.
+$f_asesora = isset( $_GET['asesora_f'] ) ? (int) $_GET['asesora_f'] : 0;
+$f_actualiza = isset( $_GET['actualiza'] ) ? sanitize_key( wp_unslash( $_GET['actualiza'] ) ) : '';
+$f_agente  = isset( $_GET['agente'] ) ? sanitize_key( wp_unslash( $_GET['agente'] ) ) : '';
+
+if ( $f_asesora ) {
+	$suyos     = SWPK_Perfiles::sitios_de_asesora( $f_asesora );
+	$filtrados = array_values( array_filter(
+		$filtrados,
+		static fn( $s ) => in_array( (string) $s->sitio_id, $suyos, true )
+	) );
+}
+
+if ( '' !== $f_actualiza ) {
+	// Se pregunta de una vez por todos los sitios que quedan, no uno por uno
+	// dentro del filtro: la cuenta de auto-update hace consultas.
+	$auto_filtro = SWPK_Inventario::auto_update_de_varios(
+		array_map( static fn( $s ) => (string) $s->sitio_id, $filtrados )
+	);
+
+	$filtrados = array_values( array_filter(
+		$filtrados,
+		static function ( $s ) use ( $auto_filtro, $f_actualiza ) {
+			$a = $auto_filtro[ (string) $s->sitio_id ] ?? [ 'con' => 0, 'sin' => 0, 'total' => 0 ];
+
+			if ( 0 === (int) $a['total'] ) {
+				return 'sin_medir' === $f_actualiza;
+			}
+			if ( 0 === (int) $a['sin'] ) {
+				return 'todo' === $f_actualiza;
+			}
+			if ( 0 === (int) $a['con'] ) {
+				return 'manual' === $f_actualiza;
+			}
+			return 'mixto' === $f_actualiza;
+		}
+	) );
+}
+
+if ( '' !== $f_agente ) {
+	$filtrados = array_values( array_filter(
+		$filtrados,
+		static fn( $s ) => ( 'si' === $f_agente ) === (bool) (int) $s->cobertura_agente
+	) );
+}
+
 // Lo que más urge, primero. Es lo que dice el pie de la tarjeta en la maqueta,
 // y sin el orden ese pie sería mentira: la lista venía como la devolvía la
 // base, que es por nombre. A igualdad de nivel, por nombre, para que dos
@@ -193,6 +250,16 @@ $volver = add_query_arg(
 		$opciones_nivel[ $clave_n ] = sprintf( '%s (%d)', $nombre_n, (int) $por_nivel[ $clave_n ] );
 	}
 
+	// Las asesoras que de verdad llevan algún sitio, con cuántos. Una lista con
+	// gente a cero obliga a probar para descubrir que no hay nada detrás.
+	$opciones_asesora = [];
+	foreach ( SWPK_Perfiles::asesoras() as $a_opt ) {
+		$cuantos = count( SWPK_Perfiles::sitios_de_asesora( (int) $a_opt->ID ) );
+		if ( $cuantos ) {
+			$opciones_asesora[ (string) $a_opt->ID ] = sprintf( '%s (%d)', $a_opt->display_name, $cuantos );
+		}
+	}
+
 	SWPK_Vista::barra_de_filtros(
 		'panel-kinsta-sitios',
 		[
@@ -211,7 +278,31 @@ $volver = add_query_arg(
 				'actual'   => $nivel,
 				'todas'    => 'Cómo está',
 			],
-		] + $versiones['campos'],
+		] + $versiones['campos'] + [
+			'actualiza' => [
+				'etiqueta' => 'Se actualiza',
+				'opciones' => [
+					'todo'      => 'Todo automático',
+					'mixto'     => 'Alguno en manual',
+					'manual'    => 'Todo en ajuste manual',
+					'sin_medir' => 'Sin medir',
+				],
+				'actual'   => $f_actualiza,
+				'todas'    => 'Se actualiza',
+			],
+			'asesora_f' => [
+				'etiqueta' => 'Asesora',
+				'opciones' => $opciones_asesora,
+				'actual'   => $f_asesora ? (string) $f_asesora : '',
+				'todas'    => 'Cualquier asesora',
+			],
+			'agente' => [
+				'etiqueta' => 'Agente',
+				'opciones' => [ 'si' => 'Con agente', 'no' => 'Sin agente' ],
+				'actual'   => $f_agente,
+				'todas'    => 'Con y sin agente',
+			],
+		],
 		[],
 		$busqueda
 	);
