@@ -140,12 +140,12 @@ Reglas de Fer, que valen igual en un chat nuevo:
 
 | | Versión | Dónde está |
 |---|---|---|
-| Panel Kinsta | **0.9.1** | Desplegado en producción y verificado ahí mismo. |
+| Panel Kinsta | **0.9.5** | Desplegado en producción y verificado ahí mismo. |
 | Agente (plugin) | **0.6.4** | En 106 de los 107 sitios que lo tienen. |
 | Agente (dentro del tema) | **0.6.4-tema** | En el PR, esperando al jefe. |
 | Tema hijo | **2.6.1** | En el PR. |
 
-### Lo del 25 y 26 (0.6.3 → 0.9.1)
+### Lo del 25 y 26 (0.6.3 → 0.9.5)
 
 Empezó por un ajuste del correo que pidió el jefe y acabó destapando cinco
 cosas que no funcionaban y que no se veían desde ninguna pantalla.
@@ -185,6 +185,29 @@ cosas que no funcionaban y que no se veían desde ninguna pantalla.
   sirve porque el panel lo vuelve a poner solo. Es además el H6 del 19.
 
 - **0.9.1 · la sección F, cerrada.** Las siete de maquetado del 23.
+
+- **0.9.2 · la primera falsa alarma de caída.** Un sitio que responde en 90 ms
+  salió como caído y, una hora después, como «estuvo caído 1h 1min». Dos
+  fallos a la vez: el aviso salía con dos intentos separados por ocho
+  segundos —que no distinguen una caída de un tropiezo— y ahora son cuatro
+  repartidos en minuto y medio; y la duración era una resta de relojes
+  disfrazada de medición, porque el monitor mira UNA VEZ POR HORA y lo único
+  que sabe son las dos revisiones. Ahora dice las dos horas y que lo de en
+  medio no es lo que estuvo caído.
+
+- **0.9.3 a 0.9.5 · el repaso de contraste.** La píldora de «Sale» salía con
+  el texto del mismo azul que su fondo —1,0 de contraste, invisible— por la
+  regla de `panel.css` que pinta los enlaces y que YA tenía un comentario
+  avisando de esto. Tercera vez. Midiendo las dos hojas enteras salieron
+  cuatro más que nadie había visto, y la peor eran **los encabezados de todas
+  las tablas**, a 2,77:1.
+
+  Y dos errores por el camino, que es lo que hay que recordar: puse la regla
+  blanca encima de la gris —pesan igual, gana la de abajo— y medí el azul de
+  la marca solo contra blanco, cuando ese azul también es texto y casi nunca
+  cae sobre blanco. Las dos se vieron midiendo el color calculado EN EL
+  NAVEGADOR, con la hoja ya desplegada. **Un cambio de contraste no está hecho
+  hasta que se mide donde se ve, no donde se escribe.**
 
 Tablas a la versión 16: `entornos` en sitios, `aplazada` y `aplazada_porque`
 en normas.
@@ -280,6 +303,30 @@ Tablas a la versión 14: `grupo_a_mano`, `ausencias`, `de_baja`, `de_baja_en`.
 ### Esperando a otra persona
 
 - **El PR del tema hijo** espera la aprobación del jefe.
+
+### La zona horaria — urgente, y es decisión de Fer
+
+**El WordPress del panel está en UTC y Guatemala es UTC−6, así que todos los
+avisos programados salen seis horas antes de la hora que dicen.** El diario de
+las 7:30 sale a la 1:30 de la mañana, y **el semanal a las asesoras del lunes
+30 les llega a la 1:00 a.m.**
+
+El panel está escrito dando por hecho lo contrario —`SWPK_Frescura::cuando()`
+usa `wp_timezone()`, y su comentario dice «pasó justo al poner la zona de
+Guatemala»—, así que la zona se puso alguna vez y hoy no está.
+
+No se tocó porque la zona horaria es de **todo el WordPress de
+solucionweb.com**, no solo del panel: entradas, formularios, Elementor. Es el
+sitio de la empresa.
+
+Cuando se decida son dos pasos, y el segundo no se puede saltar:
+
+1. Poner `America/Guatemala` en Ajustes → Generales.
+2. **Desprogramar y volver a programar las tareas.** Guardan un instante
+   absoluto y no se recalculan solas.
+
+El detalle, con la tabla de a qué hora sale hoy cada aviso, está en
+`INFORME-2026-11-25b-lo-que-encontre.md`.
 
 ### Esperando una decisión de Fer (son funcionalidad, no maquetado)
 
@@ -460,5 +507,7 @@ Los que más vale leer:
 | `b86262f` | Leer el HTML no es ver la pantalla. |
 | `3b2f382` | El botón de arreglar: la vez que insistí tres veces en que estaba y la causa era mía. |
 | `9e3fda6` | El botón azul que no se leía, por especificidad de CSS. Contraste 1,60:1. |
+| `0a99e0d`, `9430cc8`, `6fa3ee7` | La misma trampa por tercera vez, y los dos errores al arreglarla: dos reglas del mismo peso (gana la de abajo) y un color de marca medido contra un solo fondo. |
+| `504bf0e` | Por qué un tropiezo de veinte segundos no es una caída, y por qué «estuvo caído 1h 1min» era una resta de relojes. |
 | `da6a2aa` | La mudanza del agente al tema, y las dos minas que destapó. |
 | `50206dd` | «La causa que dejé escrita era falsa». |
