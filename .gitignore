@@ -47,3 +47,8 @@ INFORME-*.md
 # Catálogo de normas: trae mediciones con dominios de clientes
 NORMAS-*.md
 KINSTA-*.md
+
+# Análisis de las grabaciones del jefe: capturas de pantalla del panel con
+# nombres de clientes y correos suyos a la vista, y las citas de la reunión.
+# Es la misma razón por la que REUNION-*.md e INFORME-*.md tampoco van.
+analisis-reuniones/

@@ -74,6 +74,13 @@ y cuatro de sus archivos están a propósito distintos de los del plugin —
 Trae nombres de clientes, transcripciones de reuniones o contraseñas. Está en
 la máquina y nada más:
 
+- `analisis-reuniones/` — **el análisis de la grabación del 26 de noviembre**,
+  el más reciente: `Panel Kinsta - lo que pidio el 26 de noviembre.pdf` (44
+  páginas) y su fuente en HTML, con las capturas. Trae, por cada pedido, la
+  cita textual con el minuto, qué significa, qué se propone y la maqueta. Más
+  las cuatro contradicciones de datos comprobadas contra la base, el panel que
+  el jefe enseñó como modelo (su «Panel DMM») y un plan de 18 cambios en orden.
+  **No va al repositorio**: las capturas llevan nombres y correos de clientes.
 - `REUNION-2026-11-23-lo-que-pidio.md` — **lo último que pidió el jefe**, punto
   por punto, con la cita textual y el minuto de la grabación, agrupado en ocho
   secciones (A a H). Si alguien pregunta «¿qué pidió exactamente?», es este.
