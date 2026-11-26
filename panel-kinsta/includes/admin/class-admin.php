@@ -249,6 +249,7 @@ class SWPK_Admin {
 	 *   filtros.js    que los desplegables de filtro se apliquen al elegir
 	 *   ayuda.js      que la burbujita de ⓘ no salga cortada
 	 *   editor.js     la ventana del editor de plantillas y su vista previa
+	 *   espera.js     que un botón lento diga que está trabajando
 	 *
 	 * Solo se cargan en las pantallas del panel. Una hoja que reescribe tablas
 	 * y botones no tiene por qué andar suelta por el escritorio de alguien.
@@ -268,6 +269,7 @@ class SWPK_Admin {
 		wp_enqueue_script( 'swpk-progreso', $base . 'progreso.js', [], SWPK_VERSION, true );
 		wp_enqueue_script( 'swpk-ayuda', $base . 'ayuda.js', [], SWPK_VERSION, true );
 		wp_enqueue_script( 'swpk-editor', $base . 'editor.js', [], SWPK_VERSION, true );
+		wp_enqueue_script( 'swpk-espera', $base . 'espera.js', [], SWPK_VERSION, true );
 	}
 
 	public static function aviso_demo(): void {
@@ -301,9 +303,27 @@ class SWPK_Admin {
 
 		$url = wp_nonce_url( admin_url( 'admin-post.php?action=swpk_correr' ), 'swpk_correr' );
 		$ult = SWPK_Frescura::corrida();
+
+		// ── F7 · «Correr ahora, ¿correr ahora qué? Eso no lo entiendo» ─────
+		//
+		// Tenía razón: «correr» no dice nada. Un botón se nombra por lo que
+		// hace, y este le pregunta al hosting qué tiene instalado CADA sitio
+		// de la cartera. Así que eso es lo que dice, con el número delante
+		// para que además se vea el tamaño de lo que se está pidiendo.
+		$cuantos = count( SWPK_Inventario::todos() );
 		?>
 		<p>
-			<a href="<?php echo esc_url( $url ); ?>" class="button button-primary">Correr ahora</a>
+			<a href="<?php echo esc_url( $url ); ?>" class="button button-primary"
+				data-espera="Revisando…">
+				<?php echo esc_html( $cuantos ? sprintf( 'Revisar los %d sitios ahora', $cuantos ) : 'Revisar los sitios ahora' ); ?>
+			</a>
+			<?php echo wp_kses_post( SWPK_Vista::ayuda( sprintf(
+				'Le pregunta a %s qué tiene instalado cada sitio de la cartera y con qué versión, '
+				. 'compara con la foto de ayer y anota lo que cambió. Es lo mismo que hace solo todos '
+				. 'los días a las 6:30; esto es para no esperar a mañana. Tarda unos minutos y se '
+				. 'puede cerrar la pestaña: sigue corriendo.',
+				self::proveedor()
+			) ) ); ?>
 			<span style="margin-left:10px;color:#50575e">
 				<?php
 				echo '' !== $ult
@@ -641,9 +661,16 @@ class SWPK_Admin {
 				)
 			);
 		} else {
+			// ── F5 · «ya lo hizo, pero esto cuándo lo hizo» ────────────────
+			//
+			// Decía «revisado ahora mismo», que suena a respuesta y no lo es:
+			// «ahora mismo» deja de ser cierto en cuanto pasan diez minutos, y
+			// el mensaje se queda en pantalla. Ahora lleva la hora exacta, que
+			// es lo que se puede apuntar, comparar y repetir en voz alta.
 			$mensaje = 'ok:' . rawurlencode(
 				sprintf(
-					'Revisado ahora mismo: %d módulos%s%s.',
+					'Revisado hoy a las %s: %d módulos%s%s.',
+					SWPK_Frescura::fmt( 'H:i', current_time( 'mysql' ) ),
 					$r['modulos'],
 					$r['eventos'] ? sprintf( ', %d cambio(s) desde la última vez', $r['eventos'] ) : ', sin cambios desde la última vez',
 					'abajo' === $r['sondeo'] ? ' — y el sitio NO está respondiendo' : ''

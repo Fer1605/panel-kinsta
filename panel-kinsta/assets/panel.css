@@ -1446,6 +1446,16 @@ body[class*="panel-kinsta"] .swpk-ayuda::before { content: "i"; }
    donde queda suelta y no se entiende de qué habla. Aquí el campo se queda
    con el hueco que sobra —`min-width:0` es lo que le permite encogerse
    dentro de una caja flexible— y la burbuja mantiene sus 16 px. */
+/* Un botón que está trabajando. Ver espera.js.
+   No lleva animación de dar vueltas a propósito: en una pantalla que ya tiene
+   insignias de colores, una ruedita girando es un ruido más. Basta con que el
+   botón diga qué está haciendo y deje de parecer pulsable. */
+body[class*="panel-kinsta"] .swpk-esperando {
+	opacity: .65;
+	cursor: progress;
+	pointer-events: none;
+}
+
 /* El interruptor de cada aviso: una pastilla que se pulsa, no una casilla.
    Azul es «sale» y gris es «apagado» — el rojo se queda para lo que está mal,
    y un aviso apagado a propósito no está mal. */

@@ -146,7 +146,8 @@ $historial = array_filter(
 		] )
 		. ( SWPK_Perfiles::puede( SWPK_Perfiles::ADMINISTRAR )
 			? sprintf(
-				'<a class="button" href="%s">Sondear ahora</a>',
+				'<a class="button" data-espera="Tocando la puerta de los %d sitios…" href="%s">Sondear ahora</a>',
+				count( $estados ),
 				esc_url( wp_nonce_url( admin_url( 'admin-post.php?action=swpk_sondear' ), 'swpk_sondear' ) )
 			)
 			: '' )

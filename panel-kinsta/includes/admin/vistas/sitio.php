@@ -133,7 +133,24 @@ $url_pestana = static fn( string $s ) => add_query_arg(
 		) ); ?>
 
 		<?php if ( SWPK_Perfiles::puede( SWPK_Perfiles::ADMINISTRAR ) ) : ?>
-			<a class="button" href="<?php echo esc_url( SWPK_Admin::url_analizar( $sitio_id ) ); ?>">
+			<?php
+			// ── F4 y F5, que son la misma queja en dos mitades ─────────────
+			//
+			//   «analizar este sitio ahora… no pasa nada, o sea, no hay como
+			//    cargando, verificando» (07:59)
+			//   «ya lo hizo, pero esto cuándo lo hizo… no sé cuándo lo hizo»
+			//    (08:11)
+			//
+			// Las dos salían del mismo sitio: el botón no decía nada ni antes
+			// ni después. Antes, porque es un enlace normal y preguntarle al
+			// hosting por un sitio tarda entre tres y diez segundos en los que
+			// la pantalla no se mueve — `data-espera` lo arregla, ver
+			// espera.js. Y después, porque la última revisión estaba en la
+			// pestaña de Datos y aquí no: hay que leerla donde está el botón
+			// que la cambia, no a dos clics de distancia.
+			?>
+			<a class="button" href="<?php echo esc_url( SWPK_Admin::url_analizar( $sitio_id ) ); ?>"
+				data-espera="Revisando este sitio…">
 				Analizar este sitio ahora
 			</a>
 			<?php echo wp_kses_post( SWPK_Vista::ayuda( sprintf(
@@ -141,6 +158,13 @@ $url_pestana = static fn( string $s ) => add_query_arg(
 				. 'esperar a la corrida de mañana. Tarda unos segundos y no toca los demás sitios.',
 				SWPK_Admin::proveedor()
 			) ) ); ?>
+			<span class="swpk-mudo" style="margin-left:2px">
+				<?php
+				echo ! empty( $sitio->inventario_en )
+					? esc_html( 'Última vez: ' . SWPK_Frescura::fecha_y_edad( (string) $sitio->inventario_en ) )
+					: 'Nunca se ha analizado';
+				?>
+			</span>
 		<?php endif; ?>
 
 		<?php if ( $hallazgos && 'pendiente' === $seccion ) : ?>

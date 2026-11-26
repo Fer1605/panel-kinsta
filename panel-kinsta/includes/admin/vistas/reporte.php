@@ -51,6 +51,66 @@ $cambios = $wpdb->get_results(
 
 $hallazgos = SWPK_Riesgo::hallazgos( $sitio_id );
 $regreso   = SWPK_Vista::url_de_regreso();
+
+/**
+ * El periodo, escrito como lo diría una persona.
+ *
+ * ─── F3 · «todo es 23, 23, 23» ─────────────────────────────────────────────
+ *
+ *   «aquí arriba dice periodo del 23, generado del 23… todo es 23, 23, 23»
+ *   (23/11, 07:37)
+ *
+ * La cabecera eran tres renglones seguidos que empezaban igual y repetían la
+ * misma fecha escrita entera tres veces. Leídos rápido no se distinguen, y el
+ * dato que importa —de qué periodo habla este reporte— quedaba enterrado
+ * entre dos que no importan tanto.
+ *
+ * Tres cosas cambian:
+ *
+ *  1. El mes y el año no se repiten cuando son los mismos: «del 1 al 23 de
+ *     noviembre de 2026», no «del 1 de noviembre de 2026 al 23 de noviembre
+ *     de 2026».
+ *  2. Un periodo de un solo día se dice como un día, no como un rango de algo
+ *     a sí mismo. Ahí es donde salía el «del 23 al 23» que le chocó.
+ *  3. «Generado el» se baja al pie, que es donde va la letra pequeña. No es
+ *     de lo que habla el reporte: es cuándo se imprimió.
+ */
+$periodo_en_palabras = static function ( string $desde, string $hasta ): string {
+	$d = strtotime( $desde );
+	$h = strtotime( $hasta );
+
+	if ( ! $d || ! $h ) {
+		return $desde . ' – ' . $hasta;
+	}
+
+	if ( gmdate( 'Y-m-d', $d ) === gmdate( 'Y-m-d', $h ) ) {
+		return 'Solo el ' . SWPK_Frescura::fmt( 'j \d\e F \d\e Y', $desde );
+	}
+
+	// Mismo mes y mismo año: el mes se dice una vez.
+	if ( gmdate( 'Y-m', $d ) === gmdate( 'Y-m', $h ) ) {
+		return sprintf(
+			'Del %s al %s',
+			SWPK_Frescura::fmt( 'j', $desde ),
+			SWPK_Frescura::fmt( 'j \d\e F \d\e Y', $hasta )
+		);
+	}
+
+	// Mismo año: el año se dice una vez.
+	if ( gmdate( 'Y', $d ) === gmdate( 'Y', $h ) ) {
+		return sprintf(
+			'Del %s al %s',
+			SWPK_Frescura::fmt( 'j \d\e F', $desde ),
+			SWPK_Frescura::fmt( 'j \d\e F \d\e Y', $hasta )
+		);
+	}
+
+	return sprintf(
+		'Del %s al %s',
+		SWPK_Frescura::fmt( 'j \d\e F \d\e Y', $desde ),
+		SWPK_Frescura::fmt( 'j \d\e F \d\e Y', $hasta )
+	);
+};
 ?>
 <style>
 	@media print {
@@ -65,6 +125,12 @@ $regreso   = SWPK_Vista::url_de_regreso();
 	.swpk-rep-cab { border-bottom:2px solid #1d2327; padding-bottom:14px; margin-bottom:22px }
 	.swpk-rep-cab h2 { margin:0 0 4px; font-size:22px }
 	.swpk-rep-meta { color:#50575e; font-size:13px; margin:0 }
+	/* El sitio y el periodo, con pesos distintos: son las dos preguntas que
+	   contesta la cabecera y antes iban del mismo tamaño y del mismo color
+	   que la fecha de impresión, así que no se distinguían de un vistazo. */
+	.swpk-rep-sitio { margin:0 0 2px; font-size:15px }
+	.swpk-rep-dominio { color:#50575e; font-weight:400 }
+	.swpk-rep-periodo { margin:0; color:#1d2327; font-size:13px; font-weight:600 }
 	.swpk-rep-h3 { font-size:15px; margin:26px 0 8px; padding-bottom:5px; border-bottom:1px solid #dcdcde }
 	.swpk-rep-tabla { width:100%; border-collapse:collapse; font-size:13px }
 	.swpk-rep-tabla th { text-align:left; padding:7px 8px; border-bottom:1px solid #c3c4c7; color:#50575e; font-size:12px }
@@ -94,13 +160,11 @@ $regreso   = SWPK_Vista::url_de_regreso();
 	<div class="swpk-reporte">
 		<div class="swpk-rep-cab">
 			<h2>Reporte de mantenimiento y notificaciones</h2>
-			<p class="swpk-rep-meta">
-				<strong><?php echo esc_html( $sitio->nombre_visible ); ?></strong> ·
-				<?php echo esc_html( $sitio->dominio ); ?><br>
-				Periodo: del <?php echo esc_html( SWPK_Frescura::fmt( 'j \d\e F \d\e Y', $desde ) ); ?>
-				al <?php echo esc_html( SWPK_Frescura::fmt( 'j \d\e F \d\e Y', $hasta ) ); ?><br>
-				Generado el <?php echo esc_html( SWPK_Frescura::fmt( 'j \d\e F \d\e Y, H:i', current_time( 'mysql' ) ) ); ?>
+			<p class="swpk-rep-sitio">
+				<strong><?php echo esc_html( $sitio->nombre_visible ); ?></strong>
+				<span class="swpk-rep-dominio"><?php echo esc_html( $sitio->dominio ); ?></span>
 			</p>
+			<p class="swpk-rep-periodo"><?php echo esc_html( $periodo_en_palabras( $desde, $hasta ) ); ?></p>
 			<p class="swpk-rep-meta" style="margin-top:8px">
 				<?php echo esc_html( SWPK_Frescura::linea_de_texto() ); ?>
 			</p>
@@ -205,6 +269,7 @@ $regreso   = SWPK_Vista::url_de_regreso();
 			Este reporte lo generó automáticamente el panel de mantenimiento a partir de los registros
 			del sistema. Cada notificación listada quedó guardada con su fecha, su destinatario y su
 			contenido en el momento en que se envió.<br>
+			Generado el <?php echo esc_html( SWPK_Frescura::fmt( 'j \d\e F \d\e Y, H:i', current_time( 'mysql' ) ) ); ?>.<br>
 			<?php echo esc_html( SWPK_Frescura::linea_de_texto() ); ?><br>
 			Los datos de vulnerabilidades provienen de Wordfence Intelligence (Defiant, Inc.), usados
 			bajo su licencia. Los identificadores CVE son de MITRE.

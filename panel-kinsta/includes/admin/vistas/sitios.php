@@ -447,6 +447,7 @@ $volver = add_query_arg(
 						<td>
 							<a class="button button-small"
 								href="<?php echo esc_url( SWPK_Admin::url_analizar( (string) $s->sitio_id, $volver ) ); ?>"
+								data-espera="Revisando…"
 								title="Vuelve a preguntarle a <?php echo esc_attr( SWPK_Admin::proveedor() ); ?> qué tiene este sitio, ahora mismo">
 								Analizar
 							</a>
