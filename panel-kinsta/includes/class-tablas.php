@@ -33,7 +33,7 @@ defined( 'ABSPATH' ) || exit;
 
 class SWPK_Tablas {
 
-	public const VERSION = 16;
+	public const VERSION = 17;
 
 	public static function tabla( string $nombre ): string {
 		global $wpdb;
@@ -52,6 +52,7 @@ class SWPK_Tablas {
 		$vuln   = self::tabla( 'vulnerabilidades' );
 		$bit    = self::tabla( 'bitacora' );
 		$acc    = self::tabla( 'accesos' );
+		$sas    = self::tabla( 'sitio_asesoras' );
 
 		dbDelta(
 			"CREATE TABLE {$sitios} (
@@ -322,6 +323,33 @@ class SWPK_Tablas {
 			) {$collate};"
 		);
 
+		// ── Las asesoras de cada sitio ──────────────────────────────────────
+		//
+		// Antes era una sola columna en `sitios`: `asesora_id`. Un sitio, una
+		// persona. Y no alcanza: «que tienen que ser las 2 asesoras (...) que no
+		// sea solo un select de una persona».
+		//
+		// Esto es una tabla aparte y no tres columnas más en `sitios`, porque
+		// mañana pueden ser tres y no hay que volver a tocar el esquema.
+		//
+		// `asesora_id` se queda donde está y se sigue escribiendo con la
+		// primera de la lista: hay pantallas y una caché que la leen, y
+		// cambiarlas todas de un tirón es cómo se rompen cosas que ya
+		// funcionaban. Lo que manda para los correos y para quién ve qué es
+		// esta tabla.
+		dbDelta(
+			"CREATE TABLE {$sas} (
+				sitio_id VARCHAR(64) NOT NULL,
+				usuario_id BIGINT UNSIGNED NOT NULL,
+				asignada_en DATETIME NOT NULL,
+				asignada_por BIGINT UNSIGNED NOT NULL DEFAULT 0,
+				PRIMARY KEY (sitio_id, usuario_id),
+				KEY usuario (usuario_id)
+			) {$collate};"
+		);
+
+		self::pasar_asesoras_a_su_tabla();
+
 		update_option( 'swpk_version_tablas', self::VERSION, false );
 	}
 
@@ -329,5 +357,44 @@ class SWPK_Tablas {
 		if ( (int) get_option( 'swpk_version_tablas', 0 ) !== self::VERSION ) {
 			self::crear();
 		}
+	}
+
+	/**
+	 * Las asignaciones que ya existían, a la tabla nueva.
+	 *
+	 * Sin esto, el día que se sube esta versión todos los sitios aparecen sin
+	 * asesora: la columna `asesora_id` sigue con su valor, pero el panel ya
+	 * está leyendo la tabla. Y nadie se acuerda de a quién tenía asignado qué.
+	 *
+	 * Corre una sola vez. Se marca con su propia opción y no con la versión de
+	 * tablas, porque `crear()` se llama también cuando se añade cualquier otra
+	 * tabla más adelante, y entonces esto volvería a correr y resucitaría
+	 * asignaciones que alguien quitó a propósito.
+	 */
+	private static function pasar_asesoras_a_su_tabla(): void {
+		if ( get_option( 'swpk_asesoras_pasadas' ) ) {
+			return;
+		}
+
+		global $wpdb;
+
+		$sitios = self::tabla( 'sitios' );
+		$tabla  = self::tabla( 'sitio_asesoras' );
+
+		$filas = $wpdb->get_results( "SELECT sitio_id, asesora_id FROM {$sitios} WHERE asesora_id > 0" );
+		$ahora = current_time( 'mysql' );
+
+		foreach ( (array) $filas as $f ) {
+			$wpdb->query(
+				$wpdb->prepare(
+					"INSERT IGNORE INTO {$tabla} (sitio_id, usuario_id, asignada_en, asignada_por) VALUES (%s, %d, %s, 0)",
+					(string) $f->sitio_id,
+					(int) $f->asesora_id,
+					$ahora
+				)
+			);
+		}
+
+		update_option( 'swpk_asesoras_pasadas', 1, false );
 	}
 }

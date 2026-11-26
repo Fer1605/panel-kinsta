@@ -157,7 +157,7 @@ Reglas de Fer, que valen igual en un chat nuevo:
 |---|---|---|
 | Panel Kinsta | **0.9.5** | Desplegado en producción y verificado ahí mismo. |
 | Agente (plugin) | **0.6.4** | En 106 de los 107 sitios que lo tienen. |
-| Agente (dentro del tema) | **0.6.4-tema** | En el PR, esperando al jefe. |
+| Agente (dentro del tema) | **0.6.4-tema** | PR #1 **unido** el 19/11. Ojo: la rama declara 0.6.4-tema y lleva el código de 0.6.3. Ver abajo. |
 | Tema hijo | **2.6.1** | En el PR. |
 
 ### Lo del 25 y 26 (0.6.3 → 0.9.5)
@@ -317,7 +317,30 @@ Tablas a la versión 14: `grupo_a_mano`, `ausencias`, `de_baja`, `de_baja_en`.
 
 ### Esperando a otra persona
 
-- **El PR del tema hijo** espera la aprobación del jefe.
+- **El agente dentro del tema hijo: probado el 26, y hay que mandarle una
+  corrección.** El PR #1 de `soydiazweb/hello-elementor-child` se unió el 19
+  de noviembre, así que el agente ya vive en el tema del jefe — pero **nunca
+  se ha instalado en un sitio**. Se activó el tema en `cliente-demo` con el
+  plugin suelto apagado y funciona de punta a punta: los dos relojes se
+  programan sin gancho de activación, el reporte llega y el panel lo registra
+  como `0.6.4-tema`, la pantalla se dibuja dentro de Apariencia con sus seis
+  botones, la portada no suelta un aviso. Pero salieron **dos fallos**, los
+  dos en la rama que el jefe ya tiene unida:
+  1. **La rama declara `0.6.4-tema` y lleva el código de 0.6.3.** El número se
+     subió sin traer los archivos: nueve de los trece estaban atrasados. El que
+     importa es `class-tienda.php`, que se quedó sin el arreglo del 23 de
+     noviembre y revienta con «Unknown column `date_paid_gmt`» en las tiendas
+     con el esquema viejo de HPOS. Reproducido tal cual.
+  2. **El interruptor `panel_activo` no apagaba de verdad.** El candado estaba
+     solo en los relojes, y el vigilante llama a `SWA_Reporte::enviar()`
+     directo cuando cambia quién tiene control del sitio — así que un sitio
+     con el panel apagado seguía llamando al panel. El candado se movió dentro
+     de `enviar()`, que es la puerta por donde pasan todas.
+
+  La corrección está probada y empaquetada en `hello-elementor-child-2.6.2.zip`
+  (no va al repositorio: es el tema del jefe), con el detalle en
+  `documentacion/15-el-agente-en-el-child-theme.md`. **Falta mandársela**: no
+  se abrió PR todavía.
 
 ### La zona horaria — urgente, y es decisión de Fer
 

@@ -335,6 +335,26 @@ $volver = add_query_arg(
 						?>
 					</td>
 					<td>
+						<?php
+						// ── Varias asesoras, no una ────────────────────────
+						//
+						// «Que tienen que ser las 2 asesoras (...) que no sea
+						// solo un select de una persona.» Son casillas y no un
+						// <select multiple>: en un multiple hay que saber que
+						// se escoge con Ctrl, no se ve de un vistazo quién
+						// está marcada, y con dos nombres ocupa más que las
+						// casillas.
+						//
+						// A los sitios del cliente —no_update— no se les
+						// asigna nadie, y no se dibuja el control: así nadie
+						// marca dos nombres y se queda esperando que el panel
+						// los guarde. Ver SWPK_Perfiles::asignar_asesoras().
+						//
+						// Las dos variables se calculan ANTES del if: dentro
+						// de una rama solo existirían cuando esa rama corre.
+						$suyas   = SWPK_Perfiles::asesoras_de( (string) $s->sitio_id );
+						$nuestro = SWPK_Etiquetas::es_nuestro( (string) $s->tag );
+						?>
 						<?php if ( $asignar && ! $asesoras ) : ?>
 							<?php
 							// Sin nadie en el Equipo no hay a quién asignar, y un
@@ -345,19 +365,42 @@ $volver = add_query_arg(
 								esc_url( admin_url( 'admin.php?page=panel-kinsta-equipo' ) )
 							);
 							?>
+						<?php elseif ( $asignar && ! $nuestro ) : ?>
+							<span class="swpk-gris" style="font-size:12px">
+								No lleva asesora: es <?php echo esc_html( SWPK_Etiquetas::nombres()[ $s->tag ] ?? $s->tag ); ?>
+							</span>
 						<?php elseif ( $asignar ) : ?>
-							<select name="asesora[<?php echo esc_attr( $s->sitio_id ); ?>]" style="width:100%">
-								<option value="0">— sin asignar —</option>
+							<div class="swpk-asesoras">
 								<?php foreach ( $asesoras as $a ) : ?>
-									<option value="<?php echo (int) $a->ID; ?>" <?php selected( (int) $s->asesora_id, (int) $a->ID ); ?>>
+									<label style="display:block;font-size:12px;line-height:1.7">
+										<input type="checkbox"
+											name="asesora[<?php echo esc_attr( $s->sitio_id ); ?>][]"
+											value="<?php echo (int) $a->ID; ?>"
+											<?php checked( in_array( (int) $a->ID, $suyas, true ) ); ?>>
 										<?php echo esc_html( $a->display_name ); ?>
-									</option>
+									</label>
 								<?php endforeach; ?>
-							</select>
+								<?php
+								// Sin esto, desmarcar a todas no manda nada para este
+								// sitio y el panel no se enteraría de que hay que
+								// dejarlo sin nadie.
+								?>
+								<input type="hidden" name="asesora_vista[<?php echo esc_attr( $s->sitio_id ); ?>]" value="1">
+							</div>
 						<?php else : ?>
 							<?php
-							$a = $s->asesora_id ? get_user_by( 'id', (int) $s->asesora_id ) : null;
-							echo esc_html( $a->display_name ?? '—' );
+							if ( ! $suyas ) {
+								echo '—';
+							} else {
+								$nombres = [];
+								foreach ( $suyas as $id ) {
+									$u = get_user_by( 'id', $id );
+									if ( $u ) {
+										$nombres[] = $u->display_name;
+									}
+								}
+								echo esc_html( implode( ', ', $nombres ) );
+							}
 							?>
 						<?php endif; ?>
 					</td>

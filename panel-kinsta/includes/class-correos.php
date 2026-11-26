@@ -450,10 +450,19 @@ class SWPK_Correos {
 		$resumen = [ 'asesoras' => 0, 'sitios' => 0, 'resultados' => [] ];
 
 		foreach ( SWPK_Perfiles::del_equipo() as $persona ) {
+			// Por la tabla de asesoras, no por la columna `asesora_id`: un
+			// sitio lo pueden llevar dos, y con la columna solo entraba la
+			// primera. Ver SWPK_Perfiles::asignar_asesoras().
+			//
+			// Y por aquí es por donde los 13 sitios del cliente se quedan
+			// fuera sin apagar nada: no tienen a nadie asignado, así que no
+			// aparecen en la lista de ninguna asesora.
+			$mios = SWPK_Perfiles::sitios_de_asesora( (int) $persona->ID );
+
 			$sus_sitios = array_values(
 				array_filter(
 					SWPK_Inventario::todos(),
-					static fn( $s ) => (int) $s->asesora_id === (int) $persona->ID
+					static fn( $s ) => in_array( (string) $s->sitio_id, $mios, true )
 				)
 			);
 

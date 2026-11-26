@@ -822,19 +822,55 @@ class SWPK_Admin {
 			return $normalizar( $a ) === $normalizar( $b );
 		};
 
-		foreach ( $asignaciones as $sitio_id => $usuario_id ) {
-			$id       = sanitize_text_field( (string) $sitio_id );
-			$escrito  = sanitize_text_field( (string) ( $contactos[ $sitio_id ] ?? '' ) );
+		// ── Los sitios que venían en la pantalla ────────────────────────────
+		//
+		// No se recorre `asesora`, porque un sitio al que se le desmarcaron
+		// TODAS las casillas no manda nada con ese nombre — y entonces
+		// quedarse sin nadie sería la única orden que el panel no podría
+		// recibir. Se recorre la lista de sitios que la pantalla dibujó, y
+		// para cada uno se mira qué casillas vinieron marcadas, si alguna.
+		$vistos = isset( $_POST['asesora_vista'] ) ? (array) wp_unslash( $_POST['asesora_vista'] ) : [];
+
+		if ( ! $vistos ) {
+			// Pantallas viejas, o una sin permiso de asignar: se cae a lo que
+			// haya llegado en `asesora`, para no quedarse sin guardar nada.
+			$vistos = array_fill_keys( array_keys( $asignaciones ), 1 );
+		}
+
+		$rechazados = [];
+		$guardados  = 0;
+
+		foreach ( array_keys( $vistos ) as $sitio_id ) {
+			$id         = sanitize_text_field( (string) $sitio_id );
+			$escrito    = sanitize_text_field( (string) ( $contactos[ $sitio_id ] ?? '' ) );
 			$del_agente = sanitize_text_field( (string) ( $automaticos[ $sitio_id ] ?? '' ) );
 
 			if ( '' !== $del_agente && $misma_lista( $escrito, $del_agente ) ) {
 				$escrito = '';
 			}
 
-			SWPK_Perfiles::asignar( $id, (int) $usuario_id, $escrito );
+			$marcadas = (array) ( $asignaciones[ $sitio_id ] ?? [] );
+			$r        = SWPK_Perfiles::asignar_asesoras( $id, $marcadas, $escrito );
+
+			if ( '' !== $r['rechazado'] ) {
+				$rechazados[] = $id;
+				continue;
+			}
+
+			++$guardados;
 		}
 
-		wp_safe_redirect( admin_url( 'admin.php?page=' . self::SLUG . '-sitios&swpk_msg=ok:' . rawurlencode( 'Asignaciones guardadas.' ) ) );
+		$mensaje = $rechazados
+			? 'ok:' . rawurlencode(
+				sprintf(
+					'Se guardaron %d. A %d no se les pudo asignar asesora: están etiquetados como del cliente.',
+					$guardados,
+					count( $rechazados )
+				)
+			)
+			: 'ok:' . rawurlencode( 'Asignaciones guardadas.' );
+
+		wp_safe_redirect( admin_url( 'admin.php?page=' . self::SLUG . '-sitios&swpk_msg=' . $mensaje ) );
 		exit;
 	}
 

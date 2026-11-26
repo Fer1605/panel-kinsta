@@ -692,7 +692,15 @@ $url_pestana = static fn( string $s ) => add_query_arg(
 	// un correo del cliente?»— y porque es el dato que hace falta para mandar
 	// el reporte. Se pone al asignar el sitio, en la pantalla de Sitios.
 	if ( 'datos' === $seccion ) :
-		$asesora  = (int) $sitio->asesora_id ? get_userdata( (int) $sitio->asesora_id ) : null;
+		// Las asesoras del sitio, que pueden ser varias. Se lee la tabla y no
+		// la columna `asesora_id`, que solo guarda a la primera.
+		$sus_asesoras = [];
+		foreach ( SWPK_Perfiles::asesoras_de( (string) $sitio->sitio_id ) as $id_a ) {
+			$u = get_userdata( $id_a );
+			if ( $u ) {
+				$sus_asesoras[] = $u->display_name;
+			}
+		}
 		$contacto = trim( (string) $sitio->contacto_cliente );
 
 		$datos = [
@@ -791,9 +799,13 @@ $url_pestana = static fn( string $s ) => add_query_arg(
 						'Cuándo ' . SWPK_Admin::proveedor() . ' revisó por última vez qué tiene instalado este sitio. No lo decide el panel: lo hace el hosting a su ritmo.'
 					) )
 				: '<span class="swpk-gris">nunca</span>',
-			'Quién lo atiende'     => $asesora
-				? esc_html( $asesora->display_name )
-				: '<span class="swpk-gris">sin asignar</span>',
+			'Quién lo atiende'     => $sus_asesoras
+				? esc_html( implode( ', ', $sus_asesoras ) )
+				: '<span class="swpk-gris">'
+					. ( SWPK_Etiquetas::es_nuestro( (string) $sitio->tag )
+						? 'sin asignar'
+						: 'no lleva asesora: es ' . esc_html( SWPK_Etiquetas::nombres()[ $sitio->tag ] ?? $sitio->tag ) )
+					. '</span>',
 			'A quién le llega el correo' => ( static function () use ( $sitio ) {
 				// «Dice: lo da el agente. ¿Y por qué no lo estoy viendo?»
 				// Porque el panel lo calculaba solo en el momento de enviar y

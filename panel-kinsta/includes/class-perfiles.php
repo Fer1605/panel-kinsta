@@ -298,10 +298,12 @@ class SWPK_Perfiles {
 			return $todos;
 		}
 
-		$yo = get_current_user_id();
+		// Por la tabla de asesoras: si un sitio lo llevan dos, las dos lo
+		// ven. Con la columna `asesora_id` solo lo veía la primera.
+		$mios = self::sitios_de_asesora( get_current_user_id() );
 
 		return array_values(
-			array_filter( $todos, static fn( $s ) => (int) $s->asesora_id === $yo )
+			array_filter( $todos, static fn( $s ) => in_array( (string) $s->sitio_id, $mios, true ) )
 		);
 	}
 
@@ -341,12 +343,127 @@ class SWPK_Perfiles {
 	}
 
 	public static function asignar( string $sitio_id, int $usuario_id, string $contacto = '' ): void {
+		self::asignar_asesoras( $sitio_id, $usuario_id ? [ $usuario_id ] : [], $contacto );
+	}
+
+	/**
+	 * Las asesoras de un sitio. Varias, no una.
+	 *
+	 * ─── Por qué varias ─────────────────────────────────────────────────────
+	 *
+	 * «Que tienen que ser las 2 asesoras (...) que no sea solo un select de
+	 * una persona.» Un sitio lo llevan dos, y con una sola columna había que
+	 * elegir a cuál avisarle.
+	 *
+	 * @return array<int,int> Los ids, en el orden en que se asignaron.
+	 */
+	public static function asesoras_de( string $sitio_id ): array {
 		global $wpdb;
 
-		$wpdb->update(
-			SWPK_Tablas::tabla( 'sitios' ),
-			[ 'asesora_id' => $usuario_id, 'contacto_cliente' => $contacto ],
-			[ 'sitio_id' => $sitio_id ]
+		return array_map(
+			'intval',
+			$wpdb->get_col(
+				$wpdb->prepare(
+					'SELECT usuario_id FROM ' . SWPK_Tablas::tabla( 'sitio_asesoras' )
+					. ' WHERE sitio_id = %s ORDER BY asignada_en, usuario_id',
+					$sitio_id
+				)
+			)
 		);
+	}
+
+	/**
+	 * Los sitios de una asesora.
+	 *
+	 * @return array<int,string> Los sitio_id.
+	 */
+	public static function sitios_de_asesora( int $usuario_id ): array {
+		global $wpdb;
+
+		return array_map(
+			'strval',
+			$wpdb->get_col(
+				$wpdb->prepare(
+					'SELECT sitio_id FROM ' . SWPK_Tablas::tabla( 'sitio_asesoras' ) . ' WHERE usuario_id = %d',
+					$usuario_id
+				)
+			)
+		);
+	}
+
+	/**
+	 * Cambia la lista completa de asesoras de un sitio.
+	 *
+	 * ─── La regla de a qué sitios se les puede asignar ──────────────────────
+	 *
+	 * Solo a los nuestros: auto_update y desarrollo. A los 13 del cliente
+	 * —etiqueta no_update— no se les asigna nadie, y eso es a propósito: «en
+	 * los sitios no auto update (...) todavía no les debemos de enviar nada».
+	 *
+	 * Y la forma de que no les llegue nada NO es apagar la lista de correos,
+	 * que es lo que se había entendido: «no hay que dejar apagada la lista,
+	 * hay que dejarla encendida, simplemente hay que dejar deseleccionada a
+	 * las personas y no les debe de llegar». El aviso semanal sigue
+	 * encendido; lo que pasa es que esos sitios no tienen a nadie asignado,
+	 * así que no entran en el correo de nadie.
+	 *
+	 * Esto vive en el código y no en la memoria de quien asigna: si mañana
+	 * alguien abre un sitio no_update y escoge dos nombres, el panel no los
+	 * guarda y lo dice.
+	 *
+	 * @param array<int,int|string> $usuarios Los ids que quedan asignados.
+	 * @return array{guardadas:int,rechazado:string}
+	 */
+	public static function asignar_asesoras( string $sitio_id, array $usuarios, ?string $contacto = null ): array {
+		global $wpdb;
+
+		$tabla = SWPK_Tablas::tabla( 'sitio_asesoras' );
+
+		$sitio = SWPK_Inventario::obtener( $sitio_id );
+		$tag   = $sitio ? (string) $sitio->tag : '';
+
+		if ( $sitio && ! SWPK_Etiquetas::es_nuestro( $tag ) && $usuarios ) {
+			return [
+				'guardadas' => 0,
+				'rechazado' => 'A este sitio no se le asignan asesoras: está etiquetado como '
+					. ( SWPK_Etiquetas::nombres()[ $tag ] ?? $tag )
+					. ', y a esos todavía no se les avisa nada.',
+			];
+		}
+
+		// Solo gente del equipo. Un id que no está en la lista de asesoras se
+		// descarta en silencio: puede venir de un formulario viejo o de una
+		// cuenta que se borró desde que se dibujó la pantalla.
+		$validas = array_map( static fn( $u ) => (int) $u->ID, self::asesoras() );
+		$ids     = array_values( array_unique( array_intersect( array_map( 'intval', $usuarios ), $validas ) ) );
+
+		$wpdb->delete( $tabla, [ 'sitio_id' => $sitio_id ] );
+
+		$ahora = current_time( 'mysql' );
+		$quien = get_current_user_id();
+
+		foreach ( $ids as $id ) {
+			$wpdb->insert(
+				$tabla,
+				[
+					'sitio_id'     => $sitio_id,
+					'usuario_id'   => $id,
+					'asignada_en'  => $ahora,
+					'asignada_por' => $quien,
+				]
+			);
+		}
+
+		// `asesora_id` se sigue escribiendo con la primera, para las pantallas
+		// y la caché que todavía la leen. Ver el comentario de la tabla.
+		$cambios = [ 'asesora_id' => $ids[0] ?? 0 ];
+
+		if ( null !== $contacto ) {
+			$cambios['contacto_cliente'] = $contacto;
+		}
+
+		$wpdb->update( SWPK_Tablas::tabla( 'sitios' ), $cambios, [ 'sitio_id' => $sitio_id ] );
+
+		return [ 'guardadas' => count( $ids ), 'rechazado' => '' ];
 	}
 }
