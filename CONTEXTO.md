@@ -3,7 +3,7 @@
 Este archivo existe para una sola cosa: **que puedas abrir un chat nuevo,
 pasarle esto, y que arranque sabiendo lo mismo que sabe el chat de hoy.**
 
-Fecha de corte: **23 de noviembre de 2026, por la noche.** Lo que diga de versiones,
+Fecha de corte: **26 de noviembre de 2026.** Lo que diga de versiones,
 cantidades y pendientes era cierto ese día; lo que diga de reglas y de cómo
 está armado el panel no cambia.
 
@@ -140,10 +140,54 @@ Reglas de Fer, que valen igual en un chat nuevo:
 
 | | Versión | Dónde está |
 |---|---|---|
-| Panel Kinsta | **0.6.3** | Desplegado en producción y verificado ahí mismo. |
+| Panel Kinsta | **0.9.1** | Desplegado en producción y verificado ahí mismo. |
 | Agente (plugin) | **0.6.4** | En 106 de los 107 sitios que lo tienen. |
 | Agente (dentro del tema) | **0.6.4-tema** | En el PR, esperando al jefe. |
 | Tema hijo | **2.6.1** | En el PR. |
+
+### Lo del 25 y 26 (0.6.3 → 0.9.1)
+
+Empezó por un ajuste del correo que pidió el jefe y acabó destapando cinco
+cosas que no funcionaban y que no se veían desde ninguna pantalla.
+
+- **0.7.0 · el correo y el editor.** La tabla del diario iba sin encabezados y
+  ordenada por hora, que es el único orden que no le sirve a nadie: el mismo
+  sitio salía en la fila 3, en la 40 y en la 112. Ahora va por sitio, con lo
+  que no es rutina primero, y con un recuento por tipo arriba. Logo de la casa
+  en banda blanca —es azul, sobre la franja azul desaparecía— y en PNG, porque
+  Gmail y Outlook no dibujan SVG. Botón al panel en los seis avisos internos.
+  Y el editor de plantillas se abre en una ventana: «levantalo en un modal, no
+  me mandes a pantallitas de pantallitas» (17:11).
+
+  En el camino salieron **cuatro avisos que no salían**: el mensual a clientes
+  **nunca estuvo programado** —`monthly` no es de WordPress, la mete un filtro
+  que al activar el plugin aún no está puesto, y `wp_schedule_event()` devuelve
+  `false` callado, el mismo fallo del sondeo de cinco minutos—; el aviso de
+  caída salía una sola vez y nunca más; un agente callado no avisaba a nadie; y
+  la revisión diaria se moría a medio camino sin dejar rastro, porque era la
+  única tarea larga que no volvía a pedir tiempo.
+
+- **0.8.0 · el cortafuegos, bien medido.** Ver «Lo que dejó abierto la reunión
+  del 23», más abajo. Y dos cosas más: un sitio que el hosting ya no devuelve
+  deja de contarse como caída —el panel se lo apuntaba en `ausencias` y acto
+  seguido iba a tocarle la puerta al dominio borrado—, y las normas pueden
+  quedar **en pausa**: se siguen midiendo, pero lo que no las cumple no cuenta
+  como incumplimiento. Es para la verificación en dos pasos, que está apagada
+  a propósito; contándola como falla, el 100 % era inalcanzable por definición
+  y 83 filas rojas tapaban las que sí hay que arreglar.
+
+  El correo diario pasó a decir **cómo está la cartera hoy** y no solo qué
+  cambió: un sitio puede llevar doce días caído sin generar un movimiento
+  nuevo, y entonces el correo de hoy no lo nombraba.
+
+- **0.9.0 · un interruptor por aviso.** Lo forzó que el mensual a clientes no
+  está autorizado: el interruptor general apaga todo, y quitarle el horario no
+  sirve porque el panel lo vuelve a poner solo. Es además el H6 del 19.
+
+- **0.9.1 · la sección F, cerrada.** Las siete de maquetado del 23.
+
+Tablas a la versión 16: `entornos` en sitios, `aplazada` y `aplazada_porque`
+en normas.
 
 ### Lo del 24 y 25: los colores y la letra (0.6.1 → 0.6.3)
 
@@ -241,12 +285,16 @@ Tablas a la versión 14: `grupo_a_mano`, `ausencias`, `de_baja`, `de_baja_en`.
 
 Están en `REUNION-2026-11-19-lo-que-pidio.md`, sección K:
 
-- Un interruptor por aviso en Correos, para encender o apagar cada correo.
 - El flujo completo que pidió el jefe: analizar un sitio → mandarle correo a la
   asesora → PDF imprimible → decir «hazlo» → reporte de cómo estaba y cómo
   quedó.
 - Poder agregar más correos de notificación por sitio.
 - «Arreglar sólo esa parte», con más granularidad que la norma.
+- **Archivos modificados o maliciosos** (reunión del 18, 2.9): «aquí dice que
+  hay tres archivos maliciosos». El agente no mira integridad de archivos.
+
+El **interruptor por aviso** salió de esta lista el 26: se hizo porque el
+mensual a clientes no está autorizado y no había forma de parar solo a ese.
 
 ### El agente en los sitios del cliente (23 de noviembre, de noche)
 
@@ -280,12 +328,25 @@ Y dos cosas que destapó hacerlo:
 
 ### Lo que dejó abierto la reunión del 23
 
-- **El monitor sigue sin poder medir 106 sitios.** Cloudflare bloquea las IP
-  de salida de Pantheon; comprobado desde el servidor (403 con la página de
-  bloqueo) y desde fuera (200). Las salidas son dos: que el hosting deje
-  pasar a Pantheon, o un servicio externo de monitoreo. **Es decisión de
-  Fer**, y hasta que se decida el panel dice honestamente «no se puede
-  medir» en vez de inventarse una caída.
+- **El cortafuegos: esto estaba mal contado, y el 26 se midió bien.** No es
+  que Cloudflare bloquee a Pantheon. Contra los MISMOS catorce sitios, con
+  minutos de diferencia: saliendo por `34.46.111.53`, **403 en los catorce**;
+  saliendo por `35.239.102.121`, **200 en los catorce**, repetido dos veces.
+  **Una de las dos IP de salida está en lista negra y la otra no**, y Pantheon
+  documenta que las suyas son dinámicas y que no publica rangos. Contadas ocho
+  veces, salimos por la buena **siete de cada ocho**.
+
+  Lo caro no era el bloqueo: **la corrida ciega pisaba la buena.** La sonda
+  ponía 24 normas en «sin dato» en los 107 sitios — unas 2.500 mediciones
+  tiradas por una moneda al aire. Arreglado en 0.8.0 y sin depender de nadie:
+  si más del 60 % vuelve bloqueado, la corrida habla de nosotros, no se
+  escribe nada encima, se guarda por qué IP salió y se reintenta a la vuelta
+  siguiente.
+
+  El mensaje para soporte de Kinsta, la prueba de dos minutos que se puede
+  hacer antes en MyKinsta (Bot protection → Exceptions → Allow por user agent
+  `PanelKinsta`) y las tres salidas si dicen que no están en
+  `KINSTA-pedido-de-desbloqueo.md`, que no va al repositorio.
 - **El semanal a las asesoras ya sale**, con el primer envío el lunes 30 de
   noviembre a las 07:00. El Equipo son cuatro: dos asesoras en Ventas, y
   Luisa y Fer en Dirección, que reciben copia de todo.
