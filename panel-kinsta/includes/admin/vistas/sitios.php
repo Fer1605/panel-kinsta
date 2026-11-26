@@ -366,8 +366,33 @@ $volver = add_query_arg(
 							);
 							?>
 						<?php elseif ( $asignar && ! $nuestro ) : ?>
+							<?php
+							// A estos no se les asigna, pero algunos YA tienen a
+							// alguien de antes. Si se enseñara «no lleva asesora»
+							// el panel estaría mintiendo. Se enseña lo que hay y
+							// se dice que no se cambia desde aquí.
+							//
+							// No se borran solos: esa asignación es también lo que
+							// decide qué sitios ve cada persona al entrar, y
+							// quitarla de golpe le cerraría la puerta a alguien sin
+							// avisar. Lo que no sale es el correo, y eso ya lo
+							// frena el interruptor del aviso semanal.
+							$nombres = [];
+							foreach ( $suyas as $id_a ) {
+								$u = get_user_by( 'id', $id_a );
+								if ( $u ) {
+									$nombres[] = $u->display_name;
+								}
+							}
+							?>
 							<span class="swpk-gris" style="font-size:12px">
-								No lleva asesora: es <?php echo esc_html( SWPK_Etiquetas::nombres()[ $s->tag ] ?? $s->tag ); ?>
+								<?php if ( $nombres ) : ?>
+									<?php echo esc_html( implode( ', ', $nombres ) ); ?><br>
+									<em>de antes; no se cambia desde aquí porque es
+									<?php echo esc_html( SWPK_Etiquetas::nombres()[ $s->tag ] ?? $s->tag ); ?></em>
+								<?php else : ?>
+									No lleva asesora: es <?php echo esc_html( SWPK_Etiquetas::nombres()[ $s->tag ] ?? $s->tag ); ?>
+								<?php endif; ?>
 							</span>
 						<?php elseif ( $asignar ) : ?>
 							<div class="swpk-asesoras">
