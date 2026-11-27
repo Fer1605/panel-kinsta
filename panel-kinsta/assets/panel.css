@@ -2126,11 +2126,47 @@ body[class*="panel-kinsta"] .wrap .notice-dismiss::before {
    los 1.078 px de ancho con dos palabras dentro. Con una base corta caben
    las cinco; si algún día no cupieran, el tope impide que la que sobre se
    quede ocupando el renglón entero ella sola. */
+/* ── Un solo tamaño de tarjeta, y el número al lado del rótulo ──────────────
+   Hubo tres tamaños a la vez y ninguno gustó. Las grandes —número de 30 px
+   arriba y rótulo debajo, 95 px de alto— «saturan mucho». Las de la filita
+   —20 px y 45 px de alto— «así de chiquitas tampoco me gustan, siento que
+   hacen todavía más ruido que las grandes». Así que una sola, en medio:
+   número y rótulo A LA PAR, 26 px, unos 57 px de alto. La misma en
+   Vulnerabilidades, en Caídas, en Seguridad y en la ficha de un sitio, que es
+   la regla §8: lo mismo se ve igual en todas partes.
+
+   Y `flex: 0 1 auto`: cada tarjeta mide lo que mide su texto, en vez de
+   estirarse a partes iguales hasta el borde. Cuatro tarjetas estiradas a 320
+   px cada una son una banda de color de lado a lado; a su ancho natural son
+   cuatro datos. */
+body[class*="panel-kinsta"] .swpk-tarjetas { gap: 10px; margin: 0 0 14px; }
+
 body[class*="panel-kinsta"] .swpk-tarjetas .swpk-tarjeta {
-	flex: 1 1 150px;
-	min-width: 150px;
-	max-width: 320px;
+	display: flex;
+	align-items: baseline;
+	gap: 9px;
+	flex: 0 1 auto;
+	min-width: 0;
+	max-width: 340px;
+	padding: 13px 18px;
 }
+
+body[class*="panel-kinsta"] .swpk-tarjetas .swpk-tarjeta .swpk-n {
+	font-size: 26px;
+	line-height: 1.15;
+}
+
+body[class*="panel-kinsta"] .swpk-tarjetas .swpk-tarjeta .swpk-r {
+	margin-top: 0;
+	font-size: 13px;
+}
+
+/* Las de contexto —la versión de WordPress, la de PHP— siguen siendo las
+   pequeñas: están ahí para contestar «¿por qué no actualiza?», no son a lo
+   que se viene. */
+body[class*="panel-kinsta"] .swpk-tarjetas .swpk-tarjeta-menor { padding: 10px 14px; }
+body[class*="panel-kinsta"] .swpk-tarjetas .swpk-tarjeta-menor .swpk-n { font-size: 18px; }
+body[class*="panel-kinsta"] .swpk-tarjetas .swpk-tarjeta-menor .swpk-r { font-size: 12.5px; }
 
 /* La fila de «Mostrar: Todo · Cliente · Asesora…» del historial de envíos.
    Venía del CSS heredado con 7 px entre chips: igual de pegada que las
@@ -2726,34 +2762,6 @@ body[class*="panel-kinsta"] .swpk-vuln-modulo {
    uno: pegados se leen como un solo nombre largo. */
 body[class*="panel-kinsta"] .swpk-vuln .swpk-norma-aclara { margin-top: 4px; }
 
-/* ── Las tarjetas de cabecera, en una filita ────────────────────────────────
-   En la ficha de un sitio las tarjetas grandes funcionan: son cuatro cifras
-   sobre un sitio y hay sitio de sobra. En Vulnerabilidades, encima de una
-   barra de seis filtros, cuatro cajas de 90 px de alto con el número arriba y
-   el rótulo debajo saturan: «me satura un poco la vista». Aquí el número y el
-   rótulo van A LA PAR, en una sola fila y más pequeñas: dicen lo mismo en un
-   tercio del alto. */
-body[class*="panel-kinsta"] .swpk-tarjetas-fila { gap: 10px; margin: 0 0 14px; }
-
-body[class*="panel-kinsta"] .swpk-tarjetas-fila .swpk-tarjeta {
-	display: flex;
-	align-items: baseline;
-	gap: 8px;
-	flex: 0 1 auto;
-	min-width: 0;
-	padding: 9px 14px;
-}
-
-body[class*="panel-kinsta"] .swpk-tarjetas-fila .swpk-tarjeta .swpk-n {
-	font-size: 20px;
-	line-height: 1.2;
-}
-
-body[class*="panel-kinsta"] .swpk-tarjetas-fila .swpk-tarjeta .swpk-r {
-	margin-top: 0;
-	font-size: 12.5px;
-}
-
 /* El rotulito de «Quién puede aprovecharlo» / «Qué permite hacer». */
 body[class*="panel-kinsta"] .swpk-rotulin {
 	display: block;
@@ -2764,13 +2772,8 @@ body[class*="panel-kinsta"] .swpk-rotulin {
 	margin-bottom: 1px;
 }
 
-/* Las versiones de WordPress y PHP: siguen ahí, pero no del tamaño de lo que
-   hay que hacer. */
-body[class*="panel-kinsta"] .swpk-tarjeta-menor .swpk-n {
-	font-size: 20px;
-	padding-top: 6px;
-	color: #3a4250;
-}
+/* El color de las de contexto; el tamaño lo pone la regla de arriba. */
+body[class*="panel-kinsta"] .swpk-tarjeta-menor .swpk-n { color: #3a4250; }
 
 @media (max-width: 1100px) {
 	body[class*="panel-kinsta"] .swpk-pendiente > summary {

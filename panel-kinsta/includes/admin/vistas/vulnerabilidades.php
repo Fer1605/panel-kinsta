@@ -312,7 +312,7 @@ $url_filtro = static fn( array $args ) => add_query_arg(
 	$n_esperar  = (int) ( $por_quien[ SWPK_QueHacer::ESPERAR ] ?? 0 );
 	$n_hosting  = (int) ( $por_quien[ SWPK_QueHacer::HOSTING ] ?? 0 );
 	?>
-	<div class="swpk-tarjetas swpk-tarjetas-fila">
+	<div class="swpk-tarjetas">
 		<a class="swpk-tarjeta swpk-tarjeta-enlace" href="<?php echo esc_url( $url_filtro( [ 'pendiente' => 'vuln' ] ) ); ?>">
 			<div class="swpk-n" style="color:<?php echo $n_fallas ? '#9e0b10' : '#0b5ed7'; ?>"><?php echo (int) $n_fallas; ?></div>
 			<div class="swpk-r">Con falla conocida</div>

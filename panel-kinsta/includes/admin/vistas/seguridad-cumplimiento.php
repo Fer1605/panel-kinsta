@@ -145,7 +145,7 @@ $url_vista_con = static fn( array $args ) => add_query_arg(
 	admin_url( 'admin.php' )
 );
 ?>
-<div class="swpk-tarjetas swpk-tarjetas-fila">
+<div class="swpk-tarjetas">
 	<a class="swpk-tarjeta swpk-tarjeta-enlace" href="<?php echo esc_url( $url_vista_con( [ 'vista' => 'sitio', 'como' => 'limpio' ] ) ); ?>">
 		<div class="swpk-n" style="color:#1c6dc7"><?php echo (int) $al_dia_medibles; ?></div>
 		<div class="swpk-r">Cumplen todo</div>
@@ -160,48 +160,46 @@ $url_vista_con = static fn( array $args ) => add_query_arg(
 	</a>
 </div>
 
+<?php
+// ── «Lo que está bien» era una lista de 25 renglones, y se fue ─────────────
+//
+//   «eso es información irrelevante, y solo nos da una visualización horrible
+//    y nos satura el panel, aunque sea un desplegable […] mejor ni lo pongas»
+//
+// Era un desplegable con las 25 normas que nadie incumple, una por renglón,
+// cada una diciendo «106 sitios la cumplen, ninguno la incumple». Decir que
+// algo está bien sigue haciendo falta —un panel que solo enseña desgracias se
+// lee como si todo estuviera mal— pero eso se dice con un número, no con una
+// lista: cuáles son exactamente no lo pregunta nadie, y quien lo pregunte las
+// tiene en la pestaña de normas. Queda en media línea.
+$limpias_n = $medibles
+	? count( array_filter( $cumplidas, static fn( $r ) => $r['cumple'] >= 1 ) )
+	: 0;
+?>
 <p class="swpk-comoasi-linea">
 	<?php echo esc_html( SWPK_Vista::plural( count( $normas ), 'norma activa', 'normas activas' ) ); ?>,
 	medidas sobre <?php echo esc_html( SWPK_Vista::plural( (int) $tablero['total'], 'sitio', 'sitios' ) ); ?>.
+	<?php if ( $limpias_n ) : ?>
+		<?php echo esc_html( sprintf(
+			'%s no %s nadie.',
+			SWPK_Vista::plural( $limpias_n, 'norma', 'normas' ),
+			1 === $limpias_n ? 'la incumple' : 'las incumple'
+		) ); ?>
+	<?php endif; ?>
 	<?php echo wp_kses_post( SWPK_Vista::ayuda(
 		'El panel no comprueba estas normas por su cuenta: las mira el plugin instalado en cada '
 		. 'sitio y las manda en su reporte. Lo que se ve es cómo estaba ese sitio la última vez que '
 		. 'reportó, y por eso cada dato lleva su fecha en la ficha del sitio. Un sitio «sin revisar» '
-		. 'no es un sitio que esté bien ni uno que esté mal: es uno del que todavía no sabemos nada.'
+		. 'no es un sitio que esté bien ni uno que esté mal: es uno del que todavía no sabemos nada, '
+		. 'porque le falta el plugin. Casi ninguna de estas normas se puede comprobar desde fuera: '
+		. 'hay que estar dentro del sitio para saber si el editor de código está abierto, si '
+		. 'cualquiera puede registrarse o si el servidor ejecuta un archivo PHP subido por un '
+		. 'formulario.'
 	) ); ?>
 </p>
 <?php
 
 SWPK_Vista::rejilla_abrir();
-
-// Las normas que no incumple nadie. Decir lo que está bien es parte de decir
-// cómo vamos: una pantalla que solo enseña problemas se lee como si todo
-// estuviera mal. Va plegado y fuera de ninguna caja, que es lo que era cuando
-// vivía dentro de la de la dona.
-if ( $cumplidas && $medibles ) {
-	$limpias = array_filter( $cumplidas, static fn( $r ) => $r['cumple'] >= 1 );
-
-	if ( $limpias ) {
-		// Plegado a propósito: que algo esté bien hay que afirmarlo —si no, un
-		// panel solo enseña desgracias— pero no puede ocupar media pantalla por
-		// delante de lo que sí hay que atender. El número se ve sin abrir.
-		printf(
-			'<details style="margin:18px 0 6px"><summary class="swpk-titulin" style="cursor:pointer">Lo que está bien <span class="swpk-mudo">(%s)</span></summary>',
-			esc_html( SWPK_Vista::plural( count( $limpias ), 'norma que nadie incumple', 'normas que nadie incumple' ) )
-		);
-		echo '<ul class="swpk-bien-lista">';
-
-		foreach ( $limpias as $r ) {
-			printf(
-				'<li><strong>%s</strong> — %s, ninguno la incumple.</li>',
-				esc_html( (string) $r['norma']->nombre ),
-				esc_html( SWPK_Vista::plural( (int) $r['cumple'], 'sitio la cumple', 'sitios la cumplen' ) )
-			);
-		}
-
-		echo '</ul></details>';
-	}
-}
 
 usort(
 	$con_fallas,
@@ -822,55 +820,32 @@ $cuenta_vista = [
 ?>
 
 <?php
-// ── El veredicto ─────────────────────────────────────────────────────────────
+// ── Aquí vivían el veredicto y el aviso de los ciegos, y se fueron ──────────
 //
-// Antes decía «1 sitio incumple… y de 107 no se sabe», que deja la pregunta
-// obvia sin contestar: ¿y por qué de 107 no se sabe? Ahora lo primero que se
-// explica es de cuántos sitios se puede saber algo y por qué.
+// Al pie había dos bloques más: un «veredicto» de dos renglones —«108 sitios
+// tienen algo que arreglar. El panel puede revisar 108 de los 108… de los
+// otros no se sabe nada»— y, debajo, un aviso de cinco renglones explicando
+// por qué de N sitios no se sabe nada. Entre los dos repetían, con otras
+// palabras, exactamente lo que dicen las tres tarjetas de arriba y su línea
+// gris. Regla §3.2: si una frase dice lo mismo que otra que está más abajo,
+// sobra una. Aquí sobraban dos.
+//
+// El porqué —que hace falta el plugin dentro del sitio— no se perdió: está en
+// la burbuja de esa línea, pegado al número que lo necesita.
+//
+// Lo único que se queda es el caso en que NO se puede revisar ningún sitio,
+// porque entonces la pantalla entera está vacía y hay que decir por qué. Y se
+// queda en una línea, no en un recuadro de cuatro.
 ?>
 <?php if ( ! $medibles ) : ?>
-	<div class="swpk-veredicto swpk-veredicto-ciego">
+	<p class="swpk-aviso-fecha swpk-aviso-fecha-mal">
 		<strong>Todavía no se puede revisar ningún sitio.</strong>
-		Estas normas no se ven desde fuera —si el editor de código está abierto, si alguien puede
-		registrarse, si el servidor ejecuta archivos subidos— solo se ven desde dentro del sitio, y para eso
-		hace falta el plugin instalado. No lo tiene ninguno de los <?php echo (int) $tablero['total']; ?> todavía.
-	</div>
-<?php else : ?>
-	<div class="swpk-veredicto <?php echo $fallando_medibles > 0 ? 'swpk-veredicto-mal' : 'swpk-veredicto-bien'; ?>">
-		<?php if ( $fallando_medibles > 0 ) : ?>
-			<strong>
-				<?php echo esc_html( SWPK_Vista::plural( $fallando_medibles, 'sitio tiene algo', 'sitios tienen algo' ) ); ?>
-				que arreglar.
-			</strong>
-		<?php else : ?>
-			<strong>Los sitios que se pueden revisar están en orden.</strong>
-		<?php endif; ?>
-
-		<span class="swpk-veredicto-mas">
-			El panel puede revisar <?php echo (int) count( $medibles ); ?> de los
-			<?php echo (int) $tablero['total']; ?> sitios: son los que tienen el plugin instalado.
-			<?php if ( $al_dia_medibles > 0 && $fallando_medibles > 0 ) : ?>
-				De esos, <?php echo (int) $al_dia_medibles; ?> cumplen todo.
-			<?php endif; ?>
-			<?php if ( $ciegos ) : ?>
-				De los otros <?php echo (int) count( $ciegos ); ?> no se sabe nada, ni bueno ni malo.
-			<?php endif; ?>
-		</span>
-	</div>
+		Ninguno de los <?php echo (int) $tablero['total']; ?> tiene el plugin instalado.
+		<?php echo wp_kses_post( SWPK_Vista::ayuda(
+			'Estas normas no se ven desde fuera —si el editor de código está abierto, si alguien '
+			. 'puede registrarse, si el servidor ejecuta archivos subidos—: solo se ven desde dentro '
+			. 'del sitio, y para eso hace falta el plugin instalado. Mientras no esté, esos sitios no '
+			. 'salen aquí ni como buenos ni como malos, porque no lo sabemos.'
+		) ); ?>
+	</p>
 <?php endif; ?>
-
-<?php if ( $ciegos ) : ?>
-	<div class="notice notice-warning inline">
-		<p>
-			<strong>Por qué de <?php echo (int) count( $ciegos ); ?> sitios no se sabe nada.</strong>
-			Casi ninguna de estas normas se puede comprobar desde fuera: hay que estar dentro del sitio para
-			saber si el editor de código está abierto, si cualquiera puede registrarse o si el servidor
-			ejecuta un archivo PHP subido por un formulario. Eso lo mira el plugin que va instalado en cada
-			sitio, y <strong>falta instalarlo en <?php echo (int) count( $ciegos ); ?></strong>.
-			Mientras tanto esos sitios no aparecen aquí: ni como buenos ni como malos, porque no lo sabemos.
-		</p>
-	</div>
-<?php endif; ?>
-
-
-

@@ -122,14 +122,28 @@ $url_pestana = static fn( string $s ) => add_query_arg(
 	SWPK_Vista::cabecera(
 		$sitio->nombre_visible . ' · ' . $cual_pestana,
 		sprintf(
-			'%s<br><a href="%s" target="_blank" rel="noopener" class="swpk-mono">%s</a>',
+			'%s<br><a href="%s" target="_blank" rel="noopener" class="swpk-mono">%s</a> %s %s',
 			esc_html( $que_miro ),
 			esc_url( 'https://' . ltrim( $sitio->dominio, 'htps:/' ) ),
-			esc_html( $sitio->dominio )
+			esc_html( $sitio->dominio ),
+			SWPK_Admin::grupo_badge( SWPK_Inventario::grupo_de( $sitio ) ),
+			SWPK_Admin::nivel_badge( $nivel )
 		),
-		SWPK_Admin::grupo_badge( SWPK_Inventario::grupo_de( $sitio ) )
-		. ' ' . SWPK_Admin::nivel_badge( $nivel )
-		. ' ' . SWPK_Vista::pastillas( [
+		// ── Solo las pestañas a la derecha ──────────────────────────────
+		//
+		//   «tenemos ahí una etiqueta que dice el cliente, luego dice crítico,
+		//    luego tenemos lo que tiene pendiente, no sé qué […] se acumula
+		//    mucha info aquí»
+		//
+		// A la derecha iban cinco cosas pegadas: la etiqueta del grupo, la
+		// pastilla de riesgo y las tres pestañas. Son dos cosas distintas
+		// metidas en el mismo renglón: las dos primeras son ATRIBUTOS del
+		// sitio —qué es y cómo está— y las tres siguientes son NAVEGACIÓN.
+		// Mezcladas, no se ve cuáles se pueden pulsar para ir a otro lado.
+		//
+		// Las etiquetas bajan con el dominio, debajo del título, que es donde
+		// se dice qué es este sitio. A la derecha quedan solo las pestañas.
+		SWPK_Vista::pastillas( [
 			[
 				'texto'  => 'Lo que tiene pendiente',
 				'n'      => $hallazgos ? count( $hallazgos ) : '',
@@ -301,7 +315,7 @@ $url_pestana = static fn( string $s ) => add_query_arg(
 		<?php endif; ?>
 		<?php if ( 'datos' !== $seccion && SWPK_Etiquetas::es_nuestro( $sitio->tag ) ) : ?>
 			<div class="swpk-tarjeta">
-				<div class="swpk-n" style="font-size:19px;padding-top:6px;color:<?php echo $sitio->tiene_2fa ? '#0b5ed7' : '#9e0b10'; ?>">
+				<div class="swpk-n" style="font-size:18px;color:<?php echo $sitio->tiene_2fa ? '#0b5ed7' : '#9e0b10'; ?>">
 					<?php echo $sitio->tiene_2fa ? '✓ Activa' : 'Pendiente'; ?>
 				</div>
 				<div class="swpk-r">Doble autenticación</div>

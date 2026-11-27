@@ -293,7 +293,7 @@ $url_estado = static fn( string $cual ) => add_query_arg(
 		// solo si hay algo: un cero en «ya no están en el hosting» no es
 		// noticia, es lo normal.
 		?>
-		<div class="swpk-tarjetas swpk-tarjetas-fila">
+		<div class="swpk-tarjetas">
 			<a class="swpk-tarjeta swpk-tarjeta-enlace" href="<?php echo esc_url( $url_estado( 'arriba' ) ); ?>">
 				<div class="swpk-n" style="color:#1c6dc7"><?php echo (int) $responden; ?></div>
 				<div class="swpk-r">Responden</div>

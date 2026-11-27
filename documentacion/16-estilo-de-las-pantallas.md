@@ -159,9 +159,18 @@ fila en fila.
   sitio, ¿qué onda?».
 - Su parámetro de búsqueda es `q`, y «Limpiar» borra todos los campos más
   `q` y `p`.
-- Tarjetas de cabecera: las que importan grandes, las de contexto con
-  `.swpk-tarjeta-menor`. Y **si una tarjeta enseña un número, se puede
-  pulsar** y lleva a la lista ya filtrada.
+- **Las tarjetas de cabecera son todas del mismo tamaño**, en todas las
+  pantallas, con el **número y el rótulo a la par** y unos 57 px de alto. Se
+  llegó ahí probando los dos extremos y descartándolos los dos: las grandes
+  —número de 30 px arriba, rótulo debajo, 95 px— «saturan mucho», y las
+  pequeñas —20 px, 45 px de alto— «así de chiquitas tampoco me gustan, siento
+  que hacen todavía más ruido que las grandes». Las de contexto —la versión de
+  WordPress, la de PHP— siguen siendo `.swpk-tarjeta-menor`.
+- Y cada tarjeta mide lo que mide su texto (`flex: 0 1 auto`), no una parte
+  igual del ancho: cuatro tarjetas estiradas de lado a lado son una banda de
+  color, no cuatro datos.
+- **Si una tarjeta enseña un número, se puede pulsar** y lleva a la lista ya
+  filtrada.
 
 ---
 
@@ -177,6 +186,26 @@ En orden de urgencia, dicho por Fer el 27-11-2026:
 
 **La lista de arriba está cerrada.** Lo que sigue pendiente de esta sección es
 la pieza concreta del final: el botón «arreglarlo en Kinsta».
+
+### La repasada del final, que tocó las cuatro a la vez (0.19.6)
+
+Tres cosas que solo se ven cuando ya están las cuatro pantallas hechas:
+
+1. **Un dato que a nadie le importa no se pone, ni plegado.** En Seguridad
+   había un desplegable, «Lo que está bien (25 normas que nadie incumple)»,
+   con las 25 listadas una por renglón: «eso es información irrelevante, y
+   solo nos da una visualización horrible y nos satura el panel, aunque sea un
+   desplegable […] mejor ni lo pongas». Decir que algo está bien sigue
+   haciendo falta —un panel que solo enseña desgracias se lee como si todo
+   estuviera mal— pero eso se dice **con un número en media línea**, no con
+   una lista. Cuáles son exactamente no lo pregunta nadie.
+2. **Un tamaño de tarjeta, no tres.** Ver §8.
+3. **Atributos y navegación no comparten renglón.** En la cabecera de la ficha
+   de un sitio iban pegadas, a la derecha, la etiqueta del grupo, la pastilla
+   de riesgo y las tres pestañas: «se acumula mucha info aquí». Son dos cosas
+   distintas —qué ES este sitio, y a dónde se puede ir— y mezcladas no se ve
+   cuál se puede pulsar. Las etiquetas bajan junto al dominio; **a la derecha
+   quedan solo las pestañas**.
 
 ---
 
