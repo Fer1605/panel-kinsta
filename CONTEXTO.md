@@ -241,7 +241,40 @@ pastilla Alta/Media/Baja se enseñaba en cada fila sin poder filtrar por ella:
 «no podemos filtrar por eso». Ahora son tres desplegables con su cuenta
 dentro, y «las altas que no cumplen» se pide en dos clics.
 
-#### Cómo se destraba lo de Cloudflare, con los clics
+#### La excepción de bots: puesta en los 109, y lo que resultó NO ser la causa
+
+**La excepción está puesta en los 109 sitios** (27 de noviembre, 16:40 UTC),
+por la API, verificada después en cinco al azar:
+`{"type":"user_agent","action":"skip","value":"PanelKinsta"}`. Kinsta la
+guarda en minúsculas, con el id `user_agent:skip:panelkinsta`.
+
+Pero hay que decir lo que no se pudo probar: **no hay antes y después**. Ese
+día el bloqueo de Cloudflare no se reprodujo ni una vez. La portada de un
+sitio con excepción y la de uno sin ella contestaron 200 las veinte veces, y
+el 403 que sí sale —en `xmlrpc.php`, `wp-config.php.bak`, `phpinfo.php`— no es
+de Cloudflare: el cuerpo es la página de nginx y la cabecera dice
+`ki-cf-cache-status: BYPASS`, o sea que pasó Cloudflare y lo paró Kinsta.
+Ese 403 es la regla del servidor, igual para todos, y la sonda ya lo sabe:
+compara cada ruta con una de control.
+
+**Entonces las 27 normas no eran Cloudflare.** Era que
+`SWPK_Sonda::correr()` **nunca había terminado una corrida en producción**:
+`swpk_ultima_sonda` estaba sin escribir. Son 108 sitios y tarda unos diez
+minutos, más de lo que aguanta una corrida de cron en Pantheon, así que moría
+siempre antes de llegar al `update_option` del final. Se forzó a mano y
+terminó: `{"sondeados":108,"rutas_no_fiables":1,"corrida_mal":false,
+"medidos":108}`. Heraldos pasó de **27 normas sin medir a 4**, y sus fallas
+reales de 11 a 19 — estaban escondidas detrás del «falta medirlo».
+
+**Lo que queda por arreglar:** la sonda tiene que correr por tandas, como
+`SWPK_Trabajo::avanzar()`, en vez de una pasada de diez minutos que el
+servidor corta. Mientras no se haga, mañana vuelve a quedarse a medias.
+
+La excepción se deja puesta igual: el bloqueo de Cloudflare del 23 de
+noviembre —106 sitios con la página «Attention Required!»— fue real, y es al
+monitor de caídas al que le pega. Ver `SWPK_Monitor::SENALES_DE_BLOQUEO`.
+
+#### Cómo se pone a mano, con los clics
 
 Comprobado en MyKinsta el 27 de noviembre, entrando a uno de los sitios:
 
