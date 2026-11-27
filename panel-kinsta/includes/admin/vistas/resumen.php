@@ -213,7 +213,7 @@ $bien_hoy = $resumen_dia[ $hoy ] ?? [ 'sitios' => 0, 'modulos' => 0 ];
 	<?php if ( ! $estado['total'] ) : ?>
 
 		<div class="notice notice-info"><p>
-			Todavía no hay inventario. Dale a <strong>Correr ahora</strong> para traer los sitios
+			Todavía no hay inventario. Dale a <strong>Revisar los sitios ahora</strong> para traerlos
 			y tomar el primer inventario.
 		</p></div>
 

@@ -291,6 +291,14 @@ $url_filtro = static fn( array $args ) => add_query_arg(
 	<?php SWPK_Admin::mostrar_mensaje(); ?>
 
 	<?php
+	// El aviso de fecha va ANTES de las cifras, no después: si el inventario
+	// es viejo, esos cuatro números son viejos, y hay que saberlo antes de
+	// leerlos. Sin la parte de la lista de Wordfence: esta pantalla la dice
+	// abajo, con sus propias palabras.
+	SWPK_Frescura::aviso( false );
+	?>
+
+	<?php
 	// ── Las cuatro cifras con las que se decide el día ──────────────────────
 	//
 	// Y cada una lleva a su lista. Un número que no lleva a los renglones que
@@ -304,7 +312,7 @@ $url_filtro = static fn( array $args ) => add_query_arg(
 	$n_esperar  = (int) ( $por_quien[ SWPK_QueHacer::ESPERAR ] ?? 0 );
 	$n_hosting  = (int) ( $por_quien[ SWPK_QueHacer::HOSTING ] ?? 0 );
 	?>
-	<div class="swpk-tarjetas">
+	<div class="swpk-tarjetas swpk-tarjetas-fila">
 		<a class="swpk-tarjeta swpk-tarjeta-enlace" href="<?php echo esc_url( $url_filtro( [ 'pendiente' => 'vuln' ] ) ); ?>">
 			<div class="swpk-n" style="color:<?php echo $n_fallas ? '#9e0b10' : '#0b5ed7'; ?>"><?php echo (int) $n_fallas; ?></div>
 			<div class="swpk-r">Con falla conocida</div>
@@ -328,7 +336,7 @@ $url_filtro = static fn( array $args ) => add_query_arg(
 			<div class="swpk-r">Sin arreglo todavía</div>
 		</a>
 		<?php elseif ( $n_hosting ) : ?>
-		<a class="swpk-tarjeta swpk-tarjeta-enlace swpk-tarjeta-menor" href="<?php echo esc_url( $url_filtro( [ 'caso' => SWPK_QueHacer::DEL_HOST ] ) ); ?>">
+		<a class="swpk-tarjeta swpk-tarjeta-enlace" href="<?php echo esc_url( $url_filtro( [ 'caso' => SWPK_QueHacer::DEL_HOST ] ) ); ?>">
 			<div class="swpk-n"><?php echo (int) $n_hosting; ?></div>
 			<div class="swpk-r">Los actualiza el hosting</div>
 		</a>
@@ -355,8 +363,6 @@ $url_filtro = static fn( array $args ) => add_query_arg(
 		) ); ?>
 	</p>
 
-	<?php // Sin la parte de la lista: esta pantalla la dice abajo, con más detalle.
-	SWPK_Frescura::aviso( false ); ?>
 	<?php
 	// La frase de la lista de Wordfence, antes de nada.
 	//

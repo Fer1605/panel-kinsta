@@ -180,6 +180,32 @@ publicado parche, y esas tres no son el trabajo.
 **Los pendientes de un sitio se filtran y se paginan**, con los mismos tres
 desplegables y de quince en quince. Antes eran los 23 módulos seguidos.
 
+**Segunda pasada, la misma tarde.** «Mejor, pero todavía sigue horrible.»
+Cuatro cosas más, y las tres primeras valen para cualquier pantalla:
+
+- **Un aviso es una notita de una línea, no un comunicado.** El de «lo que
+  estás viendo no es de hoy» eran cinco párrafos, una lista con viñetas y dos
+  bloques de código dentro de un recuadro rojo a toda pantalla, antes de
+  enseñar un solo dato. Ahora es una línea: el hecho, la fecha, la burbuja
+  «i» con el porqué, y la acción al final. Y **la receta de WP-Cron y Plesk se
+  borró entera**: «eso creo que a nadie le interesa, la verdad». Era una
+  instrucción de instalación que se hace una vez en la vida del panel, y
+  estaba saliendo todos los días en cuatro pantallas. Sigue escrita donde se
+  necesita: en Ajustes y en la documentación.
+- **Las tarjetas de cabecera no siempre tienen que ser cajas grandes.** En la
+  ficha de un sitio funcionan. Encima de una barra de seis filtros, no: ahí el
+  número y el rótulo van **a la par, en una filita** y más pequeños
+  (`.swpk-tarjetas-fila`). Dicen lo mismo en un tercio del alto.
+- **El hueco de una fila va en el medio, no a la derecha.** Las dos últimas
+  columnas de una fila que se despliega llevan **ancho fijo**, no `fr`. Con
+  `minmax(190px, 0.9fr)` la última crecía con la pantalla: el texto empezaba
+  en el borde izquierdo de una columna muy ancha, quedaba un hueco grande en
+  la esquina derecha, y a la vez un sitio de nombre largo llegaba a tocar la
+  etiqueta de gravedad. Con las dos fijas, el aire cae entre el nombre y las
+  etiquetas, que es donde se necesita.
+- Y el nombre del botón en los textos tiene que ser el de verdad: decían
+  «Correr ahora» y se llama «Revisar los sitios ahora» desde hace semanas.
+
 **Y dos cosas de la hoja de estilos que valen para todo el panel:**
 
 - La barra de filtros se alinea **por abajo** (`align-items: flex-end`). Con

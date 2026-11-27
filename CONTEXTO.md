@@ -156,7 +156,7 @@ Reglas de Fer, que valen igual en un chat nuevo:
 
 | | Versión | Dónde está |
 |---|---|---|
-| Panel Kinsta | **0.19.0** | En el repositorio y comprobado en local a 1280 px. **La 0.18.1 es la que está en producción**: la 0.19.0 todavía no se ha desplegado. |
+| Panel Kinsta | **0.19.1** | En el repositorio y comprobado en local a 1280 px. **La 0.18.1 es la que está en producción**: la 0.19.x todavía no se ha desplegado. |
 | Agente (plugin) | **0.7.0** | 0.6.4 está en 106 de 107. La 0.7.0 trae el registro de actividad y **no está repartida**. |
 | Agente (dentro del tema) | **0.7.0-tema** | La rama unida del jefe sigue en 0.6.4-tema con código de 0.6.3. La corrección + el registro están en una rama lista, **sin PR abierto**. |
 | Tema hijo | **2.6.1** | En el PR. |
@@ -206,6 +206,23 @@ con parámetros reales, sin `Fatal`, `Warning`, `Notice` ni `Deprecated`, con
 los valores inventados cayendo al «sin filtro». Que se vea: en el navegador con
 `window.innerWidth` en 1280, sin desborde horizontal, el renglón bajó de 82 px
 a 69 px y los filtros se leen enteros.
+
+**Segunda pasada, la misma tarde: «mejor, pero todavía sigue horrible».**
+
+- El aviso de «lo que estás viendo no es de hoy» pasa de cinco párrafos, una
+  lista con viñetas y dos bloques de código a **una línea** con su burbuja «i»
+  y la acción al final. La receta de WP-Cron y Plesk se borró: es una
+  instrucción de instalación y salía todos los días en cuatro pantallas. Toca
+  también Resumen, Sitios y la ficha de un sitio.
+- Las cuatro tarjetas de Vulnerabilidades quedan en **una filita**, con el
+  número y el rótulo a la par. Las de la ficha de un sitio se quedan como
+  están: ahí funcionan.
+- Las dos últimas columnas de cada fila pasan a **ancho fijo**, para que el
+  hueco caiga entre el nombre del sitio y las etiquetas y no en la esquina
+  derecha.
+
+Con eso, la lista empieza en el píxel 574 en vez de pasado el 1.100: la
+primera pantalla del portátil ya enseña hallazgos.
 
 **Lo que sigue:** Caídas, que es el punto 2 de la lista de §9 del estilo de las
 pantallas.

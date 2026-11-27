@@ -1803,6 +1803,40 @@ body[class*="panel-kinsta"] .swpk-c12 .swpk-dona .swpk-leyenda {
 /* Un aviso de una línea, con su burbuja al lado. Reemplaza a los párrafos
    largos que antes abrían cada pantalla: la frase corta queda a la vista y el
    detalle se lee al pasar el ratón, en vez de ocupar media pantalla siempre. */
+/* ── «Lo que estás viendo no está al día», en UNA línea ─────────────────────
+   Era un `notice notice-error` de WordPress con cinco párrafos, una lista con
+   viñetas y dos bloques de código: medía más que la primera pantalla entera
+   del portátil de 13". «Se ve horrible porque me está saturando mi pantalla de
+   información que a la gente no le interesa.» La franja de color a la
+   izquierda basta para que no pase desapercibido; el porqué vive en la
+   burbuja. */
+body[class*="panel-kinsta"] .swpk-aviso-fecha {
+	display: flex;
+	align-items: center;
+	flex-wrap: wrap;
+	gap: 4px 8px;
+	margin: 0 0 14px;
+	padding: 9px 14px;
+	background: #fff;
+	border: 1px solid var(--swpk-borde);
+	border-left: 3px solid var(--swpk-alto);
+	border-radius: var(--swpk-radio);
+	font-size: 13px;
+	color: var(--swpk-texto);
+}
+
+/* Cuando lo viejo es el inventario entero y no solo la lista de Wordfence,
+   la franja es roja: con el inventario viejo, TODO lo de abajo es viejo. */
+body[class*="panel-kinsta"] .swpk-aviso-fecha-mal { border-left-color: var(--swpk-critico); }
+
+/* La acción, al final de la misma línea. No es un botón: un botón de ese
+   tamaño dentro de un aviso de una línea vuelve a ser un bloque. */
+body[class*="panel-kinsta"] .swpk-aviso-fecha .swpk-aviso-accion {
+	margin-left: auto;
+	font-weight: 600;
+	white-space: nowrap;
+}
+
 body[class*="panel-kinsta"] .swpk-aviso-corto {
 	margin: 0 0 14px;
 	font-size: 13px;
@@ -2601,8 +2635,16 @@ body[class*="panel-kinsta"] .swpk-interruptor-corto .swpk-que { font-size: 13px;
    información». Ahora cada módulo es una línea que se despliega, igual que las
    normas, y comparte con ellas casi todo el estilo. Lo de aquí es solo lo que
    cambia: tres columnas en vez de cuatro. */
+/* Las dos últimas columnas tienen ancho FIJO, y la primera se queda con todo
+   lo que sobre. Antes la última era `minmax(190px, 0.9fr)` y crecía con la
+   pantalla: el «qué hacer» empezaba en el borde izquierdo de una columna muy
+   ancha y quedaba un hueco grande a la derecha del todo, mientras que un sitio
+   de nombre largo llegaba a tocar la etiqueta de gravedad. «Hay que alinearlo
+   todo más a la derecha para que quede el espacio en el medio.» Con las dos
+   fijas, el hueco cae donde tiene que caer: entre el nombre del sitio y las
+   etiquetas. */
 body[class*="panel-kinsta"] .swpk-pendiente > summary {
-	grid-template-columns: 1fr 190px minmax(190px, 0.9fr);
+	grid-template-columns: 1fr 170px 210px;
 }
 /* El nivel y la píldora de parche van UNO AL LADO DEL OTRO. Apilados, cada
    renglón medía 82 px: veinticinco renglones así son dos pantallas y media de
@@ -2643,9 +2685,6 @@ body[class*="panel-kinsta"] .swpk-hacer-esperar  { border-left-color: #b4690e; }
    el sitio», así que el sitio va en negrita arriba y el módulo debajo, pero no
    en gris de nota al pie: el módulo es la mitad del renglón y se busca con la
    vista cuando no hay filtro puesto. */
-body[class*="panel-kinsta"] .swpk-vuln > summary {
-	grid-template-columns: 1fr 180px minmax(200px, 0.8fr);
-}
 body[class*="panel-kinsta"] .swpk-vuln-modulo {
 	font-weight: 600;
 	font-size: 13px;
@@ -2655,8 +2694,32 @@ body[class*="panel-kinsta"] .swpk-vuln-modulo {
    uno: pegados se leen como un solo nombre largo. */
 body[class*="panel-kinsta"] .swpk-vuln .swpk-norma-aclara { margin-top: 4px; }
 
-@media (max-width: 1100px) {
-	body[class*="panel-kinsta"] .swpk-vuln > summary { grid-template-columns: 1fr; gap: 6px; }
+/* ── Las tarjetas de cabecera, en una filita ────────────────────────────────
+   En la ficha de un sitio las tarjetas grandes funcionan: son cuatro cifras
+   sobre un sitio y hay sitio de sobra. En Vulnerabilidades, encima de una
+   barra de seis filtros, cuatro cajas de 90 px de alto con el número arriba y
+   el rótulo debajo saturan: «me satura un poco la vista». Aquí el número y el
+   rótulo van A LA PAR, en una sola fila y más pequeñas: dicen lo mismo en un
+   tercio del alto. */
+body[class*="panel-kinsta"] .swpk-tarjetas-fila { gap: 10px; margin: 0 0 14px; }
+
+body[class*="panel-kinsta"] .swpk-tarjetas-fila .swpk-tarjeta {
+	display: flex;
+	align-items: baseline;
+	gap: 8px;
+	flex: 0 1 auto;
+	min-width: 0;
+	padding: 9px 14px;
+}
+
+body[class*="panel-kinsta"] .swpk-tarjetas-fila .swpk-tarjeta .swpk-n {
+	font-size: 20px;
+	line-height: 1.2;
+}
+
+body[class*="panel-kinsta"] .swpk-tarjetas-fila .swpk-tarjeta .swpk-r {
+	margin-top: 0;
+	font-size: 12.5px;
 }
 
 /* El rotulito de «Quién puede aprovecharlo» / «Qué permite hacer». */

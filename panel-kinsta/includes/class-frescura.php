@@ -310,7 +310,7 @@ class SWPK_Frescura {
 			// aparecen tres días sin corrida y no hay nada roto.
 			'si_no'  => 'La corrida diaria no ha pasado. Lo de abajo es el último inventario bueno. '
 				. 'Suele ser porque el reloj de WordPress solo corre cuando alguien entra al panel: '
-				. 'dale a «Correr ahora», o pon un cron de verdad en el servidor.',
+				. 'dale a «Revisar los sitios ahora», o pon un cron de verdad en el servidor.',
 		];
 
 		// La línea de Wordfence dice CUÁNDO SE COMPROBÓ, no cuándo cambió la
@@ -371,17 +371,37 @@ class SWPK_Frescura {
 	}
 
 	/**
-	 * El grito, cuando el dato ya no es de hoy.
+	 * Cuando el dato ya no es de hoy: UNA LÍNEA, y el resto en la burbuja.
 	 *
-	 * Deliberadamente arriba de todo y en rojo. El día que esto pase, tiene que
-	 * ser imposible seguir leyendo el panel sin haberlo visto.
-	 */
-	/**
-	 * @param bool $incluir_feed false en la pantalla de Vulnerabilidades, que
-	 *                           ya dice lo de la lista con sus propias palabras
-	 *                           justo debajo. Repetirlo en rojo arriba no avisa
-	 *                           de nada nuevo: solo hace que la pantalla abra
-	 *                           con dos alarmas diciendo lo mismo.
+	 * ─── Por qué encogió (27-11-2026) ───────────────────────────────────────
+	 *
+	 *   «esa clase de notificación se ve horrible porque me está saturando mi
+	 *    pantalla de información que a la gente no le interesa. Creo que solo
+	 *    debería ser una notita […] que solo diga: lo que estás viendo no está
+	 *    al día, esto es de tal fecha, nada más.»
+	 *
+	 * Eran cinco párrafos, una lista con viñetas y dos bloques de código en un
+	 * recuadro rojo a toda pantalla, antes de enseñar un solo dato. Medía más
+	 * que la primera pantalla entera del portátil del jefe.
+	 *
+	 * Lo que quedó fuera, y por qué:
+	 *
+	 *  - **La receta de WP-Cron y Plesk** —`define( 'DISABLE_WP_CRON', true )`
+	 *    y la línea del cron— se borró entera. «Eso creo que a nadie le
+	 *    interesa, la verdad.» Es verdad: es una instrucción de instalación,
+	 *    se hace una vez en la vida del panel y no en esta pantalla, y estaba
+	 *    saliendo todos los días en cuatro pantallas distintas. Sigue escrita
+	 *    donde se necesita: en la pantalla de Ajustes, y en
+	 *    `documentacion/03-de-donde-salen-los-datos.md` y
+	 *    `documentacion/14-cadencia-y-lo-que-cuesta.md`.
+	 *  - **Qué falló y qué significa** no se borra: se mete en la burbuja «i»,
+	 *    la misma que el resto del panel. Lo que importa de un vistazo es la
+	 *    fecha; el porqué lo abre quien lo necesite.
+	 *
+	 * Lo que SÍ se queda a la vista, además de la fecha, es la acción: la
+	 * regla madre del estilo de las pantallas dice que una pantalla que enseña
+	 * un problema dice qué hacer. Y dice el nombre verdadero del botón —el de
+	 * arriba decía «Correr ahora», que es como se llamaba hace tres semanas.
 	 */
 	public static function aviso( bool $incluir_feed = true ): void {
 		if ( ! self::hay_problema() ) {
@@ -397,54 +417,61 @@ class SWPK_Frescura {
 		$fallo   = self::corrida_fallo();
 		$vieja   = ! self::corrida_al_dia();
 		$errores = self::errores();
+
+		// ── El caso del feed solo ───────────────────────────────────────────
+		//
+		// La corrida está al día y lo único viejo es la lista de Wordfence.
+		// Una línea y nada más: aquí no hay nada que apretar, el feed se pide
+		// solo y hay un límite de una petición por hora.
+		if ( ! $vieja && ! $fallo ) {
+			if ( ! $incluir_feed || self::feed_al_dia() ) {
+				return;
+			}
+			?>
+			<p class="swpk-aviso-fecha">
+				<strong>Hace días que no comprobamos si hay vulnerabilidades nuevas.</strong>
+				<?php echo esc_html( SWPK_Wordfence::como_va()['frase'] ); ?>
+			</p>
+			<?php
+			return;
+		}
+
+		// ── Lo que va dentro de la burbuja ──────────────────────────────────
+		//
+		// Primero qué significa —que es lo que se pregunta— y después qué
+		// falló, que es el detalle. Nunca «no se pudo» a secas.
+		$dentro = 'Los números que ves son los del último inventario bueno. No están mal: están '
+			. 'viejos. Una actualización que salió después de esa fecha no aparece, y un sitio que '
+			. 'ya se arregló sigue saliendo pendiente.';
+
+		if ( $fallo && '' !== self::intento() ) {
+			$dentro .= ' Después de ese dato hubo un intento, el ' . self::fecha( self::intento() )
+				. ', que arrancó y no trajo nada.';
+		}
+
+		if ( $errores ) {
+			$dentro .= ' Lo que falló: ' . implode( ' · ', array_map( 'strval', array_slice( $errores, 0, 5 ) ) );
+			if ( ! str_ends_with( $dentro, '.' ) ) {
+				$dentro .= '.';
+			}
+		}
 		?>
-		<div class="notice notice-error">
-			<?php if ( $vieja || $fallo ) : ?>
-				<p><strong>Lo que estás viendo no es de hoy.</strong>
-					<?php if ( '' === self::corrida() ) : ?>
-						El panel nunca ha logrado traer datos de <?php echo esc_html( SWPK_Admin::proveedor() ); ?>.
-					<?php else : ?>
-						El último dato bueno entró el
-						<?php echo esc_html( self::fecha_y_edad( self::corrida() ) ); ?>.
-					<?php endif; ?>
-					<?php if ( $fallo && '' !== self::intento() ) : ?>
-						Después de eso hubo un intento, el <?php echo esc_html( self::fecha( self::intento() ) ); ?>,
-						que arrancó y no trajo nada.
-					<?php endif; ?>
-				</p>
-
-				<?php if ( $errores ) : ?>
-					<p>Lo que falló:</p>
-					<ul style="list-style:disc;margin-left:24px">
-						<?php foreach ( array_slice( $errores, 0, 5 ) as $e ) : ?>
-							<li><?php echo esc_html( (string) $e ); ?></li>
-						<?php endforeach; ?>
-					</ul>
-				<?php endif; ?>
-
-				<p>
-					Mientras esto no se arregle, los números de abajo siguen siendo los del último
-					inventario bueno. No están mal: están viejos. Una actualización que salió después no
-					aparece, y un sitio que ya se arregló sigue saliendo pendiente.
-				</p>
-				<p>
-					La causa más común es WP-Cron, que se dispara con las visitas al sitio y a este
-					panel casi nadie entra. En producción hay que apagarlo y poner una tarea
-					programada de verdad:<br>
-					<code>define( 'DISABLE_WP_CRON', true );</code> en wp-config.php, y en Plesk, cada hora:<br>
-					<code>/usr/bin/php /ruta/al/panel/wp-cron.php &gt;/dev/null 2&gt;&amp;1</code>
-				</p>
-				<?php if ( SWPK_Perfiles::puede( SWPK_Perfiles::ADMINISTRAR ) ) : ?>
-					<p>Para traer los datos ahora mismo, a mano, está el botón <strong>Correr ahora</strong>.</p>
-				<?php endif; ?>
+		<p class="swpk-aviso-fecha swpk-aviso-fecha-mal">
+			<strong>Lo que estás viendo no está al día.</strong>
+			<?php if ( '' === self::corrida() ) : ?>
+				El panel nunca ha logrado traer datos de <?php echo esc_html( SWPK_Admin::proveedor() ); ?>.
+			<?php else : ?>
+				El último dato bueno entró el <?php echo esc_html( self::fecha_y_edad( self::corrida() ) ); ?>.
 			<?php endif; ?>
+			<?php echo wp_kses_post( SWPK_Vista::ayuda( $dentro ) ); ?>
 
-			<?php if ( $incluir_feed && ! self::feed_al_dia() && ! $vieja && ! $fallo ) : ?>
-				<p><strong>Hace días que no comprobamos si hay vulnerabilidades nuevas.</strong>
-					<?php echo esc_html( SWPK_Wordfence::como_va()['frase'] ); ?>
-				</p>
+			<?php if ( SWPK_Perfiles::puede( SWPK_Perfiles::ADMINISTRAR ) ) : ?>
+				<a class="swpk-aviso-accion" data-espera="Revisando…"
+					href="<?php echo esc_url( wp_nonce_url( admin_url( 'admin-post.php?action=swpk_correr' ), 'swpk_correr' ) ); ?>">
+					Revisar los sitios ahora
+				</a>
 			<?php endif; ?>
-		</div>
+		</p>
 		<?php
 	}
 
