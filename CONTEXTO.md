@@ -155,10 +155,63 @@ Reglas de Fer, que valen igual en un chat nuevo:
 
 | | Versión | Dónde está |
 |---|---|---|
-| Panel Kinsta | **0.14.1** | Desplegado en producción y verificado ahí mismo. |
+| Panel Kinsta | **0.15.1** | Desplegado en producción y verificado ahí mismo. |
 | Agente (plugin) | **0.7.0** | 0.6.4 está en 106 de 107. La 0.7.0 trae el registro de actividad y **no está repartida**. |
 | Agente (dentro del tema) | **0.7.0-tema** | La rama unida del jefe sigue en 0.6.4-tema con código de 0.6.3. La corrección + el registro están en una rama lista, **sin PR abierto**. |
 | Tema hijo | **2.6.1** | En el PR. |
+
+### Lo del 27 a mediodía: el panel decía que 100 sitios tenían 2FA (0.14.1 → 0.15.1)
+
+Fer pidió apagar la verificación en dos pasos de Heraldos Costa Rica: «no sé
+por qué está activa». **No estaba activa.** El agente de ese sitio reporta
+`dos_pasos = 0`, y la norma `dos_pasos_activa` lo decía bien: «aplazada».
+
+El fallo estaba en `marcar_cobertura_2fa()`: contaba `agente-sitio` como un
+plugin de 2FA cualquiera, así que bastaba con que estuviera instalado y activo
+para pintar «Doble autenticación ✓ Activa». Y el agente trae esa verificación
+**apagada a propósito** desde el 19 de noviembre. Resultado: la tarjeta mentía
+en **100 sitios**. Es la queja de fondo del jefe —«no es correcto lo que dice
+aquí, entonces yo no puedo confiar en este panel»— en una tarjeta que nadie
+había vuelto a mirar.
+
+Ahora se lee de `wp_swpk_agentes.dos_pasos`, que es el valor que el agente
+manda en cada reporte. **La tiene encendida 1 sitio de 107: Estilo Urbano.**
+Se lee de la tabla de agentes y no de la foto de plugins porque en algunos
+sitios el agente va dentro del tema hijo y ahí no hay fila `agente-sitio` que
+mirar — gatearlo por la foto dejaba fuera justo al único que la tiene.
+
+#### Por qué 27 normas se quedan en «falta medirlo»
+
+«¿Por qué no las hemos podido medir? ¿Porque esas no se pueden medir
+automáticamente?» Sí se pueden. En Heraldos son 27, y son **las mismas 27 en
+los 107 sitios**: todas las de `COMPROBADORES_DE_SONDA`, las que se miden
+pidiéndole la página al sitio desde fuera. Lo que falla es el cortafuegos —el
+mismo 403 de Cloudflare que deja ciego al sondeo de caídas—, no el agente ni
+la norma.
+
+`SWPK_Normas::por_que_no_se_midio()` lo dice en la propia norma, distinguiendo
+tres casos: la mide la sonda desde fuera y no la dejan llegar; la mide el
+agente y este sitio no lo tiene; la mide el agente y todavía no la ha mandado.
+
+#### El botón que la pantalla prometía y no estaba
+
+«Aquí dice "el panel lo puede hacer solo", pero no me tiene el botón.» El
+botón solo salía con la norma en FALLA, y XML-RPC está en «falta medilo».
+Cerrar XML-RPC no necesita haberlo medido: la orden es la misma y no hace daño
+si ya estaba cerrado. Ahora sale también en SIN_DATO, con el texto
+**«Mandarlo igual»** para que se vea que no es lo mismo.
+
+#### Los plugins apagados
+
+Pedido del jefe: «si hay algún plugin que está desactivado, que nos lo diga
+cuando entramos al sitio… que te aconseje que lo elimines». Salían solo si
+además tenían una actualización pendiente, porque los hallazgos se arman de
+vulnerabilidades y actualizaciones. Ahora hay una caja propia,
+`SWPK_Inventario::apagados()`, con el consejo según el caso: borrarlo cuanto
+antes si además es vulnerable, borrarlo si ya no se usa, o preguntarle al
+cliente si el sitio es suyo. En Heraldos son 6.
+
+---
 
 ### Lo del 27 a media mañana: la segunda pasada (0.14.0 → 0.14.1)
 

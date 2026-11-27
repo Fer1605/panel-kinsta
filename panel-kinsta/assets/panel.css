@@ -2668,3 +2668,24 @@ body[class*="panel-kinsta"] ol.swpk-norma-pasos > li .swpk-pasos {
 	margin: 0 0 8px;
 }
 body[class*="panel-kinsta"] .swpk-norma-pie { margin: 10px 0 0; }
+
+/* Por qué una norma se quedó sin medir. Va en gris y con filete, para que se
+   lea como una nota del panel sobre sí mismo y no como parte de la medición. */
+body[class*="panel-kinsta"] .swpk-no-medida {
+	margin: 8px 0 0;
+	padding: 8px 12px;
+	background: #f4f6fa;
+	border-left: 3px solid #9aa4b2;
+	border-radius: 0 4px 4px 0;
+	font-size: 12.5px;
+	line-height: 1.5;
+	color: #3a4250;
+}
+
+/* La celda de consejo en la tabla de apagados. */
+body[class*="panel-kinsta"] .swpk-hacer-celda {
+	border-left: 3px solid #1c6dc7;
+	padding-left: 12px;
+	font-size: 12.5px;
+	line-height: 1.5;
+}

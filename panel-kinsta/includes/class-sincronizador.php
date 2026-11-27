@@ -283,12 +283,43 @@ class SWPK_Sincronizador {
 		];
 	}
 
+	/**
+	 * Quién tiene de verdad la verificación en dos pasos encendida.
+	 *
+	 * ─── La tarjeta decía «✓ Activa» en 100 sitios y no lo estaba en ninguno ─
+	 *
+	 * 27-11-2026: «puedes desactivar la verificación en dos pasos de ese sitio,
+	 * por favor, porque no sé por qué está activa». No estaba activa. Lo que
+	 * pasaba es que esto contaba el agente como si fuera un plugin de 2FA
+	 * cualquiera: si `agente-sitio` está instalado y activo → «tiene 2FA».
+	 *
+	 * Y el agente trae la verificación en dos pasos **apagada a propósito**
+	 * desde el 19 de noviembre, por decisión del jefe: aquí se entra a todos
+	 * los sitios con el mismo usuario y el correo es el suyo, así que
+	 * encenderla sería pedirle el código a cualquier hora. Está apagada en 106
+	 * de 107 sitios y la norma `dos_pasos_activa` lo dice bien —«aplazada»—,
+	 * pero la tarjeta de la cabecera decía lo contrario.
+	 *
+	 * Es exactamente la queja de fondo del jefe sobre el panel: «no es correcto
+	 * lo que dice aquí, entonces yo no puedo confiar en este panel». Un dato
+	 * inventado a partir de otro no es un dato.
+	 *
+	 * El agente SÍ manda el valor de verdad en cada reporte —`dos_pasos` en la
+	 * tabla de agentes—, así que no hay que deducir nada: se lee.
+	 *
+	 * Los demás plugins de la lista no mandan nada, y de esos lo único que se
+	 * puede saber es que están instalados y activos. Para ellos se mantiene esa
+	 * lectura, que es la mejor disponible.
+	 */
 	private static function marcar_cobertura_2fa( string $fecha ): void {
 		global $wpdb;
 
 		$fotos  = SWPK_Tablas::tabla( 'fotos' );
 		$sitios = SWPK_Tablas::tabla( 'sitios' );
-		$slugs  = array_keys( self::plugins_2fa() );
+		$agentes = SWPK_Tablas::tabla( 'agentes' );
+
+		$nuestro = 'agente-sitio';
+		$slugs   = array_keys( self::plugins_2fa() );
 
 		$marcadores = implode( ',', array_fill( 0, count( $slugs ), '%s' ) );
 
@@ -302,6 +333,12 @@ class SWPK_Sincronizador {
 		$wpdb->query( "UPDATE {$sitios} SET tiene_2fa = 0, plugin_2fa = '', estado_2fa = 'sin_2fa'" );
 
 		foreach ( $encontrados as $f ) {
+			// El agente se cuenta aparte, abajo: lo suyo no se deduce de que
+			// esté instalado, se lee de lo que él mismo reporta.
+			if ( $nuestro === $f->slug ) {
+				continue;
+			}
+
 			$wpdb->update(
 				$sitios,
 				[
@@ -310,6 +347,29 @@ class SWPK_Sincronizador {
 					'estado_2fa' => 'activa',
 				],
 				[ 'sitio_id' => $f->sitio_id ]
+			);
+		}
+
+		// ── El agente, por lo que dice él, no por dónde está instalado ──────
+		//
+		// Y por la tabla de agentes y no por la foto de plugins, porque en
+		// algunos sitios el agente no va como plugin sino dentro del tema
+		// hijo: ahí no hay fila `agente-sitio` que mirar, y el agente está y
+		// reporta igual. Gatearlo por la foto dejaba fuera justo al único
+		// sitio que la tiene encendida.
+		$con_dos_pasos = $wpdb->get_col(
+			"SELECT sitio_id FROM {$agentes} WHERE dos_pasos = 1 AND sitio_id <> ''"
+		) ?: [];
+
+		foreach ( $con_dos_pasos as $sitio_id ) {
+			$wpdb->update(
+				$sitios,
+				[
+					'tiene_2fa'  => 1,
+					'plugin_2fa' => self::plugins_2fa()[ $nuestro ],
+					'estado_2fa' => 'activa',
+				],
+				[ 'sitio_id' => (string) $sitio_id ]
 			);
 		}
 	}

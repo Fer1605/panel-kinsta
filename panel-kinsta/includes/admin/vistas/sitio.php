@@ -63,6 +63,10 @@ $estado_de = static function ( $n ) use ( $cumple_sitio ): string {
 	return $fila ? (string) $fila->estado : SWPK_Normas::SIN_DATO;
 };
 
+// Un sitio del cliente se mide, pero no se le toca nada sin pedirlo. Se
+// decide una vez arriba porque lo usan las dos pestañas.
+$es_cliente = SWPK_Etiquetas::NO_UPDATE === (string) $sitio->tag;
+
 $normas_falla = 0;
 foreach ( $aplicables as $n ) {
 	if ( SWPK_Normas::FALLA === $estado_de( $n ) ) {
@@ -525,6 +529,80 @@ $url_pestana = static fn( string $s ) => add_query_arg(
 		<?php endforeach; ?>
 		</div>
 		<?php SWPK_Vista::caja_cerrar(); ?>
+
+		<?php
+		// ── Los que están instalados pero apagados ──────────────────────────
+		//
+		//   «si hay algún plugin que está desactivado, eso se ve dentro del
+		//    panel de Kinsta, que nos lo diga cuando entramos al sitio […] si
+		//    no es utilizable dentro del sitio, que te aconseje que lo
+		//    elimines»
+		//
+		// Hasta ahora solo salían los apagados que ADEMÁS tenían actualización
+		// pendiente, porque la lista de arriba se arma de vulnerabilidades y
+		// actualizaciones. Un plugin apagado y al día no aparecía en ninguna
+		// parte, y es exactamente el que lleva meses ahí sin que nadie se
+		// acuerde.
+		$apagados = SWPK_Inventario::apagados( $sitio_id );
+		?>
+		<?php if ( $apagados ) : ?>
+			<?php
+			SWPK_Vista::caja_abrir(
+				'Instalados pero apagados',
+				esc_html( SWPK_Vista::plural( count( $apagados ), 'plugin', 'plugins' ) ),
+				'swpk-c12',
+				true
+			);
+			?>
+			<p class="swpk-aviso-corto" style="margin-top:0">
+				Un plugin apagado sigue con sus archivos en el servidor, y esos archivos se pueden alcanzar desde
+				fuera aunque el plugin no esté corriendo. Y como está apagado, nadie se acuerda de actualizarlo.
+				<strong>Si ya no se usa, lo limpio es borrarlo</strong>, no dejarlo desactivado.
+				<?php echo wp_kses_post( SWPK_Vista::ayuda(
+					'Desactivar un plugin solo le dice a WordPress que no lo cargue. Los archivos siguen en '
+					. 'su carpeta y una falla en ellos se puede aprovechar igual, porque muchos se pueden '
+					. 'pedir directamente por su dirección sin pasar por WordPress.'
+				) ); ?>
+			</p>
+			<table class="widefat striped swpk-tabla">
+				<thead>
+					<tr>
+						<th>Plugin</th>
+						<th style="width:150px">Versión</th>
+						<th style="width:40%">Qué hacer</th>
+					</tr>
+				</thead>
+				<tbody>
+				<?php foreach ( $apagados as $a ) : ?>
+					<tr>
+						<td>
+							<strong><?php echo esc_html( SWPK_Textos::limpiar_titulo( (string) $a->titulo ) ); ?></strong><br>
+							<span class="swpk-mono" style="color:#50575e"><?php echo esc_html( (string) $a->slug ); ?></span>
+						</td>
+						<td>
+							<span class="swpk-mono"><?php echo esc_html( (string) $a->version ); ?></span>
+							<?php if ( '' !== (string) $a->version_disponible ) : ?>
+								→ <span class="swpk-mono" style="color:#0b5ed7"><?php echo esc_html( (string) $a->version_disponible ); ?></span>
+							<?php endif; ?>
+						</td>
+						<td class="swpk-hacer-celda">
+							<?php if ( $es_cliente ) : ?>
+								<strong>Preguntarle al cliente si lo usa.</strong>
+								Este sitio lo lleva él: si dice que no lo necesita, que lo borre o que nos deje borrarlo.
+							<?php elseif ( (int) $a->es_vulnerable ) : ?>
+								<strong>Borrarlo cuanto antes.</strong>
+								Está apagado y además tiene una falla conocida: los archivos siguen ahí y la falla con ellos.
+							<?php else : ?>
+								<strong>Borrarlo si ya no se usa.</strong>
+								Si hace falta más adelante, se vuelve a instalar en un minuto y entra con la versión del día.
+							<?php endif; ?>
+						</td>
+					</tr>
+				<?php endforeach; ?>
+				</tbody>
+			</table>
+			<?php SWPK_Vista::caja_cerrar(); ?>
+		<?php endif; ?>
 	<?php elseif ( 'pendiente' === $seccion && SWPK_Riesgo::SIN_DATOS === $nivel ) : ?>
 		<?php SWPK_Vista::caja_abrir( 'Todo lo que tiene pendiente', 'sin datos', 'swpk-c12' ); ?>
 		<p style="margin:0">
@@ -555,10 +633,7 @@ $url_pestana = static fn( string $s ) => add_query_arg(
 	<?php if ( $normas_activas && 'normas' === $seccion ) : ?>
 		<?php SWPK_Vista::caja_abrir( 'Las normas de seguridad', '', 'swpk-c12', true ); ?>
 
-		<?php
-		$agente_sitio = SWPK_Ordenes::agente_de( $sitio_id );
-		$es_cliente   = SWPK_Etiquetas::NO_UPDATE === (string) $sitio->tag;
-		?>
+		<?php $agente_sitio = SWPK_Ordenes::agente_de( $sitio_id ); ?>
 
 		<?php if ( ! $agente_sitio ) : ?>
 			<div class="notice notice-warning inline">
@@ -944,6 +1019,21 @@ $url_pestana = static fn( string $s ) => add_query_arg(
 			$es_declarativa = 'declarativa' === (string) $n->comprobador;
 			$puedo_tocar    = SWPK_Perfiles::puede( SWPK_Perfiles::ADMINISTRAR );
 
+			// ── El botón también cuando no se pudo medir ────────────────
+			//
+			//   «aquí dice "el panel lo puede hacer solo", pero aquí no me
+			//    tiene una opción de arreglar, no me tiene el botón activo.
+			//    Entonces, si aquí dice que yo lo puedo hacer desde el panel,
+			//    ¿por qué aquí no tengo un botón?»
+			//
+			// Porque el botón solo salía cuando la norma FALLA, y XML-RPC está
+			// en «falta medirlo»: se mide desde fuera y el cortafuegos no deja.
+			// Pero cerrar XML-RPC no necesita haberlo medido — la orden es la
+			// misma y no hace daño si ya estaba cerrado. Dejar el texto
+			// prometiendo algo que no tiene botón es lo peor de los dos mundos.
+			$se_puede_pedir = $puede_el_panel && ! $es_cliente
+				&& in_array( $estado, [ SWPK_Normas::FALLA, SWPK_Normas::SIN_DATO ], true );
+
 			// Se abre sola la que falla Y el panel puede arreglar: es la que
 			// uno vino a ver. Las demás, cerradas.
 			$abierta = SWPK_Normas::FALLA === $estado && $puede_el_panel && ! $es_cliente;
@@ -980,10 +1070,10 @@ $url_pestana = static fn( string $s ) => add_query_arg(
 							<a class="button button-small" href="<?php
 								echo esc_url( SWPK_Admin::url_marcar_norma( $clave, $sitio_id, SWPK_Normas::FALLA ) );
 							?>">No</a>
-						<?php elseif ( SWPK_Normas::FALLA === $estado && $puede_el_panel && ! $es_cliente ) : ?>
-							<a class="button button-small button-primary" href="<?php
+						<?php elseif ( $se_puede_pedir ) : ?>
+							<a class="button button-small <?php echo SWPK_Normas::FALLA === $estado ? 'button-primary' : ''; ?>" href="<?php
 								echo esc_url( SWPK_Admin::url_arreglar( $clave, $sitio_id ) );
-							?>">Arreglar</a>
+							?>"><?php echo SWPK_Normas::FALLA === $estado ? 'Arreglar' : 'Mandarlo igual'; ?></a>
 						<?php endif; ?>
 					</span>
 				</summary>
@@ -1034,12 +1124,25 @@ $url_pestana = static fn( string $s ) => add_query_arg(
 										}
 										?>
 									</span>
-								<?php elseif ( ! $agente_sitio ) : ?>
-									<br><span class="swpk-mudo">Este sitio no tiene el agente, así que esto no se puede medir desde aquí.</span>
-								<?php else : ?>
-									<br><span class="swpk-mudo">El agente todavía no ha mandado esta medición.</span>
 								<?php endif; ?>
 							</p>
+							<?php
+							// ── Por qué se quedó sin medir ──────────────────
+							//
+							//   «todas nuestras normas que no se pueden medir,
+							//    ¿por qué no las podemos medir?»
+							//
+							// Antes decía «el agente todavía no ha mandado esta
+							// medición», que en la mayoría de los casos es
+							// falso: las 27 que faltan medir en cada sitio se
+							// miden desde FUERA, y lo que falla es el
+							// cortafuegos, no el agente.
+							if ( SWPK_Normas::SIN_DATO === $estado ) :
+								?>
+								<p class="swpk-no-medida">
+									<?php echo esc_html( SWPK_Normas::por_que_no_se_midio( $n, $sitio, (bool) $agente_sitio ) ); ?>
+								</p>
+							<?php endif; ?>
 						</li>
 
 						<li>
@@ -1100,12 +1203,18 @@ $url_pestana = static fn( string $s ) => add_query_arg(
 								<p class="swpk-mudo">Esta norma todavía no tiene los pasos escritos.</p>
 							<?php endif; ?>
 
-							<?php if ( $puede_el_panel && ! $es_cliente && SWPK_Normas::FALLA === $estado && $puedo_tocar ) : ?>
+							<?php if ( $se_puede_pedir && $puedo_tocar ) : ?>
 								<p class="swpk-norma-pie">
 									<a class="button button-primary" href="<?php
 										echo esc_url( SWPK_Admin::url_arreglar( $clave, $sitio_id ) );
 									?>">Arreglar ahora</a>
-									<span class="swpk-mudo">El panel le manda la orden al agente y la próxima medición lo confirma.</span>
+									<span class="swpk-mudo">
+										<?php
+										echo SWPK_Normas::FALLA === $estado
+											? 'El panel le manda la orden al agente y la próxima medición lo confirma.'
+											: 'No se pudo medir, pero la orden es la misma y no hace daño si ya estaba bien.';
+										?>
+									</span>
 								</p>
 							<?php endif; ?>
 						</li>

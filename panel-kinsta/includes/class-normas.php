@@ -140,6 +140,59 @@ class SWPK_Normas {
 	public const COMPROBADOR_DE_AMBOS = 'php_en_uploads';
 
 	/**
+	 * Por qué esta norma se quedó en «falta medirlo», en una frase.
+	 *
+	 * ─── La pregunta ────────────────────────────────────────────────────────
+	 *
+	 * 27-11-2026: «todas nuestras normas que no se pueden medir, ¿por qué no
+	 * las podemos medir? ¿Por qué no las hemos podido medir? […] ¿porque esas
+	 * no se pueden medir automáticamente? ¿Por qué?»
+	 *
+	 * Sí se pueden medir automáticamente. Lo que pasa es otra cosa, y hasta
+	 * ahora la pantalla no lo decía: en Heraldos Costa Rica las 27 que faltan
+	 * medir son **las mismas 27 en los 107 sitios**, y todas son las que se
+	 * miden **desde fuera**, pidiéndole la página al sitio. El cortafuegos de
+	 * Cloudflare contesta 403 a una de las dos direcciones de salida de
+	 * Pantheon, y el panel —que hace bien en no inventar— las deja en «no se
+	 * sabe». Es el mismo bloqueo que deja ciego al sondeo de caídas.
+	 *
+	 * Decirlo cambia lo que alguien hace con la pantalla: «no se puede medir»
+	 * invita a resignarse; «el cortafuegos no nos deja, y se arregla con una
+	 * excepción en MyKinsta» es una tarea.
+	 */
+	public static function por_que_no_se_midio( object $norma, ?object $sitio, bool $hay_agente ): string {
+		$comprobador = (string) ( $norma->comprobador ?? '' );
+
+		if ( 'declarativa' === $comprobador ) {
+			return 'Esta norma no se mide sola: es un acuerdo, y alguien tiene que decir aquí si se cumple o no.';
+		}
+
+		if ( in_array( $comprobador, self::COMPROBADORES_DE_SONDA, true )
+			|| self::COMPROBADOR_DE_AMBOS === $comprobador
+		) {
+			$sonda = $sitio ? SWPK_Sonda::de( (string) ( $sitio->sitio_id ?? '' ) ) : [];
+
+			if ( ! $sonda ) {
+				return 'Esta se mide desde fuera, pidiéndole la página al sitio, y todavía no hemos conseguido '
+					. 'sondearlo. Casi siempre es el cortafuegos del hosting: le contesta 403 a la dirección por '
+					. 'la que sale el panel, así que no podemos ver lo que ve un visitante. Se destraba con una '
+					. 'excepción en MyKinsta, no tocando el sitio.';
+			}
+
+			return 'Esta se mide desde fuera, pidiéndole la página al sitio, y la última vez el servidor no nos '
+				. 'dejó llegar hasta el dato. Mientras no se pueda mirar desde fuera, el panel prefiere decir que '
+				. 'no lo sabe antes que dar por bueno lo que no vio.';
+		}
+
+		if ( ! $hay_agente ) {
+			return 'Esta la mide el agente desde dentro del sitio, y este sitio no tiene el agente instalado.';
+		}
+
+		return 'Esta la mide el agente desde dentro del sitio, y todavía no ha mandado esta medición. '
+			. 'Suele aparecer en el siguiente reporte.';
+	}
+
+	/**
 	 * Lo que sale del inventario que la corrida diaria ya guardó.
 	 *
 	 * Cero peticiones: todo esto está en `swpk_fotos` y en `swpk_sitios`.

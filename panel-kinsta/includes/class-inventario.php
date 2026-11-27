@@ -487,4 +487,54 @@ class SWPK_Inventario {
 	public static function ultima_sincronizacion(): string {
 		return (string) get_option( 'swpk_ultima_sincronizacion', '' );
 	}
+
+	/**
+	 * Lo que está instalado pero apagado en un sitio.
+	 *
+	 * ─── Por qué es un pendiente y no un detalle ────────────────────────────
+	 *
+	 * 27-11-2026, pedido por el jefe a través de Fer: «si hay algún plugin que
+	 * está desactivado —eso se ve dentro del panel de Kinsta— que nos lo diga
+	 * cuando entramos al sitio, así como "este plugin está desactivado, qué te
+	 * aconsejamos"… si no es utilizable dentro del sitio, que te aconseje que
+	 * lo elimines».
+	 *
+	 * Y no es manía de orden: un plugin apagado **sigue con sus archivos en el
+	 * servidor**, y esos archivos se pueden alcanzar desde fuera aunque el
+	 * plugin no esté corriendo. Encima, como está apagado, nadie se acuerda de
+	 * actualizarlo, así que se queda en la versión que tenía el día que lo
+	 * desactivaron. Es justo lo que dice la norma «No hay plugins instalados
+	 * pero apagados».
+	 *
+	 * La lista salía solo si el módulo además tenía una actualización
+	 * pendiente, porque los hallazgos se arman de vulnerabilidades y
+	 * actualizaciones. Un plugin apagado y sin actualización no aparecía en
+	 * ninguna parte.
+	 *
+	 * @return array<int,object>
+	 */
+	public static function apagados( string $sitio_id ): array {
+		global $wpdb;
+
+		$tabla = SWPK_Tablas::tabla( 'fotos' );
+
+		$fecha = (string) $wpdb->get_var(
+			$wpdb->prepare( "SELECT MAX(fecha) FROM {$tabla} WHERE sitio_id = %s", $sitio_id )
+		);
+
+		if ( '' === $fecha ) {
+			return [];
+		}
+
+		return $wpdb->get_results(
+			$wpdb->prepare(
+				"SELECT slug, titulo, version, version_disponible, tipo, es_vulnerable
+				 FROM {$tabla}
+				 WHERE sitio_id = %s AND fecha = %s AND activo = 0 AND tipo = 'plugin'
+				 ORDER BY es_vulnerable DESC, titulo",
+				$sitio_id,
+				$fecha
+			)
+		) ?: [];
+	}
 }
