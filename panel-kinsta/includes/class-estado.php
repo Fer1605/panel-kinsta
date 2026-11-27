@@ -71,8 +71,8 @@ class SWPK_Estado {
 			"DELETE FROM {$wpdb->options}
 			 WHERE option_name LIKE '_transient_swpk_estado%'
 			    OR option_name LIKE '_transient_timeout_swpk_estado%'
-			    OR option_name LIKE '_transient_swpk_hallazgos_%'
-			    OR option_name LIKE '_transient_timeout_swpk_hallazgos_%'"
+			    OR option_name LIKE '_transient_swpk_hallazgos%'
+			    OR option_name LIKE '_transient_timeout_swpk_hallazgos%'"
 		);
 	}
 

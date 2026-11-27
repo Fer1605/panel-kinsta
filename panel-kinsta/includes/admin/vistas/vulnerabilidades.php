@@ -1,27 +1,51 @@
 <?php
 /**
- * Vulnerabilidades: un renglón por hallazgo, no por sitio.
+ * Vulnerabilidades y pendientes: un renglón por hallazgo, y el renglón se abre.
  *
- * ─── Por qué cambió ─────────────────────────────────────────────────────────
+ * ─── Por qué cambió, la primera vez ─────────────────────────────────────────
  *
  * Esta pantalla enseñaba una ficha por sitio con dos cifras —«4 con
  * vulnerabilidad, 9 por actualizar»— y un botón para entrar. Servía para saber
  * a qué sitio ir, pero no contestaba la pregunta que de verdad se hace:
  * «¿quién tiene este plugin vulnerable?». Para eso había que entrar a los 38
- * sitios uno por uno.
+ * sitios uno por uno. La maqueta que el jefe aprobó lo resolvió con una tabla
+ * plana, un renglón por hallazgo y un filtro por módulo.
  *
- * La maqueta que el jefe aprobó la resuelve de otra forma: una tabla plana,
- * un renglón por hallazgo, con el sitio y el módulo en la misma fila y un
- * filtro por módulo. Así «enseñame todos los sitios con Elementor vulnerable»
- * son dos clics.
+ * ─── Por qué cambió otra vez (27-11-2026) ───────────────────────────────────
+ *
+ *   «sigue saturado de información y esto mi jefe no va a decir que hicimos
+ *    nada»
+ *
+ * La tabla plana resolvió el «quién tiene Elementor vulnerable» y creó el
+ * problema de al lado: la columna del medio llevaba cuatro párrafos —qué pasa,
+ * qué permite, quién puede aprovecharlo, qué hay que hacer— y veinticinco
+ * renglones de cuatro párrafos son cien párrafos en una pantalla de 13
+ * pulgadas. Es el mismo pozo en el que cayó «Lo que tiene pendiente» de la
+ * ficha de un sitio, y se sale igual: la línea cerrada dice solo aquello con lo
+ * que se decide, y el porqué, que es lo largo, vive dentro.
+ *
+ * Tres cosas más, todas de `documentacion/16-estilo-de-las-pantallas.md`:
+ *
+ *  - **Las pastillas de gravedad sobraban.** Eran una fila de cuatro pastillas
+ *    que filtran, y el desplegable de Gravedad ya hace eso con la cuenta
+ *    dentro. Dos mandos para lo mismo, diez píxeles aparte (regla §3.2).
+ *  - **Faltaba QUÉ HACER.** La ficha de un sitio lo dice desde el 27 por la
+ *    mañana con `SWPK_QueHacer` y sus ocho situaciones; la pantalla de toda la
+ *    cartera seguía diciendo «hay que actualizarlo a la 3.2» incluso de los
+ *    módulos que nadie puede actualizar. Ahora las dos pantallas dicen lo
+ *    mismo y se ven igual (regla §8).
+ *  - **Las cifras de arriba se pueden pulsar.** Cuatro tarjetas que contestan
+ *    «¿y qué hago yo con esto?» antes de leer un solo renglón, y cada una
+ *    lleva a su lista ya filtrada (regla §8).
  *
  * ─── Lo que cuesta ──────────────────────────────────────────────────────────
  *
- * Armar la tabla obliga a abrir los hallazgos de cada sitio, que es lo que ya
+ * Armar la lista obliga a abrir los hallazgos de cada sitio, que es lo que ya
  * hacía la versión anterior para pintar sus cifras — el costo es el mismo. Se
- * guarda cinco minutos en caché porque ahora cada cambio de filtro recarga la
+ * guarda cinco minutos en caché porque cada cambio de filtro recarga la
  * pantalla, y pagar el recorrido entero por mover un desplegable no tiene
- * sentido.
+ * sentido. El «qué hacer» se calcula al armar la caché y no al pintar: así se
+ * puede filtrar y contar por él sin recorrer los hallazgos dos veces.
  */
 defined( 'ABSPATH' ) || exit;
 
@@ -37,9 +61,11 @@ $por_tag = SWPK_Vista::conteo_por_tag( $todos );
  *
  * La caché es por persona porque una asesora ve su cartera y no la de todos,
  * y la corrida diaria la olvida al terminar para que nadie vea datos viejos
- * sin que se le avise.
+ * sin que se le avise. El sufijo del nombre sube cuando cambia la FORMA de lo
+ * guardado: una caché de la versión anterior volvería sin las claves nuevas y
+ * la pantalla se caería con un aviso de índice que no existe.
  */
-$clave_cache = 'swpk_hallazgos2_' . get_current_user_id();
+$clave_cache = 'swpk_hallazgos3_' . get_current_user_id();
 $todas       = get_transient( $clave_cache );
 
 if ( ! is_array( $todas ) ) {
@@ -49,20 +75,28 @@ if ( ! is_array( $todas ) ) {
 		foreach ( SWPK_Riesgo::hallazgos( (string) $s->sitio_id ) as $h ) {
 			$v = $h['vulnerabilidades'][0] ?? null;
 
-			// ── Lo que faltaba: QUÉ es la falla ─────────────────────────
+			// ── Lo que faltaba la primera vez: QUÉ es la falla ──────────
 			//
 			// Esta pantalla decía cuántas hay y de qué módulo, y nunca qué
 			// hace la falla. «No estoy entendiendo qué vulnerabilidad es.»
 			// Tenía razón, y lo peor es que el dato ya estaba guardado: el
 			// feed de Wordfence trae el título, la descripción y el CVE, y
 			// SWPK_Textos ya sabe traducirlos a una frase que se entiende.
-			// Solo había que enseñarlo.
 			$quien = $v
 				? SWPK_Textos::quien_puede(
 					(string) ( $v->cvss_vector ?? '' ),
 					(string) ( $v->descripcion ?? '' )
 				)
 				: [ 'sin_cuenta' => false, 'frase' => '' ];
+
+			// ── Y lo que faltaba la segunda: QUÉ HACER ──────────────────
+			//
+			// Se calcula aquí, dentro de la caché, y no al pintar cada fila.
+			// Dos razones: los filtros y las tarjetas de arriba cuentan por
+			// él —y contar obliga a tenerlo de las 2.700 filas, no de las 25
+			// que se ven—, y `SWPK_QueHacer::para()` necesita el objeto
+			// entero de la vulnerabilidad, que a propósito no se guarda.
+			$hacer = SWPK_QueHacer::para( $h );
 
 			$todas[] = [
 				'sitio_id'     => (string) $s->sitio_id,
@@ -83,13 +117,19 @@ if ( ! is_array( $todas ) ) {
 				'titulo_vuln'  => $v ? (string) ( $v->titulo ?? '' ) : '',
 				'cve'          => $v ? (string) ( $v->cve ?? '' ) : '',
 				'cuantas'      => count( $h['vulnerabilidades'] ),
-				// Dos campos más para la píldora de qué se puede hacer. Se
-				// guarda el booleano y el slug, no el objeto entero de la
-				// vulnerabilidad: estas filas van a un transient y meterles
-				// la descripción completa de 459 hallazgos lo engorda sin
-				// que nadie lo lea desde aquí.
+				// El slug y el tipo, para la píldora de parche y para los
+				// enlaces al historial del módulo. Del objeto de la
+				// vulnerabilidad no se guarda nada más: meterle la
+				// descripción completa de 2.700 hallazgos engorda el
+				// transient sin que nadie la lea desde aquí.
 				'slug'         => (string) $h['slug'],
+				'tipo'         => (string) ( $h['tipo'] ?? 'plugin' ),
 				'parcheada'    => $v ? (bool) (int) ( $v->parcheada ?? 0 ) : null,
+				'titular'      => (string) $hacer['titular'],
+				'detalle'      => (string) $hacer['detalle'],
+				'de_quien'     => (string) $hacer['quien'],
+				'caso'         => (string) $hacer['caso'],
+				'urgente'      => (bool) $hacer['urgente'],
 			];
 		}
 	}
@@ -97,27 +137,45 @@ if ( ! is_array( $todas ) ) {
 	set_transient( $clave_cache, $todas, 5 * MINUTE_IN_SECONDS );
 }
 
-// Lo del grupo elegido. De aquí salen las cuentas de las pastillas y las
-// opciones del desplegable de módulos: si salieran de lo ya filtrado, elegir
-// un módulo dejaría ese módulo como única opción y no habría forma de cambiar
-// de idea sin quitar el filtro.
+// Lo del grupo elegido. De aquí salen las cuentas de las tarjetas y las
+// opciones de los desplegables: si salieran de lo ya filtrado, elegir un
+// módulo dejaría ese módulo como única opción y no habría forma de cambiar de
+// idea sin quitar el filtro.
 $del_grupo = array_values( array_filter(
 	$todas,
 	static fn( $f ) => '' === $tag || $f['tag'] === $tag
 ) );
 
 $por_nivel = [];
+$por_caso  = [];
 $modulos   = [];
 
+// Las dos cuentas de la cabecera: una falla conocida no es lo mismo que una
+// versión vieja, y mezcladas en un solo «2.755 hallazgos» el número asusta sin
+// decir nada. La cifra que importa es la primera.
+$n_fallas = 0;
+$n_act    = 0;
+
+// Quién se mueve, para las otras dos tarjetas.
+$por_quien = [];
+
 // Las opciones de sitio salen de los hallazgos que hay, no del inventario:
-// ofrecer un sitio sin nada pendiente es ofrecer una tabla vacía. Con el
+// ofrecer un sitio sin nada pendiente es ofrecer una lista vacía. Con el
 // número de hallazgos al lado, que es lo que se viene a saber.
 $cuenta_sitio = [];
 $nombre_sitio = [];
 
 foreach ( $del_grupo as $f ) {
 	$por_nivel[ $f['nivel'] ] = ( $por_nivel[ $f['nivel'] ] ?? 0 ) + 1;
+	$por_caso[ $f['caso'] ]   = ( $por_caso[ $f['caso'] ] ?? 0 ) + 1;
+	$por_quien[ $f['de_quien'] ] = ( $por_quien[ $f['de_quien'] ] ?? 0 ) + 1;
 	$modulos[ $f['modulo'] ]  = $f['modulo'];
+
+	if ( 'actualizacion_pendiente' === $f['motivo'] ) {
+		++$n_act;
+	} else {
+		++$n_fallas;
+	}
 
 	$cuenta_sitio[ $f['sitio_id'] ] = ( $cuenta_sitio[ $f['sitio_id'] ] ?? 0 ) + 1;
 	$nombre_sitio[ $f['sitio_id'] ] = (string) $f['nombre'];
@@ -134,39 +192,49 @@ asort( $sitios_opciones, SORT_NATURAL | SORT_FLAG_CASE );
 
 $sitio_filtro = SWPK_Vista::opcion_pedida( 'sitio_f', $sitios_opciones );
 
-// ── Filtrar por qué se puede hacer con ella ─────────────────────────────────
+// ── Qué hay que hacer con ella ──────────────────────────────────────────────
 //
 // Es la pregunta con la que se abre esta pantalla un lunes: «¿qué puedo
-// arreglar hoy?». Las que tienen parche se resuelven actualizando; las que no,
-// no hay nada que hacer todavía; las de un plugin cerrado hay que
-// reemplazarlas. Mezcladas en una sola lista de 2.755 no se distinguen.
-$parche_filtro = SWPK_Vista::opcion_pedida(
-	'parche',
-	[ 'hay' => 'Hay parche', 'sin' => 'Sin parche todavía', 'cerrado' => 'Cerrado por WordPress' ]
+// arreglar hoy?». Antes el desplegable ofrecía tres respuestas sacadas de si
+// Wordfence había publicado parche —hay, no hay, cerrado—, y esas tres no son
+// el trabajo: un módulo con parche publicado que el sitio no ve se arregla a
+// mano, y uno que actualiza el hosting no se arregla, se espera. Las siete
+// respuestas de SWPK_QueHacer sí son el trabajo, y son las mismas que lee en
+// la ficha de un sitio.
+$casos_todos    = SWPK_QueHacer::casos();
+$casos_opciones = [];
+foreach ( $casos_todos as $clave_caso => $rotulo ) {
+	if ( ! empty( $por_caso[ $clave_caso ] ) ) {
+		$casos_opciones[ $clave_caso ] = sprintf( '%s (%d)', $rotulo, (int) $por_caso[ $clave_caso ] );
+	}
+}
+$caso_filtro = SWPK_Vista::opcion_pedida( 'caso', $casos_opciones );
+
+// ── Falla conocida o solo versión vieja ─────────────────────────────────────
+//
+// La ficha de un sitio separa las dos cosas desde el principio —son sus dos
+// primeras tarjetas— y esta pantalla, que las mezclaba en una lista de 2.755,
+// no tenía forma de separarlas. Es la primera cosa que hay que poder decir:
+// «enseñame solo las fallas».
+$pendiente_filtro = SWPK_Vista::opcion_pedida(
+	'pendiente',
+	[ 'vuln' => 'Fallas conocidas', 'act' => 'Solo actualizaciones' ]
 );
 
 $filas = array_values( array_filter(
 	$del_grupo,
-	static function ( $f ) use ( $nivel, $modulo, $busqueda, $sitio_filtro, $parche_filtro ) {
+	static function ( $f ) use ( $nivel, $modulo, $busqueda, $sitio_filtro, $caso_filtro, $pendiente_filtro ) {
 		if ( '' !== $sitio_filtro && $f['sitio_id'] !== $sitio_filtro ) {
 			return false;
 		}
-		if ( '' !== $parche_filtro ) {
-			if ( null === ( $f['parcheada'] ?? null ) ) {
-				return false;
-			}
-
-			if ( $f['parcheada'] ) {
-				$caso = 'hay';
-			} elseif ( SWPK_Repositorio::CERRADO === SWPK_Repositorio::estado( (string) $f['slug'] ) ) {
-				$caso = 'cerrado';
-			} else {
-				$caso = 'sin';
-			}
-
-			if ( $caso !== $parche_filtro ) {
-				return false;
-			}
+		if ( '' !== $caso_filtro && $f['caso'] !== $caso_filtro ) {
+			return false;
+		}
+		if ( 'vuln' === $pendiente_filtro && 'actualizacion_pendiente' === $f['motivo'] ) {
+			return false;
+		}
+		if ( 'act' === $pendiente_filtro && 'actualizacion_pendiente' !== $f['motivo'] ) {
+			return false;
 		}
 		if ( '' !== $nivel && $f['nivel'] !== $nivel ) {
 			return false;
@@ -198,45 +266,74 @@ $sitios_tocados = count( array_unique( array_column( $filas, 'sitio_id' ) ) );
 
 [ $en_pantalla, $pagina, $paginas ] = SWPK_Vista::paginar( $filas, SWPK_Vista::pagina_pedida(), 25 );
 
-$colores = SWPK_Riesgo::colores();
-$nombres = SWPK_Riesgo::nombres();
+/** La dirección de esta misma pantalla con un filtro puesto y los demás en blanco. */
+$url_filtro = static fn( array $args ) => add_query_arg(
+	array_filter( [ 'page' => 'panel-kinsta-vulnerabilidades', 'tag' => $tag ] + $args ),
+	admin_url( 'admin.php' )
+);
 ?>
 <div class="wrap">
 	<?php
-	// Las pastillas de gravedad, con la cuenta de hallazgos de cada una.
-	$pastillas_sev = [];
-
-	foreach ( [ SWPK_Riesgo::CRITICO, SWPK_Riesgo::ALTO, SWPK_Riesgo::MEDIO, SWPK_Riesgo::BAJO ] as $sev ) {
-		if ( empty( $por_nivel[ $sev ] ) ) {
-			continue;
-		}
-
-		$pastillas_sev[] = [
-			'texto'  => $nombres[ $sev ],
-			'n'      => (int) $por_nivel[ $sev ],
-			'url'    => add_query_arg(
-				array_filter( [
-					'page'  => 'panel-kinsta-vulnerabilidades',
-					'tag'   => $tag,
-					'nivel' => $nivel === $sev ? '' : $sev,
-				] ),
-				admin_url( 'admin.php' )
-			),
-			'activa' => $nivel === $sev,
-		];
-	}
-
+	// La cabecera va sin pastillas. Las cuatro de gravedad que había aquí eran
+	// un filtro más —el mismo que el desplegable «Gravedad», que además lleva
+	// la cuenta dentro—, y la regla §3.2 del estilo de las pantallas dice lo
+	// que pasa con eso: «si una frase dice lo mismo que otra que está diez
+	// píxeles más abajo, sobra una».
 	SWPK_Vista::cabecera(
 		'Vulnerabilidades y pendientes',
 		esc_html( sprintf(
 			'%s en %s.',
 			SWPK_Vista::plural( count( $filas ), 'hallazgo', 'hallazgos' ),
 			SWPK_Vista::plural( $sitios_tocados, 'sitio', 'sitios' )
-		) ),
-		SWPK_Vista::pastillas( $pastillas_sev )
+		) )
 	);
 	?>
 	<?php SWPK_Admin::mostrar_mensaje(); ?>
+
+	<?php
+	// ── Las cuatro cifras con las que se decide el día ──────────────────────
+	//
+	// Y cada una lleva a su lista. Un número que no lleva a los renglones que
+	// lo forman es un número que hay que creer: «quiero ver las 19 críticas,
+	// quiero ver las 14 pendientes, no puedo, ¿dónde puedo ver eso?».
+	//
+	// Las dos primeras separan lo que no es lo mismo: una falla conocida de
+	// una versión vieja. Las dos siguientes contestan de quién es el trabajo,
+	// que es la pregunta de después.
+	$n_nosotros = (int) ( $por_quien[ SWPK_QueHacer::NOSOTROS ] ?? 0 );
+	$n_esperar  = (int) ( $por_quien[ SWPK_QueHacer::ESPERAR ] ?? 0 );
+	$n_hosting  = (int) ( $por_quien[ SWPK_QueHacer::HOSTING ] ?? 0 );
+	?>
+	<div class="swpk-tarjetas">
+		<a class="swpk-tarjeta swpk-tarjeta-enlace" href="<?php echo esc_url( $url_filtro( [ 'pendiente' => 'vuln' ] ) ); ?>">
+			<div class="swpk-n" style="color:<?php echo $n_fallas ? '#9e0b10' : '#0b5ed7'; ?>"><?php echo (int) $n_fallas; ?></div>
+			<div class="swpk-r">Con falla conocida</div>
+		</a>
+		<a class="swpk-tarjeta swpk-tarjeta-enlace" href="<?php echo esc_url( $url_filtro( [ 'pendiente' => 'act' ] ) ); ?>">
+			<div class="swpk-n"><?php echo (int) $n_act; ?></div>
+			<div class="swpk-r">Solo actualización pendiente</div>
+		</a>
+		<a class="swpk-tarjeta swpk-tarjeta-enlace" href="<?php echo esc_url( $url_filtro( [ 'caso' => SWPK_QueHacer::ACTUALIZAR ] ) ); ?>">
+			<div class="swpk-n" style="color:#1c6dc7"><?php echo (int) ( $por_caso[ SWPK_QueHacer::ACTUALIZAR ] ?? 0 ); ?></div>
+			<div class="swpk-r">Se arreglan actualizando</div>
+		</a>
+		<?php
+		// La cuarta tarjeta cambia según lo que haya. Si hay módulos esperando
+		// arreglo, eso es lo que hay que saber; si no hay ninguno, enseñar un
+		// cero no aporta y en su lugar va lo que lleva el hosting.
+		if ( $n_esperar ) :
+		?>
+		<a class="swpk-tarjeta swpk-tarjeta-enlace" href="<?php echo esc_url( $url_filtro( [ 'caso' => SWPK_QueHacer::AGUANTAR ] ) ); ?>">
+			<div class="swpk-n" style="color:#b4690e"><?php echo (int) $n_esperar; ?></div>
+			<div class="swpk-r">Sin arreglo todavía</div>
+		</a>
+		<?php elseif ( $n_hosting ) : ?>
+		<a class="swpk-tarjeta swpk-tarjeta-enlace swpk-tarjeta-menor" href="<?php echo esc_url( $url_filtro( [ 'caso' => SWPK_QueHacer::DEL_HOST ] ) ); ?>">
+			<div class="swpk-n"><?php echo (int) $n_hosting; ?></div>
+			<div class="swpk-r">Los actualiza el hosting</div>
+		</a>
+		<?php endif; ?>
+	</div>
 
 	<?php
 	// La otra mitad de la aclaración que pidió al no distinguir esta pantalla
@@ -276,8 +373,15 @@ $nombres = SWPK_Riesgo::nombres();
 	?>
 
 	<?php
+	// El título de la caja lleva la burbuja de dónde sale la gravedad. Antes
+	// era un párrafo al pie de la pantalla, a cuatro pantallazos de la columna
+	// que explicaba: nadie lee una aclaración que está lejos de lo aclarado.
 	SWPK_Vista::caja_abrir(
-		'Todo lo que hay que parchar',
+		'Todo lo que hay que parchar ' . SWPK_Vista::ayuda(
+			'La gravedad no la inventa el panel: es la que publica Wordfence Intelligence para cada '
+			. 'vulnerabilidad. Las que solo dicen «Bajo» sin falla conocida son actualizaciones '
+			. 'pendientes, y ahí el nivel lo pone el panel para que no se lean como una urgencia.'
+		),
 		'<span style="margin-right:12px">Lo más grave primero</span>' . $boton_excel,
 		'',
 		true
@@ -286,13 +390,28 @@ $nombres = SWPK_Riesgo::nombres();
 	$opciones_sev = [];
 	foreach ( [ SWPK_Riesgo::CRITICO, SWPK_Riesgo::ALTO, SWPK_Riesgo::MEDIO, SWPK_Riesgo::BAJO ] as $sev ) {
 		if ( ! empty( $por_nivel[ $sev ] ) ) {
-			$opciones_sev[ $sev ] = sprintf( '%s (%d)', $nombres[ $sev ], (int) $por_nivel[ $sev ] );
+			$opciones_sev[ $sev ] = sprintf( '%s (%d)', SWPK_Riesgo::nombres()[ $sev ], (int) $por_nivel[ $sev ] );
 		}
 	}
 
 	SWPK_Vista::barra_de_filtros(
 		'panel-kinsta-vulnerabilidades',
 		[
+			'pendiente' => [
+				'etiqueta' => 'Qué hay pendiente',
+				'opciones' => [
+					'vuln' => sprintf( 'Fallas conocidas (%d)', (int) $n_fallas ),
+					'act'  => sprintf( 'Solo actualizaciones (%d)', (int) $n_act ),
+				],
+				'actual'   => $pendiente_filtro,
+				'todas'    => 'Fallas y actualizaciones',
+			],
+			'caso' => [
+				'etiqueta' => 'Qué hacer',
+				'opciones' => $casos_opciones,
+				'actual'   => $caso_filtro,
+				'todas'    => 'Cualquier arreglo',
+			],
 			'nivel' => [
 				'etiqueta' => 'Gravedad',
 				'opciones' => $opciones_sev,
@@ -317,16 +436,6 @@ $nombres = SWPK_Riesgo::nombres();
 				'actual'   => $modulo,
 				'todas'    => 'Todos los módulos',
 			],
-			'parche' => [
-				'etiqueta' => 'Qué se puede hacer',
-				'opciones' => [
-					'hay'     => 'Hay parche: actualizar',
-					'sin'     => 'Sin parche todavía',
-					'cerrado' => 'Cerrado por WordPress',
-				],
-				'actual'   => $parche_filtro,
-				'todas'    => 'Qué se puede hacer',
-			],
 		],
 		[],
 		$busqueda,
@@ -341,112 +450,153 @@ $nombres = SWPK_Riesgo::nombres();
 			Nada pendiente con ese filtro.
 		</p></div>
 	<?php else : ?>
-		<table class="widefat striped swpk-tabla">
-			<thead>
-				<tr>
-					<th style="width:230px">Sitio</th>
-					<th>Qué pasa, y qué hay que hacer</th>
-					<th style="width:120px">Gravedad</th>
-					<th style="width:110px">Revisado</th>
-					<th style="width:110px"></th>
-				</tr>
-			</thead>
-			<tbody>
-			<?php foreach ( $en_pantalla as $f ) : ?>
-				<?php
-				// ── Qué dice cada fila, y en qué orden ──────────────────────
-				//
-				// Primero el sitio. Luego qué pasa, en castellano. Luego qué
-				// hay que hacer. Antes empezaba por el módulo y nunca decía
-				// qué era la falla: «no estoy entendiendo qué vulnerabilidad
-				// es… de primero debería aparecer el sitio».
-				//
-				// La frase de quién puede aprovecharla sale de SWPK_Textos,
-				// que la deduce del vector del CVE. Decía «se puede aprovechar
-				// sin tener cuenta en el sitio», que no se entiende; ahora
-				// dice quién puede usarla y desde dónde.
-				$hay_version = '' !== $f['disponible'] && $f['disponible'] !== $f['version'];
+		<?php
+		// ── Por qué esto ya no es una tabla ─────────────────────────────────
+		//
+		// Era una tabla de cinco columnas y la del medio llevaba cuatro
+		// párrafos: qué pasa, qué permite la falla, quién puede aprovecharla y
+		// qué hay que hacer. Con veinticinco renglones por página eso son cien
+		// párrafos compitiendo, y la pantalla se lee como un muro. Es
+		// literalmente el mismo problema que tuvo «Lo que tiene pendiente» de
+		// la ficha de un sitio —«se ve más desordenado y se acumula toda la
+		// información»— y se arregla igual, con las mismas clases: la línea
+		// cerrada dice las cuatro cosas con las que se decide —qué sitio, qué
+		// módulo, cómo de grave y qué hay que hacer— y todo lo demás vive
+		// dentro, para quien lo abra.
+		//
+		// Ninguna fila viene abierta. Ni la primera «para ayudar» (regla §3.1).
+		?>
+		<div class="swpk-normas swpk-pendientes swpk-vulns">
+		<?php foreach ( $en_pantalla as $f ) : ?>
+			<?php
+			$hay_version = '' !== $f['disponible'] && $f['disponible'] !== $f['version'];
+			$url_sitio   = SWPK_Vista::url_del_sitio( $f['sitio_id'], 'panel-kinsta-vulnerabilidades' );
 
-				$que_pasa = match ( $f['motivo'] ) {
-					'actualizacion_pendiente' => sprintf( '%s está desactualizado', $f['modulo'] ),
-					'vulnerable_sin_detalle'  => sprintf( '%s tiene una versión marcada como vulnerable', $f['modulo'] ),
-					default                   => 1 < (int) $f['cuantas']
-						? sprintf( '%s tiene %d fallas conocidas', $f['modulo'], (int) $f['cuantas'] )
-						: sprintf( '%s tiene una falla conocida', $f['modulo'] ),
-				};
-
-				$que_hacer = $hay_version
-					? sprintf( 'Hay que actualizarlo a la %s. Tiene la %s.', $f['disponible'], $f['version'] )
-					: sprintf( 'No hay versión nueva publicada. Tiene la %s.', $f['version'] );
-
-				// Lo que va en la burbujita: el nombre técnico con el que
-				// Wordfence la publicó, para poder buscarla, y su CVE.
-				$detalle = '';
-				if ( '' !== (string) $f['titulo_vuln'] ) {
-					$detalle = 'Wordfence la publicó como: ' . $f['titulo_vuln'] . '.';
-				}
-				if ( '' !== (string) $f['cve'] ) {
-					$detalle .= ( '' !== $detalle ? ' ' : '' ) . 'Identificador ' . $f['cve'] . '.';
-				}
-				if ( 'vulnerable_sin_detalle' === $f['motivo'] ) {
-					$detalle = SWPK_Admin::proveedor() . ' marca esta versión como vulnerable, pero el feed de Wordfence todavía no publicó el detalle de qué falla es.';
-				}
-				if ( 'actualizacion_pendiente' === $f['motivo'] ) {
-					$detalle = 'No hay ninguna vulnerabilidad conocida en la versión instalada. Es una actualización pendiente: se pone al día para no acumular, no porque urja hoy.';
-				}
-				?>
-				<tr>
-					<td>
-						<a href="<?php echo esc_url( SWPK_Vista::url_del_sitio( $f['sitio_id'], 'panel-kinsta-vulnerabilidades' ) ); ?>">
-							<strong><?php echo esc_html( $f['nombre'] ); ?></strong>
-						</a>
-						<br><?php echo SWPK_Admin::grupo_badge( $f['tag'] ); ?>
-					</td>
-					<td>
-						<strong><?php echo esc_html( $que_pasa ); ?></strong>
-						<?php echo wp_kses_post( SWPK_Vista::ayuda( $detalle ) ); ?>
-
-						<?php if ( '' !== (string) $f['que_permite'] ) : ?>
-							<br><span><?php echo esc_html( $f['que_permite'] ); ?></span>
-						<?php endif; ?>
-
-						<?php if ( $f['sin_cuenta'] ) : ?>
-							<br><span class="swpk-rojo">
-								Cualquiera desde internet puede usarla, sin necesidad de tener una cuenta en el sitio.
-							</span>
-						<?php elseif ( '' !== (string) $f['quien'] ) : ?>
-							<br><span class="swpk-gris"><?php echo esc_html( $f['quien'] ); ?></span>
-						<?php endif; ?>
-
-						<br><span class="swpk-gris"><?php echo esc_html( $que_hacer ); ?></span>
-					</td>
-					<td>
+			// Lo que va en la burbujita de la línea cerrada: el nombre técnico
+			// con el que Wordfence la publicó, para poder buscarla, y su CVE.
+			$detalle_vuln = '';
+			if ( '' !== (string) $f['titulo_vuln'] ) {
+				$detalle_vuln = 'Wordfence la publicó como: ' . $f['titulo_vuln'] . '.';
+			}
+			if ( '' !== (string) $f['cve'] ) {
+				$detalle_vuln .= ( '' !== $detalle_vuln ? ' ' : '' ) . 'Identificador ' . $f['cve'] . '.';
+			}
+			?>
+			<details class="swpk-norma swpk-pendiente swpk-vuln">
+				<summary>
+					<span class="swpk-norma-nombre">
+						<strong><?php echo esc_html( $f['nombre'] ); ?></strong>
+						<span class="swpk-norma-aclara">
+							<span class="swpk-vuln-modulo"><?php echo esc_html( $f['modulo'] ); ?></span>
+							· <span class="swpk-mono"><?php echo esc_html( $f['version'] ); ?></span><?php
+							if ( $hay_version ) : ?> → <span class="swpk-mono" style="color:#0b5ed7"><?php
+								echo esc_html( $f['disponible'] );
+							?></span><?php endif; ?>
+							<?php if ( 1 < (int) $f['cuantas'] ) : ?>
+								· <?php echo (int) $f['cuantas']; ?> fallas
+							<?php endif; ?>
+						</span>
+					</span>
+					<span class="swpk-norma-estado">
 						<?php echo wp_kses_post( SWPK_Admin::nivel_badge( (string) $f['nivel'] ) ); ?>
 						<?php if ( 'actualizacion_pendiente' === $f['motivo'] ) : ?>
-							<br><span class="swpk-gris">solo actualización</span>
+							<span class="swpk-pendiente-pildora"><span class="swpk-mudo">solo actualización</span></span>
 						<?php else : ?>
-							<?php $pild = SWPK_Admin::parche_badge( $f['parcheada'] ?? null, (string) ( $f['slug'] ?? '' ) ); ?>
-							<?php if ( '' !== $pild ) : ?>
-								<div style="margin-top:6px"><?php echo wp_kses_post( $pild ); ?></div>
+							<?php
+							$pildora = SWPK_Admin::parche_badge(
+								$f['parcheada'] ?? null,
+								(string) ( $f['slug'] ?? '' ),
+								(string) ( $f['tipo'] ?? 'plugin' )
+							);
+							if ( '' !== $pildora ) :
+								?>
+								<span class="swpk-pendiente-pildora"><?php echo wp_kses_post( $pildora ); ?></span>
 							<?php endif; ?>
 						<?php endif; ?>
-					</td>
-					<td class="swpk-gris">
-						<?php echo esc_html( '' !== $f['revisado'] ? SWPK_Frescura::fmt( 'j M, H:i', $f['revisado'] ) : '—' ); ?>
-					</td>
-					<td style="text-align:right">
-						<a class="button button-small" href="<?php
-							echo esc_url( add_query_arg(
-								'solo',
-								'vuln',
-								SWPK_Vista::url_del_sitio( $f['sitio_id'], 'panel-kinsta-vulnerabilidades' )
-							) );
-						?>">Ver el sitio</a>
-					</td>
-				</tr>
-			<?php endforeach; ?>
-			</tbody>
-		</table>
+					</span>
+					<span class="swpk-pendiente-hacer swpk-hacer-<?php echo esc_attr( $f['de_quien'] ); ?>">
+						<?php echo esc_html( $f['titular'] ); ?>
+					</span>
+				</summary>
+
+				<div class="swpk-norma-dentro">
+					<ol class="swpk-norma-pasos">
+						<li>
+							<h4>Por qué importa</h4>
+							<?php if ( 'vulnerable_sin_detalle' === $f['motivo'] ) : ?>
+								<p style="margin:0">
+									<span style="color:#9e0b10"><?php echo esc_html( SWPK_Admin::proveedor() ); ?>
+									marca esta versión como vulnerable</span>, y el feed de Wordfence todavía no
+									publicó el detalle de qué falla es. El dato del hosting vale igual: lo que
+									falta es el «por qué».
+								</p>
+							<?php elseif ( 'actualizacion_pendiente' === $f['motivo'] ) : ?>
+								<p style="margin:0">
+									No tiene ninguna falla conocida publicada. Es una actualización pendiente y
+									nada más: importa porque las versiones viejas acumulan fallas que se publican
+									después.
+								</p>
+							<?php else : ?>
+								<?php if ( $f['sin_cuenta'] ) : ?>
+									<p style="margin:0 0 6px">
+										<span class="swpk-rotulin">Quién puede aprovecharlo</span>
+										<span class="swpk-rojo">Cualquiera desde internet, sin necesidad de tener
+										una cuenta en el sitio.</span>
+									</p>
+								<?php elseif ( '' !== (string) $f['quien'] ) : ?>
+									<p style="margin:0 0 6px">
+										<span class="swpk-rotulin">Quién puede aprovecharlo</span>
+										<?php echo esc_html( $f['quien'] ); ?>
+									</p>
+								<?php endif; ?>
+								<?php if ( '' !== (string) $f['que_permite'] ) : ?>
+									<p style="margin:0">
+										<span class="swpk-rotulin">Qué permite hacer</span>
+										<?php echo esc_html( $f['que_permite'] ); ?>
+										<?php if ( '' !== (string) $f['cve'] ) : ?>
+											<br><span class="swpk-mono swpk-mudo"><?php echo esc_html( (string) $f['cve'] ); ?></span>
+										<?php endif; ?>
+									</p>
+								<?php endif; ?>
+								<?php if ( '' !== (string) $f['titulo_vuln'] ) : ?>
+									<p class="swpk-mudo" style="margin:6px 0 0;font-size:12px">
+										Wordfence la publicó como «<?php echo esc_html( $f['titulo_vuln'] ); ?>».
+									</p>
+								<?php endif; ?>
+							<?php endif; ?>
+						</li>
+
+						<li>
+							<h4>Qué hacer</h4>
+							<p><strong><?php echo esc_html( $f['titular'] ); ?>.</strong>
+								<?php echo esc_html( $f['detalle'] ); ?></p>
+							<p class="swpk-norma-pie">
+								<a class="button button-small" href="<?php echo esc_url( add_query_arg( 'solo', 'vuln', $url_sitio ) ); ?>">Ver el sitio</a>
+								<a class="button button-small" href="<?php echo esc_url( add_query_arg(
+									[ 'page' => 'panel-kinsta-movimientos', 'sitio' => $f['sitio_id'], 'q' => $f['slug'] ],
+									admin_url( 'admin.php' )
+								) ); ?>">Ver su historial</a>
+								<span class="swpk-mudo">
+									<?php echo SWPK_Admin::grupo_badge( $f['tag'] ); ?>
+									<?php
+									// La fecha de revisión era una columna de la tabla y aquí
+									// pierde el sitio: nadie decide nada con ella, pero hace
+									// falta para saber si el renglón es de hoy o de hace una
+									// semana. Va donde se mira cuando se duda.
+									echo esc_html(
+										'' !== $f['revisado']
+											? ' Revisado el ' . SWPK_Frescura::fmt( 'j M, H:i', $f['revisado'] )
+											: ' Nunca revisado'
+									);
+									?>
+								</span>
+							</p>
+						</li>
+					</ol>
+				</div>
+			</details>
+		<?php endforeach; ?>
+		</div>
 
 		<?php SWPK_Vista::paginador( $pagina, $paginas, count( $filas ), 'hallazgos', 'hallazgo' ); ?>
 	<?php endif; ?>
@@ -463,11 +613,6 @@ $nombres = SWPK_Riesgo::nombres();
 	</p>
 
 	<?php SWPK_Admin::aviso_demo(); ?>
-
-	<p class="swpk-nota">
-		La gravedad no la inventa el panel: es la que publica Wordfence Intelligence para cada
-		vulnerabilidad.
-	</p>
 
 	<p class="swpk-atribucion"><?php echo wp_kses_post( SWPK_Wordfence::atribucion() ); ?></p>
 </div>

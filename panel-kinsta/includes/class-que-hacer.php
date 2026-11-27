@@ -49,6 +49,46 @@ class SWPK_QueHacer {
 	public const ESPERAR  = 'esperar';
 
 	/**
+	 * El caso, con una clave estable.
+	 *
+	 * ─── Por qué hace falta una clave y no basta el titular ─────────────────
+	 *
+	 * El titular lleva la versión dentro —«Actualizar a 3.2.1»— así que no hay
+	 * dos iguales y no se puede agrupar por él. Para que la pantalla de
+	 * Vulnerabilidades pueda ofrecer «enseñame solo lo que se arregla
+	 * actualizando», hace falta una clave que no cambie de módulo en módulo.
+	 *
+	 * Los casos 3 y 8 comparten clave a propósito: en los dos el trabajo es el
+	 * mismo —entrar y actualizar—, y lo que los distingue —si hay una falla
+	 * conocida o solo una versión vieja— ya se filtra por su lado.
+	 */
+	public const ACTUALIZAR = 'actualizar';
+	public const NO_BASTA   = 'no_basta';
+	public const A_MANO     = 'a_mano';
+	public const CERRADO    = 'cerrado';
+	public const APAGADO    = 'apagado';
+	public const AGUANTAR   = 'aguantar';
+	public const DEL_HOST   = 'del_hosting';
+
+	/**
+	 * Los rótulos de los casos, en el orden en que se trabajan: primero lo que
+	 * se puede cerrar hoy, al final lo que no depende de nosotros.
+	 *
+	 * @return array<string,string>
+	 */
+	public static function casos(): array {
+		return [
+			self::ACTUALIZAR => 'Actualizarlo',
+			self::NO_BASTA   => 'Actualizar no basta',
+			self::A_MANO     => 'Instalarlo a mano',
+			self::CERRADO    => 'Reemplazarlo: cerrado por WordPress',
+			self::APAGADO    => 'Borrarlo: está apagado',
+			self::AGUANTAR   => 'Esperar el arreglo',
+			self::DEL_HOST   => 'Lo actualiza el hosting',
+		];
+	}
+
+	/**
 	 * Módulos que pone y actualiza el hosting, no nosotros.
 	 *
 	 * Kinsta instala sus must-use plugins en cada sitio y los va soltando por
@@ -183,7 +223,7 @@ class SWPK_QueHacer {
 	 * La respuesta, para un hallazgo de SWPK_Riesgo::hallazgos().
 	 *
 	 * @param array<string,mixed> $h
-	 * @return array{titular:string,detalle:string,quien:string,urgente:bool}
+	 * @return array{titular:string,detalle:string,quien:string,caso:string,urgente:bool}
 	 */
 	public static function para( array $h ): array {
 		$slug        = (string) ( $h['slug'] ?? '' );
@@ -222,6 +262,7 @@ class SWPK_QueHacer {
 
 			return [
 				'titular' => 'Lo actualiza ' . $quien_hosting,
+				'caso'    => self::DEL_HOST,
 				'detalle' => $detalle,
 				'quien'   => self::HOSTING,
 				'urgente' => false,
@@ -249,6 +290,7 @@ class SWPK_QueHacer {
 
 			return [
 				'titular' => $activo ? 'Reemplazarlo por otro' : 'Borrarlo del sitio',
+				'caso'    => self::CERRADO,
 				'detalle' => $detalle,
 				'quien'   => self::NOSOTROS,
 				'urgente' => $activo && $hay_falla,
@@ -263,6 +305,7 @@ class SWPK_QueHacer {
 		if ( ! $activo ) {
 			return [
 				'titular' => 'Borrarlo: está apagado',
+				'caso'    => self::APAGADO,
 				'detalle' => $hay_falla
 					? 'Está desactivado, pero sus archivos siguen en el servidor y una falla en ellos se puede aprovechar igual. Lo limpio es borrarlo; si se va a volver a usar, actualizarlo primero.'
 					: 'Está desactivado. Si ya no se usa, lo limpio es borrarlo en vez de arrastrar una actualización pendiente cada mes.',
@@ -275,6 +318,7 @@ class SWPK_QueHacer {
 		if ( ! $hay_falla ) {
 			return [
 				'titular' => '' !== $disponible ? 'Actualizar a ' . $disponible : 'Actualizar',
+				'caso'    => self::ACTUALIZAR,
 				'detalle' => self::como_se_actualiza( $h ),
 				'quien'   => self::NOSOTROS,
 				'urgente' => false,
@@ -289,6 +333,7 @@ class SWPK_QueHacer {
 			if ( '' !== $corrige ) {
 				return [
 					'titular' => 'Llegar a la ' . $corrige,
+				'caso'    => self::A_MANO,
 					'detalle' => sprintf(
 						'El arreglo existe desde la %s y el sitio tiene la %s, pero WordPress no le está ofreciendo nada. Suele ser una licencia vencida o un módulo que no se instaló desde el repositorio: hay que revisar la licencia, o bajarlo del sitio del autor e instalarlo a mano.',
 						$corrige,
@@ -302,6 +347,7 @@ class SWPK_QueHacer {
 			// ── 6. No hay arreglo todavía ──────────────────────────────────
 			return [
 				'titular' => 'Desactivarlo mientras tanto',
+				'caso'    => self::AGUANTAR,
 				'detalle' => 'El autor todavía no ha publicado el arreglo, así que actualizar no sirve de nada. Lo único que baja el riesgo hoy es apagarlo, o bloquear por delante la parte del sitio que usa.',
 				'quien'   => self::ESPERAR,
 				'urgente' => true,
@@ -312,6 +358,7 @@ class SWPK_QueHacer {
 		if ( '' !== $corrige && version_compare( $disponible, $corrige, '<' ) ) {
 			return [
 				'titular' => 'Actualizar no basta',
+				'caso'    => self::NO_BASTA,
 				'detalle' => sprintf(
 					'Lo que ofrece WordPress es la %s, y la falla sigue ahí: se corrige en la %s o posterior. Hay que actualizar igual, y después revisar si el autor ya publicó esa versión.',
 					$disponible,
@@ -325,6 +372,7 @@ class SWPK_QueHacer {
 		// ── 3. Hay actualización y corrige la falla ────────────────────────
 		return [
 			'titular' => 'Actualizar a ' . $disponible,
+				'caso'    => self::ACTUALIZAR,
 			'detalle' => '' !== $corrige
 				? sprintf( 'Esa versión corrige la falla, que está arreglada desde la %s. %s', $corrige, self::como_se_actualiza( $h ) )
 				: 'Esa versión corrige la falla. ' . self::como_se_actualiza( $h ),

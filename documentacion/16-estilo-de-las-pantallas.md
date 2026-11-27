@@ -138,12 +138,60 @@ fila en fila.
 
 En orden de urgencia, dicho por Fer el 27-11-2026:
 
-1. **Vulnerabilidades** — «todavía tiene como demasiada info». Es la primera.
+1. ~~**Vulnerabilidades**~~ — hecho el 27 por la tarde, en 0.19.0. Ver §9 bis.
 2. **Caídas** — «tiene mucha información al entrar». Sí y no: la pantalla
-   está bien, lo que satura es lo que enseña de golpe.
-3. **Pendientes de un sitio** — mejoró mucho (filas que se despliegan), pero
-   todavía acumula.
+   está bien, lo que satura es lo que enseña de golpe. **Es la siguiente.**
+3. ~~**Pendientes de un sitio**~~ — hecho a la vez, en 0.19.0: filtros y
+   páginas. Ver §9 bis.
 4. **Seguridad** — «creo que está más decente». La última.
+
+---
+
+## 9 bis. Lo que se hizo con Vulnerabilidades y con los pendientes (0.19.0)
+
+Queda escrito porque es el patrón con el que hay que hacer las otras dos.
+
+**El muro de párrafos se convirtió en líneas que se despliegan.** La tabla
+tenía cinco columnas y la del medio llevaba cuatro párrafos: qué pasa, qué
+permite la falla, quién puede aprovecharla y qué hay que hacer. Veinticinco
+renglones por página son cien párrafos. Ahora cada hallazgo es una línea que se
+abre —las mismas clases `.swpk-norma .swpk-pendiente` de la ficha de un sitio—
+con cuatro cosas en la línea cerrada: **sitio, módulo y versiones, gravedad y
+parche, y qué hacer**. Lo demás vive dentro. Nada abierto al entrar.
+
+**La pantalla de la cartera ahora dice QUÉ HACER, igual que la de un sitio.**
+`SWPK_QueHacer` ya existía y solo lo usaba la ficha. Aquí se calcula al armar
+la caché, no al pintar, porque los filtros y las tarjetas cuentan por él.
+
+**`SWPK_QueHacer::para()` devuelve `caso`**, una clave estable por cada una de
+las siete situaciones (`SWPK_QueHacer::casos()`). Hacía falta porque el titular
+lleva la versión dentro —«Actualizar a 3.2.1»— y por eso no se puede agrupar ni
+filtrar por él.
+
+**Cuatro tarjetas pulsables arriba**, en vez de las cuatro pastillas de
+gravedad que repetían el desplegable de Gravedad: con falla conocida, solo
+actualización, se arreglan actualizando, y sin arreglo todavía.
+
+**Dos filtros nuevos y uno retirado.** Entran «Qué hay pendiente» (falla
+conocida / solo actualización) y «Qué hacer» (los siete casos). Sale «Qué se
+puede hacer», que ofrecía tres respuestas sacadas de si Wordfence había
+publicado parche, y esas tres no son el trabajo.
+
+**Los pendientes de un sitio se filtran y se paginan**, con los mismos tres
+desplegables y de quince en quince. Antes eran los 23 módulos seguidos.
+
+**Y dos cosas de la hoja de estilos que valen para todo el panel:**
+
+- La barra de filtros se alinea **por abajo** (`align-items: flex-end`). Con
+  seis filtros alguna etiqueta se parte en dos renglones, y alineando por
+  arriba su desplegable se descolgaba del resto de la fila.
+- Por debajo de 1500 px cada desplegable tiene **155 px como mínimo** y la
+  barra se parte en dos renglones. Con seis filtros a 1280 px cada uno se
+  quedaba en 124 px, y «Todos los sitios» y «Todos los módulos» se recortaban
+  los dos a «Todos los …»: un desplegable que no se puede leer no filtra nada,
+  y la cuenta que va dentro —que es la razón de que sean desplegables— no se
+  veía. Dos renglones de desplegables no son lo que se pidió quitar; lo que se
+  pidió quitar eran cuatro renglones de pastillas.
 
 Y una pieza concreta pendiente, de las normas de un sitio: **el botón
 «arreglarlo en Kinsta»** para las que se tocan en MyKinsta y no en el sitio

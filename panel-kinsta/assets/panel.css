@@ -509,7 +509,12 @@ body[class*="panel-kinsta"] .wrap .swpk-filtra,
 body[class*="panel-kinsta"] .wrap .swpk-rango {
 	display: flex;
 	flex-wrap: wrap;
-	align-items: flex-start;
+	/* Alineados por ABAJO, no por arriba. Con seis filtros hay siempre alguna
+	   etiqueta que se parte en dos renglones, y alineando por arriba su
+	   desplegable se descolgaba un renglón entero por debajo de los demás: la
+	   fila dejaba de leerse como una fila. Cuando todas las etiquetas caben en
+	   una línea —que es lo normal— esto no cambia nada. */
+	align-items: flex-end;
 	/* 14 px entre campos dejaba los desplegables pegados unos a otros y la
 	   barra se leía como un solo bloque: «todos esos filtros están pegados».
 	   Con 22 px cada uno se ve como lo que es, un filtro aparte. */
@@ -1708,6 +1713,24 @@ body[class*="panel-kinsta"] .wrap .swpk-filtra .swpk-campo-ancho {
 	max-width: none;
 }
 
+/* ── Pero un desplegable que no se puede leer no filtra nada ────────────────
+   Lo de arriba vale mientras los filtros sean cuatro o cinco. Con seis —los
+   que necesita Vulnerabilidades— a 1280 px, que es la pantalla de 13" en la
+   que lo mira el jefe, cada uno se queda en 124 px: «Todos los sitios» y
+   «Todos los módulos» se recortan los dos a «Todos los …», y la cuenta que va
+   dentro de cada opción, que es la razón de que sean desplegables y no
+   pastillas, no se ve. Por debajo de 1500 px se les deja un ancho que se lee y
+   la barra se parte en dos renglones. Dos renglones de desplegables no son lo
+   que se pidió quitar: lo que se pidió quitar eran cuatro renglones de
+   pastillas. */
+@media (max-width: 1500px) {
+	body[class*="panel-kinsta"] .wrap .swpk-filtra .swpk-campo {
+		flex: 0 1 165px;
+		min-width: 155px;
+		max-width: 230px;
+	}
+}
+
 /* Con `flex-basis: auto` el navegador decide si la fila cabe mirando el ancho
    del CONTENIDO de cada campo, no el que acabarán teniendo: con seis campos y
    un desplegable de nombres de sitio, esa suma se pasaba y el buscador y el
@@ -2581,9 +2604,20 @@ body[class*="panel-kinsta"] .swpk-interruptor-corto .swpk-que { font-size: 13px;
 body[class*="panel-kinsta"] .swpk-pendiente > summary {
 	grid-template-columns: 1fr 190px minmax(190px, 0.9fr);
 }
+/* El nivel y la píldora de parche van UNO AL LADO DEL OTRO. Apilados, cada
+   renglón medía 82 px: veinticinco renglones así son dos pantallas y media de
+   scroll en el portátil de 13" del jefe, y eso es la mitad del «sigue saturado
+   de información». Con `wrap`, «Cerrado por WordPress» —que es la píldora
+   larga— baja sola cuando no cabe, sin estirar los demás renglones. */
+body[class*="panel-kinsta"] .swpk-pendiente .swpk-norma-estado {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 5px 7px;
+}
 body[class*="panel-kinsta"] .swpk-pendiente-pildora {
-	display: block;
-	margin-top: 5px;
+	display: inline-block;
+	margin-top: 0;
 }
 
 /* El «qué hacer» de la línea cerrada: la frase corta, con una franja que dice
@@ -2601,6 +2635,29 @@ body[class*="panel-kinsta"] .swpk-hacer-nosotros { border-left-color: #1c6dc7; }
 body[class*="panel-kinsta"] .swpk-hacer-hosting  { border-left-color: #9aa4b2; }
 body[class*="panel-kinsta"] .swpk-hacer-cliente  { border-left-color: #7a5cd6; }
 body[class*="panel-kinsta"] .swpk-hacer-esperar  { border-left-color: #b4690e; }
+
+/* ── Vulnerabilidades y pendientes, la pantalla de toda la cartera ──────────
+   Es la misma línea que se despliega que la ficha de un sitio, con una
+   diferencia: aquí la primera columna lleva DOS datos —el sitio y el módulo—
+   porque el renglón es de un módulo EN un sitio. «De primero debería aparecer
+   el sitio», así que el sitio va en negrita arriba y el módulo debajo, pero no
+   en gris de nota al pie: el módulo es la mitad del renglón y se busca con la
+   vista cuando no hay filtro puesto. */
+body[class*="panel-kinsta"] .swpk-vuln > summary {
+	grid-template-columns: 1fr 180px minmax(200px, 0.8fr);
+}
+body[class*="panel-kinsta"] .swpk-vuln-modulo {
+	font-weight: 600;
+	font-size: 13px;
+	color: #2c333c;
+}
+/* La fila de dos datos necesita un pelín más de aire entre ellos que la de
+   uno: pegados se leen como un solo nombre largo. */
+body[class*="panel-kinsta"] .swpk-vuln .swpk-norma-aclara { margin-top: 4px; }
+
+@media (max-width: 1100px) {
+	body[class*="panel-kinsta"] .swpk-vuln > summary { grid-template-columns: 1fr; gap: 6px; }
+}
 
 /* El rotulito de «Quién puede aprovecharlo» / «Qué permite hacer». */
 body[class*="panel-kinsta"] .swpk-rotulin {

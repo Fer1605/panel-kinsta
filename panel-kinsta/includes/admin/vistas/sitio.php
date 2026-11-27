@@ -402,19 +402,150 @@ $url_pestana = static fn( string $s ) => add_query_arg(
 			default => 'Todo lo que tiene pendiente',
 		};
 
+		// ── Por qué esta lista también se filtra y se pagina ────────────────
+		//
+		//   «sigue saturado de información»  (27-11-2026)
+		//
+		// Esta pestaña ya no es una tabla de párrafos —cada módulo es una línea
+		// que se despliega— pero seguía enseñando los 23 módulos de un sitio
+		// seguidos, sin filtros y sin páginas. Es la regla §3.4 del estilo de
+		// las pantallas, la misma que vale para el resto del panel: listas
+		// paginadas, nunca una lista que no se acaba.
+		//
+		// Los filtros son los mismos tres que la pantalla de toda la cartera,
+		// con los mismos rótulos y la misma barra, porque es la misma pregunta
+		// hecha de dos alturas distintas (regla §8).
+		//
+		// El desplegable «Qué hay pendiente» usa el parámetro `solo`, que es el
+		// que ya traían las dos tarjetas de arriba: así el mando y el atajo son
+		// la misma cosa y no dos maneras de filtrar lo mismo.
+		$pendientes = [];
+		foreach ( $hallazgos as $h ) {
+			$h['hacer']   = SWPK_QueHacer::para( $h );
+			$pendientes[] = $h;
+		}
+
+		// Las cuentas de gravedad y de arreglo salen de lo que hay DESPUÉS de
+		// `solo` y ANTES de estos dos filtros: si se contaran sobre lo ya
+		// filtrado, al elegir «Crítico» las demás opciones dirían 0 y no habría
+		// forma de volver sin limpiar.
+		$cuenta_nivel_p = [];
+		$cuenta_caso_p  = [];
+		foreach ( $pendientes as $p ) {
+			$cuenta_nivel_p[ $p['nivel'] ]          = ( $cuenta_nivel_p[ $p['nivel'] ] ?? 0 ) + 1;
+			$cuenta_caso_p[ $p['hacer']['caso'] ]   = ( $cuenta_caso_p[ $p['hacer']['caso'] ] ?? 0 ) + 1;
+		}
+
+		$opciones_nivel_p = [];
+		foreach ( [ SWPK_Riesgo::CRITICO, SWPK_Riesgo::ALTO, SWPK_Riesgo::MEDIO, SWPK_Riesgo::BAJO ] as $sev_p ) {
+			if ( ! empty( $cuenta_nivel_p[ $sev_p ] ) ) {
+				$opciones_nivel_p[ $sev_p ] = sprintf(
+					'%s (%d)',
+					SWPK_Riesgo::nombres()[ $sev_p ],
+					(int) $cuenta_nivel_p[ $sev_p ]
+				);
+			}
+		}
+
+		$opciones_caso_p = [];
+		foreach ( SWPK_QueHacer::casos() as $clave_caso_p => $rotulo_caso_p ) {
+			if ( ! empty( $cuenta_caso_p[ $clave_caso_p ] ) ) {
+				$opciones_caso_p[ $clave_caso_p ] = sprintf( '%s (%d)', $rotulo_caso_p, (int) $cuenta_caso_p[ $clave_caso_p ] );
+			}
+		}
+
+		$nivel_p  = SWPK_Vista::opcion_pedida( 'nivel', $opciones_nivel_p );
+		$caso_p   = SWPK_Vista::opcion_pedida( 'caso', $opciones_caso_p );
+		$buscar_p = isset( $_GET['q'] ) ? trim( sanitize_text_field( wp_unslash( (string) $_GET['q'] ) ) ) : '';
+
+		$total_sin_filtrar = count( $pendientes );
+
+		$pendientes = array_values( array_filter(
+			$pendientes,
+			static function ( $p ) use ( $nivel_p, $caso_p, $buscar_p ): bool {
+				if ( '' !== $nivel_p && $p['nivel'] !== $nivel_p ) {
+					return false;
+				}
+				if ( '' !== $caso_p && $p['hacer']['caso'] !== $caso_p ) {
+					return false;
+				}
+				if ( '' !== $buscar_p ) {
+					$aguja = strtolower( remove_accents( $buscar_p ) );
+					$pajar = strtolower( remove_accents( (string) $p['titulo'] . ' ' . (string) $p['slug'] ) );
+					if ( ! str_contains( $pajar, $aguja ) ) {
+						return false;
+					}
+				}
+				return true;
+			}
+		) );
+
+		// Lo más grave primero, y a igualdad de gravedad lo urgente. Venían en
+		// el orden en que los devuelve la base, así que un crítico podía salir
+		// debajo de tres actualizaciones de rutina.
+		usort(
+			$pendientes,
+			static fn( $a, $b ) =>
+				[ SWPK_Riesgo::peso( $b['nivel'] ), (int) $b['hacer']['urgente'], (string) $a['titulo'] ]
+				<=> [ SWPK_Riesgo::peso( $a['nivel'] ), (int) $a['hacer']['urgente'], (string) $b['titulo'] ]
+		);
+
+		$hay_filtro_p = '' !== $solo || '' !== $nivel_p || '' !== $caso_p || '' !== $buscar_p;
+
+		[ $pend_pagina, $pag_pend, $pags_pend ] = SWPK_Vista::paginar( $pendientes, SWPK_Vista::pagina_pedida(), 15 );
+
 		SWPK_Vista::caja_abrir(
 			$titulo_tabla,
-			'' !== $solo
+			$hay_filtro_p
 				? sprintf(
 					'%s · <a href="%s">ver todo</a>',
-					esc_html( SWPK_Vista::plural( count( $hallazgos ), 'módulo', 'módulos' ) ),
+					esc_html( SWPK_Vista::plural( count( $pendientes ), 'módulo', 'módulos' ) ),
 					esc_url( $url_pestana( 'pendiente' ) )
 				)
-				: esc_html( SWPK_Vista::plural( count( $hallazgos ), 'módulo', 'módulos' ) ),
+				: esc_html( SWPK_Vista::plural( count( $pendientes ), 'módulo', 'módulos' ) ),
 			'swpk-c12',
 			true
 		);
+
+		SWPK_Vista::barra_de_filtros(
+			'panel-kinsta-sitio',
+			[
+				'solo' => [
+					'etiqueta' => 'Qué hay pendiente',
+					'opciones' => [
+						'vuln' => sprintf( 'Fallas conocidas (%d)', count( $con_vuln ) ),
+						'act'  => sprintf( 'Solo actualizaciones (%d)', count( $solo_act ) ),
+					],
+					'actual'   => $solo,
+					'todas'    => sprintf( 'Fallas y actualizaciones (%d)', count( $con_vuln ) + count( $solo_act ) ),
+				],
+				'caso' => [
+					'etiqueta' => 'Qué hacer',
+					'opciones' => $opciones_caso_p,
+					'actual'   => $caso_p,
+					'todas'    => sprintf( 'Cualquier arreglo (%d)', $total_sin_filtrar ),
+				],
+				'nivel' => [
+					'etiqueta' => 'Gravedad',
+					'opciones' => $opciones_nivel_p,
+					'actual'   => $nivel_p,
+					'todas'    => sprintf( 'Toda gravedad (%d)', $total_sin_filtrar ),
+				],
+			],
+			[ 'sitio' => $sitio_id, 'seccion' => 'pendiente' ] + SWPK_Vista::rastro(),
+			$buscar_p,
+			'un módulo…'
+		);
+
+		SWPK_Vista::paginador( $pag_pend, $pags_pend, count( $pendientes ), 'módulos', 'módulo' );
 		?>
+
+		<?php if ( ! $pend_pagina ) : ?>
+			<div class="notice notice-info inline"><p>
+				Ningún módulo de este sitio cumple lo que se pidió en los filtros.
+				<a href="<?php echo esc_url( $url_pestana( 'pendiente' ) ); ?>">Ver todo</a>
+			</p></div>
+		<?php endif; ?>
 		<?php
 		// ── «Aquí no me dice qué podemos hacer» ─────────────────────────────
 		//
@@ -437,11 +568,12 @@ $url_pestana = static fn( string $s ) => add_query_arg(
 		// las tres cosas con las que se decide —qué módulo, cómo de grave, y
 		// qué hay que hacer— y el porqué, que es lo largo, vive dentro.
 		?>
+		<?php if ( $pend_pagina ) : ?>
 		<div class="swpk-normas swpk-pendientes">
-		<?php foreach ( $hallazgos as $h ) : ?>
+		<?php foreach ( $pend_pagina as $h ) : ?>
 			<?php
 			$v     = $h['vulnerabilidades'][0] ?? null;
-			$hacer = SWPK_QueHacer::para( $h );
+			$hacer = $h['hacer'];
 			$quien = $v
 				? SWPK_Textos::quien_puede( (string) ( $v->cvss_vector ?? '' ), (string) $v->descripcion )
 				: null;
@@ -533,6 +665,8 @@ $url_pestana = static fn( string $s ) => add_query_arg(
 			</details>
 		<?php endforeach; ?>
 		</div>
+		<?php SWPK_Vista::paginador( $pag_pend, $pags_pend, count( $pendientes ), 'módulos', 'módulo' ); ?>
+		<?php endif; ?>
 		<?php SWPK_Vista::caja_cerrar(); ?>
 
 		<?php

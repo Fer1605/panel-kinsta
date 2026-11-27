@@ -156,10 +156,59 @@ Reglas de Fer, que valen igual en un chat nuevo:
 
 | | Versión | Dónde está |
 |---|---|---|
-| Panel Kinsta | **0.18.1** | Desplegado en producción y verificado ahí mismo. |
+| Panel Kinsta | **0.19.0** | En el repositorio y comprobado en local a 1280 px. **La 0.18.1 es la que está en producción**: la 0.19.0 todavía no se ha desplegado. |
 | Agente (plugin) | **0.7.0** | 0.6.4 está en 106 de 107. La 0.7.0 trae el registro de actividad y **no está repartida**. |
 | Agente (dentro del tema) | **0.7.0-tema** | La rama unida del jefe sigue en 0.6.4-tema con código de 0.6.3. La corrección + el registro están en una rama lista, **sin PR abierto**. |
 | Tema hijo | **2.6.1** | En el PR. |
+
+### Lo del 27 por la tarde: Vulnerabilidades dejó de ser un muro (0.18.1 → 0.19.0)
+
+**La queja, textual:** «sigue saturado de información y esto mi jefe no va a
+decir que hicimos nada».
+
+**Qué estaba mal.** La pantalla de Vulnerabilidades era una tabla de cinco
+columnas y la del medio llevaba **cuatro párrafos** por renglón: qué pasa, qué
+permite la falla, quién puede aprovecharla y qué hay que hacer. Con
+veinticinco renglones por página son cien párrafos en un portátil de 13
+pulgadas. Y encima no decía lo único por lo que se abre: **qué hacer**. Eso ya
+lo sabía decir `SWPK_QueHacer` desde esa misma mañana, pero solo lo usaba la
+ficha de un sitio.
+
+**Qué se hizo.** Lo mismo que se hizo en la ficha, con las mismas clases: cada
+hallazgo es ahora una **línea que se despliega**. La línea cerrada dice sitio,
+módulo y versiones, gravedad y parche, y qué hacer con su franja de color de
+quién se mueve. El porqué vive dentro, en dos pasos numerados. Nada abierto al
+entrar.
+
+Además: cuatro tarjetas pulsables arriba (con falla conocida · solo
+actualización · se arreglan actualizando · sin arreglo todavía) en lugar de las
+cuatro pastillas de gravedad, que repetían el desplegable de Gravedad; dos
+filtros nuevos —«Qué hay pendiente» y «Qué hacer»— y uno retirado; y los
+**pendientes de un sitio** con filtros y páginas, de quince en quince, que
+antes eran los 23 módulos seguidos.
+
+**Lo que cambió fuera de esas dos pantallas:**
+
+- `SWPK_QueHacer::para()` devuelve ahora `caso`, una clave estable por cada una
+  de las siete situaciones, y `SWPK_QueHacer::casos()` da sus rótulos. Hacía
+  falta porque el titular lleva la versión dentro y no se puede agrupar por él.
+- El transient de la pantalla pasa a `swpk_hallazgos3_` (cambió la forma de lo
+  guardado), y el `DELETE` de `SWPK_Estado::olvidar()` ya no depende de que el
+  nombre acabe en guion bajo.
+- La barra de filtros de **todo el panel** se alinea por abajo, y por debajo de
+  1500 px cada desplegable mide 155 px como mínimo y la barra se parte en dos
+  renglones. Con seis filtros a 1280 px se quedaban en 124 px y «Todos los
+  sitios» y «Todos los módulos» se recortaban los dos a «Todos los …». De paso
+  arregla lo mismo en Sitios, que tiene ocho.
+
+**Qué se comprobó.** Que no reviente: las dos pantallas y sus filtros pedidos
+con parámetros reales, sin `Fatal`, `Warning`, `Notice` ni `Deprecated`, con
+los valores inventados cayendo al «sin filtro». Que se vea: en el navegador con
+`window.innerWidth` en 1280, sin desborde horizontal, el renglón bajó de 82 px
+a 69 px y los filtros se leen enteros.
+
+**Lo que sigue:** Caídas, que es el punto 2 de la lista de §9 del estilo de las
+pantallas.
 
 ### Lo del 27 a mediodía: el panel decía que 100 sitios tenían 2FA (0.14.1 → 0.15.1)
 
