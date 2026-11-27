@@ -170,11 +170,10 @@ fila en fila.
 En orden de urgencia, dicho por Fer el 27-11-2026:
 
 1. ~~**Vulnerabilidades**~~ — hecho el 27 por la tarde, en 0.19.0. Ver §9 bis.
-2. **Caídas** — «tiene mucha información al entrar». Sí y no: la pantalla
-   está bien, lo que satura es lo que enseña de golpe. **Es la siguiente.**
+2. ~~**Caídas**~~ — hecho el 27 por la tarde, en 0.19.4. Ver §9 ter.
 3. ~~**Pendientes de un sitio**~~ — hecho a la vez, en 0.19.0: filtros y
    páginas. Ver §9 bis.
-4. **Seguridad** — «creo que está más decente». La última.
+4. **Seguridad** — «creo que está más decente». **Es la que queda.**
 
 ---
 
@@ -256,6 +255,42 @@ Y una pieza concreta pendiente, de las normas de un sitio: **el botón
 pantalla exacta. Hay que **comprobar cada dirección a mano** antes de
 escribirla: así se arregló «Abrir en Kinsta», que llevaba a la lista de los
 109 porque la ruta inventada no existía.
+
+---
+
+## 9 ter. Lo que se hizo con Caídas (0.19.4)
+
+El diagnóstico de arriba —«la pantalla está bien, lo que satura es lo que
+enseña de golpe»— era exacto. Medido antes de tocar nada: **4.809 px de alto y
+la tabla empezando en el píxel 893**. La primera pantalla del portátil no
+enseñaba ni un sitio. Después: **2.672 px y la lista en el 477**.
+
+Nada nuevo en el método; es el mismo de §9 bis aplicado a lo que había:
+
+- **Dos avisos de tres párrafos** —el monitor parado y la vuelta que salió por
+  la IP bloqueada— pasan a una línea con su burbuja.
+- **El veredicto sube al subtítulo de la cabecera.** Era una caja propia con
+  un `<h2>` y dos párrafos, encima de otra caja que decía lo mismo con una
+  dona. El subtítulo existe para esto. La mecánica —los dos intentos, el
+  sondeo cada cinco minutos mientras algo esté caído— baja a la burbuja.
+- **Fuera la dona**: 230 px de caja para cuatro números de los que tres suelen
+  ser cero, y sin poder pulsarlos. En su lugar, la filita de tarjetas, y cada
+  una filtra la lista. Las dos primeras salen siempre aunque sean cero —un
+  cero en «no responden» es la buena noticia que se viene a ver—; las otras
+  dos solo si hay algo.
+- **La tabla pasa a filas que se despliegan**, con las mismas clases. El
+  renglón baja de 140 px a 69.
+- **A un sitio que responde bien no se le explica nada.** La celda «Ahora»
+  llevaba un «Qué significa» plegable en TODAS las filas, y el de un 200 decía
+  «el panel no tiene una traducción para esta respuesta»: ruido con forma de
+  dato. Ahora el análisis solo aparece donde hay algo que analizar.
+- **Y por eso la columna de la derecha queda vacía casi siempre**, que es lo
+  que se busca: las filas con problema —que van primero— son las únicas con
+  texto a la derecha y saltan solas. El día que no hay ninguna, la rejilla
+  pasa a dos columnas y el estado se pega a la derecha, **decidido por página
+  entera y nunca fila por fila**.
+- **El historial se pagina**, de diez en diez, con su propio parámetro `ph`:
+  con `p` para las dos listas, pasar de página en una saltaba también la otra.
 
 ---
 

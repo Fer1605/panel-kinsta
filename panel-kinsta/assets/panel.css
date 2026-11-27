@@ -2504,22 +2504,24 @@ body[class*="panel-kinsta"] .swpk-norma-pie {
 	body[class*="panel-kinsta"] .swpk-norma > summary { grid-template-columns: 1fr; gap: 6px; }
 }
 
-/* La ficha de una caída, plegada dentro de su fila. Son cuatro párrafos
-   y la tabla tiene 109 filas: se abre la del sitio que importa. */
-body[class*="panel-kinsta"] .swpk-caida-ficha { margin-top: 5px; }
-body[class*="panel-kinsta"] .swpk-caida-ficha > summary {
-	cursor: pointer; font-size: 12px; color: #1c6dc7;
-	list-style: none; display: inline-block;
+/* ── Caídas, leída como las otras dos listas ────────────────────────────────
+   Aquí vivía `.swpk-caida-ficha`: una ficha plegable DENTRO de la celda de una
+   tabla, con su propio triangulito y sus propios títulos. Se fue con la tabla.
+   La fila entera es ahora la que se despliega, con las clases de
+   `.swpk-pendiente`, y lo único propio es la pastilla del código: va en gris y
+   pequeña porque es el dato técnico («502 · Puerta de enlace incorrecta»), no
+   el estado. */
+body[class*="panel-kinsta"] .swpk-caida .swpk-pendiente-pildora {
+	font-size: 12px;
+	line-height: 1.4;
 }
-body[class*="panel-kinsta"] .swpk-caida-ficha > summary::-webkit-details-marker { display: none; }
-body[class*="panel-kinsta"] .swpk-caida-ficha > summary::before { content: "▸ "; }
-body[class*="panel-kinsta"] .swpk-caida-ficha[open] > summary::before { content: "▾ "; }
-body[class*="panel-kinsta"] .swpk-caida-ficha h5 {
-	margin: 10px 0 3px; font-size: 11px; letter-spacing: .05em;
-	text-transform: uppercase; color: #5c6670;
-}
-body[class*="panel-kinsta"] .swpk-caida-ficha p {
-	margin: 0 0 4px; font-size: 13px; line-height: 1.55; max-width: 60ch;
+
+/* El día que todos responden no hay tercera columna que llenar: la rejilla
+   pasa a dos y el estado se pega a la derecha, en vez de flotar en el medio
+   con 400 px de aire al lado. La clase la pone la vista mirando la página
+   entera, nunca fila por fila. */
+body[class*="panel-kinsta"] .swpk-caidas-sin-accion .swpk-caida > summary {
+	grid-template-columns: 1fr 170px;
 }
 
 /* ── «Lo que hay que hacer», en el Resumen ─────────────────────────

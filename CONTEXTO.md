@@ -156,7 +156,7 @@ Reglas de Fer, que valen igual en un chat nuevo:
 
 | | Versión | Dónde está |
 |---|---|---|
-| Panel Kinsta | **0.19.3** | En el repositorio y comprobado en local a 1280 px. **La 0.18.1 es la que está en producción**: la 0.19.x todavía no se ha desplegado. |
+| Panel Kinsta | **0.19.4** | En el repositorio y comprobado en local a 1280 px. **La 0.18.1 es la que está en producción**: la 0.19.x todavía no se ha desplegado. |
 | Agente (plugin) | **0.7.0** | 0.6.4 está en 106 de 107. La 0.7.0 trae el registro de actividad y **no está repartida**. |
 | Agente (dentro del tema) | **0.7.0-tema** | La rama unida del jefe sigue en 0.6.4-tema con código de 0.6.3. La corrección + el registro están en una rama lista, **sin PR abierto**. |
 | Tema hijo | **2.6.1** | En el PR. |
@@ -245,8 +245,32 @@ va siempre la palabra que dice lo mismo. **Ya no queda ni una franja de color
 en todo el panel**: `grep -n "border-left" assets/*.css` solo devuelve tres
 líneas grises de 1 px, que son separadores de columna.
 
-**Lo que sigue:** Caídas, que es el punto 2 de la lista de §9 del estilo de las
-pantallas.
+### Lo del 27 al cierre: Caídas, de 4.809 px a 2.672 (0.19.3 → 0.19.4)
+
+El punto 2 de la lista de §9. El diagnóstico que estaba escrito —«la pantalla
+está bien, lo que satura es lo que enseña de golpe»— era exacto: medida antes
+de tocar nada, la página tenía **4.809 px de alto y la tabla empezaba en el
+893**, así que la primera pantalla del portátil no enseñaba ni un sitio.
+
+Mismo método que en Vulnerabilidades: los dos avisos de tres párrafos pasan a
+una línea con burbuja; el veredicto sube al subtítulo de la cabecera y su
+mecánica a la burbuja; fuera la dona y en su lugar la filita de tarjetas
+pulsables; y la tabla pasa a filas que se despliegan, de 140 px a 69.
+
+Lo propio de esta pantalla: **a un sitio que responde bien no se le explica
+nada**. La celda «Ahora» llevaba un «Qué significa» plegable en todas las
+filas, y el de un 200 decía «el panel no tiene una traducción para esta
+respuesta». Ahora el análisis sale solo donde hay algo que analizar, así que
+la columna de la derecha está vacía casi siempre y las filas con problema
+—que van primero— son las únicas que saltan. El día que no hay ninguna, la
+rejilla pasa a dos columnas, decidido por página entera y nunca fila por fila.
+
+El historial se pagina de diez en diez con su propio parámetro `ph`.
+
+Queda: **2.672 px, y la lista empieza en el 477.**
+
+**Lo que sigue:** Seguridad, el punto 4 y último de la lista de §9. «Creo que
+está más decente», así que es la que menos urge.
 
 ### Lo del 27 a mediodía: el panel decía que 100 sitios tenían 2FA (0.14.1 → 0.15.1)
 
