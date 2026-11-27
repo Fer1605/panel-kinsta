@@ -315,7 +315,7 @@ $url_pestana = static fn( string $s ) => add_query_arg(
 		<?php endif; ?>
 		<?php if ( 'datos' !== $seccion && SWPK_Etiquetas::es_nuestro( $sitio->tag ) ) : ?>
 			<div class="swpk-tarjeta">
-				<div class="swpk-n" style="font-size:18px;color:<?php echo $sitio->tiene_2fa ? '#0b5ed7' : '#9e0b10'; ?>">
+				<div class="swpk-n" style="font-size:20px;color:<?php echo $sitio->tiene_2fa ? '#0b5ed7' : '#9e0b10'; ?>">
 					<?php echo $sitio->tiene_2fa ? '✓ Activa' : 'Pendiente'; ?>
 				</div>
 				<div class="swpk-r">Doble autenticación</div>

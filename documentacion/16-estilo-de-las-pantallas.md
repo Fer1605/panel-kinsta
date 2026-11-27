@@ -160,12 +160,14 @@ fila en fila.
 - Su parámetro de búsqueda es `q`, y «Limpiar» borra todos los campos más
   `q` y `p`.
 - **Las tarjetas de cabecera son todas del mismo tamaño**, en todas las
-  pantallas, con el **número y el rótulo a la par** y unos 57 px de alto. Se
-  llegó ahí probando los dos extremos y descartándolos los dos: las grandes
-  —número de 30 px arriba, rótulo debajo, 95 px— «saturan mucho», y las
-  pequeñas —20 px, 45 px de alto— «así de chiquitas tampoco me gustan, siento
-  que hacen todavía más ruido que las grandes». Las de contexto —la versión de
-  WordPress, la de PHP— siguen siendo `.swpk-tarjeta-menor`.
+  pantallas, con el **número y el rótulo A LA PAR**: cifra de 30 px, caja de
+  69. Se llegó ahí probando los extremos y descartándolos todos: las grandes
+  —número de 30 px arriba, rótulo debajo, 95 px— «saturan mucho»; las pequeñas
+  —20 px, 45 px de alto— «así de chiquitas tampoco me gustan, siento que hacen
+  todavía más ruido que las grandes»; y el primer intermedio, de 26 px y 58,
+  se quedó corto. **La cifra mide lo mismo que en las grandes**: lo que hacía
+  pesar a aquellas no era el número, era el rótulo debajo. Las de contexto —la
+  versión de WordPress, la de PHP— siguen siendo `.swpk-tarjeta-menor`.
 - Y cada tarjeta mide lo que mide su texto (`flex: 0 1 auto`), no una parte
   igual del ancho: cuatro tarjetas estiradas de lado a lado son una banda de
   color, no cuatro datos.

@@ -156,7 +156,7 @@ Reglas de Fer, que valen igual en un chat nuevo:
 
 | | Versión | Dónde está |
 |---|---|---|
-| Panel Kinsta | **0.19.6** | En el repositorio y comprobado en local a 1280 px. **La 0.18.1 es la que está en producción**: la 0.19.x todavía no se ha desplegado. |
+| Panel Kinsta | **0.19.7** | En el repositorio y comprobado en local a 1280 px. **La 0.18.1 es la que está en producción**: la 0.19.x todavía no se ha desplegado. |
 | Agente (plugin) | **0.7.0** | 0.6.4 está en 106 de 107. La 0.7.0 trae el registro de actividad y **no está repartida**. |
 | Agente (dentro del tema) | **0.7.0-tema** | La rama unida del jefe sigue en 0.6.4-tema con código de 0.6.3. La corrección + el registro están en una rama lista, **sin PR abierto**. |
 | Tema hijo | **2.6.1** | En el PR. |
@@ -299,11 +299,13 @@ Tres cosas que solo se ven cuando ya están las cuatro pantallas hechas:
   […] mejor ni lo pongas.» Queda el número, en media línea. Y de paso se van
   el «veredicto» del pie y el aviso de los sitios sin revisar, que repetían
   con otras palabras lo que ya dicen las tarjetas y su burbuja.
-- **Un solo tamaño de tarjeta en todo el panel**, intermedio: número y rótulo
-  a la par, 26 px, unos 57 px de alto. Se probaron los dos extremos y los dos
-  se descartaron: las grandes saturan y las pequeñas «hacen todavía más ruido
-  que las grandes». Y cada tarjeta mide lo que mide su texto en vez de
-  estirarse hasta el borde.
+- **Un solo tamaño de tarjeta en todo el panel**: número y rótulo a la par,
+  30 px de cifra, 69 px de alto. Se probaron los dos extremos y los dos se
+  descartaron —las grandes saturan, las pequeñas «hacen todavía más ruido que
+  las grandes»— y el primer intermedio (26 px, 58 px) se quedó corto. El
+  cuerpo de la cifra es el mismo que el de las grandes: lo que las hacía pesar
+  no era el número, era el rótulo DEBAJO. Y cada tarjeta mide lo que mide su
+  texto en vez de estirarse hasta el borde.
 - **La cabecera de la ficha de un sitio**: a la derecha iban pegadas la
   etiqueta del grupo, la pastilla de riesgo y las tres pestañas. Las dos
   primeras son atributos del sitio y las otras navegación; mezcladas no se ve

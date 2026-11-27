@@ -2131,7 +2131,10 @@ body[class*="panel-kinsta"] .wrap .notice-dismiss::before {
    arriba y rótulo debajo, 95 px de alto— «saturan mucho». Las de la filita
    —20 px y 45 px de alto— «así de chiquitas tampoco me gustan, siento que
    hacen todavía más ruido que las grandes». Así que una sola, en medio:
-   número y rótulo A LA PAR, 26 px, unos 57 px de alto. La misma en
+   número y rótulo A LA PAR. El primer intento se quedó corto —26 px y 58 px
+   de alto— y hubo que subir un escalón: 30 px de número y 68 de caja, que es
+   el mismo cuerpo de cifra que tenían las grandes. Lo que las hacía pesar no
+   era el número, era el rótulo DEBAJO. La misma en
    Vulnerabilidades, en Caídas, en Seguridad y en la ficha de un sitio, que es
    la regla §8: lo mismo se ve igual en todas partes.
 
@@ -2139,34 +2142,37 @@ body[class*="panel-kinsta"] .wrap .notice-dismiss::before {
    estirarse a partes iguales hasta el borde. Cuatro tarjetas estiradas a 320
    px cada una son una banda de color de lado a lado; a su ancho natural son
    cuatro datos. */
-body[class*="panel-kinsta"] .swpk-tarjetas { gap: 10px; margin: 0 0 14px; }
+body[class*="panel-kinsta"] .swpk-tarjetas { gap: 12px; margin: 0 0 16px; }
 
 body[class*="panel-kinsta"] .swpk-tarjetas .swpk-tarjeta {
 	display: flex;
 	align-items: baseline;
-	gap: 9px;
+	gap: 10px;
 	flex: 0 1 auto;
 	min-width: 0;
-	max-width: 340px;
-	padding: 13px 18px;
+	max-width: 360px;
+	padding: 16px 20px;
 }
 
+/* 30 px, el mismo cuerpo que tenían las grandes. Lo que las hacía pesar no
+   era el número: era que el rótulo iba DEBAJO, y eso son 95 px de caja. Con
+   el rótulo al lado, el mismo 30 cabe en 68. */
 body[class*="panel-kinsta"] .swpk-tarjetas .swpk-tarjeta .swpk-n {
-	font-size: 26px;
+	font-size: 30px;
 	line-height: 1.15;
 }
 
 body[class*="panel-kinsta"] .swpk-tarjetas .swpk-tarjeta .swpk-r {
 	margin-top: 0;
-	font-size: 13px;
+	font-size: 13.5px;
 }
 
 /* Las de contexto —la versión de WordPress, la de PHP— siguen siendo las
    pequeñas: están ahí para contestar «¿por qué no actualiza?», no son a lo
    que se viene. */
-body[class*="panel-kinsta"] .swpk-tarjetas .swpk-tarjeta-menor { padding: 10px 14px; }
-body[class*="panel-kinsta"] .swpk-tarjetas .swpk-tarjeta-menor .swpk-n { font-size: 18px; }
-body[class*="panel-kinsta"] .swpk-tarjetas .swpk-tarjeta-menor .swpk-r { font-size: 12.5px; }
+body[class*="panel-kinsta"] .swpk-tarjetas .swpk-tarjeta-menor { padding: 12px 16px; }
+body[class*="panel-kinsta"] .swpk-tarjetas .swpk-tarjeta-menor .swpk-n { font-size: 20px; }
+body[class*="panel-kinsta"] .swpk-tarjetas .swpk-tarjeta-menor .swpk-r { font-size: 13px; }
 
 /* La fila de «Mostrar: Todo · Cliente · Asesora…» del historial de envíos.
    Venía del CSS heredado con 7 px entre chips: igual de pegada que las
