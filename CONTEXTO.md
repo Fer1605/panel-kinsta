@@ -155,7 +155,7 @@ Reglas de Fer, que valen igual en un chat nuevo:
 
 | | Versión | Dónde está |
 |---|---|---|
-| Panel Kinsta | **0.17.0** | Desplegado en producción y verificado ahí mismo. |
+| Panel Kinsta | **0.17.2** | Desplegado en producción y verificado ahí mismo. |
 | Agente (plugin) | **0.7.0** | 0.6.4 está en 106 de 107. La 0.7.0 trae el registro de actividad y **no está repartida**. |
 | Agente (dentro del tema) | **0.7.0-tema** | La rama unida del jefe sigue en 0.6.4-tema con código de 0.6.3. La corrección + el registro están en una rama lista, **sin PR abierto**. |
 | Tema hijo | **2.6.1** | En el PR. |
@@ -354,7 +354,52 @@ sitio a **9,8**. Heraldos, de 27 a **5**.
 
 ---
 
-### Lo del 27 por la noche: el bloqueo es POR IP, y es nuestro propio sondeo el que lo provoca
+### Lo del 27 por la noche, confirmado por Kinsta: fueron nuestras peticiones a xmlrpc.php
+
+Soporte de Kinsta, textual, mientras yo seguía buscándolo:
+
+> «La razón por la que fuiste bloqueado es que hay muchas solicitudes XML-RPC
+> a múltiples sitios alojados con nosotros en un corto período de tiempo. Más
+> de 50 sitios.»
+
+Eran nuestras. Una línea de `SWPK_Sonda::plan()` mandaba un POST a
+`xmlrpc.php` por sitio: **108 POST a xmlrpc.php en ocho minutos, repartidos
+por toda la cartera**. Visto desde un cortafuegos eso no se distingue de un
+ataque de fuerza bruta distribuido, porque es literalmente la misma forma.
+Nos bloquearon la IP de salida y con ella se cegó todo: las normas y el
+monitor de caídas.
+
+Es la causa de todo lo de hoy, y también la del 23 de noviembre, cuando 106
+sitios figuraban caídos sin estarlo.
+
+**Lo hecho, en caliente:**
+
+1. **La corrida diaria ya no pide `xmlrpc.php`.** Se queda solo para el botón
+   de «analizar este sitio ahora»: un sitio, cuando alguien lo pide. Un sitio
+   no es un patrón. Tiene un coste y hay que decirlo: esa norma solo se puede
+   afirmar desde fuera —el dato del agente da falsos positivos, está en
+   `comprobar_xmlrpc_cerrado()`—, así que donde nadie pulse el botón se
+   quedará en «falta medirlo». Es el precio de no parecer un atacante.
+2. **Freno de dos peticiones por segundo** en toda la corrida
+   (`SWPK_Sonda::POR_SEGUNDO`). Pasa de ocho minutos a una hora larga, de
+   madrugada. El botón de un sitio no lleva freno: 58 peticiones sueltas no
+   mueven ninguna aguja y hay una persona esperando.
+3. **La sonda queda desprogramada** hasta que Fer diga. No corre esta noche.
+4. El monitor de caídas sigue: son 108 peticiones a la portada por hora,
+   0,03 por segundo, y es lo único que avisa si un sitio se cae.
+
+**Lo que hay que pedirle a Kinsta:** que desbloqueen `34.46.111.53` y
+`35.239.102.121`, las dos IP de salida de Pantheon, diciendo qué se cambió.
+
+**La lección, para que no se repita:** el panel sondea sitios de clientes
+desde una IP compartida. Cualquier comprobación nueva que se repita por toda
+la cartera hay que mirarla dos veces, y preguntarse cómo se ve **desde el
+cortafuegos del otro lado**, no solo si el dato es correcto. Un patrón que
+parece un ataque es un ataque, a efectos de quien lo recibe.
+
+---
+
+### Lo del 27 por la noche: cómo se encontró (el bloqueo es POR IP)
 
 Al mirar los 20 sitios que la corrida marcó con un archivo alcanzable desde
 fuera saltó el detalle: **son los 20 primeros por orden alfabético**, o sea

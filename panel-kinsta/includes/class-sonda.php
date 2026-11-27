@@ -94,12 +94,48 @@ class SWPK_Sonda {
 	 * en menos de un minuto. El reloj manda sobre la cantidad: si un día los
 	 * sitios contestan lentos, la tanda hace menos sitios, pero termina.
 	 */
-	private const POR_TANDA = 10;
-	private const SEGUNDOS  = 25;
+	/**
+	 * Un sitio por tanda, y cuarenta segundos de margen.
+	 *
+	 * Con el ritmo de POR_SEGUNDO, un sitio son unas 58 peticiones, o sea
+	 * medio minuto. Diez sitios serían cinco minutos en una sola petición
+	 * web, y el servidor la corta mucho antes.
+	 */
+	private const POR_TANDA = 1;
+	private const SEGUNDOS  = 40;
 
 	/** Un transient por sitio. Vive 25 horas: hasta la corrida de mañana. */
 	private const CACHE = 'swpk_sonda_';
 	private const VIDA  = 25 * HOUR_IN_SECONDS;
+
+	/**
+	 * Cuántas peticiones por segundo, como mucho, contra los sitios.
+	 *
+	 * ─── De dónde sale este número ──────────────────────────────────────────
+	 *
+	 * 27-11-2026, de noche. La corrida marcaba 20 sitios con un archivo
+	 * alcanzable desde fuera, y resultaron ser los 20 PRIMEROS por orden
+	 * alfabético: las dos primeras tandas. Del 21 en adelante, todo contesta
+	 * 403 con el cuerpo de Cloudflare —«Sorry, you have been blocked»—, y con
+	 * un agente de usuario de Chrome también. O sea que no es el agente: es
+	 * la IP de salida del panel, bloqueada para todo.
+	 *
+	 * Lo dispara el propio panel. Una corrida son 6.264 peticiones en ocho
+	 * minutos: trece por segundo contra sitios del mismo hosting. Cualquier
+	 * cortafuegos con límite por IP corta eso, y después nos deja fuera un
+	 * buen rato. El panel se estaba cegando solo, y de paso cegaba al monitor
+	 * de caídas: es la causa del 23 de noviembre, cuando 106 sitios figuraban
+	 * caídos sin estarlo.
+	 *
+	 * Dos por segundo: la corrida pasa de ocho minutos a una hora larga. Es
+	 * una tarea de madrugada que no la espera nadie, y a cambio los datos son
+	 * de verdad. Un dato medido en una hora vale más que seis mil peticiones
+	 * en ocho minutos de las que solo sirven las primeras mil.
+	 *
+	 * Si algún día hace falta subirlo, el techo está entre las 1.000 y las
+	 * 1.200 peticiones seguidas: es donde se cortó la corrida de ese día.
+	 */
+	private const POR_SEGUNDO = 2;
 
 	private const TIMEOUT      = 12;
 	private const CONCURRENCIA = 15;
@@ -415,6 +451,8 @@ class SWPK_Sonda {
 
 			$cola['latido'] = time();
 			update_option( self::COLA, $cola, false );
+
+			self::$con_freno = true;
 
 			$antes = self::contadores();
 			$r     = self::sondear( $tanda );
@@ -840,14 +878,30 @@ class SWPK_Sonda {
 	private static function conservar_lo_medido( string $sitio_id, array $uno ): array {
 		$viejo = self::de( $sitio_id );
 
-		if ( ! $viejo || empty( $viejo['rutas'] ) || empty( $uno['rutas'] ) ) {
+		if ( ! $viejo ) {
 			return $uno;
+		}
+
+		if ( empty( $viejo['rutas'] ) || empty( $uno['rutas'] ) ) {
+			$uno['rutas'] = $uno['rutas'] ?? [];
 		}
 
 		$ahora   = current_time( 'mysql' );
 		$limite  = strtotime( $ahora ) - 3 * DAY_IN_SECONDS;
 		$dudosos = [ self::BLOQUEADO, self::NO_SE_PUDO ];
 		$buenos  = [ self::PROTEGIDO, self::AUSENTE, self::EXPUESTO ];
+
+		// Lo mismo con XML-RPC. La corrida diaria ya no lo pide —ver plan()—,
+		// así que llega siempre como «no se pudo»; si alguien lo midió con el
+		// botón, ese dato manda.
+		if ( 'no_se_pudo' === (string) ( $uno['xmlrpc'] ?? '' ) ) {
+			$antes_x = (string) ( $viejo['xmlrpc'] ?? '' );
+
+			if ( '' !== $antes_x && 'no_se_pudo' !== $antes_x ) {
+				$uno['xmlrpc']    = $antes_x;
+				$uno['xmlrpc_de'] = (string) ( $viejo['xmlrpc_de'] ?? $viejo['cuando'] ?? '' );
+			}
+		}
 
 		foreach ( (array) $uno['rutas'] as $grupo => $estado ) {
 			if ( ! in_array( (string) $estado, $dudosos, true ) ) {
@@ -877,6 +931,17 @@ class SWPK_Sonda {
 	private static function limitada( array $r ): bool {
 		return in_array( (int) ( $r['codigo'] ?? 0 ), [ 429, 500, 502, 503, 504 ], true );
 	}
+
+	/**
+	 * Si esta pasada va frenada.
+	 *
+	 * La corrida diaria sí: son 6.264 peticiones seguidas y es lo que nos
+	 * bloquea la IP. El botón de «analizar este sitio ahora» no: son 58
+	 * peticiones sueltas, no mueven ninguna aguja, y hay una persona
+	 * esperando delante de la pantalla. Lo que hace daño es el volumen
+	 * sostenido, no una consulta.
+	 */
+	private static bool $con_freno = false;
 
 	/** Cuántas peticiones se cayeron y cuántas se hicieron, en esta corrida. */
 	private static int $caidas     = 0;
@@ -944,7 +1009,33 @@ class SWPK_Sonda {
 
 		$pon( 'trace', $base, [ 'metodo' => 'TRACE' ] );
 		$pon( 'robots', $base . 'robots.txt' );
-		$pon( 'xmlrpc', $base . 'xmlrpc.php', [ 'post' => self::XMLRPC_CUERPO ] );
+		// ── XML-RPC: nunca en la corrida de toda la cartera ─────────────────
+		//
+		// 27-11-2026, por la noche. Soporte de Kinsta, textual:
+		//
+		//   «La razón por la que fuiste bloqueado es que hay muchas
+		//    solicitudes XML-RPC a múltiples sitios alojados con nosotros en
+		//    un corto período de tiempo. Más de 50 sitios.»
+		//
+		// Eran nuestras. Esta línea, una por sitio, 108 POST a xmlrpc.php en
+		// ocho minutos. Visto desde el cortafuegos de Kinsta eso no se
+		// distingue de un ataque de fuerza bruta repartido por la cartera, y
+		// con razón: es literalmente la misma forma. Nos bloquearon la IP de
+		// salida, y con ella se cegaron el sondeo de normas Y el monitor de
+		// caídas.
+		//
+		// Así que desde la corrida diaria no se pide más. Se queda solo para
+		// el botón de «analizar este sitio ahora»: un sitio, una petición,
+		// cuando alguien la pide. Un sitio no es un patrón.
+		//
+		// El coste es real y hay que decirlo: la norma `xmlrpc_cerrado` solo
+		// se puede afirmar desde fuera —el dato del agente da falsos
+		// positivos, está explicado en comprobar_xmlrpc_cerrado()—, así que
+		// en los sitios donde nadie pulse el botón se quedará en «falta
+		// medirlo». Es el precio de no parecer un atacante.
+		if ( ! self::$con_freno ) {
+			$pon( 'xmlrpc', $base . 'xmlrpc.php', [ 'post' => self::XMLRPC_CUERPO ] );
+		}
 		$pon( 'usuarios_rest', $base . 'wp-json/wp/v2/users' );
 		$pon( 'autor', $base . '?author=1' );
 		$pon( 'uploads_php', $base . 'wp-content/uploads/swpk-' . $azar . '.php' );
@@ -1074,6 +1165,8 @@ class SWPK_Sonda {
 		$hechas = [];
 
 		foreach ( array_chunk( $peticiones, self::CONCURRENCIA ) as $tanda ) {
+			$arranco = microtime( true );
+
 			// Cada tanda vuelve a pedir tiempo. Sin esto, una corrida de ocho
 			// minutos muere a la mitad en cualquier servidor con el límite por
 			// omisión, y lo peor es que moriría en silencio.
@@ -1169,6 +1262,18 @@ class SWPK_Sonda {
 			}
 
 			curl_multi_close( $multi );
+
+			// El freno. Ver POR_SEGUNDO: sin esto el panel se bloquea solo.
+			// Se mide por tanda y no por petición porque las de una tanda
+			// salen a la vez; lo que importa es el ritmo medio.
+			if ( self::$con_freno ) {
+				$debe = count( $tanda ) / max( 1, self::POR_SEGUNDO );
+				$va   = microtime( true ) - $arranco;
+
+				if ( $va < $debe ) {
+					usleep( (int) ( ( $debe - $va ) * 1000000 ) );
+				}
+			}
 		}
 
 		return $hechas;
