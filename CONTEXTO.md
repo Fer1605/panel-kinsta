@@ -156,7 +156,7 @@ Reglas de Fer, que valen igual en un chat nuevo:
 
 | | Versión | Dónde está |
 |---|---|---|
-| Panel Kinsta | **0.19.1** | En el repositorio y comprobado en local a 1280 px. **La 0.18.1 es la que está en producción**: la 0.19.x todavía no se ha desplegado. |
+| Panel Kinsta | **0.19.2** | En el repositorio y comprobado en local a 1280 px. **La 0.18.1 es la que está en producción**: la 0.19.x todavía no se ha desplegado. |
 | Agente (plugin) | **0.7.0** | 0.6.4 está en 106 de 107. La 0.7.0 trae el registro de actividad y **no está repartida**. |
 | Agente (dentro del tema) | **0.7.0-tema** | La rama unida del jefe sigue en 0.6.4-tema con código de 0.6.3. La corrección + el registro están en una rama lista, **sin PR abierto**. |
 | Tema hijo | **2.6.1** | En el PR. |
@@ -223,6 +223,22 @@ a 69 px y los filtros se leen enteros.
 
 Con eso, la lista empieza en el píxel 574 en vez de pasado el 1.100: la
 primera pantalla del portátil ya enseña hallazgos.
+
+**Tercera pasada, y una lección que costó una corrida.** El aviso de una línea
+salió con un enlace al final —«Revisar los sitios ahora»— y Fer lo pulsó
+creyendo que llevaba a la pantalla de Sitios. Arrancó una corrida de 108
+sitios contra la API de Kinsta desde el panel local; se paró a mano con
+`SWPK_Trabajo::olvidar()` cuando iba por 93. **El enlace se quitó**: dónde
+está el botón se dice ahora dentro de la burbuja. La regla quedó escrita en
+§2 del estilo de las pantallas: nada que tarde minutos o le pegue al hosting
+se dispara desde un aviso.
+
+Y la otra, que ya estaba escrita en la hoja de estilos y se volvió a romper:
+**ningún aviso lleva franja de color en la orilla izquierda.** El aviso nuevo
+salió con una. Se quitó, y de paso las tres que quedaban sueltas —el reparto
+del trabajo de un sitio, la nota de «no se pudo medir» y la celda de consejo
+de los apagados—. La única franja que se queda es la de «quién se mueve» en
+cada fila, porque ahí el color dice un dato y no decora un párrafo.
 
 **Lo que sigue:** Caídas, que es el punto 2 de la lista de §9 del estilo de las
 pantallas.

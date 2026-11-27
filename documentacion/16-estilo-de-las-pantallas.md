@@ -38,6 +38,21 @@ frase. Nada de una frase genérica que valga para todo. Las ocho de
 sitio» era falso: el HTTPS forzado se activa en MyKinsta sin entrar al sitio.
 Si no se sabe dónde se arregla, se dice «a mano», no se inventa el lugar.
 
+**Pero la acción no se pone donde se pueda apretar sin querer.** Un enlace
+dentro de un aviso se lee como «llévame ahí», no como «haz esto ahora». El
+aviso de la fecha llevó veinte minutos un enlace que decía «Revisar los sitios
+ahora» y arrancaba una corrida de 108 sitios contra la API del hosting:
+
+  «lo apaché sin querer porque no sabía qué significaba […] decía ver sitios o
+   revisar sitios, y yo entiendo que es verlos, entrar al panel de sitios. Lo
+   apaché y resulta que está jalando información»
+
+**Nada que tarde minutos, que le pegue al hosting o que no se pueda deshacer
+se dispara desde un aviso, una burbuja o un enlace suelto.** Va en un botón,
+en su pantalla, con su burbuja que dice lo que va a pasar y su aviso de
+espera. En el aviso se dice DÓNDE está ese botón, que también es decir qué
+hacer.
+
 ---
 
 ## 3. No saturar. Lo que eso quiere decir, en concreto
@@ -116,7 +131,17 @@ fila en fila.
 - **Verificar el color calculado en el navegador**, no en el archivo. Un azul
   que se leía 1,60:1 pasó tres revisiones del código.
 - Las franjas de color de «quién se mueve»: nosotros `#1c6dc7`, hosting
-  `#9aa4b2`, cliente `#7a5cd6`, esperar `#b4690e`.
+  `#9aa4b2`, cliente `#7a5cd6`, esperar `#b4690e`. **Son la única excepción
+  a la regla de abajo**, y lo son porque ahí el color dice un dato —de quién
+  es el trabajo— y no decora un bloque de texto.
+- **Ningún aviso, nota o recuadro lleva franja de color en la orilla
+  izquierda.** «Evita usar las líneas de color en la orilla, quítalas todas
+  las que encuentres […] esas líneas son mucha inteligencia, te dije que las
+  quitaras de todo el sitio, eso incluye hasta las notificaciones.» El estado
+  se dice con el FONDO: `#fdf5f5` con borde `#ecc7c9` para lo que va mal,
+  `#fdfbf2` con `#ebd9a4` para lo que avisa, `#f4faf5` con `#cbe5d1` para lo
+  que está bien. Es la regla que más veces se ha vuelto a romper por
+  descuido: se escribe una franja sin pensarlo porque «queda bien».
 
 ---
 

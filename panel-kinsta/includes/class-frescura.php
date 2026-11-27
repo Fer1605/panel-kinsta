@@ -398,10 +398,11 @@ class SWPK_Frescura {
 	 *    la misma que el resto del panel. Lo que importa de un vistazo es la
 	 *    fecha; el porqué lo abre quien lo necesite.
 	 *
-	 * Lo que SÍ se queda a la vista, además de la fecha, es la acción: la
-	 * regla madre del estilo de las pantallas dice que una pantalla que enseña
-	 * un problema dice qué hacer. Y dice el nombre verdadero del botón —el de
-	 * arriba decía «Correr ahora», que es como se llamaba hace tres semanas.
+	 * En la línea NO va ningún enlace. Hubo uno —«Revisar los sitios ahora»—
+	 * y duró veinte minutos: se leyó como «ir a la pantalla de Sitios», se
+	 * pulsó sin querer y arrancó una corrida de 108 sitios contra la API del
+	 * hosting. Dónde está el botón se dice dentro de la burbuja, que es decir
+	 * qué hacer sin poder hacerlo por accidente.
 	 */
 	public static function aviso( bool $incluir_feed = true ): void {
 		if ( ! self::hay_problema() ) {
@@ -455,6 +456,28 @@ class SWPK_Frescura {
 				$dentro .= '.';
 			}
 		}
+
+		// ── Aquí había un enlace, y se quitó ────────────────────────────────
+		//
+		//   «puedes detener ahorita el revisor de sitios que le di sin querer
+		//    […] decía «Revisar los sitios», y yo entiendo que es verlos,
+		//    entrar al panel de sitios. Lo apaché y resulta que está jalando
+		//    información»
+		//
+		// Y arrancó una corrida de 108 sitios contra la API del hosting. El
+		// fallo fue de quien lo escribió: en un aviso, un enlace se lee como
+		// «llévame ahí», no como «haz esto ahora», y este hacía lo segundo. La
+		// regla madre dice que la pantalla tiene que decir qué hacer, pero
+		// decir dónde está el botón ES decir qué hacer; ponerlo aquí a un clic
+		// de distancia, al lado de una fecha, no lo es.
+		//
+		// Nada que tarde minutos y le pegue al hosting se dispara desde un
+		// aviso. El botón vive en el Resumen, con su nombre entero, su burbuja
+		// que explica lo que va a pasar y su aviso de espera.
+		if ( SWPK_Perfiles::puede( SWPK_Perfiles::ADMINISTRAR ) ) {
+			$dentro .= ' Para traer los datos sin esperar a mañana está el botón de revisar los '
+				. 'sitios, arriba del todo en el Resumen.';
+		}
 		?>
 		<p class="swpk-aviso-fecha swpk-aviso-fecha-mal">
 			<strong>Lo que estás viendo no está al día.</strong>
@@ -464,13 +487,6 @@ class SWPK_Frescura {
 				El último dato bueno entró el <?php echo esc_html( self::fecha_y_edad( self::corrida() ) ); ?>.
 			<?php endif; ?>
 			<?php echo wp_kses_post( SWPK_Vista::ayuda( $dentro ) ); ?>
-
-			<?php if ( SWPK_Perfiles::puede( SWPK_Perfiles::ADMINISTRAR ) ) : ?>
-				<a class="swpk-aviso-accion" data-espera="Revisando…"
-					href="<?php echo esc_url( wp_nonce_url( admin_url( 'admin-post.php?action=swpk_correr' ), 'swpk_correr' ) ); ?>">
-					Revisar los sitios ahora
-				</a>
-			<?php endif; ?>
 		</p>
 		<?php
 	}
