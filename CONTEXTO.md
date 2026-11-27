@@ -354,6 +354,51 @@ sitio a **9,8**. Heraldos, de 27 a **5**.
 
 ---
 
+### Lo del 27 por la noche: el bloqueo es POR IP, y es nuestro propio sondeo el que lo provoca
+
+Al mirar los 20 sitios que la corrida marcó con un archivo alcanzable desde
+fuera saltó el detalle: **son los 20 primeros por orden alfabético**, o sea
+las dos primeras tandas. Los demás no es que estén limpios: es que no se
+pudieron medir.
+
+Y la razón, comprobada a mano desde producción: `readme.html` y **la portada**
+de los sitios 30, 60 y 95 contestan 403 con el cuerpo de Cloudflare:
+
+    Attention Required! | Cloudflare — Sorry, you have been blocked
+
+La prueba que lo cierra: **cambiando el agente de usuario a uno de Chrome,
+también 403.** No es el agente. **Es la IP.** Cloudflare tiene bloqueada
+`34.46.111.53`, que es por donde sale el panel, y la bloquea para todo.
+
+Eso explica el día entero:
+
+- Por qué la excepción por agente de usuario no cambió nada: Cloudflare corta
+  por IP antes de mirar el agente.
+- Por qué un sitio sondeado aparte sale bien y dentro de la corrida sale
+  «bloqueado»: al principio de la corrida la IP todavía no está bloqueada.
+- Por qué los 20 son los 20 primeros.
+- Por qué el 23 de noviembre 106 sitios figuraban caídos sin estarlo.
+- Y, muy probablemente, por qué no salió el correo de Cito Color.
+
+**Lo que lo dispara es el propio panel.** Una corrida son 6.264 peticiones en
+ocho minutos: unas 13 por segundo contra sitios del mismo hosting. Cualquier
+cortafuegos con límite por IP corta eso. Nos estamos bloqueando solos.
+
+**Lo que hay que decidir, y es decisión de Fer:**
+
+| | Qué es | Qué cuesta |
+|---|---|---|
+| Bajarle el ritmo al sondeo | Repartir las 6.264 peticiones en una hora en vez de ocho minutos. Es nuestro, no toca la seguridad de nadie | La corrida diaria tarda una hora, de madrugada |
+| Excepción por IP en Kinsta | `{"type":"ip","action":"skip"}` con las dos IP de salida de Pantheon, en los 109 | **Las IP de salida de Pantheon son compartidas**: dejaríamos pasar también el tráfico de otros clientes de Pantheon por encima de la protección de bots de NUESTROS clientes |
+| Preguntarle a Kinsta | Por qué la excepción por agente no evita el bloqueo | Depende de ellos |
+
+La recomendación es la primera, y la segunda solo si la primera no basta.
+
+**Mientras tanto el panel está ciego**: ahora mismo no puede ver si un sitio
+se cae, porque le contestan 403 a todo.
+
+---
+
 #### La excepción de bots: puesta en los 109, y lo que resultó NO ser la causa
 
 **La excepción está puesta en los 109 sitios** (27 de noviembre, 16:40 UTC),
