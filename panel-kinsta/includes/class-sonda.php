@@ -339,6 +339,8 @@ class SWPK_Sonda {
 				'rutas_no_fiables' => 0,
 				'expuestos'        => 0,
 				'medidos'          => 0,
+				'peticiones'       => 0,
+				'caidas'           => 0,
 			],
 			// Nace y muere con la corrida. Es lo único que deja al panel
 			// pedirse la siguiente tanda a sí mismo sin sesión de nadie.
@@ -414,7 +416,15 @@ class SWPK_Sonda {
 			$cola['latido'] = time();
 			update_option( self::COLA, $cola, false );
 
-			$r = self::sondear( $tanda );
+			$antes = self::contadores();
+			$r     = self::sondear( $tanda );
+			$desp  = self::contadores();
+
+			// Se arrastran en la cola porque cada tanda es un proceso nuevo y
+			// los contadores nacen en cero. Sirven para ver de un vistazo si
+			// una corrida fue limpia o si la red se portó mal.
+			$cola['resumen']['caidas']     = (int) ( $cola['resumen']['caidas'] ?? 0 ) + ( $desp['caidas'] - $antes['caidas'] );
+			$cola['resumen']['peticiones'] = (int) ( $cola['resumen']['peticiones'] ?? 0 ) + ( $desp['peticiones'] - $antes['peticiones'] );
 
 			foreach ( array_keys( $tanda ) as $sitio_id ) {
 				$uno = $r[ (string) $sitio_id ] ?? [];
@@ -715,6 +725,46 @@ class SWPK_Sonda {
 			$agrupado[ $fila['sitio'] ][ $fila['que'] ] = $fila;
 		}
 
+		// ── Lo que no llegó se vuelve a pedir ───────────────────────────────
+		//
+		// 27-11-2026. Un mismo sitio salía con nueve rutas en «bloqueado»
+		// dentro de la corrida completa, y con esas mismas rutas en
+		// «protegido», «ausente» y una «expuesta» cuando se le sondeaba
+		// aparte. No era el tamaño de la tanda: sondeándolo en grupos de 1,
+		// 10 y 30 sale idéntico y bien.
+		//
+		// La diferencia está en una petición que se cae. Para decir «esto lo
+		// niega el servidor a todo el mundo» hace falta la respuesta de una
+		// dirección inventada con la misma extensión. Si ESA petición no
+		// llega —se acaba el tiempo, se corta la conexión—, control_bloqueado()
+		// devuelve false, y entonces el 403 del archivo real pasa de
+		// «protegido» a «bloqueado», que en la pantalla sale como «falta
+		// medirlo». O sea: una respuesta perdida de una dirección que no
+		// existe convierte una norma medida en una norma sin medir.
+		//
+		// Una corrida son unas 2.700 peticiones. Que se caigan unas cuantas
+		// es normal y no hay que arreglarlo con tiempos de espera más largos,
+		// que harían la corrida eterna: se vuelven a pedir, y ya. Son pocas,
+		// y esta vez van solas, sin otras 2.700 delante.
+		$reintentos = self::fallidas( $por_sitio, $agrupado );
+
+		if ( $reintentos ) {
+			// Un respiro antes de volver a pedir: si lo que pasó es que nos
+			// estaban limitando, repreguntar en el mismo segundo no sirve.
+			sleep( 3 );
+
+			foreach ( self::lanzar( self::intercalar_plano( $reintentos ) ) as $fila ) {
+				// Solo si esta vez sí contestó. Una segunda caída no mejora
+				// nada, y pisar la primera respuesta perdería el motivo.
+				if ( empty( $fila['error'] ) && ! self::limitada( $fila ) ) {
+					$agrupado[ $fila['sitio'] ][ $fila['que'] ] = $fila;
+				}
+			}
+		}
+
+		self::$caidas    += count( $reintentos );
+		self::$peticiones += count( $crudo );
+
 		// Segunda pasada, solo para lo que quedó sin explicar.
 		//
 		// Un 403 que el control de la extensión no explica puede seguir siendo
@@ -760,8 +810,33 @@ class SWPK_Sonda {
 		}
 
 		if ( $segunda ) {
+			$caidas_2 = [];
+
 			foreach ( self::lanzar( self::intercalar_plano( $segunda ) ) as $fila ) {
 				$agrupado[ $fila['sitio'] ][ $fila['que'] ] = $fila;
+
+				if ( ! empty( $fila['error'] ) ) {
+					$caidas_2[ $fila['sitio'] . '|' . $fila['que'] ] = true;
+				}
+			}
+
+			// Lo mismo que arriba, para la pasada del nombre: una caída aquí
+			// también termina en «falta medirlo».
+			$otra = [];
+			foreach ( $segunda as $p ) {
+				if ( isset( $caidas_2[ $p['sitio'] . '|' . $p['que'] ] ) ) {
+					$otra[] = $p;
+				}
+			}
+
+			if ( $otra ) {
+				self::$caidas += count( $otra );
+
+				foreach ( self::lanzar( self::intercalar_plano( $otra ) ) as $fila ) {
+					if ( empty( $fila['error'] ) ) {
+						$agrupado[ $fila['sitio'] ][ $fila['que'] ] = $fila;
+					}
+				}
 			}
 		}
 
@@ -769,12 +844,116 @@ class SWPK_Sonda {
 
 		foreach ( $agrupado as $sitio_id => $partes ) {
 			$uno = self::interpretar( $partes, (string) ( $objetivos[ $sitio_id ] ?? '' ) );
+			$uno = self::conservar_lo_medido( (string) $sitio_id, $uno );
 
 			set_transient( self::CACHE . $sitio_id, $uno, self::VIDA );
 			$salida[ $sitio_id ] = $uno;
 		}
 
 		return $salida;
+	}
+
+	/**
+	 * Un «no se pudo» de hoy no borra un «sí se pudo» de ayer.
+	 *
+	 * ─── Qué problema resuelve ──────────────────────────────────────────────
+	 *
+	 * «bloqueado» no es un hallazgo: es «no pude averiguarlo». Significa que
+	 * el archivo contestó 403 y la dirección inventada de control no, así que
+	 * no se sabe si el 403 es una regla para todos o un cortafuegos cortando
+	 * solo a la sonda. En la pantalla eso sale como «falta medirlo», que es
+	 * justo lo que el jefe no quiere leer.
+	 *
+	 * Y no sale igual en todas las corridas. Medido el 27-11-2026 en un mismo
+	 * sitio, el mismo día, con la misma versión: sondeado aparte da
+	 * «protegido, ausente, expuesto»; dentro de la corrida completa, las
+	 * nueve rutas en «bloqueado». No es el tamaño de la tanda —en grupos de
+	 * 1, 10 y 30 sale idéntico y bien— ni son peticiones que se caigan: de
+	 * 6.264 peticiones de una corrida se cayeron 4.
+	 *
+	 * Mientras no se sepa por qué, lo que no se puede hacer es tirar una
+	 * medición buena de ayer para poner un «no sé» de hoy. Es la misma regla
+	 * que ya gobierna la corrida entera —ver correr() y
+	 * SWPK_Monitor::CIEGOS_PARA_DUDAR—, aplicada a cada ruta.
+	 *
+	 * El dato viejo no se queda para siempre: se guarda de dónde viene y
+	 * cuándo se midió, y a los tres días deja de valer y la norma vuelve a
+	 * «falta medirlo», que entonces sí será verdad.
+	 *
+	 * @param array<string,mixed> $uno
+	 * @return array<string,mixed>
+	 */
+	private static function conservar_lo_medido( string $sitio_id, array $uno ): array {
+		$viejo = self::de( $sitio_id );
+
+		if ( ! $viejo || empty( $viejo['rutas'] ) || empty( $uno['rutas'] ) ) {
+			return $uno;
+		}
+
+		$ahora   = current_time( 'mysql' );
+		$limite  = strtotime( $ahora ) - 3 * DAY_IN_SECONDS;
+		$dudosos = [ self::BLOQUEADO, self::NO_SE_PUDO ];
+		$buenos  = [ self::PROTEGIDO, self::AUSENTE, self::EXPUESTO ];
+
+		foreach ( (array) $uno['rutas'] as $grupo => $estado ) {
+			if ( ! in_array( (string) $estado, $dudosos, true ) ) {
+				continue;
+			}
+
+			$antes = (string) ( $viejo['rutas'][ $grupo ] ?? '' );
+
+			if ( ! in_array( $antes, $buenos, true ) ) {
+				continue;
+			}
+
+			$cuando = (string) ( $viejo['rutas_de'][ $grupo ] ?? $viejo['cuando'] ?? '' );
+
+			if ( '' === $cuando || strtotime( $cuando ) < $limite ) {
+				continue; // ya es viejo de verdad: que diga que no se sabe
+			}
+
+			$uno['rutas'][ $grupo ]    = $antes;
+			$uno['rutas_de'][ $grupo ] = $cuando;
+		}
+
+		return $uno;
+	}
+
+	/** «Ahora no te contesto»: el borde nos está limitando, no es un dato. */
+	private static function limitada( array $r ): bool {
+		return in_array( (int) ( $r['codigo'] ?? 0 ), [ 429, 500, 502, 503, 504 ], true );
+	}
+
+	/** Cuántas peticiones se cayeron y cuántas se hicieron, en esta corrida. */
+	private static int $caidas     = 0;
+	private static int $peticiones = 0;
+
+	/** @return array{caidas:int,peticiones:int} */
+	public static function contadores(): array {
+		return [ 'caidas' => self::$caidas, 'peticiones' => self::$peticiones ];
+	}
+
+	/**
+	 * Las peticiones del plan que no trajeron respuesta.
+	 *
+	 * @param array<string,array<int,array<string,mixed>>> $por_sitio
+	 * @param array<string,array<string,array<string,mixed>>> $agrupado
+	 * @return array<int,array<string,mixed>>
+	 */
+	private static function fallidas( array $por_sitio, array $agrupado ): array {
+		$fuera = [];
+
+		foreach ( $por_sitio as $sitio_id => $lista ) {
+			foreach ( $lista as $p ) {
+				$r = $agrupado[ (string) $sitio_id ][ (string) $p['que'] ] ?? null;
+
+				if ( ! is_array( $r ) || ! empty( $r['error'] ) || self::limitada( $r ) ) {
+					$fuera[] = $p;
+				}
+			}
+		}
+
+		return $fuera;
 	}
 
 	/**
@@ -1145,6 +1324,24 @@ class SWPK_Sonda {
 
 		if ( in_array( $codigo, [ 401, 403, 451 ], true ) ) {
 			return self::BLOQUEADO;
+		}
+
+		// ── 429 y 5xx no son «ese archivo no está» ──────────────────────────
+		//
+		// Es «ahora no te contesto». Tratarlos como AUSENTE tiene dos caras y
+		// las dos son malas: en la ruta real convierte un «no sé» en un
+		// «cumple», que es la mentira que la regla 3 prohíbe; y en la
+		// dirección de control hace que control_bloqueado() diga que no, con
+		// lo cual el 403 del archivo real pasa de «protegido» a «bloqueado»,
+		// que en la pantalla es «falta medirlo».
+		//
+		// Esto último es lo que estaba pasando el 27-11-2026: el mismo sitio
+		// sondeado aparte salía bien y dentro de la corrida completa salía con
+		// nueve rutas sin medir. Aparte son 250 peticiones; dentro de la
+		// corrida van unas 6.000 seguidas desde la misma IP, y a partir de
+		// cierto punto el borde empieza a contestar con limitaciones.
+		if ( in_array( $codigo, [ 429, 500, 502, 503, 504 ], true ) ) {
+			return self::NO_SE_PUDO;
 		}
 
 		if ( ! in_array( $codigo, [ 200, 206 ], true ) ) {

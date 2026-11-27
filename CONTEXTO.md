@@ -155,7 +155,7 @@ Reglas de Fer, que valen igual en un chat nuevo:
 
 | | Versión | Dónde está |
 |---|---|---|
-| Panel Kinsta | **0.16.2** | Desplegado en producción y verificado ahí mismo. |
+| Panel Kinsta | **0.16.4** | Desplegado en producción y verificado ahí mismo. |
 | Agente (plugin) | **0.7.0** | 0.6.4 está en 106 de 107. La 0.7.0 trae el registro de actividad y **no está repartida**. |
 | Agente (dentro del tema) | **0.7.0-tema** | La rama unida del jefe sigue en 0.6.4-tema con código de 0.6.3. La corrección + el registro están en una rama lista, **sin PR abierto**. |
 | Tema hijo | **2.6.1** | En el PR. |
@@ -275,17 +275,50 @@ Nunca había terminado. Ahora va por tandas, igual que `SWPK_Trabajo`:
 `{"sondeados":108,"rutas_no_fiables":1,"expuestos":10,"medidos":107,
 "corrida_mal":false}`, en 8 min 20 s y 8 min 43 s.
 
-**Lo que queda, y es de datos, no de estructura.** La clasificación de rutas
-no sale igual en todas las corridas. Para decir «esto está protegido» la sonda
-pide la misma ruta con un nombre inventado: si el servidor también la niega,
-es regla para todos (`protegido` → cumple); si contesta, el bloqueo es solo
-contra nosotros (`bloqueado` → «falta medirlo»). En una corrida completa
-Heraldos sale con nueve rutas en `bloqueado`; sondeado aparte, con las mismas
-rutas en `protegido`, `ausente` y una en `expuesto`. Probado que **no es el
-tamaño de la tanda**: sondeando ese sitio en grupos de 1, 10 y 30 el resultado
-es idéntico y bueno. Queda por ver si es presión acumulada sobre la IP de
-salida a lo largo de la corrida. Mientras tanto, lo que se ve son unas 17
-normas «falta medirlo» por sitio en vez de las 27 de la mañana.
+#### La clasificación de rutas, que es lo que dejaba el «falta medirlo»
+
+`bloqueado` no es un hallazgo: es «no pude averiguarlo», y en la pantalla sale
+como «falta medirlo». Para decir `protegido` la sonda pide la misma ruta con
+un nombre inventado: si el servidor también la niega, es regla para todos; si
+contesta, el bloqueo es solo contra la sonda y no se aprendió nada.
+
+Eso no salía igual en todas las corridas. El mismo sitio, el mismo día, la
+misma versión: sondeado aparte daba `protegido`, `ausente` y un `expuesto`;
+dentro de la corrida completa, las nueve rutas en `bloqueado`.
+
+**Tres hipótesis descartadas, todas midiendo, no razonando:**
+
+| Se pensó | Se midió | Resultado |
+|---|---|---|
+| Es el tamaño de la tanda | El mismo sitio en grupos de 1, 10 y 30 | Idéntico y bueno las tres veces |
+| Es la compañía de la tanda | Su tanda real de 10, los mismos vecinos | Bueno |
+| Son peticiones que se caen | Contador propio en la corrida | 4 caídas de 6.264 |
+
+Así que la causa sigue sin estar clara. Lo que sí se arregló:
+
+1. **Un 429 o un 5xx ya no es «ese archivo no existe».** Era un error de
+   verdad y con dos caras: en la ruta real convertía un «no sé» en un
+   «cumple» —la mentira que prohíbe la regla 3—, y en la dirección de control
+   hacía que el 403 del archivo real pasara de `protegido` a `bloqueado`.
+2. **Lo que no llega se vuelve a pedir**, con tres segundos de respiro, y una
+   segunda respuesta mala no pisa la primera.
+3. **Un «no sé» de hoy no borra un «sí» de ayer.** Es la regla que ya
+   gobernaba la corrida entera, aplicada a cada ruta: si hoy una ruta sale
+   `bloqueado` y ayer salió `protegido`, `ausente` o `expuesto`, se conserva
+   la de ayer y se guarda de cuándo es. A los tres días deja de valer y la
+   norma vuelve a «falta medirlo», que entonces sí será verdad. Está en
+   `conservar_lo_medido()`.
+
+**Medido después, en producción:** las 24 normas que se miden desde fuera son
+2.592 mediciones posibles en los 108 sitios. Esta mañana estaban las 2.592 sin
+medir, porque la sonda no había terminado nunca. Ahora hay **1.778 medidas y
+814 sin medir** — del 0 % al 69 %. Heraldos pasó de 27 a 5, y sus fallas
+reales de 11 a 15. Y la corrida encontró **20 sitios con algún archivo
+alcanzable desde fuera**; en Heraldos, `readme.html`, que dice qué versión de
+WordPress corre.
+
+Las otras 1.003 mediciones sin dato no son de la sonda: son las que contesta
+el agente, en sitios que no lo tienen. Ese es otro asunto.
 
 ---
 
