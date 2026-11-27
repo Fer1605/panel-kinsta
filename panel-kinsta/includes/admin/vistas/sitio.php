@@ -523,7 +523,7 @@ $url_pestana = static fn( string $s ) => add_query_arg(
 
 		$estados_posibles = [
 			SWPK_Normas::FALLA    => 'No cumple',
-			SWPK_Normas::SIN_DATO => 'Sin medir',
+			SWPK_Normas::SIN_DATO => 'Falta medirlo',
 			SWPK_Normas::CUMPLE   => 'Cumple',
 		];
 
@@ -725,96 +725,193 @@ $url_pestana = static fn( string $s ) => add_query_arg(
 			?>
 		</p>
 
-		<table class="widefat striped swpk-tabla">
-			<thead>
-				<tr>
-					<th style="width:34%">Norma</th>
-					<th style="width:12%">Cómo está</th>
-					<th style="width:36%">Detalle</th>
-					<th style="width:18%"></th>
-				</tr>
-			</thead>
-			<tbody>
-			<?php foreach ( $normas_pagina as $n ) : ?>
-				<?php
-				$clave = (string) $n->clave;
+		<?php
+		// ── Cada norma se despliega, en vez de llenar la tabla ──────────────
+		//
+		// Era una tabla de cuatro columnas donde la tercera —«Detalle»— metía
+		// tres renglones de texto en cada fila, y la cuarta cambiaba de
+		// contenido según la fila: un botón azul, dos botones, «Hay que
+		// hacerlo a mano», «Se puede arreglar», «El panel la sabe arreglar»,
+		// «Lo lleva el cliente», o nada. Anchos distintos, alineados a la
+		// derecha, uno debajo de otro:
+		//
+		//   «y ahora me cambió el orden, ahora me pasó el orden para acá.
+		//    Date cuenta: aquí lo tengo y luego me lo pasa para acá» (07:34)
+		//
+		// Eso no era una impresión suya: la columna bailaba de verdad.
+		//
+		// Ahora la línea cerrada enseña tres cosas y siempre las mismas
+		// —nombre, cómo está, gravedad— y el botón «Arreglar» va en una
+		// columna de ancho fijo. Todo lo demás —qué quiere decir, cómo lo
+		// sabemos, qué pasa si no, cómo se arregla— vive dentro, al abrirla.
+		//
+		// No es una <table> porque una fila de tabla no se puede desplegar sin
+		// JavaScript, y <details> lo hace solo, funciona con el teclado y se
+		// imprime abierto.
+		?>
+		<div class="swpk-normas">
+		<?php foreach ( $normas_pagina as $n ) : ?>
+			<?php
+			$clave = (string) $n->clave;
 
-				$fila   = $cumple_sitio[ $clave ] ?? null;
-				$estado = $fila ? (string) $fila->estado : SWPK_Normas::SIN_DATO;
-				$orden  = SWPK_Ordenes::orden_de_la_norma( $clave );
+			$fila   = $cumple_sitio[ $clave ] ?? null;
+			$estado = $fila ? (string) $fila->estado : SWPK_Normas::SIN_DATO;
+			$orden  = SWPK_Ordenes::orden_de_la_norma( $clave );
 
-				// La celda de la derecha dice SIEMPRE qué se puede hacer con esta
-				// norma, y no solo cuando falla. Antes, una que el panel sabe
-				// arreglar pero que todavía no se ha medido salía con la celda en
-				// blanco: ni botón ni explicación. Desde fuera eso se lee como
-				// «aquí no se puede arreglar nada», que es lo contrario de lo que
-				// pasa, y es lo que hacía parecer que el botón había desaparecido.
-				$puede_el_panel = '' !== $orden && 1 === (int) $n->arreglable;
-				?>
-				<tr>
-					<td>
+			// La acción se decide una vez y se usa en los dos sitios: el botón
+			// de la línea cerrada y el bloque «cómo se arregla» de dentro.
+			$puede_el_panel = '' !== $orden && 1 === (int) $n->arreglable;
+			$es_declarativa = 'declarativa' === (string) $n->comprobador;
+			$puedo_tocar    = SWPK_Perfiles::puede( SWPK_Perfiles::ADMINISTRAR );
+
+			// Se abre sola la que falla Y el panel puede arreglar: es la que
+			// uno vino a ver. Las demás, cerradas.
+			$abierta = SWPK_Normas::FALLA === $estado && $puede_el_panel && ! $es_cliente;
+			?>
+			<details class="swpk-norma" <?php echo $abierta ? 'open' : ''; ?>>
+				<summary>
+					<span class="swpk-norma-nombre">
 						<strong><?php echo esc_html( (string) $n->nombre ); ?></strong>
-						<span class="swpk-etq swpk-sev-<?php echo esc_attr( (string) $n->severidad ); ?>"><?php
-							echo esc_html( ucfirst( (string) $n->severidad ) );
-						?></span>
-					</td>
-					<td>
+						<?php if ( '' !== (string) ( $n->aclaracion ?? '' ) ) : ?>
+							<span class="swpk-norma-aclara"><?php echo esc_html( (string) $n->aclaracion ); ?></span>
+						<?php endif; ?>
+					</span>
+					<span class="swpk-norma-estado">
 						<span class="swpk-etq swpk-celda-<?php echo esc_attr( $estado ); ?>"><?php
 							echo esc_html( SWPK_Normas::etiqueta( $estado ) );
 						?></span>
-					</td>
-					<td>
-						<?php echo esc_html( $fila ? (string) $fila->detalle : 'Todavía no se ha medido.' ); ?>
-						<?php if ( $fila && $fila->medido_en ) : ?>
-							<br><span class="swpk-mudo">
-								<?php
-								if ( (int) $fila->revisado_por > 0 ) {
-									$quien = get_userdata( (int) $fila->revisado_por );
-									printf(
-										'Marcado por %s el %s',
-										esc_html( $quien ? $quien->display_name : 'alguien' ),
-										esc_html( SWPK_Frescura::fmt( 'j/n/Y H:i', (string) $fila->medido_en ) )
-									);
-								} else {
-									printf(
-										'Medido el %s',
-										esc_html( SWPK_Frescura::fmt( 'j/n/Y H:i', (string) $fila->medido_en ) )
-									);
-								}
-								?>
-							</span>
-						<?php endif; ?>
-					</td>
-					<td style="text-align:right">
-						<?php if ( ! SWPK_Perfiles::puede( SWPK_Perfiles::ADMINISTRAR ) ) : ?>
-							&mdash;
-						<?php elseif ( 'declarativa' === (string) $n->comprobador ) : ?>
+					</span>
+					<span class="swpk-norma-grav">
+						<span class="swpk-etq swpk-sev-<?php echo esc_attr( (string) $n->severidad ); ?>"><?php
+							echo esc_html( ucfirst( (string) $n->severidad ) );
+						?></span>
+					</span>
+					<?php
+					// La columna de ancho fijo. Solo lleva botón: cuando el
+					// panel no puede hacer nada, se queda vacía, porque el
+					// «cómo se arregla» está dentro, que es su sitio.
+					?>
+					<span class="swpk-norma-accion">
+						<?php if ( ! $puedo_tocar ) : ?>
+						<?php elseif ( $es_declarativa ) : ?>
 							<a class="button button-small" href="<?php
 								echo esc_url( SWPK_Admin::url_marcar_norma( $clave, $sitio_id, SWPK_Normas::CUMPLE ) );
 							?>">Cumple</a>
 							<a class="button button-small" href="<?php
 								echo esc_url( SWPK_Admin::url_marcar_norma( $clave, $sitio_id, SWPK_Normas::FALLA ) );
 							?>">No</a>
-					<?php elseif ( $es_cliente && $puede_el_panel ) : ?>
-						<span class="swpk-mudo" title="Sitio del cliente: se mide, no se cambia sin que lo pida.">Lo lleva el cliente</span>
-					<?php elseif ( SWPK_Normas::FALLA === $estado && $puede_el_panel ) : ?>
-						<a class="button button-small button-primary" href="<?php
-							echo esc_url( SWPK_Admin::url_arreglar( $clave, $sitio_id ) );
-						?>">Arreglar</a>
-					<?php elseif ( $puede_el_panel && SWPK_Normas::SIN_DATO === $estado ) : ?>
-						<span class="swpk-puede" title="El panel sabe arreglar esta norma, pero todavía no sabe si hace falta: el sitio no ha mandado la medición.">
-							Se puede arreglar
-						</span>
-					<?php elseif ( $puede_el_panel ) : ?>
-						<span class="swpk-mudo" title="El panel sabe arreglarla, y aquí ya está bien.">El panel la sabe arreglar</span>
-					<?php elseif ( SWPK_Normas::FALLA === $estado ) : ?>
-						<span class="swpk-mudo" title="Esto no lo puede cambiar el panel: hay que entrar al sitio a hacerlo.">Ajuste manual</span>
+						<?php elseif ( SWPK_Normas::FALLA === $estado && $puede_el_panel && ! $es_cliente ) : ?>
+							<a class="button button-small button-primary" href="<?php
+								echo esc_url( SWPK_Admin::url_arreglar( $clave, $sitio_id ) );
+							?>">Arreglar</a>
+						<?php endif; ?>
+					</span>
+				</summary>
+
+				<div class="swpk-norma-dentro">
+					<div class="swpk-norma-dos">
+						<div>
+							<h4>Cómo lo sabemos</h4>
+							<p>
+								<?php echo esc_html( $fila ? (string) $fila->detalle : 'Todavía no se ha medido.' ); ?>
+								<?php if ( $fila && $fila->medido_en ) : ?>
+									<br><span class="swpk-mudo">
+										<?php
+										if ( (int) $fila->revisado_por > 0 ) {
+											$quien = get_userdata( (int) $fila->revisado_por );
+											printf(
+												'Marcado por %s el %s',
+												esc_html( $quien ? $quien->display_name : 'alguien' ),
+												esc_html( SWPK_Frescura::fmt( 'j/n/Y H:i', (string) $fila->medido_en ) )
+											);
+										} else {
+											printf(
+												'Medido el %s',
+												esc_html( SWPK_Frescura::fmt( 'j/n/Y H:i', (string) $fila->medido_en ) )
+											);
+										}
+										?>
+									</span>
+								<?php elseif ( ! $agente_sitio ) : ?>
+									<br><span class="swpk-mudo">Este sitio no tiene el agente, así que esto no se puede medir desde aquí.</span>
+								<?php else : ?>
+									<br><span class="swpk-mudo">El agente todavía no ha mandado esta medición.</span>
+								<?php endif; ?>
+							</p>
+						</div>
+						<div>
+							<h4>Qué pasa si no se arregla</h4>
+							<p><?php echo esc_html( (string) ( $n->porque ?? '' ) ); ?></p>
+						</div>
+					</div>
+
+					<?php
+					// ── «Ok, ¿qué debo de hacer yo a mano?» (17:58) ─────────
+					//
+					// Es el campo que no existía. La tabla de normas guardaba
+					// nombre, problema, porque, comprobador y severidad, y
+					// ninguno decía cómo cerrarla. No es que no se enseñara:
+					// no se había escrito nunca. Están los 73 en
+					// includes/normas-arreglos.php.
+					$pasos = trim( (string) ( $n->como_se_arregla ?? '' ) );
+					?>
+					<?php if ( '' !== $pasos ) : ?>
+						<h4>Cómo se arregla</h4>
+						<?php if ( $es_cliente ) : ?>
+							<p class="swpk-mudo">
+								Este sitio lo lleva el cliente: el panel lo mide, pero no le cambia nada.
+								Lo de abajo es para decírselo a quien sí lo administra.
+							</p>
+						<?php endif; ?>
+						<?php
+						// Las líneas que empiezan por «1.» van en lista
+						// numerada; las demás son párrafos. Así el texto se
+						// escribe de corrido en el archivo y se lee como pasos
+						// aquí, sin que haya que marcar nada a mano.
+						$en_lista = false;
+						foreach ( explode( "\n", $pasos ) as $linea ) {
+							$linea = trim( $linea );
+							if ( '' === $linea ) {
+								continue;
+							}
+							$es_paso = (bool) preg_match( '/^\d+\.\s/', $linea );
+
+							if ( $es_paso && ! $en_lista ) {
+								echo '<ol class="swpk-pasos">';
+								$en_lista = true;
+							} elseif ( ! $es_paso && $en_lista ) {
+								echo '</ol>';
+								$en_lista = false;
+							}
+
+							if ( $es_paso ) {
+								echo '<li>' . esc_html( preg_replace( '/^\d+\.\s*/', '', $linea ) ) . '</li>';
+							} else {
+								echo '<p>' . esc_html( $linea ) . '</p>';
+							}
+						}
+						if ( $en_lista ) {
+							echo '</ol>';
+						}
+						?>
+					<?php else : ?>
+						<h4>Cómo se arregla</h4>
+						<p class="swpk-mudo">Esta norma todavía no tiene los pasos escritos.</p>
 					<?php endif; ?>
-					</td>
-				</tr>
-			<?php endforeach; ?>
-			</tbody>
-		</table>
+
+					<?php if ( $puede_el_panel && ! $es_cliente && SWPK_Normas::FALLA === $estado && $puedo_tocar ) : ?>
+						<p class="swpk-norma-pie">
+							<a class="button button-primary" href="<?php
+								echo esc_url( SWPK_Admin::url_arreglar( $clave, $sitio_id ) );
+							?>">Arreglar ahora</a>
+							<span class="swpk-mudo">El panel le manda la orden al agente y la próxima medición lo confirma.</span>
+						</p>
+					<?php endif; ?>
+				</div>
+			</details>
+		<?php endforeach; ?>
+		</div>
+
 		<?php SWPK_Vista::paginador( $pag_nor, $pags_nor, count( $para_ver ), 'normas', 'norma' ); ?>
 		<?php SWPK_Vista::caja_cerrar(); ?>
 	<?php endif; ?>

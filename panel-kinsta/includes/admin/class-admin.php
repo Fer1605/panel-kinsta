@@ -37,6 +37,8 @@ class SWPK_Admin {
 		add_action( 'admin_post_swpk_correo_diario', [ __CLASS__, 'accion_correo_diario' ] );
 		add_action( 'admin_post_swpk_correo_mensual', [ __CLASS__, 'accion_correo_mensual' ] );
 		add_action( 'admin_post_swpk_correo_resumen', [ __CLASS__, 'accion_correo_resumen' ] );
+		add_action( 'admin_post_swpk_correo_prueba', [ __CLASS__, 'accion_correo_prueba' ] );
+		add_action( 'admin_post_swpk_repartir_asesoras', [ __CLASS__, 'accion_repartir_asesoras' ] );
 		add_action( 'admin_post_swpk_quitar_acceso', [ __CLASS__, 'accion_quitar_acceso' ] );
 		add_action( 'admin_post_swpk_crear_llave', [ __CLASS__, 'accion_crear_llave' ] );
 		add_action( 'admin_post_swpk_revocar_llave', [ __CLASS__, 'accion_revocar_llave' ] );
@@ -1236,6 +1238,96 @@ class SWPK_Admin {
 				? sprintf( '«%s» encendido. Vuelve a salir cuando le toque.', $nombre )
 				: sprintf( '«%s» apagado. Cuando le toque no sale, y queda anotado en el historial que tocaba.', $nombre )
 		);
+	}
+
+	/**
+	 * ─── «Enviármelo a mí», que antes no existía ────────────────────────────
+	 *
+	 * Los cuatro botones que decían «Mandar una prueba» llamaban al envío de
+	 * verdad. El del mensual a clientes recorre los 109 sitios y le escribe al
+	 * contacto de cada uno: el día que se encendiera ese aviso, el botón
+	 * mandaba correo a todos los clientes a quien le diera clic creyendo que
+	 * probaba algo.
+	 *
+	 * Una sola acción para los cuatro avisos: lo único que cambia es a qué
+	 * función se llama, y el desvío lo pone y lo quita esta función, no cada
+	 * envío. Va en try/finally porque si uno de los cuatro lanzara una
+	 * excepción a mitad, el desvío se quedaría puesto para el resto de la
+	 * petición — y eso significa correos que nadie recibe.
+	 */
+	/**
+	 * Aplica la regla de reparto a toda la cartera, ahora mismo.
+	 *
+	 * La regla también corre sola en cada sincronización; este botón es para
+	 * no esperar a mañana y para ver el resultado en una frase.
+	 */
+	public static function accion_repartir_asesoras(): void {
+		if ( ! self::puede_administrar() ) {
+			wp_die( 'Sin permiso.' );
+		}
+		check_admin_referer( 'swpk_repartir_asesoras' );
+
+		$r = SWPK_Perfiles::repartir_asesoras_por_defecto();
+
+		wp_safe_redirect( add_query_arg(
+			'swpk_msg',
+			'ok:' . rawurlencode( sprintf(
+				'Asesoras repartidas: %d sitio(s) nuestros que estaban sin nadie, %d del cliente a los que se les quitó, y %d que ya tenían a alguien y no se tocaron.',
+				$r['puestas'],
+				$r['quitadas'],
+				$r['ya_tenian']
+			) ),
+			wp_get_referer() ?: admin_url( 'admin.php?page=' . self::SLUG . '-sitios' )
+		) );
+		exit;
+	}
+
+	public static function accion_correo_prueba(): void {
+		if ( ! self::puede_administrar() ) {
+			wp_die( 'Sin permiso.' );
+		}
+		check_admin_referer( 'swpk_correo_prueba' );
+
+		$aviso = isset( $_GET['aviso'] ) ? sanitize_key( wp_unslash( (string) $_GET['aviso'] ) ) : '';
+
+		$cuales = [
+			'semanal' => [ 'Semanal a las asesoras', [ 'SWPK_Correos', 'semanal_asesoras' ] ],
+			'diario'  => [ 'Diario a soporte',       [ 'SWPK_Correos', 'diario_soporte' ] ],
+			'mensual' => [ 'Mensual a los clientes', [ 'SWPK_Correos', 'mensual_clientes' ] ],
+			'resumen' => [ 'Resumen de los domingos', [ 'SWPK_Correos', 'resumen_semanal' ] ],
+		];
+
+		if ( ! isset( $cuales[ $aviso ] ) ) {
+			self::volver_a_correos( 'No sé cuál aviso probar.', false );
+			return;
+		}
+
+		$mio = self::correo_de_quien_entro();
+
+		if ( '' === $mio ) {
+			self::volver_a_correos(
+				'Tu usuario no tiene correo, así que no hay a dónde mandarte la prueba.',
+				false
+			);
+			return;
+		}
+
+		[ $nombre, $fn ] = $cuales[ $aviso ];
+
+		SWPK_Correos::desviar_a( $mio );
+		try {
+			call_user_func( $fn );
+		} finally {
+			SWPK_Correos::dejar_de_desviar();
+		}
+
+		self::volver_a_correos( sprintf( 'Listo. «%s» enviado a %s.', $nombre, $mio ) );
+	}
+
+	/** El correo de quien está dentro del panel. Es el único destino posible de una prueba. */
+	public static function correo_de_quien_entro(): string {
+		$u = wp_get_current_user();
+		return $u && $u->user_email ? sanitize_email( $u->user_email ) : '';
 	}
 
 	public static function accion_correo_semanal(): void {

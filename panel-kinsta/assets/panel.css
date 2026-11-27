@@ -2329,3 +2329,111 @@ body[class*="panel-kinsta"] .swpk-pastillas-estado {
 body[class*="panel-kinsta"] .swpk-pastillas-rotulo {
 	font-size: 12px; color: #5c6670; font-weight: 600;
 }
+
+/* ── El botón que manda correo de verdad ───────────────────────────
+   Iba igual que el de la prueba, y uno de los dos le escribe a los
+   clientes. Rojo y con confirmación: la diferencia tiene que verse
+   antes de pulsar, no después. */
+body[class*="panel-kinsta"] .wrap .swpk-boton-peligro {
+	background: #9e0b10; border-color: #9e0b10; color: #fff;
+}
+body[class*="panel-kinsta"] .wrap .swpk-boton-peligro:hover,
+body[class*="panel-kinsta"] .wrap .swpk-boton-peligro:focus {
+	background: #7d090d; border-color: #7d090d; color: #fff;
+}
+body[class*="panel-kinsta"] .swpk-acciones-fila { line-height: 2.2; }
+
+/* ═════════════════════════════════════════════════════════════════
+   Las normas de un sitio: cada una se despliega
+   ═════════════════════════════════════════════════════════════════
+   «Hay que hacerlo a mano. Ok, ¿qué debo de hacer yo a mano? Si no,
+   no se entiende qué debo de hacer» (17:58).
+
+   La línea cerrada enseña siempre lo mismo y en el mismo sitio, que
+   es lo que arregla la columna que bailaba. Lo demás va dentro. */
+
+body[class*="panel-kinsta"] .swpk-normas {
+	border: 1px solid #e2e6ee;
+	border-radius: 8px;
+	overflow: hidden;
+	background: #fff;
+}
+
+body[class*="panel-kinsta"] .swpk-norma + .swpk-norma { border-top: 1px solid #eef0f5; }
+
+body[class*="panel-kinsta"] .swpk-norma > summary {
+	display: grid;
+	/* Las cuatro columnas son FIJAS. Es lo que hace que el ojo no vea
+	   la columna de la derecha moverse de fila en fila. */
+	grid-template-columns: 1fr 120px 86px 150px;
+	gap: 14px;
+	align-items: start;
+	padding: 13px 16px;
+	cursor: pointer;
+	list-style: none;
+}
+body[class*="panel-kinsta"] .swpk-norma > summary::-webkit-details-marker { display: none; }
+body[class*="panel-kinsta"] .swpk-norma > summary:hover { background: #fbfcfe; }
+body[class*="panel-kinsta"] .swpk-norma[open] > summary { background: #f7f9fc; }
+
+body[class*="panel-kinsta"] .swpk-norma-nombre { min-width: 0; }
+body[class*="panel-kinsta"] .swpk-norma-nombre::before {
+	content: "▸";
+	color: #8c95a3;
+	margin-right: 7px;
+	font-size: 11px;
+}
+body[class*="panel-kinsta"] .swpk-norma[open] .swpk-norma-nombre::before { content: "▾"; }
+
+/* La línea que contesta «¿qué quiere decir esto?» antes de que nadie
+   la pregunte. Nació de la norma del editor de código, que él leyó en
+   voz alta y entendió al revés: creyó que le cerraba los widgets. */
+body[class*="panel-kinsta"] .swpk-norma-aclara {
+	display: block;
+	margin: 3px 0 0 18px;
+	font-size: 12px;
+	color: #5c6670;
+	line-height: 1.5;
+}
+
+body[class*="panel-kinsta"] .swpk-norma-accion { text-align: left; }
+
+body[class*="panel-kinsta"] .swpk-norma-dentro {
+	padding: 2px 16px 18px 34px;
+	border-top: 1px dashed #e2e6ee;
+	margin-top: -1px;
+}
+body[class*="panel-kinsta"] .swpk-norma-dos {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: 8px 28px;
+}
+body[class*="panel-kinsta"] .swpk-norma-dentro h4 {
+	margin: 16px 0 5px;
+	font-size: 11px;
+	letter-spacing: .06em;
+	text-transform: uppercase;
+	color: #5c6670;
+}
+body[class*="panel-kinsta"] .swpk-norma-dentro p { margin: 0 0 6px; max-width: 70ch; line-height: 1.6; }
+
+body[class*="panel-kinsta"] .swpk-pasos {
+	margin: 4px 0 8px 18px;
+	max-width: 70ch;
+	line-height: 1.7;
+}
+body[class*="panel-kinsta"] .swpk-pasos li { margin-bottom: 3px; }
+
+body[class*="panel-kinsta"] .swpk-norma-pie {
+	display: flex; align-items: center; gap: 12px;
+	margin-top: 14px !important;
+}
+
+/* A 1280 px —la pantalla de 13" en la que él lo mira— las dos columnas
+   de dentro dejan los párrafos en cuatro palabras por renglón. */
+@media (max-width: 1400px) {
+	body[class*="panel-kinsta"] .swpk-norma-dos { grid-template-columns: 1fr; gap: 0; }
+}
+@media (max-width: 960px) {
+	body[class*="panel-kinsta"] .swpk-norma > summary { grid-template-columns: 1fr; gap: 6px; }
+}

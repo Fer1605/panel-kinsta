@@ -19,6 +19,47 @@ $proximos = [
 
 $accion = static fn( $a ) => wp_nonce_url( admin_url( 'admin-post.php?action=' . $a ), $a );
 
+// ── «Mandar una prueba. ¿A quién?» ──────────────────────────────────────────
+//
+// Los cuatro botones que decían eso llamaban al envío de verdad. El del
+// mensual le escribe al contacto de cada uno de los 109 sitios.
+//
+// Ahora son dos botones que dicen la verdad, y el de la prueba lleva la
+// dirección escrita dentro —como en el panel que nos enseñó— para que no haya
+// que preguntarse a dónde fue.
+$mi_correo = SWPK_Admin::correo_de_quien_entro();
+
+$prueba_url = static fn( string $aviso ) => wp_nonce_url(
+	admin_url( 'admin-post.php?action=swpk_correo_prueba&aviso=' . rawurlencode( $aviso ) ),
+	'swpk_correo_prueba'
+);
+
+/**
+ * Los dos botones de una fila. El de verdad va en rojo y pregunta antes,
+ * diciendo a quién le va a escribir: una confirmación que no dice el alcance
+ * no es una confirmación, es un trámite.
+ */
+$botones_de = static function ( string $aviso, string $accion_real, string $a_quien ) use ( $accion, $prueba_url, $mi_correo ): string {
+	$html = '';
+
+	if ( '' !== $mi_correo ) {
+		$html .= sprintf(
+			'<a class="button" href="%s" title="%s">Enviármelo a mí (%s)</a> ',
+			esc_url( $prueba_url( $aviso ) ),
+			esc_attr( 'Arma el correo de verdad, con los datos de verdad, y te lo manda solo a vos. No le llega a nadie más, ni siquiera con el envío real encendido.' ),
+			esc_html( $mi_correo )
+		);
+	}
+
+	$html .= sprintf(
+		'<a class="button swpk-boton-peligro" href="%s" onclick="return confirm(%s);">Enviarlo de verdad ahora</a>',
+		esc_url( $accion( $accion_real ) ),
+		esc_attr( wp_json_encode( sprintf( 'Esto manda el correo de verdad, ahora mismo, a %s. No se puede recoger. ¿Seguro?', $a_quien ) ) )
+	);
+
+	return $html;
+};
+
 // «Aquí debería haber un botón que diga ver, editar»: cada aviso abre su
 // plantilla. Y la abre ENCIMA, no en otra pestaña — «levantalo en un modal,
 // no me mandes a pantallitas de pantallitas» (17:11). Las ventanas las dibuja
@@ -178,7 +219,7 @@ $texto_de = static fn( string $plantilla ) => sprintf(
 				</td>
 				<td class="swpk-acciones-fila">
 					<?php echo wp_kses_post( $texto_de( 'semanal' ) ); ?>
-					<a class="button" href="<?php echo esc_url( $accion( 'swpk_correo_semanal' ) ); ?>">Mandar una prueba</a>
+					<?php echo wp_kses_post( $botones_de( 'semanal', 'swpk_correo_semanal', 'cada asesora con sitios pendientes, con copia a ventas' ) ); ?>
 				</td>
 			</tr>
 			<tr>
@@ -191,7 +232,7 @@ $texto_de = static fn( string $plantilla ) => sprintf(
 				<td>Lo que cambió en las últimas 24 horas en toda la cartera.</td>
 				<td class="swpk-acciones-fila">
 					<?php echo wp_kses_post( $texto_de( 'diario' ) ); ?>
-					<a class="button" href="<?php echo esc_url( $accion( 'swpk_correo_diario' ) ); ?>">Mandar una prueba</a>
+					<?php echo wp_kses_post( $botones_de( 'diario', 'swpk_correo_diario', 'soporte' ) ); ?>
 				</td>
 			</tr>
 			<tr>
@@ -207,7 +248,7 @@ $texto_de = static fn( string $plantilla ) => sprintf(
 				</td>
 				<td class="swpk-acciones-fila">
 					<?php echo wp_kses_post( $texto_de( 'mensual' ) ); ?>
-					<a class="button" href="<?php echo esc_url( $accion( 'swpk_correo_mensual' ) ); ?>">Mandar una prueba</a>
+					<?php echo wp_kses_post( $botones_de( 'mensual', 'swpk_correo_mensual', 'LOS CLIENTES de todos los sitios que llevamos nosotros' ) ); ?>
 				</td>
 			</tr>
 			<tr>
@@ -224,7 +265,7 @@ $texto_de = static fn( string $plantilla ) => sprintf(
 				</td>
 				<td class="swpk-acciones-fila">
 					<?php echo wp_kses_post( $texto_de( 'resumen' ) ); ?>
-					<a class="button" href="<?php echo esc_url( $accion( 'swpk_correo_resumen' ) ); ?>">Mandar una prueba</a>
+					<?php echo wp_kses_post( $botones_de( 'resumen', 'swpk_correo_resumen', 'soporte' ) ); ?>
 				</td>
 			</tr>
 		</tbody>

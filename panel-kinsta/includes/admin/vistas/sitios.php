@@ -345,6 +345,22 @@ $volver = add_query_arg(
 						'Abre las dos columnas de edición sobre los sitios que estás viendo ahora. '
 						. 'Fuera de ese modo la tabla es de solo lectura, que es como se mira a diario.'
 					) ); ?>
+
+					<?php
+					// El reparto en lote, para no ir sitio por sitio. La misma
+					// regla corre sola en cada sincronización; esto es para no
+					// esperar a mañana.
+					?>
+					<a class="button button-small"
+						href="<?php echo esc_url( wp_nonce_url( admin_url( 'admin-post.php?action=swpk_repartir_asesoras' ), 'swpk_repartir_asesoras' ) ); ?>"
+						onclick="return confirm('Pone a todas las asesoras del Equipo en cada sitio nuestro que no tenga ninguna, y se las quita a los del cliente. Lo que ya esté asignado a mano no se toca. ¿Seguimos?');">
+						Poner las asesoras en todos los nuestros
+					</a>
+					<?php echo wp_kses_post( SWPK_Vista::ayuda(
+						'Auto update y Desarrollo llevan a las dos asesoras. Los del cliente —No auto '
+						. 'update— se quedan sin ninguna: a esos el panel no les manda el semanal. Un '
+						. 'sitio nuestro que ya tenga a alguien puesto a mano se queda como está.'
+					) ); ?>
 				<?php endif; ?>
 			</p>
 		<?php endif; ?>

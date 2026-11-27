@@ -414,6 +414,98 @@ class SWPK_Perfiles {
 	 * @param array<int,int|string> $usuarios Los ids que quedan asignados.
 	 * @return array{guardadas:int,rechazado:string}
 	 */
+	/**
+	 * ─── La regla de reparto, aplicada a toda la cartera ────────────────────
+	 *
+	 * «Poné a las 2 asesoras en todos los sitios de auto update, y a los NO
+	 * auto update, quitalas.»
+	 *
+	 * Lo mismo que dijo el jefe en el 03:45: «ahorita todos van a Tiffany,
+	 * incluso los auto update y desarrollos, todos van a Tiffany… y también
+	 * van a Ale, deberían ser las dos, ellas dos como asesoras».
+	 *
+	 * Cubre los dos grupos NUESTROS —auto update y desarrollo—, que es lo que
+	 * decide es_nuestro() y lo que él nombró. Los del cliente se quedan sin
+	 * nadie: asignar_asesoras() ya los rechaza, así que tenerlos asignados era
+	 * un estado que la propia pantalla no deja crear.
+	 *
+	 * No pisa lo que alguien haya puesto a mano: un sitio nuestro que YA tiene
+	 * asesoras se queda como está. Solo rellena los vacíos y vacía los del
+	 * cliente. Así se puede correr en cada sincronización sin deshacer el
+	 * trabajo de nadie.
+	 *
+	 * @return array{puestas:int,quitadas:int,ya_tenian:int}
+	 */
+	public static function repartir_asesoras_por_defecto(): array {
+		global $wpdb;
+
+		$tabla = SWPK_Tablas::tabla( 'sitio_asesoras' );
+		$todas = array_map( static fn( $u ) => (int) $u->ID, self::asesoras() );
+
+		$cuenta = [ 'puestas' => 0, 'quitadas' => 0, 'ya_tenian' => 0 ];
+
+		if ( ! $todas ) {
+			return $cuenta;
+		}
+
+		$sitios = $wpdb->get_results(
+			'SELECT sitio_id, tag, grupo_a_mano FROM ' . SWPK_Tablas::tabla( 'sitios' ) . ' WHERE de_baja = 0'
+		) ?: [];
+
+		$ahora = current_time( 'mysql' );
+		$quien = get_current_user_id();
+
+		foreach ( $sitios as $s ) {
+			// El grupo corregido a mano manda sobre la etiqueta del hosting,
+			// igual que en todas las demás pantallas.
+			$grupo = '' !== (string) $s->grupo_a_mano ? (string) $s->grupo_a_mano : (string) $s->tag;
+			$sid   = (string) $s->sitio_id;
+
+			$tiene = (int) $wpdb->get_var(
+				$wpdb->prepare( "SELECT COUNT(*) FROM {$tabla} WHERE sitio_id = %s", $sid )
+			);
+
+			if ( ! SWPK_Etiquetas::es_nuestro( $grupo ) ) {
+				if ( $tiene ) {
+					$wpdb->delete( $tabla, [ 'sitio_id' => $sid ] );
+					$wpdb->update(
+						SWPK_Tablas::tabla( 'sitios' ),
+						[ 'asesora_id' => 0 ],
+						[ 'sitio_id' => $sid ]
+					);
+					++$cuenta['quitadas'];
+				}
+				continue;
+			}
+
+			if ( $tiene ) {
+				++$cuenta['ya_tenian'];
+				continue;
+			}
+
+			foreach ( $todas as $id ) {
+				$wpdb->insert(
+					$tabla,
+					[
+						'sitio_id'     => $sid,
+						'usuario_id'   => $id,
+						'asignada_en'  => $ahora,
+						'asignada_por' => $quien,
+					]
+				);
+			}
+
+			$wpdb->update(
+				SWPK_Tablas::tabla( 'sitios' ),
+				[ 'asesora_id' => $todas[0] ],
+				[ 'sitio_id' => $sid ]
+			);
+			++$cuenta['puestas'];
+		}
+
+		return $cuenta;
+	}
+
 	public static function asignar_asesoras( string $sitio_id, array $usuarios, ?string $contacto = null ): array {
 		global $wpdb;
 

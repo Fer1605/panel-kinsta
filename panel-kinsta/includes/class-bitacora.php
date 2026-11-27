@@ -27,6 +27,14 @@ class SWPK_Bitacora {
 	public const CAIDA    = 'aviso_caida';
 	public const RESUMEN  = 'resumen_semanal';
 
+	/**
+	 * Resultado de una prueba que uno se manda a sí mismo. No es un tipo
+	 * aparte a propósito: la fila tiene que seguir saliendo al filtrar por su
+	 * aviso —es el mismo correo— y lo que cambia es que no le llegó a nadie
+	 * más. Ver SWPK_Correos::desviar_a().
+	 */
+	public const RES_PRUEBA = 'prueba';
+
 	public static function tipos(): array {
 		return [
 			self::CLIENTE => 'Cliente',
@@ -48,7 +56,8 @@ class SWPK_Bitacora {
 		array $destinatarios,
 		string $asunto,
 		string $cuerpo_html,
-		string $sitio_id = ''
+		string $sitio_id = '',
+		string $resultado_ok = 'enviado'
 	): bool {
 		$destinatarios = array_values( array_unique( array_filter( array_map( 'sanitize_email', $destinatarios ) ) ) );
 
@@ -75,7 +84,7 @@ class SWPK_Bitacora {
 			$asunto,
 			$cuerpo_html,
 			$sitio_id,
-			$ok ? 'enviado' : 'fallo',
+			$ok ? $resultado_ok : 'fallo',
 			$error
 		);
 

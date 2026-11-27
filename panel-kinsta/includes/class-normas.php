@@ -87,7 +87,7 @@ class SWPK_Normas {
 	public const OPCION_SEMBRADO = 'swpk_normas_sembradas';
 
 	/** Cada vez que cambie el catálogo de fábrica, este número sube. */
-	public const VERSION_CATALOGO = 11;
+	public const VERSION_CATALOGO = 12;
 
 	/**
 	 * Los comprobadores que contesta la sonda del panel, no el agente.
@@ -224,8 +224,30 @@ class SWPK_Normas {
 		];
 	}
 
+	/**
+	 * Los textos de «qué quiere decir» y «cómo se arregla», que viven en su
+	 * propio archivo.
+	 *
+	 * Están aparte y no dentro de catalogo() porque son 73 textos de varios
+	 * párrafos cada uno: metidos aquí, el catálogo —que es la definición de
+	 * qué se mide— quedaba enterrado debajo de la redacción.
+	 *
+	 * @return array<string,array{aclaracion:string,arreglo:string}>
+	 */
+	public static function arreglos(): array {
+		static $cache = null;
+
+		if ( null === $cache ) {
+			$cache = require SWPK_RUTA . 'includes/normas-arreglos.php';
+		}
+
+		return $cache;
+	}
+
 	public static function catalogo(): array {
-		return [
+		$arreglos = self::arreglos();
+
+		$normas = [
 			'dos_pasos_activa' => [
 				'nombre'      => 'La verificación en dos pasos está activa en el sitio',
 				'problema'    => 'La verificación en dos pasos está apagada',
@@ -251,7 +273,7 @@ class SWPK_Normas {
 				'grupo'       => 'Cuentas y accesos',
 			],
 			'editor_codigo' => [
-				'nombre'      => 'No se puede escribir código desde el escritorio',
+				'nombre'      => 'El editor de código de WordPress está cerrado',
 				'problema'    => 'Se puede escribir código desde el escritorio',
 				'porque'      => 'WordPress trae un editor que deja cambiar el código del sitio desde el '
 					. 'escritorio, sin entrar al servidor. Si alguien se roba una cuenta de administrador y eso '
@@ -1164,6 +1186,16 @@ class SWPK_Normas {
 				'grupo'       => 'Tienda',
 			],
 		];
+
+		// La redacción se pega aquí y no se escribe en cada entrada: así el
+		// catálogo sigue leyéndose como «qué se mide», y si una norma se queda
+		// sin texto se ve de un vistazo (sale vacía, no a medias).
+		foreach ( $normas as $clave => $n ) {
+			$normas[ $clave ]['aclaracion']      = (string) ( $arreglos[ $clave ]['aclaracion'] ?? '' );
+			$normas[ $clave ]['como_se_arregla'] = (string) ( $arreglos[ $clave ]['arreglo'] ?? '' );
+		}
+
+		return $normas;
 	}
 
 	/** Mete el catálogo en la tabla la primera vez, y al subir de versión. */
@@ -1189,6 +1221,8 @@ class SWPK_Normas {
 				'orden'       => (int) $n['orden'],
 				'aplica_tipo' => (string) ( $n['aplica_tipo'] ?? '' ),
 				'grupo'       => (string) ( $n['grupo'] ?? '' ),
+				'aclaracion'      => (string) ( $n['aclaracion'] ?? '' ),
+				'como_se_arregla' => (string) ( $n['como_se_arregla'] ?? '' ),
 				'de_fabrica'  => 1,
 			];
 
@@ -3774,7 +3808,10 @@ class SWPK_Normas {
 			self::FALLA     => 'No cumple',
 			self::NO_APLICA => 'No aplica',
 			self::APLAZADA  => 'En pausa',
-			default         => 'Sin medir',
+			// «"Sin medir" no sé qué significa» (08:27). Era un estado
+			// honesto con un nombre que no lo decía: suena a que la norma no
+			// se mide, y lo que pasa es que todavía no se ha medido ESTA vez.
+			default         => 'Falta medirlo',
 		};
 	}
 }

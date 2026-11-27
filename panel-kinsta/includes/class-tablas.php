@@ -33,7 +33,7 @@ defined( 'ABSPATH' ) || exit;
 
 class SWPK_Tablas {
 
-	public const VERSION = 17;
+	public const VERSION = 18;
 
 	public static function tabla( string $nombre ): string {
 		global $wpdb;
@@ -260,6 +260,13 @@ class SWPK_Tablas {
 		$cum = self::tabla( 'cumplimiento' );
 		$ord = self::tabla( 'ordenes' );
 
+		// `aclaracion` y `como_se_arregla` son las dos que faltaban para que una
+		// norma se pueda cerrar sin preguntarle a nadie: «hay que hacerlo a
+		// mano. Ok, ¿qué debo de hacer yo a mano?» (17:58). Los 73 textos
+		// están en includes/normas-arreglos.php.
+		//
+		// El comentario va AQUÍ y no dentro del CREATE TABLE: dbDelta parte la
+		// consulta línea a línea y un /* */ dentro la deja sin parsear.
 		dbDelta(
 			"CREATE TABLE {$nor} (
 				id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -267,6 +274,8 @@ class SWPK_Tablas {
 				nombre VARCHAR(191) NOT NULL DEFAULT '',
 				problema VARCHAR(191) NOT NULL DEFAULT '',
 				porque TEXT NULL,
+				aclaracion VARCHAR(255) NOT NULL DEFAULT '',
+				como_se_arregla TEXT NULL,
 				comprobador VARCHAR(64) NOT NULL DEFAULT '',
 				aplica_a VARCHAR(191) NOT NULL DEFAULT '',
 				aplica_tipo VARCHAR(64) NOT NULL DEFAULT '',

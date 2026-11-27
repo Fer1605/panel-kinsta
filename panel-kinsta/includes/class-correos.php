@@ -194,8 +194,75 @@ class SWPK_Correos {
 	 * salió también es información, y en modo de prueba es justamente lo que hay
 	 * que poder leer.
 	 */
+	/**
+	 * ─── El desvío: lo que hace que una prueba sea una prueba ───────────────
+	 *
+	 * «Mandar una prueba. ¿A quién? ¿A quién voy a mandar una prueba? ¿A quién
+	 * le mandé la prueba?» (09:22)
+	 *
+	 * El botón que decía «Mandar una prueba» al lado de «Reporte mensual a los
+	 * clientes» llamaba a mensual_clientes(), que es el ENVÍO DE VERDAD:
+	 * recorre los 109 sitios, saca el contacto de cada cliente y le escribe.
+	 * No pasaba nada porque ese aviso está apagado desde la 0.9.0, pero el día
+	 * que se encendiera, ese botón le escribía a todos los clientes a quien le
+	 * diera clic creyendo que probaba algo.
+	 *
+	 * El arreglo va AQUÍ y no en cada uno de los cuatro envíos, porque
+	 * despachar() es la única puerta por la que sale un correo: con el desvío
+	 * puesto, los cuatro se vuelven pruebas sin tocar su código.
+	 *
+	 * Y la prueba se salta el modo de prueba y los interruptores a propósito.
+	 * El sentido de «enviármelo a mí» es verlo en la bandeja; si el modo de
+	 * prueba lo dejara sin enviar, no habría nada que ver. Es seguro por
+	 * construcción: el único destinatario posible es la dirección de quien
+	 * está dentro del panel, así que por este camino no puede llegarle nada a
+	 * un cliente.
+	 */
+	private static string $desvio = '';
+
+	public static function desviar_a( string $correo ): void {
+		self::$desvio = sanitize_email( $correo );
+	}
+
+	public static function dejar_de_desviar(): void {
+		self::$desvio = '';
+	}
+
 	public static function despachar( string $tipo, array $destinatarios, string $asunto, string $cuerpo, string $sitio_id = '' ): string {
 		$destinatarios = array_values( array_unique( array_filter( array_map( 'sanitize_email', $destinatarios ) ) ) );
+
+		if ( '' !== self::$desvio ) {
+			// Se dice en el asunto y en la primera línea del cuerpo A QUIÉN le
+			// habría llegado. Sin eso, una prueba del mensual es un correo que
+			// parece dirigido a uno mismo y no enseña lo que importa: que iba
+			// a salir a catorce clientes.
+			$iban = $destinatarios
+				? sprintf(
+					// Sin SWPK_Vista::plural(): esta clase también corre desde
+					// el cron, donde las clases de admin no están cargadas.
+					'El envío real habría ido a %d %s: %s.',
+					count( $destinatarios ),
+					1 === count( $destinatarios ) ? 'persona' : 'personas',
+					implode( ', ', $destinatarios )
+				)
+				: 'El envío real no habría salido: este correo no tiene destinatarios.';
+
+			$asunto = '[PRUEBA] ' . $asunto;
+			$cuerpo = '<p style="margin:0 0 16px;padding:10px 14px;background:#f1f3f7;'
+				. 'border-left:4px solid #1c6dc7;font-size:14px">'
+				. '<strong>Esto es una prueba.</strong> ' . esc_html( $iban )
+				. '</p>' . $cuerpo;
+
+			SWPK_Bitacora::enviar(
+				$tipo,
+				[ self::$desvio ],
+				$asunto,
+				$cuerpo,
+				$sitio_id,
+				SWPK_Bitacora::RES_PRUEBA
+			);
+			return SWPK_Bitacora::RES_PRUEBA;
+		}
 
 		if ( ! $destinatarios ) {
 			SWPK_Bitacora::registrar( $tipo, [], $asunto, $cuerpo, $sitio_id, 'sin_destinatario', 'No había a quién enviarle.' );

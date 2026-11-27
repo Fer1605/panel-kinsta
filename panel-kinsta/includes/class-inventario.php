@@ -84,6 +84,16 @@ class SWPK_Inventario {
 
 		self::dar_de_baja_a_los_que_ya_no_estan( $vistos, $ahora );
 
+		// ── Las dos asesoras, en cada sitio nuestro ─────────────────────────
+		//
+		// Va aquí y no en el alta de cada sitio porque la etiqueta puede
+		// cambiar después: un sitio que entró como «sin etiqueta» y mañana es
+		// auto update tiene que ganar sus asesoras sin que nadie se acuerde de
+		// ir a ponérselas. Y uno que pasa a ser del cliente las pierde.
+		//
+		// Solo rellena vacíos: lo que alguien puso a mano no se toca.
+		SWPK_Perfiles::repartir_asesoras_por_defecto();
+
 		update_option( 'swpk_ultima_sincronizacion', $ahora, false );
 
 		return $n;

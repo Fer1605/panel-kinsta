@@ -263,7 +263,10 @@ $hubo_alguna_vez = SWPK_Bitacora::hay_alguno();
 						<?php
 						[ $texto_r, $color_r ] = match ( $r->resultado ) {
 							'enviado'          => [ 'Enviado', '#0b5ed7' ],
-							'simulado'         => [ 'De prueba', '#2271b1' ],
+							'simulado'         => [ 'Armado, no salió', '#2271b1' ],
+							// Distinto de «simulado»: esta SÍ salió, pero solo
+							// a quien le dio al botón. Ver SWPK_Correos::desviar_a().
+							'prueba'           => [ 'Prueba a mí mismo', '#1c6dc7' ],
 							'apagado'          => [ 'No salió', '#6b7280' ],
 							'sin_destinatario' => [ 'Sin destinatario', '#6b7280' ],
 							'sin_novedad'      => [ 'Sin novedad', '#6b7280' ],
