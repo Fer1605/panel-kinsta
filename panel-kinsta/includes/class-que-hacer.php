@@ -69,8 +69,52 @@ class SWPK_QueHacer {
 		'kinsta-mu-plugins' => 'Kinsta',
 	];
 
+	/**
+	 * Lo que el hosting mete como must-use lleva su prefijo y puede salir con
+	 * nombres que no conocemos de antemano. El prefijo cubre los que vengan.
+	 */
+	private const PREFIJOS_DEL_HOSTING = [ 'kinsta-' ];
+
 	public static function es_del_hosting( string $slug ): bool {
-		return isset( self::DEL_HOSTING[ $slug ] );
+		if ( isset( self::DEL_HOSTING[ $slug ] ) ) {
+			return true;
+		}
+
+		foreach ( self::PREFIJOS_DEL_HOSTING as $prefijo ) {
+			if ( str_starts_with( $slug, $prefijo ) ) {
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	/** Quién lo pone, para nombrarlo en la frase. */
+	public static function quien_del_hosting( string $slug ): string {
+		return self::DEL_HOSTING[ $slug ] ?? 'Kinsta';
+	}
+
+	/**
+	 * Si se puede apagar desde el escritorio del sitio.
+	 *
+	 * ─── Por qué esto existe ────────────────────────────────────────────────
+	 *
+	 * 27-11-2026, Heraldos Costa Rica: «Kinsta Must-use Plugins» salía en la
+	 * lista «instalados pero apagados». Fer:
+	 *
+	 *   «ese es de Kinsta, no debería de estar entre los apagados, porque ese
+	 *    ni siquiera aparece dentro de los sitios»
+	 *
+	 * Tiene razón, y el dato de Kinsta nos engaña: un must-use plugin se
+	 * carga siempre, antes que cualquier otro, y WordPress no lo apunta en la
+	 * lista de plugins activos porque no hace falta —no se puede desactivar—.
+	 * La API lo devuelve con status «inactive» por eso, no porque esté
+	 * apagado. «Apagado» quiere decir una cosa concreta: que alguien lo
+	 * desactivó en el escritorio del sitio. Esto no se puede desactivar ahí,
+	 * así que nunca está apagado.
+	 */
+	public static function se_puede_apagar( string $slug ): bool {
+		return ! self::es_del_hosting( $slug );
 	}
 
 	/**
@@ -153,7 +197,7 @@ class SWPK_QueHacer {
 
 		// ── 1. Lo pone y lo actualiza el hosting ───────────────────────────
 		if ( self::es_del_hosting( $slug ) ) {
-			$quien_hosting = self::DEL_HOSTING[ $slug ];
+			$quien_hosting = self::quien_del_hosting( $slug );
 			$r             = self::reparto_del_hosting( $slug );
 
 			$detalle = sprintf(

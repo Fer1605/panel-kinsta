@@ -155,7 +155,7 @@ Reglas de Fer, que valen igual en un chat nuevo:
 
 | | Versión | Dónde está |
 |---|---|---|
-| Panel Kinsta | **0.15.1** | Desplegado en producción y verificado ahí mismo. |
+| Panel Kinsta | **0.15.5** | Desplegado en producción y verificado ahí mismo. |
 | Agente (plugin) | **0.7.0** | 0.6.4 está en 106 de 107. La 0.7.0 trae el registro de actividad y **no está repartida**. |
 | Agente (dentro del tema) | **0.7.0-tema** | La rama unida del jefe sigue en 0.6.4-tema con código de 0.6.3. La corrección + el registro están en una rama lista, **sin PR abierto**. |
 | Tema hijo | **2.6.1** | En el PR. |
@@ -198,8 +198,11 @@ agente y este sitio no lo tiene; la mide el agente y todavía no la ha mandado.
 «Aquí dice "el panel lo puede hacer solo", pero no me tiene el botón.» El
 botón solo salía con la norma en FALLA, y XML-RPC está en «falta medilo».
 Cerrar XML-RPC no necesita haberlo medido: la orden es la misma y no hace daño
-si ya estaba cerrado. Ahora sale también en SIN_DATO, con el texto
-**«Mandarlo igual»** para que se vea que no es lo mismo.
+si ya estaba cerrado. Ahora sale también en SIN_DATO. Primero decía
+«Mandarlo igual», y eso duró media hora: «ni se entiende qué significa eso».
+El botón dice **«Arreglar»** en los dos casos, y la salvedad va escrita debajo,
+dentro: «Aunque no se pudo medir, la orden se puede mandar: si ya estaba bien,
+no cambia nada».
 
 #### Los plugins apagados
 
@@ -209,7 +212,56 @@ además tenían una actualización pendiente, porque los hallazgos se arman de
 vulnerabilidades y actualizaciones. Ahora hay una caja propia,
 `SWPK_Inventario::apagados()`, con el consejo según el caso: borrarlo cuanto
 antes si además es vulnerable, borrarlo si ya no se usa, o preguntarle al
-cliente si el sitio es suyo. En Heraldos son 6.
+cliente si el sitio es suyo. En Heraldos son 4.
+
+---
+
+### Lo del 27 por la tarde: el must-use no estaba apagado (0.15.1 → 0.15.5)
+
+**«Kinsta Must-use Plugins» salía entre los apagados.** Fer:
+
+> «ese es de Kinsta, no debería de estar entre los apagados, porque ese ni
+> siquiera aparece dentro de los sitios»
+
+Y nos lo dejó definido, que es lo que faltaba: *apagado* quiere decir **que
+alguien lo desactivó en el escritorio del sitio**, no que lleve tiempo sin
+uso. Un must-use plugin se carga siempre y no se puede desactivar ahí.
+WordPress no lo apunta en `active_plugins` porque no hace falta, la API de
+Kinsta lo devuelve con `status: inactive` por eso, y el panel se lo creyó.
+
+Lo decidía en dos sitios distintos y uno estaba mal: la norma
+`inv_inactivos` lo saltaba con un `str_starts_with( $slug, 'kinsta-' )`
+escrito a mano, y la caja nueva no lo saltaba. Ahora lo decide
+**`SWPK_QueHacer::se_puede_apagar()`**, una sola vez, y lo usan los tres
+sitios donde se dice «apagado»: la norma, la caja y la pastilla de la fila de
+pendientes.
+
+**Filtro de gravedad en las normas.** Estaban «Tipo de norma» y «Estado», y la
+pastilla Alta/Media/Baja se enseñaba en cada fila sin poder filtrar por ella:
+«no podemos filtrar por eso». Ahora son tres desplegables con su cuenta
+dentro, y «las altas que no cumplen» se pide en dos clics.
+
+#### Cómo se destraba lo de Cloudflare, con los clics
+
+Comprobado en MyKinsta el 27 de noviembre, entrando a uno de los sitios:
+
+1. MyKinsta → **Sitios** → el sitio → **Protección contra bots** (en el menú
+   de la izquierda; sale marcado como *Beta*).
+2. Abajo del todo, **Excepciones** → **Añadir excepción**.
+3. Pestaña **Agente de usuario**. El propio cuadro dice: «la regla se aplicará
+   siempre que parte de la cadena especificada coincida», así que basta con
+   escribir `PanelKinsta`.
+4. Dejar marcado **Permitir** (las otras dos son *Desafiar* y *Bloquear*) y
+   **Añadir excepción**.
+
+`PanelKinsta` es el agente de usuario de las dos cosas que hoy se quedan
+fuera: `SWPK_Monitor` (`PanelKinsta/<versión> (monitor de disponibilidad)`) y
+`SWPK_Sonda` (`PanelKinsta/<versión> (revision de configuracion)`).
+
+**Es por sitio.** En el que miré, la protección iba bloqueando cerca de una
+cuarta parte de las peticiones de las últimas 24 horas. Hacerlo en los 109 a mano son 109 vueltas,
+así que lo sensato es probarlo en uno, comprobar que la sonda pasa, y recién
+entonces pedirle a Kinsta por ticket que lo aplique a toda la empresa.
 
 ---
 

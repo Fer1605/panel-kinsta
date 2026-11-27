@@ -3334,7 +3334,7 @@ class SWPK_Normas {
 		foreach ( $filas as $f ) {
 			// Los mu-plugins de la plataforma salen siempre como inactivos y no
 			// son nuestros ni se pueden borrar. Contarlos sería ruido fijo.
-			if ( (int) $f->activo || str_starts_with( (string) $f->slug, 'kinsta-' ) ) {
+			if ( (int) $f->activo || ! SWPK_QueHacer::se_puede_apagar( (string) $f->slug ) ) {
 				continue;
 			}
 

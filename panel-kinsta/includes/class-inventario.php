@@ -526,7 +526,7 @@ class SWPK_Inventario {
 			return [];
 		}
 
-		return $wpdb->get_results(
+		$filas = $wpdb->get_results(
 			$wpdb->prepare(
 				"SELECT slug, titulo, version, version_disponible, tipo, es_vulnerable
 				 FROM {$tabla}
@@ -536,5 +536,16 @@ class SWPK_Inventario {
 				$fecha
 			)
 		) ?: [];
+
+		// Lo que pone el hosting se carga siempre y no se puede desactivar en
+		// el escritorio del sitio: la API lo devuelve como «inactive» por eso,
+		// no porque esté apagado. Quien decide esto es SWPK_QueHacer, una sola
+		// vez, para que la norma y esta lista no contesten cosas distintas.
+		return array_values(
+			array_filter(
+				$filas,
+				static fn( $f ) => SWPK_QueHacer::se_puede_apagar( (string) $f->slug )
+			)
+		);
 	}
 }

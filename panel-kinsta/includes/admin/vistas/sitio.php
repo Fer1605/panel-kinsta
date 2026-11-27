@@ -456,7 +456,12 @@ $url_pestana = static fn( string $s ) => add_query_arg(
 								echo esc_html( $h['version_disponible'] );
 							?></span><?php endif; ?>
 							· <?php echo esc_html( $h['slug'] ); ?>
-							<?php if ( isset( $h['activo'] ) && 0 === (int) $h['activo'] ) : ?>
+							<?php
+							// Lo del hosting se carga siempre y no se puede
+							// desactivar en el escritorio: la API lo devuelve
+							// como «inactive» por eso, no porque esté apagado.
+							if ( isset( $h['activo'] ) && 0 === (int) $h['activo']
+								&& SWPK_QueHacer::se_puede_apagar( (string) $h['slug'] ) ) : ?>
 								· apagado
 							<?php endif; ?>
 						</span>
@@ -750,6 +755,44 @@ $url_pestana = static fn( string $s ) => add_query_arg(
 			) );
 		}
 
+		// ── Filtrar por gravedad ────────────────────────────────────────
+		//
+		//   «tenemos tipo de norma, estado, y deberíamos poner el de alta,
+		//    media, baja, porque […] no podemos filtrar por eso»
+		//
+		// La gravedad ya se enseñaba en cada fila —la pastilla Alta/Media/Baja
+		// a la derecha del estado— y no se podía usar para buscar. Con 73
+		// normas, «las altas que no cumplen» es la pregunta con la que se
+		// entra a arreglar, y era la única de las tres que no se podía hacer.
+		$gravedades_posibles = [
+			'alta'  => 'Alta',
+			'media' => 'Media',
+			'baja'  => 'Baja',
+		];
+
+		$gravedad_pedida = isset( $_GET['gravedad'] ) ? sanitize_key( wp_unslash( (string) $_GET['gravedad'] ) ) : '';
+		if ( ! isset( $gravedades_posibles[ $gravedad_pedida ] ) ) {
+			$gravedad_pedida = '';
+		}
+
+		// Igual que con el estado: las cuentas se sacan de lo que hay ANTES de
+		// aplicar este filtro, o al elegir «Alta» las otras dos dirían 0.
+		$cuenta_gravedad = array_fill_keys( array_keys( $gravedades_posibles ), 0 );
+		foreach ( $para_ver as $n ) {
+			$g = strtolower( (string) $n->severidad );
+			if ( isset( $cuenta_gravedad[ $g ] ) ) {
+				++$cuenta_gravedad[ $g ];
+			}
+		}
+		$total_antes_de_gravedad = count( $para_ver );
+
+		if ( '' !== $gravedad_pedida ) {
+			$para_ver = array_values( array_filter(
+				$para_ver,
+				static fn( $n ) => strtolower( (string) $n->severidad ) === $gravedad_pedida
+			) );
+		}
+
 		// ── Primero lo que falta ────────────────────────────────────────
 		//
 		// Venían en el orden del catálogo, así que al entrar se veía una
@@ -829,6 +872,11 @@ $url_pestana = static fn( string $s ) => add_query_arg(
 			$opciones_estado[ $clave_e ] = sprintf( '%s (%d)', $nombre_e, $cuenta_estado[ $clave_e ] );
 		}
 
+		$opciones_gravedad = [];
+		foreach ( $gravedades_posibles as $clave_g => $nombre_g ) {
+			$opciones_gravedad[ $clave_g ] = sprintf( '%s (%d)', $nombre_g, $cuenta_gravedad[ $clave_g ] );
+		}
+
 		// ── La misma barra que el resto del panel ───────────────────────────
 		//
 		//   «y estos filtros quedan horribles, nada que ver con los demás del
@@ -854,6 +902,12 @@ $url_pestana = static fn( string $s ) => add_query_arg(
 					'actual'   => $estado_pedido,
 					'todas'    => sprintf( 'Todas (%d)', $total_antes_de_estado ),
 				],
+				'gravedad' => [
+					'etiqueta' => 'Gravedad',
+					'opciones' => $opciones_gravedad,
+					'actual'   => $gravedad_pedida,
+					'todas'    => sprintf( 'Cualquier gravedad (%d)', $total_antes_de_gravedad ),
+				],
 			],
 			[ 'sitio' => $sitio_id, 'seccion' => 'normas' ] + SWPK_Vista::rastro(),
 			$buscar,
@@ -861,10 +915,9 @@ $url_pestana = static fn( string $s ) => add_query_arg(
 		);
 		?>
 
-		<?php if ( '' !== $estado_pedido && ! $para_ver ) : ?>
+		<?php if ( ! $para_ver && ( '' !== $estado_pedido || '' !== $gravedad_pedida || '' !== $buscar ) ) : ?>
 			<div class="notice notice-info inline"><p>
-				Ninguna norma de este sitio está en «<?php echo esc_html( $estados_posibles[ $estado_pedido ] ); ?>»
-				<?php if ( $hay_tema || $pide_arreglables ) : ?>dentro de este tema<?php endif; ?>.
+				Ninguna norma de este sitio cumple lo que se pidió en los filtros.
 				<a href="<?php echo esc_url( $url_pestana( 'normas' ) ); ?>">Ver todas</a>
 			</p></div>
 		<?php endif; ?>
@@ -1073,7 +1126,7 @@ $url_pestana = static fn( string $s ) => add_query_arg(
 						<?php elseif ( $se_puede_pedir ) : ?>
 							<a class="button button-small <?php echo SWPK_Normas::FALLA === $estado ? 'button-primary' : ''; ?>" href="<?php
 								echo esc_url( SWPK_Admin::url_arreglar( $clave, $sitio_id ) );
-							?>"><?php echo SWPK_Normas::FALLA === $estado ? 'Arreglar' : 'Mandarlo igual'; ?></a>
+							?>">Arreglar</a>
 						<?php endif; ?>
 					</span>
 				</summary>
@@ -1212,7 +1265,7 @@ $url_pestana = static fn( string $s ) => add_query_arg(
 										<?php
 										echo SWPK_Normas::FALLA === $estado
 											? 'El panel le manda la orden al agente y la próxima medición lo confirma.'
-											: 'No se pudo medir, pero la orden es la misma y no hace daño si ya estaba bien.';
+											: 'Aunque no se pudo medir, la orden se puede mandar: si ya estaba bien, no cambia nada.';
 										?>
 									</span>
 								</p>
