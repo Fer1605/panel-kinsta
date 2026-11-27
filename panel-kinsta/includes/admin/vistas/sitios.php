@@ -6,7 +6,21 @@
 defined( 'ABSPATH' ) || exit;
 
 $todos    = SWPK_Perfiles::sitios_visibles();
-$asignar  = SWPK_Perfiles::puede( SWPK_Perfiles::ADMINISTRAR );
+$puede_asignar = SWPK_Perfiles::puede( SWPK_Perfiles::ADMINISTRAR );
+
+// ── Cinco columnas, y las de asignar solo cuando se van a usar ─────────────
+//
+// «Siento que hay demasiada data, demasiado texto, y lo que quiero son
+// resúmenes» (02:52). Eran nueve columnas —once para un administrador, que
+// es lo que somos los dos que la usamos— y de esas, las de Asesora y
+// Contacto del cliente son un FORMULARIO: campos de texto y casillas en
+// todas las filas, siempre, aunque nadie vaya a asignar nada ese día.
+//
+// Así que la pantalla por defecto son cinco columnas de solo lectura, y
+// asignar pasa a ser un modo al que se entra con un botón. Mismo formulario,
+// misma acción, mismos permisos: lo único que cambia es que ya no está
+// puesto encima de la mesa a todas horas.
+$asignar  = $puede_asignar && 'asesoras' === ( isset( $_GET['editar'] ) ? sanitize_key( wp_unslash( $_GET['editar'] ) ) : '' );
 $asesoras = $asignar ? SWPK_Perfiles::asesoras() : [];
 
 $tag      = SWPK_Vista::tag_pedido();
@@ -312,6 +326,29 @@ $volver = add_query_arg(
 		<div class="notice notice-info inline"><p>Ningún sitio coincide con ese filtro.</p></div>
 	<?php else : ?>
 
+		<?php if ( $puede_asignar ) : ?>
+			<?php
+			// La puerta del modo de asignación. Conserva los filtros puestos:
+			// se entra a asignar sobre lo que uno está mirando, no sobre los
+			// 109 otra vez.
+			$url_editar = $asignar
+				? remove_query_arg( 'editar' )
+				: add_query_arg( 'editar', 'asesoras' );
+			?>
+			<p class="swpk-barra-modo">
+				<?php if ( $asignar ) : ?>
+					<strong>Asignando asesoras y contactos.</strong>
+					<a href="<?php echo esc_url( $url_editar ); ?>">Salir sin guardar</a>
+				<?php else : ?>
+					<a class="button button-small" href="<?php echo esc_url( $url_editar ); ?>">Asignar asesoras y contactos</a>
+					<?php echo wp_kses_post( SWPK_Vista::ayuda(
+						'Abre las dos columnas de edición sobre los sitios que estás viendo ahora. '
+						. 'Fuera de ese modo la tabla es de solo lectura, que es como se mira a diario.'
+					) ); ?>
+				<?php endif; ?>
+			</p>
+		<?php endif; ?>
+
 		<?php if ( $asignar ) : ?>
 			<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
 			<input type="hidden" name="action" value="swpk_asignar">
@@ -324,32 +361,31 @@ $volver = add_query_arg(
 		);
 		?>
 		<?php SWPK_Vista::paginador( $pagina, $paginas, count( $filtrados ) ); ?>
-		<table class="widefat striped swpk-tabla">
+		<?php
+		// ── Cuántas normas no cumple cada sitio de esta página ──────────────
+		//
+		// Se lee una vez para toda la página y no una por fila: la tabla de
+		// cumplimiento son 109 sitios por 73 normas, y preguntar sitio a sitio
+		// dentro del bucle son veinte consultas por pantalla.
+		$cumple_mapa = SWPK_Normas::cumplimiento();
+		?>
+		<table class="widefat striped swpk-tabla swpk-tabla-sitios">
 			<thead>
 				<tr>
 					<th>Sitio</th>
-					<th style="width:96px">Grupo</th>
-					<th style="width:112px">
+					<th style="width:86px">Cómo está</th>
+					<th style="width:230px">Qué le falta</th>
+					<th style="width:120px">
 						Se actualiza
 						<?php echo wp_kses_post( SWPK_Vista::ayuda(
-							'Si los módulos del sitio tienen puesta la actualización automática, según el '
-							. 'hosting. Es un dato medido, no la etiqueta: un sitio puede estar etiquetado '
-							. 'como Desarrollo y tener todo en automático, y al revés.'
+							'Cuántos módulos hay que entrar a actualizar a mano, según el hosting. Es un '
+							. 'dato medido, no la etiqueta: un sitio puede estar etiquetado como Desarrollo '
+							. 'y tener todo en automático, y al revés.'
 						) ); ?>
 					</th>
-					<th style="width:82px">Cómo está</th>
-					<th style="width:124px">Pendientes</th>
-					<th style="width:104px">
-						Versiones
-						<?php echo wp_kses_post( SWPK_Vista::ayuda( 'WordPress y PHP, en ese orden.' ) ); ?>
-					</th>
-					<?php if ( SWPK_Etiquetas::es_nuestro( $tag ) ) : ?>
-						<th style="width:96px">Doble paso</th>
-					<?php endif; ?>
-					<th style="width:96px">Revisado</th>
-					<th style="width:200px">Asesora</th>
 					<?php if ( $asignar ) : ?>
-						<th style="width:260px">
+						<th style="width:170px">Asesora</th>
+						<th style="width:240px">
 							Contacto del cliente
 							<?php echo wp_kses_post( SWPK_Vista::ayuda(
 								'A quién se le manda el reporte de lo que se hizo. En los sitios que '
@@ -359,8 +395,8 @@ $volver = add_query_arg(
 								. 'son justo los que más hay que avisar.'
 							) ); ?>
 						</th>
-						<th style="width:84px"></th>
 					<?php endif; ?>
+					<th style="width:110px"></th>
 				</tr>
 			</thead>
 			<tbody>
@@ -374,141 +410,175 @@ $volver = add_query_arg(
 						++$vulns;
 					}
 				}
+				$updates = count( $hallazgos ) - $vulns;
+
+				$sin_cumplir = 0;
+				foreach ( ( $cumple_mapa[ (string) $s->sitio_id ] ?? [] ) as $c ) {
+					if ( SWPK_Normas::FALLA === ( $c->estado ?? '' ) ) {
+						++$sin_cumplir;
+					}
+				}
+
+				$grupo_s  = SWPK_Inventario::grupo_de( $s );
+				$suyas    = SWPK_Perfiles::asesoras_de( (string) $s->sitio_id );
+				$nuestro  = SWPK_Etiquetas::es_nuestro( (string) $s->tag );
+				$nombres  = [];
+				foreach ( $suyas as $id_a ) {
+					$u = get_user_by( 'id', $id_a );
+					if ( $u ) {
+						$nombres[] = $u->display_name;
+					}
+				}
 				?>
 				<tr>
-					<td>
+					<?php
+					// ── La franja de grupo, que él pidió con esas palabras ──
+					//
+					// «Le podríamos colocar como grupo… un colorcito, como una
+					// línea, una burbuja, entonces yo ya sé» (04:14). Una
+					// franja de 4 px al inicio de la fila, en frío —azul, lila,
+					// gris—, que no se confunde con el rojo del riesgo porque
+					// no es cálida. Así el color cálido de la fila queda para
+					// una sola cosa: cómo está el sitio.
+					?>
+					<td class="swpk-col-sitio swpk-franja-<?php echo esc_attr( $grupo_s ); ?>">
 						<a href="<?php echo esc_url( SWPK_Vista::url_del_sitio( (string) $s->sitio_id, 'panel-kinsta-sitios' ) ); ?>">
 							<strong><?php echo esc_html( $s->nombre_visible ); ?></strong>
-						</a><br>
-						<span class="swpk-mono" style="color:#50575e"><?php echo esc_html( $s->dominio ); ?></span>
+						</a>
+						<div class="swpk-sitio-pie">
+							<span class="swpk-mono"><?php echo esc_html( $s->dominio ); ?></span>
+							<span class="swpk-gris">·</span>
+							<?php echo esc_html( SWPK_Etiquetas::nombres()[ $grupo_s ] ?? 'Sin etiqueta' ); ?>
+						</div>
+						<?php
+						// ── «Ver todo»: lo que no se mira a diario ──────────
+						//
+						// Versiones, última revisión, doble paso y asesora
+						// salen de la tabla y entran aquí plegados. Es la
+						// regla 7 de su panel: «el detalle se despliega, no se
+						// muestra». Sigue a un clic, no a dos pantallas.
+						?>
+						<details class="swpk-vertodo">
+							<summary>Ver todo</summary>
+							<dl>
+								<dt>WordPress</dt><dd class="swpk-mono"><?php echo esc_html( $s->version_wp ?: '—' ); ?></dd>
+								<dt>PHP</dt><dd class="swpk-mono"><?php echo esc_html( $s->version_php ?: '—' ); ?></dd>
+								<dt>Revisado</dt>
+								<dd><?php echo esc_html(
+									! empty( $s->inventario_en )
+										? SWPK_Frescura::fmt( 'j M, H:i', (string) $s->inventario_en )
+										: '—'
+								); ?></dd>
+								<?php if ( $nuestro ) : ?>
+									<dt>Doble paso</dt>
+									<dd><?php echo $s->tiene_2fa
+										? esc_html( '✓ ' . $s->plugin_2fa )
+										: '<span class="swpk-rojo">Pendiente</span>'; ?></dd>
+								<?php endif; ?>
+								<dt>Asesora</dt>
+								<dd><?php echo $nombres ? esc_html( implode( ', ', $nombres ) ) : '—'; ?></dd>
+							</dl>
+						</details>
 					</td>
-					<td><?php echo SWPK_Admin::grupo_badge( SWPK_Inventario::grupo_de( $s ) ); ?></td>
-					<td><?php echo wp_kses_post( SWPK_Admin::auto_update_badge( $auto_de[ (string) $s->sitio_id ] ?? [ 'con' => 0, 'sin' => 0, 'total' => 0 ] ) ); ?></td>
+
 					<td><?php echo wp_kses_post( SWPK_Admin::nivel_badge( $nivel_s ) ); ?></td>
-					<td>
+
+					<?php
+					// ── «Qué le falta»: frases, no cifras sueltas ───────────
+					//
+					// Eran dos números pegados en una columna de 124 px —«1 con
+					// vulnerabilidad / 2 por actualizar»— que había que
+					// interpretar. Ahora cada línea se lee sola y dice de qué
+					// es el número, con la vulnerabilidad arriba y en negrita
+					// porque es la que manda.
+					?>
+					<td class="swpk-falta">
 						<?php if ( SWPK_Riesgo::SIN_DATOS === $nivel_s ) : ?>
-							<span style="color:#6b7280">sin escanear por <?php echo esc_html( SWPK_Admin::proveedor() ); ?></span>
+							<span class="swpk-gris">Sin escanear por <?php echo esc_html( SWPK_Admin::proveedor() ); ?></span>
+						<?php elseif ( ! $vulns && ! $updates && ! $sin_cumplir ) : ?>
+							<span class="swpk-gris">Nada pendiente.</span>
 						<?php else : ?>
 							<?php if ( $vulns ) : ?>
-								<strong style="color:#9e0b10"><?php echo (int) $vulns; ?> con vulnerabilidad</strong><br>
+								<div><strong class="swpk-rojo"><?php
+									printf(
+										'%d %s conocida%s',
+										(int) $vulns,
+										1 === $vulns ? 'vulnerabilidad' : 'vulnerabilidades',
+										1 === $vulns ? '' : 's'
+									);
+								?></strong></div>
 							<?php endif; ?>
-							<?php echo count( $hallazgos ) - $vulns; ?> por actualizar
-							<?php if ( SWPK_Inventario::dato_viejo( $s ) ) : ?>
-								<br><span style="color:#6b7280;font-size:12px" title="<?php echo esc_attr( SWPK_Admin::proveedor() . ' no lo revisa desde hace ' . (int) SWPK_Inventario::dias_sin_escanear( $s ) . ' días' ); ?>">
-									dato de hace <?php echo (int) SWPK_Inventario::dias_sin_escanear( $s ); ?> días
-								</span>
+							<?php if ( $updates ) : ?>
+								<div><?php
+									printf(
+										'%d actualizaci%s pendiente%s',
+										(int) $updates,
+										1 === $updates ? 'ón' : 'ones',
+										1 === $updates ? '' : 's'
+									);
+								?></div>
+							<?php endif; ?>
+							<?php if ( $sin_cumplir ) : ?>
+								<div><a href="<?php echo esc_url( SWPK_Vista::url_del_sitio( (string) $s->sitio_id, 'panel-kinsta-sitios' ) . '&seccion=normas&estado=' . SWPK_Normas::FALLA ); ?>"><?php
+									printf( '%d norma%s sin cumplir', (int) $sin_cumplir, 1 === $sin_cumplir ? '' : 's' );
+								?></a></div>
 							<?php endif; ?>
 						<?php endif; ?>
+						<?php if ( SWPK_Inventario::dato_viejo( $s ) ) : ?>
+							<div class="swpk-mudo" style="font-size:12px">dato de hace <?php echo (int) SWPK_Inventario::dias_sin_escanear( $s ); ?> días</div>
+						<?php endif; ?>
 					</td>
-					<td class="swpk-mono"><?php
-						printf(
-							'%s <span class="swpk-gris">·</span> %s',
-							esc_html( $s->version_wp ?: '—' ),
-							esc_html( $s->version_php ?: '—' )
-						);
-					?></td>
-					<?php if ( SWPK_Etiquetas::es_nuestro( $tag ) ) : ?>
+
+					<td><?php echo wp_kses_post( SWPK_Admin::auto_update_badge( $auto_de[ (string) $s->sitio_id ] ?? [ 'con' => 0, 'sin' => 0, 'total' => 0 ] ) ); ?></td>
+
+					<?php if ( $asignar ) : ?>
 						<td>
-							<?php if ( $s->tiene_2fa ) : ?>
-								<span style="color:#0b5ed7">✓ <?php echo esc_html( $s->plugin_2fa ); ?></span>
+							<?php
+							// ── Varias asesoras, no una ────────────────────
+							//
+							// «Que tienen que ser las 2 asesoras (...) que no
+							// sea solo un select de una persona.» Son casillas
+							// y no un <select multiple>: en un multiple hay que
+							// saber que se escoge con Ctrl, no se ve de un
+							// vistazo quién está marcada, y con dos nombres
+							// ocupa más que las casillas.
+							//
+							// A los sitios del cliente —no_update— no se les
+							// asigna nadie, y no se dibuja el control: así
+							// nadie marca dos nombres y se queda esperando que
+							// el panel los guarde. Ver asignar_asesoras().
+							?>
+							<?php if ( ! $asesoras ) : ?>
+								<?php printf(
+									'<span class="swpk-gris" style="font-size:12px">Nadie en el <a href="%s">Equipo</a> todavía</span>',
+									esc_url( admin_url( 'admin.php?page=panel-kinsta-equipo' ) )
+								); ?>
+							<?php elseif ( ! $nuestro ) : ?>
+								<span class="swpk-gris" style="font-size:12px"
+									title="A los sitios del cliente no se les asigna asesora desde aquí.">
+									<?php echo $nombres ? esc_html( implode( ', ', $nombres ) ) : '—'; ?>
+								</span>
 							<?php else : ?>
-								<span style="color:#9e0b10">Pendiente</span>
+								<div class="swpk-asesoras">
+									<?php foreach ( $asesoras as $a ) : ?>
+										<?php
+										// Solo el nombre de pila: «Luisa Fernanda
+										// Álvarez» parte en tres renglones y con
+										// cuatro personas la fila crece doce.
+										$partes = explode( ' ', (string) $a->display_name );
+										?>
+										<label title="<?php echo esc_attr( $a->display_name ); ?>">
+											<input type="checkbox"
+												name="asesora[<?php echo esc_attr( $s->sitio_id ); ?>][]"
+												value="<?php echo (int) $a->ID; ?>"
+												<?php checked( in_array( (int) $a->ID, $suyas, true ) ); ?>>
+											<?php echo esc_html( $partes[0] ); ?>
+										</label>
+									<?php endforeach; ?>
+									<input type="hidden" name="asesora_vista[<?php echo esc_attr( $s->sitio_id ); ?>]" value="1">
+								</div>
 							<?php endif; ?>
 						</td>
-					<?php endif; ?>
-					<td class="swpk-gris">
-						<?php
-						echo esc_html(
-							! empty( $s->inventario_en )
-								? SWPK_Frescura::fmt( 'j M, H:i', (string) $s->inventario_en )
-								: '—'
-						);
-						?>
-					</td>
-					<td>
-						<?php
-						// ── Varias asesoras, no una ────────────────────────
-						//
-						// «Que tienen que ser las 2 asesoras (...) que no sea
-						// solo un select de una persona.» Son casillas y no un
-						// <select multiple>: en un multiple hay que saber que
-						// se escoge con Ctrl, no se ve de un vistazo quién
-						// está marcada, y con dos nombres ocupa más que las
-						// casillas.
-						//
-						// A los sitios del cliente —no_update— no se les
-						// asigna nadie, y no se dibuja el control: así nadie
-						// marca dos nombres y se queda esperando que el panel
-						// los guarde. Ver SWPK_Perfiles::asignar_asesoras().
-						//
-						// Las dos variables se calculan ANTES del if: dentro
-						// de una rama solo existirían cuando esa rama corre.
-						$suyas   = SWPK_Perfiles::asesoras_de( (string) $s->sitio_id );
-						$nuestro = SWPK_Etiquetas::es_nuestro( (string) $s->tag );
-						?>
-						<?php if ( $asignar && ! $asesoras ) : ?>
-							<?php
-							// Sin nadie en el Equipo no hay a quién asignar, y un
-							// desplegable vacío no lo explica. Se dice y se enseña
-							// dónde se arregla.
-							printf(
-								'<span class="swpk-gris" style="font-size:12px">Nadie en el <a href="%s">Equipo</a> todavía</span>',
-								esc_url( admin_url( 'admin.php?page=panel-kinsta-equipo' ) )
-							);
-							?>
-						<?php elseif ( $asignar && ! $nuestro ) : ?>
-							<?php
-							// A los del cliente no se les asigna. Si alguno ya
-							// tiene a alguien de antes se enseña el nombre en
-							// gris y nada más: el porqué va en el title, no en
-							// tres renglones dentro de la celda.
-							$nombres = [];
-							foreach ( $suyas as $id_a ) {
-								$u = get_user_by( 'id', $id_a );
-								if ( $u ) {
-									$nombres[] = $u->display_name;
-								}
-							}
-							?>
-							<span class="swpk-gris" style="font-size:12px"
-								title="A los sitios del cliente no se les asigna asesora desde aquí.">
-								<?php echo $nombres ? esc_html( implode( ', ', $nombres ) ) : '—'; ?>
-							</span>
-						<?php elseif ( $asignar ) : ?>
-							<div class="swpk-asesoras">
-								<?php foreach ( $asesoras as $a ) : ?>
-									<?php
-									// Solo el nombre de pila. En una columna de
-									// 165px «Luisa Fernanda Álvarez» parte en tres
-									// renglones, y con cuatro personas cada fila de
-									// la tabla crecía doce renglones. El nombre
-									// entero está en el title y en la ficha.
-									$partes = explode( ' ', (string) $a->display_name );
-									?>
-									<label title="<?php echo esc_attr( $a->display_name ); ?>">
-										<input type="checkbox"
-											name="asesora[<?php echo esc_attr( $s->sitio_id ); ?>][]"
-											value="<?php echo (int) $a->ID; ?>"
-											<?php checked( in_array( (int) $a->ID, $suyas, true ) ); ?>>
-										<?php echo esc_html( $partes[0] ); ?>
-									</label>
-								<?php endforeach; ?>
-								<input type="hidden" name="asesora_vista[<?php echo esc_attr( $s->sitio_id ); ?>]" value="1">
-							</div>
-						<?php else : ?>
-							<?php
-							$nombres = [];
-							foreach ( $suyas as $id_a ) {
-								$u = get_user_by( 'id', $id_a );
-								if ( $u ) {
-									$nombres[] = $u->display_name;
-								}
-							}
-							echo $nombres ? esc_html( implode( ', ', $nombres ) ) : '—';
-							?>
-						<?php endif; ?>
-					</td>
-					<?php if ( $asignar ) : ?>
 						<td>
 							<?php
 							// El campo trae la lista del agente como VALOR, no como
@@ -561,27 +631,14 @@ $volver = add_query_arg(
 										. 'aviso no sale.',
 									],
 								};
-							?>
-							<?php
-							$auto   = $del_agente ? implode( ', ', $del_agente ) : '';
+
+							$auto    = $del_agente ? implode( ', ', $del_agente ) : '';
 							$escrito = trim( (string) $s->contacto_cliente );
-							$valor  = '' !== $escrito ? $escrito : $auto;
+							$valor   = '' !== $escrito ? $escrito : $auto;
 							?>
 							<input type="hidden"
 								name="contacto_auto[<?php echo esc_attr( $s->sitio_id ); ?>]"
 								value="<?php echo esc_attr( $auto ); ?>">
-							<?php
-							// La burbuja va A LA PAR del campo, no debajo.
-							//
-							// El campo era `width:100%`, así que ocupaba la
-							// celda entera y la «i» caía en el renglón
-							// siguiente, suelta y sin nada que la explicara:
-							// «no entiendo dónde está esto, la i al lado de
-							// los correos». La caja flexible le deja a la
-							// burbuja sus 16 px y el campo se queda con el
-							// resto — o sea, el campo se angosta lo justo
-							// para que quepan los dos en la misma línea.
-							?>
 							<span class="swpk-campo-con-ayuda">
 								<input type="text"
 									title="<?php echo esc_attr( $valor ); ?>"
@@ -591,15 +648,20 @@ $volver = add_query_arg(
 								<?php echo wp_kses_post( SWPK_Vista::ayuda( $explica ) ); ?>
 							</span>
 						</td>
-						<td>
-							<a class="button button-small"
+					<?php endif; ?>
+
+					<td class="swpk-col-ir">
+						<a class="button button-small"
+							href="<?php echo esc_url( SWPK_Vista::url_del_sitio( (string) $s->sitio_id, 'panel-kinsta-sitios' ) ); ?>">Ver sitio</a>
+						<?php if ( $puede_asignar ) : ?>
+							<a class="swpk-enlace-pie"
 								href="<?php echo esc_url( SWPK_Admin::url_analizar( (string) $s->sitio_id, $volver ) ); ?>"
 								data-espera="Revisando…"
 								title="Vuelve a preguntarle a <?php echo esc_attr( SWPK_Admin::proveedor() ); ?> qué tiene este sitio, ahora mismo">
 								Analizar
 							</a>
-						</td>
-					<?php endif; ?>
+						<?php endif; ?>
+					</td>
 				</tr>
 			<?php endforeach; ?>
 			</tbody>

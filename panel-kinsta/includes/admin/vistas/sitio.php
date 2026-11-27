@@ -123,11 +123,51 @@ $url_pestana = static fn( string $s ) => add_query_arg(
 	// en su renglón con un párrafo al lado explicando qué hacía, y entre los
 	// dos se comían el alto de la pantalla antes de enseñar un solo dato.
 	?>
+	<?php
+	// ── La barra de acciones, siempre los mismos enlaces ────────────────────
+	//
+	//   «ahora vengo yo aquí, quiero ver todo lo que ha pasado con este sitio.
+	//    ¿Dónde lo veo? Ah, me tengo que ir a historial, y en historial buscar
+	//    el sitio… y tengo un sitio en blanco» (13:24)
+	//   «le podemos poner un botoncito: ir a ver sitio, o ir al reporte de
+	//    sitio, y te manda para acá» (14:43)
+	//
+	// Faltaban los dos puentes de salida: al Historial de ESTE sitio, ya
+	// filtrado, y al hosting. Estaban a tres pantallas y un desplegable de 109
+	// nombres. Ahora son dos enlaces, siempre en el mismo orden y en el mismo
+	// sitio de la ficha — que es la regla 5 de su panel: «unas cosas se pasan
+	// para arriba, unas para abajo» es justo lo que no puede pasar.
+	?>
 	<p class="swpk-acciones-ficha">
+		<a class="button"
+			href="<?php echo esc_url( add_query_arg( [ 'page' => 'panel-kinsta-movimientos', 'sitio' => $sitio_id ] , admin_url( 'admin.php' ) ) ); ?>">
+			Ver su historial
+		</a>
 		<a class="button button-primary"
 			href="<?php echo esc_url( add_query_arg( [ 'page' => 'panel-kinsta-reporte', 'sitio' => $sitio_id ] + SWPK_Vista::rastro(), admin_url( 'admin.php' ) ) ); ?>">
 			Reporte para el cliente
 		</a>
+
+		<?php
+		// El cuarto enlace de la barra. Va al hosting, que es a donde hay que
+		// ir para la mitad de los arreglos: encender la actualización
+		// automática, mirar los entornos, los respaldos.
+		//
+		// Hace falta el id del entorno además del del sitio: MyKinsta no abre
+		// la ficha sin los dos. Si el sitio no tiene entorno guardado —pasa
+		// con los que la API aún no ha devuelto entero— no se dibuja el
+		// enlace, porque un enlace que lleva a un 404 es peor que ninguno.
+		?>
+		<?php if ( ! empty( $sitio->entorno_id ) ) : ?>
+			<a class="button" target="_blank" rel="noopener"
+				href="<?php echo esc_url( sprintf(
+					'https://my.kinsta.com/sites/info/%s/%s',
+					rawurlencode( (string) $sitio->sitio_id ),
+					rawurlencode( (string) $sitio->entorno_id )
+				) ); ?>">
+				Abrir en Kinsta ↗
+			</a>
+		<?php endif; ?>
 		<?php echo wp_kses_post( SWPK_Vista::ayuda(
 			'Qué se le notificó a este cliente y cuándo, en una hoja lista para imprimir o guardar en PDF.'
 		) ); ?>
@@ -467,6 +507,50 @@ $url_pestana = static fn( string $s ) => add_query_arg(
 		$hay_tema    = '' !== $tema_pedido && isset( $por_tema[ $tema_pedido ] );
 		$para_ver    = $pide_arreglables ? $las_arreglables : ( $hay_tema ? $por_tema[ $tema_pedido ] : $aplicables );
 
+		// ── Filtrar por cómo está la norma ──────────────────────────────
+		//
+		//   «quiero filtrar por las que no cumplen, ¿cómo filtro?»
+		//
+		// Había pastillas por TEMA y ninguna por ESTADO, que es la pregunta
+		// con la que se entra aquí. Con 73 normas y doce por página, ver las
+		// que fallan era ir pasando páginas.
+		//
+		// Se combina con el tema: las de «Cuentas y accesos» que no cumplen.
+		$estado_de = static function ( $n ) use ( $cumple_sitio ): string {
+			$fila = $cumple_sitio[ (string) $n->clave ] ?? null;
+			return $fila ? (string) $fila->estado : SWPK_Normas::SIN_DATO;
+		};
+
+		$estados_posibles = [
+			SWPK_Normas::FALLA    => 'No cumple',
+			SWPK_Normas::SIN_DATO => 'Sin medir',
+			SWPK_Normas::CUMPLE   => 'Cumple',
+		];
+
+		$estado_pedido = isset( $_GET['estado'] ) ? sanitize_key( wp_unslash( (string) $_GET['estado'] ) ) : '';
+		if ( ! isset( $estados_posibles[ $estado_pedido ] ) ) {
+			$estado_pedido = '';
+		}
+
+		// Las cuentas se sacan de lo que hay DESPUÉS del tema y ANTES del
+		// estado: si se contaran sobre lo ya filtrado, al elegir «No cumple»
+		// las otras dos pastillas dirían 0 y no habría forma de volver.
+		$cuenta_estado = array_fill_keys( array_keys( $estados_posibles ), 0 );
+		foreach ( $para_ver as $n ) {
+			$e = $estado_de( $n );
+			if ( isset( $cuenta_estado[ $e ] ) ) {
+				++$cuenta_estado[ $e ];
+			}
+		}
+		$total_antes_de_estado = count( $para_ver );
+
+		if ( '' !== $estado_pedido ) {
+			$para_ver = array_values( array_filter(
+				$para_ver,
+				static fn( $n ) => $estado_de( $n ) === $estado_pedido
+			) );
+		}
+
 		// ── Primero lo que falta ────────────────────────────────────────
 		//
 		// Venían en el orden del catálogo, así que al entrar se veía una
@@ -520,6 +604,19 @@ $url_pestana = static fn( string $s ) => add_query_arg(
 				'sitio'   => (string) $sitio->sitio_id,
 				'seccion' => 'normas',
 				'tema'    => $g,
+				'estado'  => $estado_pedido,
+			] ) + SWPK_Vista::rastro(),
+			admin_url( 'admin.php' )
+		);
+
+		// Y al revés: elegir estado no puede tirar el tema que ya estaba.
+		$url_estado = static fn( string $e ) => add_query_arg(
+			array_filter( [
+				'page'    => 'panel-kinsta-sitio',
+				'sitio'   => (string) $sitio->sitio_id,
+				'seccion' => 'normas',
+				'tema'    => $tema_pedido,
+				'estado'  => $e,
 			] ) + SWPK_Vista::rastro(),
 			admin_url( 'admin.php' )
 		);
@@ -551,7 +648,39 @@ $url_pestana = static fn( string $s ) => add_query_arg(
 
 		[ $normas_pagina, $pag_nor, $pags_nor ] = SWPK_Vista::paginar( $para_ver, SWPK_Vista::pagina_pedida(), 12 );
 		?>
-		<div class="swpk-pastillas" style="margin:0 0 12px"><?php echo SWPK_Vista::pastillas( $pastillas_tema ); // phpcs:ignore WordPress.Security.EscapeOutput ?></div>
+		<div class="swpk-pastillas" style="margin:0 0 8px"><?php echo SWPK_Vista::pastillas( $pastillas_tema ); // phpcs:ignore WordPress.Security.EscapeOutput ?></div>
+
+		<?php
+		// La segunda fila: cómo está. Va debajo del tema y no mezclada con él
+		// porque son dos preguntas distintas —de qué trata, y si se cumple— y
+		// en una sola fila de quince pastillas no se distingue cuál es cuál.
+		$pastillas_estado = [ [
+			'texto'  => 'Todas',
+			'n'      => $total_antes_de_estado,
+			'url'    => $url_estado( '' ),
+			'activa' => '' === $estado_pedido,
+		] ];
+		foreach ( $estados_posibles as $clave_e => $nombre_e ) {
+			$pastillas_estado[] = [
+				'texto'  => $nombre_e,
+				'n'      => $cuenta_estado[ $clave_e ],
+				'url'    => $url_estado( $clave_e ),
+				'activa' => $estado_pedido === $clave_e,
+			];
+		}
+		?>
+		<div class="swpk-pastillas swpk-pastillas-estado" style="margin:0 0 12px">
+			<span class="swpk-pastillas-rotulo">Cómo está</span>
+			<?php echo SWPK_Vista::pastillas( $pastillas_estado ); // phpcs:ignore WordPress.Security.EscapeOutput ?>
+		</div>
+
+		<?php if ( '' !== $estado_pedido && ! $para_ver ) : ?>
+			<div class="notice notice-info inline"><p>
+				Ninguna norma de este sitio está en «<?php echo esc_html( $estados_posibles[ $estado_pedido ] ); ?>»
+				<?php if ( $hay_tema || $pide_arreglables ) : ?>dentro de este tema<?php endif; ?>.
+				<a href="<?php echo esc_url( $url_estado( '' ) ); ?>">Ver todas</a>
+			</p></div>
+		<?php endif; ?>
 
 		<?php
 		// Lo mismo que se dice en Seguridad, dicho también aquí: esta es la

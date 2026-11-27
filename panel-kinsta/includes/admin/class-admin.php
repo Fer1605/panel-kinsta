@@ -91,10 +91,6 @@ class SWPK_Admin {
 
 		add_submenu_page( self::SLUG, 'Resumen', 'Resumen', $ver, self::SLUG, [ __CLASS__, 'pantalla_resumen' ] );
 		add_submenu_page( self::SLUG, 'Sitios', 'Sitios', $ver, self::SLUG . '-sitios', [ __CLASS__, 'pantalla_sitios' ] );
-		// «Lo que toca» va justo después de Sitios, antes de Vulnerabilidades:
-		// es la pantalla con la que se empieza el día. Las demás contestan
-		// «cómo está la cartera»; esta contesta «qué hago ahora».
-		add_submenu_page( self::SLUG, 'Lo que toca', 'Lo que toca', $ver, self::SLUG . '-toca', [ __CLASS__, 'pantalla_toca' ] );
 		add_submenu_page( self::SLUG, 'Vulnerabilidades', 'Vulnerabilidades', $ver, self::SLUG . '-vulnerabilidades', [ __CLASS__, 'pantalla_vulnerabilidades' ] );
 		add_submenu_page( self::SLUG, 'Seguridad', 'Seguridad', $ver, self::SLUG . '-seguridad', [ __CLASS__, 'pantalla_seguridad' ] );
 		add_submenu_page( self::SLUG, 'Caídas', 'Caídas', $tecnico, self::SLUG . '-caidas', [ __CLASS__, 'pantalla_caidas' ] );
@@ -439,14 +435,14 @@ class SWPK_Admin {
 	public static function auto_update_badge( array $a ): string {
 		if ( 0 === (int) $a['total'] ) {
 			return sprintf(
-				'<span class="swpk-etq swpk-nivel-sin_datos" title="%s">Sin medir</span>',
+				'<span class="swpk-etq swpk-autoupd" title="%s">Sin medir</span>',
 				esc_attr( 'El hosting todavía no ha devuelto la lista de módulos de este sitio, así que no se sabe si se actualizan solos.' )
 			);
 		}
 
 		if ( 0 === (int) $a['sin'] ) {
 			return sprintf(
-				'<span class="swpk-etq swpk-nivel-al_dia" title="%s">Automático</span>',
+				'<span class="swpk-etq swpk-autoupd" title="%s">Automático</span>',
 				esc_attr( sprintf( 'Los %d módulos activos tienen actualización automática en el hosting.', (int) $a['total'] ) )
 			);
 		}
@@ -463,13 +459,13 @@ class SWPK_Admin {
 		// número que importa es el 2.
 		if ( 0 === (int) $a['con'] ) {
 			return sprintf(
-				'<span class="swpk-etq swpk-nivel-medio" title="%s">Ajuste manual</span>',
+				'<span class="swpk-etq swpk-autoupd" title="%s">Ajuste manual</span>',
 				esc_attr( sprintf( 'Ninguno de los %d módulos activos tiene actualización automática. Hay que entrar al sitio y actualizarlos.', (int) $a['total'] ) )
 			);
 		}
 
 		return sprintf(
-			'<span class="swpk-etq swpk-nivel-medio" title="%s">%d en manual</span>',
+			'<span class="swpk-etq swpk-autoupd" title="%s">%d a mano</span>',
 			esc_attr( sprintf( '%d módulo(s) se actualizan solos. Los otros %d hay que entrar a actualizarlos.', (int) $a['con'], (int) $a['sin'] ) ),
 			(int) $a['sin']
 		);
@@ -576,13 +572,6 @@ class SWPK_Admin {
 			wp_die( 'Sin permiso.' );
 		}
 		require SWPK_RUTA . 'includes/admin/vistas/sitios.php';
-	}
-
-	public static function pantalla_toca(): void {
-		if ( ! self::puede_ver() ) {
-			wp_die( 'Sin permiso.' );
-		}
-		require SWPK_RUTA . 'includes/admin/vistas/toca.php';
 	}
 
 	public static function pantalla_vulnerabilidades(): void {

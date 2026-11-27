@@ -60,9 +60,9 @@
 	   A este le tocaba y se quedó fuera de aquella pasada. Ahora da 5,6:1. */
 	--swpk-tenue: #5c6670;
 
-	--swpk-critico: #d63638;
+	--swpk-critico: #9e0b10;
 	--swpk-alto: #e07c00;
-	--swpk-medio: #dba617;
+	--swpk-medio: #5c6670;
 	--swpk-bajo: #8a8a94;
 	--swpk-bien: #00a32a;
 
@@ -1194,7 +1194,7 @@ body[class*="panel-kinsta"] .swpk-encendido .swpk-palanca::after { left: 20px; }
 
 /* El modo real es el que puede mandarle correo a un cliente de verdad. Va en
    ámbar y no en azul: encenderlo no es una preferencia, es una decisión. */
-body[class*="panel-kinsta"] .swpk-ojo .swpk-palanca { background: var(--swpk-alto); }
+body[class*="panel-kinsta"] .swpk-ojo .swpk-palanca { background: #b4690e; }
 
 /* Bloques y no en línea: el <a> que envuelve la palanca es inline, así que
    sin esto el título y la explicación salen uno detrás del otro, en el mismo
@@ -2193,4 +2193,139 @@ body[class*="panel-kinsta"] .swpk-parche-cerrado {
 	background: #2b313a;
 	color: #fff;
 	border: 2px solid #2b313a;
+}
+
+/* ─────────────────────────────────────────────────────────────────
+   Los cálidos que quedaban en heredado.css
+   ─────────────────────────────────────────────────────────────────
+   La paleta nueva se aplicó a .swpk-nivel-* y se olvidó de .swpk-sev-*,
+   que es la que pinta Alta / Media / Baja en las tablas de normas: en la
+   pantalla de un sitio seguían saliendo el amarillo #fbc02d y el rojo
+   lleno de antes. Misma regla que arriba: el calor significa «hay que
+   actuar», y se distingue por RELLENO, no por tono.
+
+   Alta = el mismo rojo pero hueco. Media y Baja = gris. Nada amarillo. */
+body[class*="panel-kinsta"] .swpk-sev-alta  { background: #fff;     color: #9e0b10; border-color: #9e0b10; box-shadow: inset 0 0 0 1px #9e0b10; }
+body[class*="panel-kinsta"] .swpk-sev-media { background: #eef0f5;  color: #3a4250; border-color: #d7dce6; box-shadow: none; }
+body[class*="panel-kinsta"] .swpk-sev-baja  { background: #f4f6fa;  color: #5c6670; border-color: #e2e6ee; box-shadow: none; }
+
+/* La celda «en pausa» de la cuadrícula de cumplimiento. Era mostaza, que
+   es el cuarto tono cálido de una pantalla que ya tenía tres. Se dice con
+   borde discontinuo: «esto está detenido a propósito» se lee igual sin
+   color, y es la única celda punteada de la cuadrícula. */
+body[class*="panel-kinsta"] .swpk-celda-aplazada {
+	background: #fff; color: #3a4250; border: 1px dashed #9aa4b2;
+}
+
+/* Los avisos de fondo crema: pasan a gris muy claro. */
+body[class*="panel-kinsta"] .swpk-orden-pendiente { background: #f1f3f7; color: #434b54; border-color: #d7dce6; }
+body[class*="panel-kinsta"] .swpk-lista-mal       { background: #f1f3f7; border-color: #d7dce6; }
+body[class*="panel-kinsta"] .swpk-aviso-demo      { background: #f1f3f7; border-color: #d7dce6; }
+
+/* ═════════════════════════════════════════════════════════════════
+   Sitios: cinco columnas
+   ═════════════════════════════════════════════════════════════════
+   «Demasiada data, demasiado texto, y lo que quiero son resúmenes»
+   (02:52). Eran nueve columnas, once para un administrador. Ahora son
+   cinco y el resto se despliega. */
+
+body[class*="panel-kinsta"] .swpk-tabla-sitios td { vertical-align: top; }
+
+/* ── La franja de grupo ────────────────────────────────────────────
+   «Le podríamos colocar como grupo… un colorcito, como una línea, una
+   burbuja, entonces yo ya sé» (04:14).
+
+   Los tres colores son FRÍOS a propósito. El riesgo ya usa rojo; si el
+   grupo usara naranja o ámbar, en una misma fila habría cinco manchas
+   cálidas y las cinco se leen como cinco alarmas. Azul, lila y gris no
+   se confunden entre sí en deuteranopía, protanopía ni tritanopía, y
+   tampoco se confunden con el rojo del riesgo.
+
+   Y es una franja, no otra insignia: la columna Grupo desaparece. */
+body[class*="panel-kinsta"] .swpk-col-sitio {
+	position: relative;
+	padding-left: 16px;
+}
+body[class*="panel-kinsta"] .swpk-col-sitio::before {
+	content: "";
+	position: absolute;
+	left: 0; top: 8px; bottom: 8px;
+	width: 4px;
+	border-radius: 2px;
+	background: #c3cad6;
+}
+body[class*="panel-kinsta"] .swpk-franja-auto_update::before { background: #1c6dc7; }
+body[class*="panel-kinsta"] .swpk-franja-desarrollo::before  { background: #7a5cd6; }
+body[class*="panel-kinsta"] .swpk-franja-no_update::before   { background: #9aa4b2; }
+body[class*="panel-kinsta"] .swpk-franja-sin_etiqueta::before{ background: #d6dbe0; }
+
+body[class*="panel-kinsta"] .swpk-sitio-pie {
+	margin-top: 2px;
+	font-size: 12px;
+	color: #5c6670;
+}
+
+/* ── «Ver todo»: el detalle se despliega, no se muestra ────────────
+   Regla 7 del panel que nos enseñó. Versiones, revisado, doble paso y
+   asesora viven aquí: están a un clic, no en dos pantallas, y no
+   ocupan cuatro columnas en las 109 filas. */
+body[class*="panel-kinsta"] .swpk-vertodo { margin-top: 6px; }
+body[class*="panel-kinsta"] .swpk-vertodo > summary {
+	cursor: pointer;
+	font-size: 12px;
+	color: #1c6dc7;
+	list-style: none;
+	display: inline-block;
+}
+body[class*="panel-kinsta"] .swpk-vertodo > summary::-webkit-details-marker { display: none; }
+body[class*="panel-kinsta"] .swpk-vertodo > summary::before { content: "▸ "; }
+body[class*="panel-kinsta"] .swpk-vertodo[open] > summary::before { content: "▾ "; }
+body[class*="panel-kinsta"] .swpk-vertodo dl {
+	margin: 6px 0 0;
+	display: grid;
+	grid-template-columns: auto 1fr;
+	gap: 2px 10px;
+	font-size: 12px;
+}
+body[class*="panel-kinsta"] .swpk-vertodo dt { color: #5c6670; margin: 0; }
+body[class*="panel-kinsta"] .swpk-vertodo dd { margin: 0; color: #1d2327; }
+
+/* ── «Qué le falta»: una frase por línea ───────────────────────────
+   Antes eran dos cifras pegadas que había que interpretar. Cada línea
+   dice de qué es el número, y la vulnerabilidad va arriba porque es la
+   que manda. */
+body[class*="panel-kinsta"] .swpk-falta div { margin-bottom: 2px; line-height: 1.45; }
+
+body[class*="panel-kinsta"] .swpk-col-ir { white-space: nowrap; }
+body[class*="panel-kinsta"] .swpk-enlace-pie {
+	display: block;
+	margin-top: 5px;
+	font-size: 12px;
+}
+
+body[class*="panel-kinsta"] .swpk-barra-modo {
+	display: flex; align-items: center; gap: 10px;
+	margin: 14px 0 6px;
+}
+
+/* ── Una sola insignia de color por fila ───────────────────────────
+   «Automático» era azul, con la clase del nivel de riesgo «Al día». Dos
+   cosas distintas compartiendo clase: cambiarle el color a una le
+   cambiaba el color a la otra. Ahora tiene la suya.
+
+   Y va en gris porque cómo se actualiza un sitio es configuración, no
+   alarma: en esta pantalla el color lo lleva una sola dimensión, el
+   riesgo. */
+body[class*="panel-kinsta"] .swpk-autoupd {
+	background: #eef0f5; color: #3a4250; border-color: #d7dce6;
+}
+
+/* La segunda fila de pastillas de la ficha, la de «Cómo está». Lleva
+   rótulo porque sin él dos filas de pastillas seguidas se leen como una
+   sola fila partida. */
+body[class*="panel-kinsta"] .swpk-pastillas-estado {
+	display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+}
+body[class*="panel-kinsta"] .swpk-pastillas-rotulo {
+	font-size: 12px; color: #5c6670; font-weight: 600;
 }
