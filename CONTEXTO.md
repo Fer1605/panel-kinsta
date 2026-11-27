@@ -151,14 +151,61 @@ Reglas de Fer, que valen igual en un chat nuevo:
 
 ---
 
-## 5. Estado al 25 de noviembre de 2026
+## 5. Estado al 26 de noviembre de 2026
 
 | | Versión | Dónde está |
 |---|---|---|
-| Panel Kinsta | **0.9.5** | Desplegado en producción y verificado ahí mismo. |
+| Panel Kinsta | **0.11.0** | Desplegado en producción y verificado ahí mismo. |
 | Agente (plugin) | **0.7.0** | 0.6.4 está en 106 de 107. La 0.7.0 trae el registro de actividad y **no está repartida**. |
 | Agente (dentro del tema) | **0.7.0-tema** | La rama unida del jefe sigue en 0.6.4-tema con código de 0.6.3. La corrección + el registro están en una rama lista, **sin PR abierto**. |
 | Tema hijo | **2.6.1** | En el PR. |
+
+### Lo del 26 por la noche: los cinco primeros del PDF (0.10.0 → 0.11.0)
+
+El PDF del 26 lista **18 cambios**, y dice cuáles van primero: «del 1 al 5 son
+los que cambian lo que se ve al abrir». Esa noche se hicieron píldoras,
+filtros, el registro de actividad (el 16) y una pantalla llamada «Lo que
+toca»… **que no estaba en los 18**. Fer abrió el panel y no vio nada
+cambiado, porque de los cinco primeros solo había pedazos.
+
+**La lección, que es la que importa:** una lista priorizada por el cliente no
+se reordena por cuenta propia. Si se hace el 16 antes que el 2, el cliente ve
+la pantalla igual que ayer y con razón pregunta en qué se fue la tarde.
+
+- **El amarillo que quedó.** La paleta se había aplicado a `.swpk-nivel-*` y
+  nadie miró `.swpk-sev-*`, que es la que pinta Alta/Media/Baja en las tablas
+  de normas. Vive en `heredado.css`, que casi nunca se abre. **Buscar la clase
+  por su nombre no basta: hay que buscar el COLOR por su hex en las dos
+  hojas.** De paso salieron la mostaza de la celda «en pausa» y tres fondos
+  crema.
+
+- **`swpk-nivel-al_dia` lo compartían dos cosas.** El nivel de riesgo «Al día»
+  y la insignia «Automático» de cómo se actualiza. Ponerle gris a una se lo
+  ponía a la otra. La insignia tiene ahora su propia clase, `swpk-autoupd`.
+
+- **Sitios, de nueve columnas a cinco.** Las de Asesora y Contacto eran un
+  formulario abierto en las 109 filas a todas horas, para cualquiera con
+  permiso de administrar — o sea, siempre. Pasan a un modo con botón que
+  conserva los filtros. Versiones, revisado, doble paso y asesora se pliegan
+  en «Ver todo».
+
+- **La franja de grupo.** 4 px al inicio de la fila: azul, lila, gris. Fríos a
+  propósito — con un naranja ahí la fila vuelve a tener cinco manchas cálidas,
+  que es justo de lo que se quejó.
+
+- **«N normas sin cumplir»** en la fila, enlazando a la ficha ya filtrada. Se
+  escribió primero leyendo `$c->veredicto`, y la columna se llama `estado`:
+  habría salido 0 en las 109 filas sin dar error. Se vio contando filas en el
+  render, no mirando el código.
+
+- **La ficha:** «Ver su historial» (abre Historial ya filtrado por ese sitio) y
+  «Abrir en Kinsta» (necesita el id del entorno además del del sitio; sin él no
+  se dibuja, porque un enlace a un 404 es peor que ninguno). Y una segunda fila
+  de pastillas, «Cómo está»: Todas · No cumple · Sin medir · Cumple. Las
+  cuentas se calculan ANTES de filtrar, o al elegir «No cumple» las otras
+  dirían 0 y no habría vuelta.
+
+- **«Lo que toca», quitada entera.** Menú, manejador y vista.
 
 ### Lo del 25 y 26 (0.6.3 → 0.9.5)
 
