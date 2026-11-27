@@ -67,6 +67,13 @@ class SWPK_Revision {
 
 	/** Por qué sitio iba la última vuelta. Ver correr(). */
 	private const CURSOR = 'swpk_revision_cursor';
+
+	/** El reloj de respaldo y la cola, igual que en la sonda. Ver SWPK_Relevo. */
+	public const HOOK_TANDA = 'swpk_revision_tanda';
+
+	private const COLA      = 'swpk_revision_cola';
+	private const POR_TANDA = 4;
+	private const SEGUNDOS  = 25;
 	private const VIDA  = 25 * HOUR_IN_SECONDS;
 
 	/**
@@ -87,6 +94,10 @@ class SWPK_Revision {
 
 	public static function init(): void {
 		add_action( self::HOOK, [ __CLASS__, 'correr' ] );
+		add_action( self::HOOK_TANDA, [ __CLASS__, 'tanda' ] );
+
+		add_action( 'wp_ajax_nopriv_swpk_revision_relevo', [ __CLASS__, 'relevo' ] );
+		add_action( 'wp_ajax_swpk_revision_relevo', [ __CLASS__, 'relevo' ] );
 		self::programar();
 	}
 
@@ -97,6 +108,11 @@ class SWPK_Revision {
 	}
 
 	public static function desprogramar(): void {
+		$ts2 = wp_next_scheduled( self::HOOK_TANDA );
+		if ( $ts2 ) {
+			wp_unschedule_event( $ts2, self::HOOK_TANDA );
+		}
+
 		$ts = wp_next_scheduled( self::HOOK );
 		if ( $ts ) {
 			wp_unschedule_event( $ts, self::HOOK );
@@ -152,6 +168,35 @@ class SWPK_Revision {
 	 *
 	 * @return array<string,mixed>
 	 */
+	/**
+	 * Arranca la revisión del día. La llama el reloj.
+	 *
+	 * ─── Por qué esto cambió otra vez ───────────────────────────────────────
+	 *
+	 * El 25 de noviembre esto se arregló a medias: se le puso un cursor para
+	 * que cada día siguiera donde se había quedado, dando la vuelta a la
+	 * cartera en varios días. Mejor que nada, pero el 27 de noviembre la
+	 * opción seguía diciendo lo mismo todos los días:
+	 *
+	 *     {"estado":"corriendo","arranco_en":23,"total":109}
+	 *
+	 * «Corriendo» desde las 4:35 de la mañana, con 23 sitios hechos de 109.
+	 * O sea: el cursor avanzaba, sí, pero la revisión no terminaba NUNCA, y
+	 * de las diez normas que salen de aquí había 84 sitios sin medir. Dar la
+	 * vuelta en cinco días significa que el dato de un sitio tiene cinco días
+	 * cuando le toca.
+	 *
+	 * Son trece llamadas a la API de Kinsta por sitio, mil cuatrocientas en
+	 * total, y el cliente frena solo para no pasarse del límite de Kinsta:
+	 * catorce minutos largos. Eso no cabe en una petición, y pedir tiempo
+	 * otra vez no basta cuando quien corta es el servidor web.
+	 *
+	 * Así que va por tandas y se encadena sola, igual que la sonda: cuatro
+	 * sitios o veinticinco segundos, lo que llegue antes. Ver SWPK_Relevo
+	 * para la parte que costó encontrar.
+	 *
+	 * @return array<string,mixed>
+	 */
 	public static function correr(): array {
 		if ( ! self::disponible() ) {
 			update_option(
@@ -163,97 +208,168 @@ class SWPK_Revision {
 			return [ 'saltado' => 'La fuente no es la API de Kinsta.' ];
 		}
 
-		$todos = array_values(
-			array_filter(
-				SWPK_Inventario::todos(),
-				static fn( $s ) => '' !== trim( (string) $s->entorno_id )
-			)
-		);
+		// Si quedó una corrida a medias, se sigue esa en vez de empezar de
+		// cero: volver a empezar es lo que hacía que la cola de la cartera no
+		// se midiera nunca.
+		$cola = get_option( self::COLA, null );
 
-		$resumen = [ 'revisados' => 0, 'fallos' => 0, 'medidos' => 0 ];
+		if ( is_array( $cola ) && ! empty( $cola['pend'] ) ) {
+			return [ 'retomada' => count( $cola['pend'] ) ] + self::avanzar();
+		}
 
-		// ── Que se note si esto se muere a medio camino ─────────────────────
-		//
-		// Hasta hoy, lo único que esta función escribía era `swpk_ultima_revision`
-		// Y AL FINAL DEL TODO. O sea: si se moría antes de llegar, no quedaba
-		// ni rastro de que lo hubiera intentado.
-		//
-		// Y se moría. El 25 de noviembre de 2026 la opción NO EXISTÍA en
-		// producción, con la tarea programada y corriendo a diario desde
-		// hacía días. De las nueve normas que salen de aquí, 86 de los 109
-		// sitios estaban en «sin dato» y 23 medidos: justo lo que cabe en el
-		// tiempo que PHP le da a una petición antes de matarla.
-		//
-		// Son trece llamadas a la API de Kinsta POR SITIO, una detrás de
-		// otra. Con 109 sitios son más de mil, y esta función era la única
-		// tarea larga del panel que no volvía a pedir tiempo por el camino
-		// —la sonda y la corrida sí lo hacen—. Dos arreglos, y hacen falta
-		// los dos:
-		//
-		//   1. Pedir tiempo otra vez en cada sitio, como la sonda.
-		//   2. Si aun así se muere, que la próxima vuelta SIGA DONDE SE QUEDÓ
-		//      en vez de volver a empezar por el principio. Sin esto, los
-		//      mismos 23 sitios se medían todos los días y los otros 86 no
-		//      se iban a medir nunca.
-		$desde = (int) get_option( self::CURSOR, 0 );
-		$desde = ( $desde >= 0 && $desde < count( $todos ) ) ? $desde : 0;
+		$pend = [];
 
+		foreach ( SWPK_Inventario::todos() as $s ) {
+			if ( '' !== trim( (string) $s->entorno_id ) ) {
+				$pend[ (string) $s->sitio_id ] = (string) $s->entorno_id;
+			}
+		}
+
+		$cola = [
+			'inicio'  => current_time( 'mysql' ),
+			'pend'    => $pend,
+			'total'   => count( $pend ),
+			'resumen' => [ 'revisados' => 0, 'fallos' => 0, 'medidos' => 0 ],
+			'llave'   => wp_generate_password( 32, false ),
+			'latido'  => time(),
+		];
+
+		update_option( self::COLA, $cola, false );
 		update_option(
 			'swpk_ultima_revision',
-			[
-				'cuando'  => current_time( 'mysql' ),
-				'estado'  => 'corriendo',
-				'arranco_en' => $desde,
-				'total'   => count( $todos ),
-			],
+			[ 'cuando' => current_time( 'mysql' ), 'estado' => 'corriendo', 'total' => count( $pend ) ],
 			false
 		);
 
-		// Se recorre la cartera entera empezando por donde se quedó la vez
-		// pasada y dando la vuelta: así, muera donde muera, en unos días los
-		// ha visto todos.
-		$orden = array_merge(
-			array_slice( $todos, $desde ),
-			array_slice( $todos, 0, $desde )
-		);
+		return [ 'arrancada' => true, 'total' => $cola['total'] ] + self::avanzar();
+	}
 
-		foreach ( $orden as $i => $sitio ) {
-			// Cada sitio vuelve a pedir tiempo. Trece llamadas a una API de
-			// fuera pueden tardar diez segundos largos, y treinta segundos de
-			// límite dan para tres sitios.
-			if ( function_exists( 'set_time_limit' ) ) {
-				@set_time_limit( 60 ); // phpcs:ignore WordPress.PHP.NoSilencedErrors
-			}
+	/** Lo que llama el reloj de respaldo. */
+	public static function tanda(): void {
+		self::avanzar();
+	}
 
-			$r = self::revisar_uno( (string) $sitio->sitio_id, (string) $sitio->entorno_id );
+	/**
+	 * Revisa unos cuantos sitios y deja pedida la siguiente tanda.
+	 *
+	 * @param int $segundos 0 = hasta terminar (línea de comandos y pruebas).
+	 * @return array<string,mixed>
+	 */
+	public static function avanzar( int $segundos = self::SEGUNDOS ): array {
+		$cola = get_option( self::COLA, null );
 
-			++$resumen['revisados'];
-			$resumen['fallos'] += count( (array) ( $r['fallos'] ?? [] ) );
-
-			SWPK_Normas::medir( (string) $sitio->sitio_id, [], SWPK_Normas::COMPROBADORES_DE_REVISION );
-			++$resumen['medidos'];
-
-			// El cursor se guarda SOBRE LA MARCHA, no al final: guardarlo al
-			// final es justo lo que no sirve cuando el problema es que no se
-			// llega al final.
-			update_option( self::CURSOR, ( $desde + $i + 1 ) % max( 1, count( $todos ) ), false );
+		if ( ! is_array( $cola ) ) {
+			return [];
 		}
 
-		// Estas tres salen del inventario y no de la API, así que se miden
-		// aunque la revisión no haya podido correr.
+		if ( empty( $cola['pend'] ) ) {
+			return self::cerrar( $cola );
+		}
+
+		if ( ! SWPK_Relevo::tomar( 'revision' ) ) {
+			return [ 'ocupado' => true ];
+		}
+
+		$hasta = $segundos > 0 ? microtime( true ) + $segundos : INF;
+
+		do {
+			$tanda = array_slice( (array) $cola['pend'], 0, self::POR_TANDA, true );
+
+			if ( ! $tanda ) {
+				break;
+			}
+
+			foreach ( array_keys( $tanda ) as $id ) {
+				unset( $cola['pend'][ $id ] );
+			}
+
+			$cola['latido'] = time();
+			update_option( self::COLA, $cola, false );
+
+			foreach ( $tanda as $sitio_id => $entorno_id ) {
+				// Trece llamadas a una API de fuera pueden tardar diez
+				// segundos largos: cada sitio vuelve a pedir tiempo.
+				if ( function_exists( 'set_time_limit' ) ) {
+					@set_time_limit( 60 ); // phpcs:ignore WordPress.PHP.NoSilencedErrors
+				}
+
+				$r = self::revisar_uno( (string) $sitio_id, (string) $entorno_id );
+
+				++$cola['resumen']['revisados'];
+				$cola['resumen']['fallos'] += count( (array) ( $r['fallos'] ?? [] ) );
+
+				SWPK_Normas::medir( (string) $sitio_id, [], SWPK_Normas::COMPROBADORES_DE_REVISION );
+				++$cola['resumen']['medidos'];
+			}
+
+			$cola['latido'] = time();
+			update_option( self::COLA, $cola, false );
+		} while ( ! empty( $cola['pend'] ) && microtime( true ) < $hasta );
+
+		SWPK_Relevo::soltar( 'revision' );
+
+		if ( ! empty( $cola['pend'] ) ) {
+			SWPK_Relevo::pedir( 'swpk_revision_relevo', (string) ( $cola['llave'] ?? '' ), self::HOOK_TANDA );
+
+			return [ 'pendientes' => count( $cola['pend'] ) ] + (array) $cola['resumen'];
+		}
+
+		return self::cerrar( $cola );
+	}
+
+	/** Si hay una revisión a medias, cuántos sitios le faltan. */
+	public static function pendientes(): int {
+		$cola = get_option( self::COLA, null );
+
+		return is_array( $cola ) ? count( (array) ( $cola['pend'] ?? [] ) ) : 0;
+	}
+
+	/** Cierra la revisión: las normas de inventario, el resumen y a dormir. */
+	private static function cerrar( array $cola ): array {
+		// Estas salen del inventario y no de la API, así que se miden aunque
+		// la revisión no haya podido leer nada.
 		foreach ( SWPK_Inventario::todos() as $sitio ) {
 			SWPK_Normas::medir( (string) $sitio->sitio_id, [], SWPK_Normas::COMPROBADORES_DE_INVENTARIO );
 		}
 
+		$resumen = (array) ( $cola['resumen'] ?? [] );
+
 		update_option(
 			'swpk_ultima_revision',
-			[ 'cuando' => current_time( 'mysql' ), 'estado' => 'terminada', 'total' => count( $todos ) ] + $resumen,
+			[
+				'cuando' => current_time( 'mysql' ),
+				'empezo' => (string) ( $cola['inicio'] ?? '' ),
+				'estado' => 'terminada',
+				'total'  => (int) ( $cola['total'] ?? 0 ),
+			] + $resumen,
 			false
 		);
+
+		delete_option( self::COLA );
+		delete_option( self::CURSOR );
 
 		SWPK_Estado::olvidar();
 
 		return $resumen;
+	}
+
+	/** El relevo entre tandas. Lo autoriza la llave, no una sesión. */
+	public static function relevo(): void {
+		$cola = get_option( self::COLA, null );
+
+		if ( ! is_array( $cola ) || '' === (string) ( $cola['llave'] ?? '' ) ) {
+			wp_die( '', '', [ 'response' => 204 ] );
+		}
+
+		if ( ! hash_equals( (string) $cola['llave'], SWPK_Relevo::llave_pedida() ) ) {
+			wp_die( '', '', [ 'response' => 403 ] );
+		}
+
+		ignore_user_abort( true );
+
+		self::avanzar();
+
+		wp_die( '', '', [ 'response' => 204 ] );
 	}
 
 	/**

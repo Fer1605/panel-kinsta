@@ -529,60 +529,16 @@ class SWPK_Sonda {
 	}
 
 	private static function candado(): bool {
-		if ( get_transient( self::CANDADO ) ) {
-			return false;
-		}
-
-		set_transient( self::CANDADO, 1, 180 );
-
-		return true;
+		return SWPK_Relevo::tomar( 'sonda' );
 	}
 
 	private static function soltar_candado(): void {
-		delete_transient( self::CANDADO );
+		SWPK_Relevo::soltar( 'sonda' );
 	}
 
-	/**
-	 * Pide la siguiente tanda al propio panel, sin esperar la respuesta.
-	 *
-	 * Si el hosting no permite que un sitio se llame a sí mismo, esto no hace
-	 * nada y no rompe nada: queda el reloj de HOOK_TANDA, más lento pero
-	 * llega.
-	 */
+	/** Ver SWPK_Relevo: ahí está por qué esto no se manda sin esperar. */
 	private static function encadenar( string $llave ): void {
-		if ( '' === $llave ) {
-			return;
-		}
-
-		// Y la red, siempre: si la petición de abajo no sale, esto lo recoge
-		// en la siguiente pasada del reloj del hosting.
-		if ( ! wp_next_scheduled( self::HOOK_TANDA ) ) {
-			wp_schedule_single_event( time() + 120, self::HOOK_TANDA );
-		}
-
-		wp_remote_post(
-			admin_url( 'admin-ajax.php' ),
-			[
-				// Se espera medio segundo a propósito, en vez de mandarla sin
-				// esperar.
-				//
-				// Medido en producción el 27-11-2026: con 'blocking' => false
-				// la petición sale desde una pantalla, pero NO sale desde la
-				// línea de comandos ni desde el reloj —que es justo de donde
-				// arranca esta corrida—, y la tanda siguiente no llegaba
-				// nunca. Con una espera corta sale siempre, y medio segundo
-				// no es esperar a que trabaje: la tanda del otro lado tarda
-				// veinticinco. Al cortarse la espera, el panel sigue
-				// trabajando igual, porque relevo() pone ignore_user_abort().
-				'blocking'  => true,
-				'timeout'   => 0.5,
-				'sslverify' => false,
-				'body'      => [
-					'action' => 'swpk_sonda_relevo',
-					'llave'  => $llave,
-				],
-			]
-		);
+		SWPK_Relevo::pedir( 'swpk_sonda_relevo', $llave, self::HOOK_TANDA );
 	}
 
 	/**
@@ -599,9 +555,7 @@ class SWPK_Sonda {
 			wp_die( '', '', [ 'response' => 204 ] );
 		}
 
-		$llave = isset( $_POST['llave'] ) ? sanitize_text_field( wp_unslash( (string) $_POST['llave'] ) ) : '';
-
-		if ( ! hash_equals( (string) $cola['llave'], $llave ) ) {
+		if ( ! hash_equals( (string) $cola['llave'], SWPK_Relevo::llave_pedida() ) ) {
 			wp_die( '', '', [ 'response' => 403 ] );
 		}
 

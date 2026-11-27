@@ -155,7 +155,7 @@ Reglas de Fer, que valen igual en un chat nuevo:
 
 | | Versión | Dónde está |
 |---|---|---|
-| Panel Kinsta | **0.16.4** | Desplegado en producción y verificado ahí mismo. |
+| Panel Kinsta | **0.17.0** | Desplegado en producción y verificado ahí mismo. |
 | Agente (plugin) | **0.7.0** | 0.6.4 está en 106 de 107. La 0.7.0 trae el registro de actividad y **no está repartida**. |
 | Agente (dentro del tema) | **0.7.0-tema** | La rama unida del jefe sigue en 0.6.4-tema con código de 0.6.3. La corrección + el registro están en una rama lista, **sin PR abierto**. |
 | Tema hijo | **2.6.1** | En el PR. |
@@ -317,8 +317,40 @@ reales de 11 a 15. Y la corrida encontró **20 sitios con algún archivo
 alcanzable desde fuera**; en Heraldos, `readme.html`, que dice qué versión de
 WordPress corre.
 
-Las otras 1.003 mediciones sin dato no son de la sonda: son las que contesta
-el agente, en sitios que no lo tienen. Ese es otro asunto.
+#### Y las otras 1.003: la revisión diaria tampoco terminaba
+
+Dije que eran «las que contesta el agente, en sitios que no lo tienen». **Era
+falso**, y Fer lo cazó en una línea: «entiendo que solo era uno el que no
+tenía el agente instalado». Son dos —Cito Color y Trazo—, no ochenta.
+
+Lo que había detrás era la misma enfermedad por tercera vez.
+`swpk_ultima_revision` decía, todos los días:
+
+    {"estado":"corriendo","arranco_en":23,"total":109}
+
+«Corriendo» desde las 4:35 de la mañana, con 23 sitios de 109. Son trece
+llamadas a la API de Kinsta por sitio —mil cuatrocientas—, y el cliente frena
+solo para no pasarse del límite de Kinsta: catorce minutos. No cabe en una
+petición.
+
+El 25 de noviembre esto ya se había arreglado **a medias**: se le puso un
+cursor para que cada día siguiera donde se quedó y diera la vuelta a la
+cartera en varios días. El cursor avanzaba, sí. Pero la revisión no terminaba
+nunca, y el dato de un sitio tenía cinco días cuando le tocaba. Un arreglo
+que esconde el síntoma es peor que ninguno: desde entonces la opción decía
+«corriendo» y nadie volvió a mirarla.
+
+Ahora va por tandas y se encadena sola, igual que la sonda. **Comprobado
+desde el reloj:** `{"estado":"terminada","total":108,"revisados":108,
+"fallos":0,"medidos":108}` en 13 minutos. Primera vez que termina.
+
+Y como ya iban dos copias del mismo mecanismo, la parte que costó encontrar
+vive en un solo sitio: **`SWPK_Relevo`**. Ahí está escrito por qué el aviso
+se manda esperando medio segundo y no sin esperar, que es lo que
+`SWPK_Trabajo::encadenar()` hace y lo que a esas dos no les funcionaba.
+
+**Resultado del día, medido:** las mediciones sin dato pasaron de 27 por
+sitio a **9,8**. Heraldos, de 27 a **5**.
 
 ---
 
