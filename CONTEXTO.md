@@ -156,7 +156,7 @@ Reglas de Fer, que valen igual en un chat nuevo:
 
 | | Versión | Dónde está |
 |---|---|---|
-| Panel Kinsta | **0.19.2** | En el repositorio y comprobado en local a 1280 px. **La 0.18.1 es la que está en producción**: la 0.19.x todavía no se ha desplegado. |
+| Panel Kinsta | **0.19.3** | En el repositorio y comprobado en local a 1280 px. **La 0.18.1 es la que está en producción**: la 0.19.x todavía no se ha desplegado. |
 | Agente (plugin) | **0.7.0** | 0.6.4 está en 106 de 107. La 0.7.0 trae el registro de actividad y **no está repartida**. |
 | Agente (dentro del tema) | **0.7.0-tema** | La rama unida del jefe sigue en 0.6.4-tema con código de 0.6.3. La corrección + el registro están en una rama lista, **sin PR abierto**. |
 | Tema hijo | **2.6.1** | En el PR. |
@@ -237,8 +237,13 @@ Y la otra, que ya estaba escrita en la hoja de estilos y se volvió a romper:
 **ningún aviso lleva franja de color en la orilla izquierda.** El aviso nuevo
 salió con una. Se quitó, y de paso las tres que quedaban sueltas —el reparto
 del trabajo de un sitio, la nota de «no se pudo medir» y la celda de consejo
-de los apagados—. La única franja que se queda es la de «quién se mueve» en
-cada fila, porque ahí el color dice un dato y no decora un párrafo.
+de los apagados—. Y la de «quién se mueve» en cada fila tampoco se queda como
+franja: pasa a ser un **punto de color** delante de la frase —«cambiémoslas a
+no líneas, sino a un círculo o algo que los identifique con ese color»—. El
+color sigue diciendo de quién es el trabajo, pero sin rayar la fila, y al lado
+va siempre la palabra que dice lo mismo. **Ya no queda ni una franja de color
+en todo el panel**: `grep -n "border-left" assets/*.css` solo devuelve tres
+líneas grises de 1 px, que son separadores de columna.
 
 **Lo que sigue:** Caídas, que es el punto 2 de la lista de §9 del estilo de las
 pantallas.

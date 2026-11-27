@@ -130,10 +130,16 @@ fila en fila.
   color a una se lo cambiaba a la otra.
 - **Verificar el color calculado en el navegador**, no en el archivo. Un azul
   que se leía 1,60:1 pasó tres revisiones del código.
-- Las franjas de color de «quién se mueve»: nosotros `#1c6dc7`, hosting
-  `#9aa4b2`, cliente `#7a5cd6`, esperar `#b4690e`. **Son la única excepción
-  a la regla de abajo**, y lo son porque ahí el color dice un dato —de quién
-  es el trabajo— y no decora un bloque de texto.
+- **Un color que dice un dato se enseña con un PUNTO, no con una franja.**
+  Los de «quién se mueve» —nosotros `#1c6dc7`, hosting `#9aa4b2`, cliente
+  `#7a5cd6`, esperar `#b4690e`— eran una franja en la orilla izquierda de
+  cada fila y ahora son un círculo de 8 px delante de la frase: «cambiémoslas
+  a no líneas, sino a un círculo o algo que los identifique con ese color».
+  El color sigue diciendo lo mismo, la fila deja de estar rayada, y el punto
+  es lo que el panel ya usa en otras partes para «esto es de este grupo».
+- Y el punto **nunca va solo**: al lado va siempre la frase que dice lo mismo
+  con palabras —«Lo actualiza Kinsta», «Desactivarlo mientras tanto»—. Un
+  color no puede ser la única manera de saber algo.
 - **Ningún aviso, nota o recuadro lleva franja de color en la orilla
   izquierda.** «Evita usar las líneas de color en la orilla, quítalas todas
   las que encuentres […] esas líneas son mucha inteligencia, te dije que las

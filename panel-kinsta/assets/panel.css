@@ -2662,21 +2662,51 @@ body[class*="panel-kinsta"] .swpk-pendiente-pildora {
 	margin-top: 0;
 }
 
-/* El «qué hacer» de la línea cerrada: la frase corta, con una franja que dice
-   de quién es el trabajo. Franja fría y fina, porque en esta pantalla el color
-   ya lo lleva el nivel y dos colores fuertes juntos se leen como uno. */
+/* ── El «qué hacer» de la línea cerrada: un punto, no una franja ────────────
+   La frase corta de qué hay que hacer, con una marca de color que dice de
+   quién es el trabajo. Era una franja en la orilla izquierda y ahora es un
+   PUNTO delante:
+
+     «las líneas que estábamos usando para identificar cosas, cambiémoslas a
+      no líneas, sino a un círculo o algo que los identifique con ese color»
+
+   El color sigue diciendo lo mismo y la fila deja de estar rayada. El punto
+   es además lo que ya se usa en todas partes para «esto es de este grupo», y
+   un punto de 8 px pesa menos que una barra que mide todo el alto del
+   renglón. Frío y pequeño, porque en esta fila el color fuerte ya lo lleva el
+   nivel y dos colores fuertes juntos se leen como uno.
+
+   El punto NO es la única pista: al lado va siempre la frase —«Actualizar a
+   4.4.2», «Lo actualiza Kinsta»— que dice lo mismo con palabras. Un color
+   solo no puede ser la única manera de saber algo. */
 body[class*="panel-kinsta"] .swpk-pendiente-hacer {
-	border-left: 3px solid #c3cad6;
-	padding-left: 11px;
+	--swpk-quien: #c3cad6;
+	display: flex;
+	align-items: flex-start;
+	gap: 8px;
 	font-weight: 600;
 	font-size: 13.5px;
 	line-height: 1.35;
 	color: #1d2327;
 }
-body[class*="panel-kinsta"] .swpk-hacer-nosotros { border-left-color: #1c6dc7; }
-body[class*="panel-kinsta"] .swpk-hacer-hosting  { border-left-color: #9aa4b2; }
-body[class*="panel-kinsta"] .swpk-hacer-cliente  { border-left-color: #7a5cd6; }
-body[class*="panel-kinsta"] .swpk-hacer-esperar  { border-left-color: #b4690e; }
+
+body[class*="panel-kinsta"] .swpk-pendiente-hacer::before {
+	content: "";
+	flex: 0 0 auto;
+	/* 5 px lo deja en el centro óptico del primer renglón: la caja de línea
+	   mide unos 18 px y el punto 8. Sin esto se pega al borde de arriba y
+	   parece una viñeta mal puesta. */
+	margin-top: 5px;
+	width: 8px;
+	height: 8px;
+	border-radius: 50%;
+	background: var(--swpk-quien);
+}
+
+body[class*="panel-kinsta"] .swpk-hacer-nosotros { --swpk-quien: #1c6dc7; }
+body[class*="panel-kinsta"] .swpk-hacer-hosting  { --swpk-quien: #9aa4b2; }
+body[class*="panel-kinsta"] .swpk-hacer-cliente  { --swpk-quien: #7a5cd6; }
+body[class*="panel-kinsta"] .swpk-hacer-esperar  { --swpk-quien: #b4690e; }
 
 /* ── Vulnerabilidades y pendientes, la pantalla de toda la cartera ──────────
    Es la misma línea que se despliega que la ficha de un sitio, con una
@@ -2745,7 +2775,6 @@ body[class*="panel-kinsta"] .swpk-tarjeta-menor .swpk-n {
 		grid-template-columns: 1fr;
 		gap: 6px;
 	}
-	body[class*="panel-kinsta"] .swpk-pendiente-hacer { border-left: 0; padding-left: 0; }
 }
 
 /* ── La norma abierta: tres pasos numerados, uno debajo de otro ──────────────
