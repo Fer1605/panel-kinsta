@@ -178,6 +178,14 @@ $url_pestana = static fn( string $s ) => add_query_arg(
 			href="<?php echo esc_url( add_query_arg( [ 'page' => 'panel-kinsta-reporte', 'sitio' => $sitio_id ] + SWPK_Vista::rastro(), admin_url( 'admin.php' ) ) ); ?>">
 			Reporte para el cliente
 		</a>
+		<?php
+		// La burbuja del reporte iba DESPUÉS del botón de Kinsta, así que
+		// parecía explicar ese: «la burbuja no dice nada relacionado a Kinsta
+		// ni se entiende qué onda». Cada burbuja pegada a lo suyo.
+		echo wp_kses_post( SWPK_Vista::ayuda(
+			'Qué se le notificó a este cliente y cuándo, en una hoja lista para imprimir o guardar en PDF.'
+		) );
+		?>
 
 		<?php
 		// El cuarto enlace de la barra. Va al hosting, que es a donde hay que
@@ -191,17 +199,15 @@ $url_pestana = static fn( string $s ) => add_query_arg(
 		?>
 		<?php if ( ! empty( $sitio->entorno_id ) ) : ?>
 			<a class="button" target="_blank" rel="noopener"
-				href="<?php echo esc_url( sprintf(
-					'https://my.kinsta.com/sites/info/%s/%s',
-					rawurlencode( (string) $sitio->sitio_id ),
-					rawurlencode( (string) $sitio->entorno_id )
-				) ); ?>">
+				href="<?php echo esc_url( SWPK_Codigos::url_sitio( $sitio ) ); ?>">
 				Abrir en Kinsta ↗
 			</a>
+			<?php echo wp_kses_post( SWPK_Vista::ayuda(
+				'Abre la ficha de este sitio en MyKinsta, en otra pestaña: los entornos, los respaldos, '
+				. 'la caché, los registros y el interruptor de las actualizaciones automáticas del hosting. '
+				. 'Hay que tener la sesión de Kinsta iniciada.'
+			) ); ?>
 		<?php endif; ?>
-		<?php echo wp_kses_post( SWPK_Vista::ayuda(
-			'Qué se le notificó a este cliente y cuándo, en una hoja lista para imprimir o guardar en PDF.'
-		) ); ?>
 
 		<?php if ( SWPK_Perfiles::puede( SWPK_Perfiles::ADMINISTRAR ) ) : ?>
 			<?php
@@ -408,64 +414,52 @@ $url_pestana = static fn( string $s ) => add_query_arg(
 		<?php
 		// ── «Aquí no me dice qué podemos hacer» ─────────────────────────────
 		//
+		//   «tiene un nivel crítico y dice que hay un parche, pero no tiene una
+		//    actualización, ¿o sí? Entonces, ¿qué es lo que podemos hacer? […]
+		//    mi jefe quiere saber qué puede hacer»
+		//
 		// La tabla tenía cinco columnas —módulo, versión, nivel, quién puede
-		// aprovecharlo, qué permite— y ninguna contestaba lo único que trae a
-		// alguien a esta pantalla:
+		// aprovecharlo, qué permite— y ninguna contestaba eso. Se añadió una
+		// sexta con la respuesta y el remedio salió peor que la enfermedad:
 		//
-		//   «tiene un nivel crítico y de vulnerabilidad y dice que hay un
-		//    parche, pero no tiene una actualización, ¿o sí? Entonces, ¿qué es
-		//    lo que podemos hacer? […] mi jefe quiere saber qué puede hacer»
+		//   «esta visualización ahora no me gusta, siento que se ve más
+		//    desordenado y se acumula toda la información»
 		//
-		// Ahora son cuatro columnas y la tercera es la respuesta. La versión
-		// se fue dentro del módulo, que es donde se lee sin ocupar columna, y
-		// «quién puede» y «qué permite» se juntaron en una sola: son la misma
-		// pregunta —por qué importa— partida en dos.
+		// Tenía razón: cuatro columnas de párrafos son cuatro bloques de texto
+		// compitiendo, y cada módulo ocupaba media pantalla. El mismo pozo que
+		// había en las normas, y que allí se resolvió desplegando cada línea.
+		//
+		// Así que esto se lee ahora igual que las normas: la línea cerrada dice
+		// las tres cosas con las que se decide —qué módulo, cómo de grave, y
+		// qué hay que hacer— y el porqué, que es lo largo, vive dentro.
 		?>
-		<table class="widefat striped swpk-tabla swpk-tabla-pendiente">
-			<thead>
-				<tr>
-					<th>Módulo</th>
-					<th style="width:120px">Nivel</th>
-					<th style="width:30%">Qué hacer</th>
-					<th>Por qué importa</th>
-				</tr>
-			</thead>
-			<tbody>
-			<?php foreach ( $hallazgos as $h ) : ?>
-				<?php
-				$v     = $h['vulnerabilidades'][0] ?? null;
-				$hacer = SWPK_QueHacer::para( $h );
-				?>
-				<tr>
-					<td>
-						<strong><?php echo esc_html( SWPK_Textos::limpiar_titulo( (string) $h['titulo'] ) ); ?></strong><br>
-						<span class="swpk-mono" style="color:#50575e"><?php echo esc_html( $h['slug'] ); ?></span>
-						<div style="margin-top:4px">
-							<span class="swpk-mono"><?php echo esc_html( $h['version'] ); ?></span>
-							<?php if ( '' !== $h['version_disponible'] ) : ?>
-								→ <span class="swpk-mono" style="color:#0b5ed7"><?php echo esc_html( $h['version_disponible'] ); ?></span>
-							<?php endif; ?>
+		<div class="swpk-normas swpk-pendientes">
+		<?php foreach ( $hallazgos as $h ) : ?>
+			<?php
+			$v     = $h['vulnerabilidades'][0] ?? null;
+			$hacer = SWPK_QueHacer::para( $h );
+			$quien = $v
+				? SWPK_Textos::quien_puede( (string) ( $v->cvss_vector ?? '' ), (string) $v->descripcion )
+				: null;
+			?>
+			<details class="swpk-norma swpk-pendiente">
+				<summary>
+					<span class="swpk-norma-nombre">
+						<strong><?php echo esc_html( SWPK_Textos::limpiar_titulo( (string) $h['titulo'] ) ); ?></strong>
+						<span class="swpk-norma-aclara">
+							<span class="swpk-mono"><?php echo esc_html( $h['version'] ); ?></span><?php
+							if ( '' !== $h['version_disponible'] ) : ?> → <span class="swpk-mono" style="color:#0b5ed7"><?php
+								echo esc_html( $h['version_disponible'] );
+							?></span><?php endif; ?>
+							· <?php echo esc_html( $h['slug'] ); ?>
 							<?php if ( isset( $h['activo'] ) && 0 === (int) $h['activo'] ) : ?>
-								<span class="swpk-etq swpk-autoupd" title="Instalado pero desactivado. Sus archivos siguen en el servidor.">Apagado</span>
+								· apagado
 							<?php endif; ?>
-						</div>
-						<?php
-						// El puente al Historial de ESTE módulo en ESTE sitio.
-						//
-						// «¿cómo se actualizó ayer?» se contestaba saliendo a
-						// Historial, buscando el sitio en un desplegable de 109
-						// nombres y leyendo a ojo. Ahora es un clic.
-						?>
-						<a style="font-size:12px" href="<?php echo esc_url( add_query_arg(
-							[ 'page' => 'panel-kinsta-movimientos', 'sitio' => $sitio_id, 'q' => $h['slug'] ],
-							admin_url( 'admin.php' )
-						) ); ?>">Ver su historial →</a>
-					</td>
-					<td>
+						</span>
+					</span>
+					<span class="swpk-norma-estado">
 						<?php echo wp_kses_post( SWPK_Admin::nivel_badge( $h['nivel'] ) ); ?>
 						<?php
-						// Qué se puede hacer con ella: hay parche, no lo hay
-						// todavía, o el módulo está cerrado y no lo habrá.
 						$pildora = SWPK_Admin::parche_badge(
 							$v ? (bool) (int) ( $v->parcheada ?? 0 ) : null,
 							(string) $h['slug'],
@@ -473,40 +467,63 @@ $url_pestana = static fn( string $s ) => add_query_arg(
 						);
 						if ( '' !== $pildora ) :
 							?>
-							<div style="margin-top:6px"><?php echo wp_kses_post( $pildora ); ?></div>
+							<span class="swpk-pendiente-pildora"><?php echo wp_kses_post( $pildora ); ?></span>
 						<?php endif; ?>
-					</td>
-					<td class="swpk-hacer swpk-hacer-<?php echo esc_attr( $hacer['quien'] ); ?>">
-						<strong><?php echo esc_html( $hacer['titular'] ); ?></strong>
-						<p><?php echo esc_html( $hacer['detalle'] ); ?></p>
-					</td>
-					<td>
-						<?php if ( $v ) : ?>
-							<?php $quien = SWPK_Textos::quien_puede( (string) ( $v->cvss_vector ?? '' ), (string) $v->descripcion ); ?>
-							<p style="margin:0 0 6px">
-								<span class="swpk-rotulin">Quién</span>
-								<span style="color:<?php echo $quien['sin_cuenta'] ? '#9e0b10' : '#1d2327'; ?>">
-									<?php echo esc_html( $quien['frase'] ); ?>
-								</span>
+					</span>
+					<span class="swpk-pendiente-hacer swpk-hacer-<?php echo esc_attr( $hacer['quien'] ); ?>">
+						<?php echo esc_html( $hacer['titular'] ); ?>
+					</span>
+				</summary>
+
+				<div class="swpk-norma-dentro">
+					<ol class="swpk-norma-pasos">
+						<li>
+							<h4>Por qué importa</h4>
+							<?php if ( $v ) : ?>
+								<p style="margin:0 0 6px">
+									<span class="swpk-rotulin">Quién puede aprovecharlo</span>
+									<span style="color:<?php echo $quien['sin_cuenta'] ? '#9e0b10' : '#1d2327'; ?>">
+										<?php echo esc_html( $quien['frase'] ); ?>
+									</span>
+								</p>
+								<p style="margin:0">
+									<span class="swpk-rotulin">Qué permite hacer</span>
+									<?php echo esc_html( SWPK_Textos::explicar( (string) $v->titulo, (string) $v->descripcion ) ); ?>
+									<?php if ( '' !== (string) $v->cve ) : ?>
+										<br><span class="swpk-mono swpk-mudo"><?php echo esc_html( (string) $v->cve ); ?></span>
+									<?php endif; ?>
+								</p>
+							<?php elseif ( 'vulnerable_sin_detalle' === $h['motivo'] ) : ?>
+								<p style="margin:0">
+									<span style="color:#9e0b10">El hosting marca esta versión como vulnerable</span>,
+									y todavía no hay detalle público de la falla. El dato del hosting vale igual:
+									lo que falta es el «por qué».
+								</p>
+							<?php else : ?>
+								<p style="margin:0">
+									No tiene ninguna falla conocida publicada. Es una actualización pendiente y nada más:
+									importa porque las versiones viejas acumulan fallas que se publican después.
+								</p>
+							<?php endif; ?>
+						</li>
+
+						<li>
+							<h4>Qué hacer</h4>
+							<p><strong><?php echo esc_html( $hacer['titular'] ); ?>.</strong>
+								<?php echo esc_html( $hacer['detalle'] ); ?></p>
+							<p class="swpk-norma-pie">
+								<a class="button button-small" href="<?php echo esc_url( add_query_arg(
+									[ 'page' => 'panel-kinsta-movimientos', 'sitio' => $sitio_id, 'q' => $h['slug'] ],
+									admin_url( 'admin.php' )
+								) ); ?>">Ver su historial</a>
+								<span class="swpk-mudo">Cada vez que este módulo cambió de versión en este sitio.</span>
 							</p>
-							<p style="margin:0">
-								<span class="swpk-rotulin">Qué permite</span>
-								<?php echo esc_html( SWPK_Textos::explicar( (string) $v->titulo, (string) $v->descripcion ) ); ?>
-								<?php if ( '' !== (string) $v->cve ) : ?>
-									<br><span class="swpk-mono" style="color:#50575e"><?php echo esc_html( (string) $v->cve ); ?></span>
-								<?php endif; ?>
-							</p>
-						<?php elseif ( 'vulnerable_sin_detalle' === $h['motivo'] ) : ?>
-							<span style="color:#9e0b10">El hosting la marca como vulnerable</span>,
-							<span style="color:#50575e">a la espera del detalle público.</span>
-						<?php else : ?>
-							<span style="color:#50575e">Solo actualización pendiente, sin vulnerabilidad conocida.</span>
-						<?php endif; ?>
-					</td>
-				</tr>
-			<?php endforeach; ?>
-			</tbody>
-		</table>
+						</li>
+					</ol>
+				</div>
+			</details>
+		<?php endforeach; ?>
+		</div>
 		<?php SWPK_Vista::caja_cerrar(); ?>
 	<?php elseif ( 'pendiente' === $seccion && SWPK_Riesgo::SIN_DATOS === $nivel ) : ?>
 		<?php SWPK_Vista::caja_abrir( 'Todo lo que tiene pendiente', 'sin datos', 'swpk-c12' ); ?>
@@ -600,7 +617,7 @@ $url_pestana = static fn( string $s ) => add_query_arg(
 		// habla de XML-RPC no sirve de nada si hay que ir pasando páginas hasta
 		// dar con ella. Busca en el nombre, en la aclaración y en el porqué,
 		// que es por donde alguien la reconocería.
-		$buscar = isset( $_GET['buscar'] ) ? trim( sanitize_text_field( wp_unslash( (string) $_GET['buscar'] ) ) ) : '';
+		$buscar = isset( $_GET['q'] ) ? trim( sanitize_text_field( wp_unslash( (string) $_GET['q'] ) ) ) : '';
 
 		if ( '' !== $buscar ) {
 			$aguja    = mb_strtolower( $buscar );
@@ -732,52 +749,42 @@ $url_pestana = static fn( string $s ) => add_query_arg(
 			$temas_opciones[ $ARREGLABLES ] = sprintf( 'Las que el panel sabe arreglar (%d)', count( $las_arreglables ) );
 		}
 
-		$hay_filtro = '' !== $tema_pedido || '' !== $estado_pedido || '' !== $buscar;
+		$opciones_estado = [];
+		foreach ( $estados_posibles as $clave_e => $nombre_e ) {
+			$opciones_estado[ $clave_e ] = sprintf( '%s (%d)', $nombre_e, $cuenta_estado[ $clave_e ] );
+		}
+
+		// ── La misma barra que el resto del panel ───────────────────────────
+		//
+		//   «y estos filtros quedan horribles, nada que ver con los demás del
+		//    sitio, ¿qué onda?»
+		//
+		// Los había escrito a mano en vez de usar SWPK_Vista::barra_de_filtros(),
+		// que es la que dibuja la de Sitios, la de Vulnerabilidades y la de
+		// Historial. Salían con otra caja, otro alto y otra tipografía en la
+		// misma pantalla. Es la regla 5 otra vez: lo mismo se ve igual en todas
+		// partes, o deja de reconocerse.
+		SWPK_Vista::barra_de_filtros(
+			'panel-kinsta-sitio',
+			[
+				'tema' => [
+					'etiqueta' => 'Tipo de norma',
+					'opciones' => $temas_opciones,
+					'actual'   => $tema_pedido,
+					'todas'    => sprintf( 'Todas (%d)', count( $aplicables ) ),
+				],
+				'estado' => [
+					'etiqueta' => 'Estado',
+					'opciones' => $opciones_estado,
+					'actual'   => $estado_pedido,
+					'todas'    => sprintf( 'Todas (%d)', $total_antes_de_estado ),
+				],
+			],
+			[ 'sitio' => $sitio_id, 'seccion' => 'normas' ] + SWPK_Vista::rastro(),
+			$buscar,
+			'una palabra de la norma…'
+		);
 		?>
-		<form method="get" class="swpk-filtros">
-			<input type="hidden" name="page" value="panel-kinsta-sitio">
-			<input type="hidden" name="sitio" value="<?php echo esc_attr( (string) $sitio->sitio_id ); ?>">
-			<input type="hidden" name="seccion" value="normas">
-			<?php foreach ( SWPK_Vista::rastro() as $k_r => $v_r ) : ?>
-				<input type="hidden" name="<?php echo esc_attr( $k_r ); ?>" value="<?php echo esc_attr( (string) $v_r ); ?>">
-			<?php endforeach; ?>
-
-			<label class="swpk-filtro">
-				<span>Tipo de norma</span>
-				<select name="tema" onchange="this.form.submit()">
-					<option value=""><?php echo esc_html( sprintf( 'Todas (%d)', count( $aplicables ) ) ); ?></option>
-					<?php foreach ( $temas_opciones as $valor => $texto ) : ?>
-						<option value="<?php echo esc_attr( $valor ); ?>" <?php selected( $tema_pedido, $valor ); ?>>
-							<?php echo esc_html( $texto ); ?>
-						</option>
-					<?php endforeach; ?>
-				</select>
-			</label>
-
-			<label class="swpk-filtro">
-				<span>Estado</span>
-				<select name="estado" onchange="this.form.submit()">
-					<option value=""><?php echo esc_html( sprintf( 'Todas (%d)', $total_antes_de_estado ) ); ?></option>
-					<?php foreach ( $estados_posibles as $clave_e => $nombre_e ) : ?>
-						<option value="<?php echo esc_attr( $clave_e ); ?>" <?php selected( $estado_pedido, $clave_e ); ?>>
-							<?php echo esc_html( sprintf( '%s (%d)', $nombre_e, $cuenta_estado[ $clave_e ] ) ); ?>
-						</option>
-					<?php endforeach; ?>
-				</select>
-			</label>
-
-			<label class="swpk-filtro swpk-filtro-buscar">
-				<span>Buscar</span>
-				<input type="search" name="buscar" value="<?php echo esc_attr( $buscar ); ?>"
-					placeholder="una palabra de la norma">
-			</label>
-
-			<button type="submit" class="button">Filtrar</button>
-
-			<?php if ( $hay_filtro ) : ?>
-				<a class="swpk-quitar-filtros" href="<?php echo esc_url( $url_pestana( 'normas' ) ); ?>">Quitar los filtros</a>
-			<?php endif; ?>
-		</form>
 
 		<?php if ( '' !== $estado_pedido && ! $para_ver ) : ?>
 			<div class="notice notice-info inline"><p>

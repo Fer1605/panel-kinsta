@@ -155,10 +155,60 @@ Reglas de Fer, que valen igual en un chat nuevo:
 
 | | Versión | Dónde está |
 |---|---|---|
-| Panel Kinsta | **0.14.0** | Desplegado en producción y verificado ahí mismo. |
+| Panel Kinsta | **0.14.1** | Desplegado en producción y verificado ahí mismo. |
 | Agente (plugin) | **0.7.0** | 0.6.4 está en 106 de 107. La 0.7.0 trae el registro de actividad y **no está repartida**. |
 | Agente (dentro del tema) | **0.7.0-tema** | La rama unida del jefe sigue en 0.6.4-tema con código de 0.6.3. La corrección + el registro están en una rama lista, **sin PR abierto**. |
 | Tema hijo | **2.6.1** | En el PR. |
+
+### Lo del 27 a media mañana: la segunda pasada (0.14.0 → 0.14.1)
+
+La columna «Qué hacer» contestaba la pregunta, pero cuatro columnas de
+párrafos acumulaban: «esta visualización ahora no me gusta, siento que se ve
+más desordenado y se acumula toda la información». Cada módulo ocupaba media
+pantalla. Ahora **la lista de pendientes se lee como las normas**: cada módulo
+es una línea que se despliega, con módulo, nivel y qué hacer en la línea
+cerrada, y el porqué dentro, en dos bloques numerados.
+
+**Los filtros de normas** se habían escrito a mano en vez de usar
+`SWPK_Vista::barra_de_filtros()`, la misma de Sitios, Vulnerabilidades e
+Historial: «estos filtros quedan horribles, nada que ver con los demás del
+sitio». Ya usan la compartida.
+
+**«Abrir en Kinsta» no abría el sitio.** Construía
+`/sites/info/<sitio>/<entorno>`, que MyKinsta no reconoce y redirige a la lista
+de los 109. Las rutas buenas, comprobadas copiándolas de la barra del
+navegador: `/sites/details/<sitio>/<entorno>` para la ficha y
+`/sites/errorLogs/<sitio>/<entorno>` para los registros. Los dos identificadores
+que guardamos siempre fueron los buenos. Y la burbuja del reporte para el
+cliente iba después de ese botón, así que parecía explicarlo: «la burbuja no
+dice nada relacionado a Kinsta ni se entiende qué onda».
+
+#### Y por qué no llegó el correo de Cito Color
+
+Kinsta avisó a las 7:47 de un 504 en Cito Color y el panel no mandó nada. Hay
+dos motivos, y el segundo es el de fondo:
+
+1. **El panel mira una vez por hora.** Kinsta mira sin parar. La caída empezó y
+   terminó entre dos vueltas: a las 13:57 UTC el sitio contestaba 200 en 0,37 s.
+   El sondeo de cinco minutos de la 0.13.0 **no ayuda aquí**: solo se enciende
+   cuando el panel YA pilló un sitio caído, y sirve para medir cuándo vuelve.
+2. **El panel está ciego en la mayoría de las vueltas.** La corrida manual de
+   hoy: `{"sondeados":108,"abajo":0,"ciegos":106,"corrida_mal":true,
+   "ip_de_salida":"34.46.111.53"}`. Es el bloqueo de Cloudflare documentado en
+   `KINSTA-pedido-de-desbloqueo.md`: de las dos IP de salida de Pantheon, una
+   está en lista negra y la otra limpia, y Pantheon no deja elegir. Cuando la
+   vuelta sale por la mala, el panel no escribe nada —y hace bien, para no
+   borrar lo bueno— pero tampoco puede detectar una caída.
+
+O sea: aunque la caída hubiera durado una hora entera, había una moneda al aire
+de que el panel no la viera. **Sigue pendiente la excepción de Bot protection en
+MyKinsta**, que son dos minutos en un sitio de prueba.
+
+El sondeo en sí funciona: 108 sitios en 5,8 segundos, y los avisos salen cuando
+hay algo que decir (ayer: `[Caído] Cito Color` 14:33 y `[Repuesto] Cito Color`
+15:33, a jdiaz, lalvarez y mvalle).
+
+---
 
 ### Lo del 27 por la mañana: «¿y qué hago yo con esto?» (0.13.2 → 0.14.0)
 

@@ -192,21 +192,48 @@ class SWPK_Codigos {
 	}
 
 	/**
-	 * El enlace a los registros de ese sitio en MyKinsta, que es el botón
-	 * «View logs» del correo de Kinsta.
+	 * Los enlaces a MyKinsta.
+	 *
+	 * ─── La dirección estaba mal, y el botón no llevaba a ninguna parte ─────
+	 *
+	 * 27-11-2026: «donde dice abrir en Kinsta, solo me abre el panel general de
+	 * sitios, no me abre el sitio como tal». Era verdad y el fallo era la ruta:
+	 * se estaba construyendo `/sites/info/<sitio>/<entorno>`, que MyKinsta no
+	 * reconoce y redirige a la lista de los 109. Los dos identificadores que
+	 * guardamos son los buenos; lo que estaba mal era la palabra del medio.
+	 *
+	 * Comprobado entrando a mano en MyKinsta y copiando la dirección de la
+	 * barra:
+	 *
+	 *   ficha del sitio → https://my.kinsta.com/sites/details/<sitio>/<entorno>
+	 *   registros       → https://my.kinsta.com/sites/errorLogs/<sitio>/<entorno>
+	 *
+	 * MyKinsta le añade después un `?idCompany=…` por su cuenta, así que no
+	 * hace falta ponerlo.
 	 *
 	 * Hace falta el id del entorno además del del sitio. Sin él no se dibuja:
 	 * un enlace que lleva a un 404 es peor que ninguno.
 	 */
-	public static function url_registros( object $sitio ): string {
-		if ( empty( $sitio->entorno_id ) ) {
+	private static function url_kinsta( object $sitio, string $seccion ): string {
+		if ( empty( $sitio->entorno_id ) || empty( $sitio->sitio_id ) ) {
 			return '';
 		}
 
 		return sprintf(
-			'https://my.kinsta.com/sites/info/%s/%s/logs',
+			'https://my.kinsta.com/sites/%s/%s/%s',
+			$seccion,
 			rawurlencode( (string) $sitio->sitio_id ),
 			rawurlencode( (string) $sitio->entorno_id )
 		);
+	}
+
+	/** La ficha del sitio en MyKinsta: entornos, respaldos, caché, ajustes. */
+	public static function url_sitio( object $sitio ): string {
+		return self::url_kinsta( $sitio, 'details' );
+	}
+
+	/** El visor de registros, que es el botón «View logs» del correo de Kinsta. */
+	public static function url_registros( object $sitio ): string {
+		return self::url_kinsta( $sitio, 'errorLogs' );
 	}
 }
