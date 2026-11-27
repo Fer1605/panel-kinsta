@@ -156,7 +156,7 @@ Reglas de Fer, que valen igual en un chat nuevo:
 
 | | Versión | Dónde está |
 |---|---|---|
-| Panel Kinsta | **0.19.7** | En el repositorio y comprobado en local a 1280 px. **La 0.18.1 es la que está en producción**: la 0.19.x todavía no se ha desplegado. |
+| Panel Kinsta | **0.19.8** | **Desplegado en producción el 27 por la noche y verificado ahí mismo**, a 1280 px y sin errores en las cuatro pantallas. |
 | Agente (plugin) | **0.7.0** | 0.6.4 está en 106 de 107. La 0.7.0 trae el registro de actividad y **no está repartida**. |
 | Agente (dentro del tema) | **0.7.0-tema** | La rama unida del jefe sigue en 0.6.4-tema con código de 0.6.3. La corrección + el registro están en una rama lista, **sin PR abierto**. |
 | Tema hijo | **2.6.1** | En el PR. |
@@ -311,6 +311,25 @@ Tres cosas que solo se ven cuando ya están las cuatro pantallas hechas:
   primeras son atributos del sitio y las otras navegación; mezcladas no se ve
   qué se puede pulsar. Las etiquetas bajan junto al dominio y a la derecha
   quedan solo las pestañas.
+
+### Lo del 27 por la noche: desplegado (0.19.8)
+
+Todo lo de hoy está **en producción**. Se desplegó con la receta de siempre:
+`git push` a `master` del git de Pantheon → se sincroniza `dev`, luego
+`terminus env:deploy solucionweb.test` y `terminus env:deploy solucionweb.live
+--cc`. Hay que pasar por `test`: `env:deploy …live` promueve desde ahí, no
+desde `dev`.
+
+**Ojo para la próxima:** en esta carpeta NO hay remoto de Pantheon, solo el de
+GitHub. Hay que clonar aparte con la dirección que da
+`terminus connection:info solucionweb.dev --field=git_url`, copiar el plugin a
+`wp-content/plugins/panel-kinsta/` —con `rsync -a --delete --exclude='.DS_Store'`,
+que si no se cuela el `.DS_Store`— y hacer el commit ahí.
+
+Verificado en producción con datos de verdad, a 1280 px: Vulnerabilidades,
+Caídas, Seguridad y Resumen sin `Fatal`, `Warning`, `Notice` ni `Deprecated`, y
+sin desborde horizontal. La 0.19.8 corrige además un «De 1 sitios no se sabe
+nada» que salió a la luz justo con los datos reales.
 
 **La lista de §9 está cerrada.** Lo que sigue pendiente de maquetado es la
 pieza concreta del final de esa sección: el botón «arreglarlo en Kinsta» para

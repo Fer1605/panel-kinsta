@@ -46,10 +46,14 @@ $en_camino       = $conteos_ordenes[ SWPK_Ordenes::PENDIENTE ] + $conteos_ordene
 
 	SWPK_Vista::cabecera(
 		'Seguridad',
+		// El plural en condiciones: con un solo sitio decía «De 1 sitios no se
+		// sabe nada», y una falta de ortografía en el subtítulo de una
+		// pantalla hace dudar de los números que hay debajo.
 		$sin_agente_vis > 0
 			? esc_html( sprintf(
-				'De %d sitios no se sabe nada: les falta el plugin instalado.',
-				$sin_agente_vis
+				'De %s no se sabe nada: %s el plugin instalado.',
+				SWPK_Vista::plural( $sin_agente_vis, 'sitio', 'sitios' ),
+				1 === $sin_agente_vis ? 'le falta' : 'les falta'
 			) )
 			: 'Las normas que cada sitio tiene que cumplir, y qué le falta a cada uno.',
 		SWPK_Vista::pastillas( [
