@@ -155,7 +155,7 @@ Reglas de Fer, que valen igual en un chat nuevo:
 
 | | Versión | Dónde está |
 |---|---|---|
-| Panel Kinsta | **0.15.5** | Desplegado en producción y verificado ahí mismo. |
+| Panel Kinsta | **0.16.2** | Desplegado en producción y verificado ahí mismo. |
 | Agente (plugin) | **0.7.0** | 0.6.4 está en 106 de 107. La 0.7.0 trae el registro de actividad y **no está repartida**. |
 | Agente (dentro del tema) | **0.7.0-tema** | La rama unida del jefe sigue en 0.6.4-tema con código de 0.6.3. La corrección + el registro están en una rama lista, **sin PR abierto**. |
 | Tema hijo | **2.6.1** | En el PR. |
@@ -240,6 +240,54 @@ pendientes.
 pastilla Alta/Media/Baja se enseñaba en cada fila sin poder filtrar por ella:
 «no podemos filtrar por eso». Ahora son tres desplegables con su cuenta
 dentro, y «las altas que no cumplen» se pide en dos clics.
+
+### Lo del 27 por la tarde: la sonda ya termina sola (0.15.5 → 0.16.2)
+
+`SWPK_Sonda::correr()` hacía los 108 sitios de una pasada —unas 2.700
+peticiones, diez minutos— y guardaba solo al final. Ni el reloj de Pantheon ni
+una sesión de consola aguantan tanto, así que moría siempre antes de guardar.
+Nunca había terminado. Ahora va por tandas, igual que `SWPK_Trabajo`:
+
+- `empezar()` arma la cola, **hace la primera tanda ahí mismo** y pide la
+  siguiente. Lo llama el reloj diario.
+- `avanzar()` hace diez sitios o veinticinco segundos, lo que llegue antes,
+  guarda dónde quedó y encadena. Con candado, para que no avancen dos a la vez.
+- Los sitios salen de la cola **antes** de sondearlos: si el servidor mata una
+  tanda, la siguiente sigue con los que faltan en vez de reintentar los mismos.
+- La protección de «una corrida ciega no borra lo bueno» ahora es por sitio:
+  el que vuelve sin rutas fiables no se mide y conserva lo de ayer.
+
+**Dos cosas que costaron encontrar, las dos medidas en producción:**
+
+1. `'blocking' => false` con `'timeout' => 0.01` —copiado de
+   `SWPK_Trabajo::encadenar()`— **no manda la petición cuando quien la manda
+   es la línea de comandos o el reloj**, que es justo de donde arranca esta
+   corrida. Desde una pantalla sí sale. La corrida se quedaba en 108
+   pendientes sin moverse. Ahora se manda esperando medio segundo
+   (`'blocking' => true`, `'timeout' => 0.5`): sale siempre, y la espera no es
+   por el trabajo —la tanda del otro lado tarda veinticinco segundos—, porque
+   `relevo()` pone `ignore_user_abort()`.
+2. Aun así hace falta la red del reloj `swpk_sonda_tanda`, que se vuelve a
+   programar en cada encadenado.
+
+**Comprobado dos veces de punta a punta**, arrancando con
+`wp cron event run swpk_sonda_diaria` y sin tocar nada más:
+`{"sondeados":108,"rutas_no_fiables":1,"expuestos":10,"medidos":107,
+"corrida_mal":false}`, en 8 min 20 s y 8 min 43 s.
+
+**Lo que queda, y es de datos, no de estructura.** La clasificación de rutas
+no sale igual en todas las corridas. Para decir «esto está protegido» la sonda
+pide la misma ruta con un nombre inventado: si el servidor también la niega,
+es regla para todos (`protegido` → cumple); si contesta, el bloqueo es solo
+contra nosotros (`bloqueado` → «falta medirlo»). En una corrida completa
+Heraldos sale con nueve rutas en `bloqueado`; sondeado aparte, con las mismas
+rutas en `protegido`, `ausente` y una en `expuesto`. Probado que **no es el
+tamaño de la tanda**: sondeando ese sitio en grupos de 1, 10 y 30 el resultado
+es idéntico y bueno. Queda por ver si es presión acumulada sobre la IP de
+salida a lo largo de la corrida. Mientras tanto, lo que se ve son unas 17
+normas «falta medirlo» por sitio en vez de las 27 de la mañana.
+
+---
 
 #### La excepción de bots: puesta en los 109, y lo que resultó NO ser la causa
 

@@ -75,6 +75,28 @@ class SWPK_Sonda {
 	 */
 	public const HOOK = 'swpk_sonda_diaria';
 
+	/**
+	 * El reloj de la red: cada tanda pide la siguiente por su cuenta, y esto
+	 * solo está por si el sitio no se puede llamar a sí mismo.
+	 */
+	public const HOOK_TANDA = 'swpk_sonda_tanda';
+
+	/** Dónde se quedó la corrida. Es una opción, no un transitorio: no caduca. */
+	private const COLA = 'swpk_sonda_cola';
+
+	/** Para que dos tandas no saquen sitios de la misma cola a la vez. */
+	private const CANDADO = 'swpk_sonda_candado';
+
+	/**
+	 * Cuántos sitios lleva una tanda y cuánto puede durar.
+	 *
+	 * Diez sitios son unas 250 peticiones, que con quince en paralelo salen
+	 * en menos de un minuto. El reloj manda sobre la cantidad: si un día los
+	 * sitios contestan lentos, la tanda hace menos sitios, pero termina.
+	 */
+	private const POR_TANDA = 10;
+	private const SEGUNDOS  = 25;
+
 	/** Un transient por sitio. Vive 25 horas: hasta la corrida de mañana. */
 	private const CACHE = 'swpk_sonda_';
 	private const VIDA  = 25 * HOUR_IN_SECONDS;
@@ -229,7 +251,16 @@ class SWPK_Sonda {
 	}
 
 	public static function init(): void {
-		add_action( self::HOOK, [ __CLASS__, 'correr' ] );
+		add_action( self::HOOK, [ __CLASS__, 'empezar' ] );
+		add_action( self::HOOK_TANDA, [ __CLASS__, 'tanda' ] );
+
+		// El relevo entre tandas. Va sin sesión a propósito: lo pide el panel
+		// a sí mismo, no una persona. Lo que lo protege es la llave de la
+		// corrida. Es el mismo mecanismo de SWPK_Trabajo::encadenar(), y está
+		// aquí por el mismo motivo: en Pantheon el reloj real pasa cada hora,
+		// y a ese ritmo una corrida de nueve tandas tardaría nueve horas.
+		add_action( 'wp_ajax_nopriv_swpk_sonda_relevo', [ __CLASS__, 'relevo' ] );
+		add_action( 'wp_ajax_swpk_sonda_relevo', [ __CLASS__, 'relevo' ] );
 
 		// Y se programa aquí además de en la activación, para que los paneles
 		// que ya estaban instalados antes de que esto existiera también la
@@ -244,73 +275,331 @@ class SWPK_Sonda {
 	}
 
 	public static function desprogramar(): void {
-		$ts = wp_next_scheduled( self::HOOK );
-		if ( $ts ) {
-			wp_unschedule_event( $ts, self::HOOK );
+		foreach ( [ self::HOOK, self::HOOK_TANDA ] as $hook ) {
+			$ts = wp_next_scheduled( $hook );
+			if ( $ts ) {
+				wp_unschedule_event( $ts, $hook );
+			}
 		}
 	}
 
 	/**
-	 * Sondear la cartera y medir lo que de ahí sale.
+	 * Sondear la cartera y medir lo que de ahí sale, por tandas.
 	 *
-	 * Las dos cosas van juntas a propósito: estas normas no las contesta el
-	 * agente, así que si no se midieran aquí se quedarían en «sin dato» para
-	 * siempre en los sitios sin agente — que hoy son todos.
+	 * ─── Por qué por tandas: esto nunca había terminado ─────────────────────
+	 *
+	 * 27-11-2026. El panel enseñaba 27 normas en «falta medirlo» en los 107
+	 * sitios, y la explicación que yo le había dado a Fer era el cortafuegos.
+	 * Era falsa. La verdadera estaba a un `get_option` de distancia:
+	 * `swpk_ultima_sonda` no existía. **Esta corrida no había terminado ni una
+	 * sola vez en producción.**
+	 *
+	 * Son 108 sitios por unas 25 peticiones cada uno. Tarda diez minutos, y
+	 * ni el reloj de Pantheon ni una sesión de línea de comandos aguantan
+	 * tanto: el proceso muere, y como lo único que se guardaba al final era
+	 * el resumen, no quedaba nada. Diez minutos de trabajo, todos los días, a
+	 * la basura. Medido: forzada a mano terminó en 108 sondeados, 1 sin rutas
+	 * fiables, y Heraldos pasó de 27 normas sin medir a 4.
+	 *
+	 * Es la misma lección de SWPK_Trabajo, que ya estaba escrita en este
+	 * repositorio hace nueve días: **un trabajo de minutos no cabe en una
+	 * petición.** Allí se vio porque alguien pulsó un botón y salió un 504.
+	 * Aquí no se vio porque nadie mira un cron que falla en silencio.
+	 *
+	 * Así que ahora es igual que la corrida: la cola se guarda, cada tanda
+	 * hace unos pocos sitios, deja escrito dónde quedó y pide la siguiente.
+	 * Si el servidor mata una tanda, se pierde esa tanda, no el día.
+	 *
+	 * ─── Y lo de «una corrida ciega no borra lo bueno» ──────────────────────
+	 *
+	 * Esa protección sigue, pero ahora es por sitio y no por corrida. Antes,
+	 * si el 60 % de la cartera venía sin rutas fiables, no se medía NADA.
+	 * Ahora, el sitio que vino sin rutas fiables no se mide —se queda con lo
+	 * de ayer, que es lo que esa regla quería— y los demás sí. Protege lo
+	 * mismo sin tirar el trabajo de los otros cien.
+	 *
+	 * @return array<string,mixed> en qué quedó el arranque
+	 */
+	public static function empezar(): array {
+		$objetivos = [];
+
+		foreach ( SWPK_Inventario::todos() as $sitio ) {
+			$dominio = trim( (string) $sitio->dominio );
+			if ( '' !== $dominio ) {
+				$objetivos[ (string) $sitio->sitio_id ] = $dominio;
+			}
+		}
+
+		$cola = [
+			'inicio'  => current_time( 'mysql' ),
+			'pend'    => $objetivos,
+			'total'   => count( $objetivos ),
+			'resumen' => [
+				'sondeados'        => 0,
+				'rutas_no_fiables' => 0,
+				'expuestos'        => 0,
+				'medidos'          => 0,
+			],
+			// Nace y muere con la corrida. Es lo único que deja al panel
+			// pedirse la siguiente tanda a sí mismo sin sesión de nadie.
+			'llave'   => wp_generate_password( 32, false ),
+			'latido'  => time(),
+		];
+
+		update_option( self::COLA, $cola, false );
+
+		// La primera tanda se hace aquí mismo, sin pedírsela a nadie.
+		//
+		// Quien llama a esto es el reloj, y el aviso al propio panel para la
+		// siguiente tanda sale de un proceso de línea de comandos que termina
+		// enseguida: a veces la petición no llega a salir. Medido el
+		// 27-11-2026: la primera vez arrancó, la segunda se quedó en 108
+		// pendientes nueve minutos. Si la corrida hace una tanda antes de
+		// soltar el testigo, al menos avanza siempre, y el encadenado se
+		// vuelve a intentar al final de cada tanda, ya desde una petición web,
+		// que es donde sí funciona.
+		return [ 'arrancada' => true, 'total' => $cola['total'] ] + self::avanzar();
+	}
+
+	/** Lo que llama el reloj de respaldo. Ver init(). */
+	public static function tanda(): void {
+		self::avanzar();
+	}
+
+	/**
+	 * Hace una tanda y deja pedida la siguiente.
+	 *
+	 * @param int $segundos Cuánto puede durar. Con 0 no para hasta terminar:
+	 *                      es para la línea de comandos y las pruebas.
 	 *
 	 * @return array<string,mixed>
 	 */
-	public static function correr(): array {
-		$resumen = self::sondear_todos();
+	public static function avanzar( int $segundos = self::SEGUNDOS ): array {
+		$cola = get_option( self::COLA, null );
 
-		// ── Una corrida que no vio nada no borra la que sí vio ──────────────
-		//
-		// Es el mismo caso que el del monitor, y aquí cuesta mucho más caro:
-		// de esta corrida salen 24 normas de seguridad, y hasta hoy una
-		// corrida que salía por una IP bloqueada las ponía las 24 en «sin
-		// dato» en los 107 sitios. Es decir, 2.500 mediciones buenas borradas
-		// por una moneda al aire. Ver SWPK_Monitor::CIEGOS_PARA_DUDAR, donde
-		// está la medición que lo demuestra.
-		//
-		// Si casi todo vino sin rutas fiables, se deja lo de ayer y se dice
-		// por qué. Mañana se vuelve a intentar.
-		$sondeados = max( 1, (int) ( $resumen['sondeados'] ?? 0 ) );
-		$no_fiables = (int) ( $resumen['rutas_no_fiables'] ?? 0 );
-
-		if ( $no_fiables >= $sondeados * 0.6 ) {
-			$resumen['corrida_mal']  = true;
-			$resumen['ip_de_salida'] = SWPK_Monitor::ip_de_salida();
-			$resumen['medidos']      = 0;
-
-			update_option( 'swpk_ultima_sonda', [ 'cuando' => current_time( 'mysql' ) ] + $resumen, false );
-
-			return $resumen;
+		if ( ! is_array( $cola ) ) {
+			return [];
 		}
 
-		$resumen['corrida_mal'] = false;
+		if ( empty( $cola['pend'] ) ) {
+			return self::cerrar( $cola );
+		}
 
-		$medidos = 0;
+		// Si ya hay alguien avanzando, este se aparta: los dos sacarían
+		// sitios de la misma cola y cada uno guardaría su versión.
+		if ( ! self::candado() ) {
+			return [ 'ocupado' => true ];
+		}
 
-		foreach ( SWPK_Inventario::todos() as $sitio ) {
-			$cuales = SWPK_Normas::COMPROBADORES_DE_SONDA;
+		if ( function_exists( 'set_time_limit' ) ) {
+			@set_time_limit( 120 ); // phpcs:ignore WordPress.PHP.NoSilencedErrors
+		}
 
-			// La prueba de PHP en subidas la contesta mejor el agente. Desde
-			// aquí solo se mide donde no hay agente, para no pisar lo bueno
-			// con lo parcial.
-			if ( ! (int) $sitio->cobertura_agente ) {
-				$cuales[] = SWPK_Normas::COMPROBADOR_DE_AMBOS;
+		$hasta = $segundos > 0 ? microtime( true ) + $segundos : INF;
+
+		do {
+			$tanda = array_slice( (array) $cola['pend'], 0, self::POR_TANDA, true );
+
+			if ( ! $tanda ) {
+				break;
 			}
 
-			SWPK_Normas::medir( (string) $sitio->sitio_id, [], $cuales );
-			++$medidos;
+			// Fuera de la cola ANTES de sondear: si el servidor mata esta
+			// tanda a mitad, la siguiente sigue con los que faltan en vez de
+			// volver a intentar los mismos para siempre.
+			foreach ( array_keys( $tanda ) as $id ) {
+				unset( $cola['pend'][ $id ] );
+			}
+
+			$cola['latido'] = time();
+			update_option( self::COLA, $cola, false );
+
+			$r = self::sondear( $tanda );
+
+			foreach ( array_keys( $tanda ) as $sitio_id ) {
+				$uno = $r[ (string) $sitio_id ] ?? [];
+
+				++$cola['resumen']['sondeados'];
+
+				if ( empty( $uno['rutas_fiables'] ) ) {
+					++$cola['resumen']['rutas_no_fiables'];
+					continue;
+				}
+
+				foreach ( (array) ( $uno['rutas'] ?? [] ) as $estado ) {
+					if ( self::EXPUESTO === $estado ) {
+						++$cola['resumen']['expuestos'];
+						break;
+					}
+				}
+
+				self::medir_uno( (string) $sitio_id );
+				++$cola['resumen']['medidos'];
+			}
+
+			$cola['latido'] = time();
+			update_option( self::COLA, $cola, false );
+		} while ( ! empty( $cola['pend'] ) && microtime( true ) < $hasta );
+
+		self::soltar_candado();
+
+		if ( ! empty( $cola['pend'] ) ) {
+			self::encadenar( (string) ( $cola['llave'] ?? '' ) );
+
+			return [ 'pendientes' => count( $cola['pend'] ) ] + (array) $cola['resumen'];
 		}
 
-		$resumen['medidos'] = $medidos;
+		return self::cerrar( $cola );
+	}
 
-		update_option( 'swpk_ultima_sonda', [ 'cuando' => current_time( 'mysql' ) ] + $resumen, false );
+	/** Mide las normas que salen de la sonda, para un sitio. */
+	private static function medir_uno( string $sitio_id ): void {
+		$sitio = SWPK_Inventario::obtener( $sitio_id );
+
+		if ( ! $sitio ) {
+			return;
+		}
+
+		$cuales = SWPK_Normas::COMPROBADORES_DE_SONDA;
+
+		// La prueba de PHP en subidas la contesta mejor el agente. Desde
+		// aquí solo se mide donde no hay agente, para no pisar lo bueno
+		// con lo parcial.
+		if ( ! (int) $sitio->cobertura_agente ) {
+			$cuales[] = SWPK_Normas::COMPROBADOR_DE_AMBOS;
+		}
+
+		SWPK_Normas::medir( $sitio_id, [], $cuales );
+	}
+
+	/** Cierra la corrida: deja el resumen y borra la cola. */
+	private static function cerrar( array $cola ): array {
+		$resumen = (array) ( $cola['resumen'] ?? [] );
+
+		$sondeados  = max( 1, (int) ( $resumen['sondeados'] ?? 0 ) );
+		$no_fiables = (int) ( $resumen['rutas_no_fiables'] ?? 0 );
+
+		// Ya no decide si se mide o no —eso se decidió sitio por sitio—, pero
+		// se sigue anotando: una corrida en la que casi nadie contestó bien es
+		// una corrida que hay que mirar, y la IP de salida dice por dónde fue.
+		$resumen['corrida_mal'] = $no_fiables >= $sondeados * 0.6;
+
+		if ( $resumen['corrida_mal'] ) {
+			$resumen['ip_de_salida'] = SWPK_Monitor::ip_de_salida();
+		}
+
+		update_option(
+			'swpk_ultima_sonda',
+			[ 'cuando' => current_time( 'mysql' ), 'empezo' => (string) ( $cola['inicio'] ?? '' ) ] + $resumen,
+			false
+		);
+
+		delete_option( self::COLA );
 
 		SWPK_Estado::olvidar();
 
 		return $resumen;
+	}
+
+	/** Si hay una corrida a medias, cuántos sitios le faltan. */
+	public static function pendientes(): int {
+		$cola = get_option( self::COLA, null );
+
+		return is_array( $cola ) ? count( (array) ( $cola['pend'] ?? [] ) ) : 0;
+	}
+
+	/**
+	 * Arranca la corrida. Se queda por el nombre: es lo que llamaban el reloj
+	 * y la línea de comandos. Ya no hace el trabajo, lo pone en marcha.
+	 *
+	 * @return array<string,mixed>
+	 */
+	public static function correr(): array {
+		return self::empezar();
+	}
+
+	private static function candado(): bool {
+		if ( get_transient( self::CANDADO ) ) {
+			return false;
+		}
+
+		set_transient( self::CANDADO, 1, 180 );
+
+		return true;
+	}
+
+	private static function soltar_candado(): void {
+		delete_transient( self::CANDADO );
+	}
+
+	/**
+	 * Pide la siguiente tanda al propio panel, sin esperar la respuesta.
+	 *
+	 * Si el hosting no permite que un sitio se llame a sí mismo, esto no hace
+	 * nada y no rompe nada: queda el reloj de HOOK_TANDA, más lento pero
+	 * llega.
+	 */
+	private static function encadenar( string $llave ): void {
+		if ( '' === $llave ) {
+			return;
+		}
+
+		// Y la red, siempre: si la petición de abajo no sale, esto lo recoge
+		// en la siguiente pasada del reloj del hosting.
+		if ( ! wp_next_scheduled( self::HOOK_TANDA ) ) {
+			wp_schedule_single_event( time() + 120, self::HOOK_TANDA );
+		}
+
+		wp_remote_post(
+			admin_url( 'admin-ajax.php' ),
+			[
+				// Se espera medio segundo a propósito, en vez de mandarla sin
+				// esperar.
+				//
+				// Medido en producción el 27-11-2026: con 'blocking' => false
+				// la petición sale desde una pantalla, pero NO sale desde la
+				// línea de comandos ni desde el reloj —que es justo de donde
+				// arranca esta corrida—, y la tanda siguiente no llegaba
+				// nunca. Con una espera corta sale siempre, y medio segundo
+				// no es esperar a que trabaje: la tanda del otro lado tarda
+				// veinticinco. Al cortarse la espera, el panel sigue
+				// trabajando igual, porque relevo() pone ignore_user_abort().
+				'blocking'  => true,
+				'timeout'   => 0.5,
+				'sslverify' => false,
+				'body'      => [
+					'action' => 'swpk_sonda_relevo',
+					'llave'  => $llave,
+				],
+			]
+		);
+	}
+
+	/**
+	 * El relevo: hace una tanda y, al terminar, pide la siguiente.
+	 *
+	 * No mira permisos porque no hay usuario: la manda el panel. Lo que
+	 * comprueba es la llave de la corrida en curso, que es aleatoria y vive
+	 * solo mientras dura esa corrida.
+	 */
+	public static function relevo(): void {
+		$cola = get_option( self::COLA, null );
+
+		if ( ! is_array( $cola ) || '' === (string) ( $cola['llave'] ?? '' ) ) {
+			wp_die( '', '', [ 'response' => 204 ] );
+		}
+
+		$llave = isset( $_POST['llave'] ) ? sanitize_text_field( wp_unslash( (string) $_POST['llave'] ) ) : '';
+
+		if ( ! hash_equals( (string) $cola['llave'], $llave ) ) {
+			wp_die( '', '', [ 'response' => 403 ] );
+		}
+
+		ignore_user_abort( true );
+
+		self::avanzar();
+
+		wp_die( '', '', [ 'response' => 204 ] );
 	}
 
 	/**
