@@ -135,9 +135,15 @@ $hay_filtro_equipo = ( '' !== $perfil_pedido || '' !== $busca_persona );
 						SWPK_Accesos::ENTRADA
 					)
 				);
-				$asignados = (int) $wpdb->get_var(
-					$wpdb->prepare( 'SELECT COUNT(*) FROM ' . SWPK_Tablas::tabla( 'sitios' ) . ' WHERE asesora_id = %d', $u->ID )
-				);
+				// ── De la tabla, no de la columna vieja ─────────────────────
+				//
+				// Contaba sobre `sitios.asesora_id`, que solo guarda a la
+				// PRIMERA asesora de cada sitio y se mantiene por
+				// compatibilidad. Con las dos puestas en los 96, Alejandra
+				// salía con 96 y Tiffany con «ninguno todavía», teniendo las
+				// dos exactamente los mismos. Quien lleva la cuenta de verdad
+				// es la tabla sitio_asesoras.
+				$asignados = count( SWPK_Perfiles::sitios_de_asesora( (int) $u->ID ) );
 				$perfil = array_values( array_intersect( array_keys( $roles ), (array) $u->roles ) )[0] ?? '';
 				?>
 				<tr>
