@@ -81,6 +81,12 @@ class SWPK_Sonda {
 	 */
 	public const HOOK_TANDA = 'swpk_sonda_tanda';
 
+	/** El goteo de XML-RPC: un sitio por minuto, de madrugada. Ver goteo(). */
+	public const HOOK_GOTEO = 'swpk_xmlrpc_goteo';
+
+	private const COLA_GOTEO    = 'swpk_xmlrpc_cola';
+	private const SEGUNDOS_GOTEO = 60;
+
 	/** Dónde se quedó la corrida. Es una opción, no un transitorio: no caduca. */
 	private const COLA = 'swpk_sonda_cola';
 
@@ -298,20 +304,60 @@ class SWPK_Sonda {
 		add_action( 'wp_ajax_nopriv_swpk_sonda_relevo', [ __CLASS__, 'relevo' ] );
 		add_action( 'wp_ajax_swpk_sonda_relevo', [ __CLASS__, 'relevo' ] );
 
+		add_action( self::HOOK_GOTEO, [ __CLASS__, 'empezar_goteo' ] );
+		add_action( 'wp_ajax_nopriv_swpk_xmlrpc_relevo', [ __CLASS__, 'relevo_goteo' ] );
+		add_action( 'wp_ajax_swpk_xmlrpc_relevo', [ __CLASS__, 'relevo_goteo' ] );
+
 		// Y se programa aquí además de en la activación, para que los paneles
 		// que ya estaban instalados antes de que esto existiera también la
 		// tengan. programar() ya comprueba si está puesta.
 		self::programar();
 	}
 
+	/**
+	 * El interruptor de la corrida completa.
+	 *
+	 * Existe porque el 27-11-2026 hubo que pararla en caliente: Kinsta nos
+	 * había bloqueado la IP y no tocaba volver a salir a la calle hasta que
+	 * nos desbloquearan. Sin esto, `init()` la volvía a programar en la
+	 * siguiente visita al escritorio y el «lo paré» duraba hasta que alguien
+	 * abriera una pantalla.
+	 */
+	public static function pausada(): bool {
+		return (bool) get_option( 'swpk_sonda_pausada', false );
+	}
+
 	public static function programar(): void {
-		if ( ! wp_next_scheduled( self::HOOK ) ) {
+		if ( self::pausada() ) {
+			self::desprogramar_corrida();
+		} elseif ( ! wp_next_scheduled( self::HOOK ) ) {
 			wp_schedule_event( SWPK_Frescura::cuando( 'tomorrow 05:30' ), 'daily', self::HOOK );
+		}
+
+		// El goteo no se pausa con esto: son 60 peticiones por hora, y es
+		// precisamente lo que se hizo para no volver a molestar a nadie.
+		self::programar_goteo();
+	}
+
+	private static function desprogramar_corrida(): void {
+		foreach ( [ self::HOOK, self::HOOK_TANDA ] as $hook ) {
+			$ts = wp_next_scheduled( $hook );
+			if ( $ts ) {
+				wp_unschedule_event( $ts, $hook );
+			}
+		}
+	}
+
+	public static function programar_goteo(): void {
+		if ( ! wp_next_scheduled( self::HOOK_GOTEO ) ) {
+			// Las 9:00 UTC son las 3 de la mañana en Guatemala: el sitio
+			// corre en UTC, y «de madrugada» es de madrugada allí.
+			wp_schedule_event( SWPK_Frescura::cuando( 'tomorrow 09:00' ), 'daily', self::HOOK_GOTEO );
 		}
 	}
 
 	public static function desprogramar(): void {
-		foreach ( [ self::HOOK, self::HOOK_TANDA ] as $hook ) {
+		foreach ( [ self::HOOK, self::HOOK_TANDA, self::HOOK_GOTEO ] as $hook ) {
 			$ts = wp_next_scheduled( $hook );
 			if ( $ts ) {
 				wp_unschedule_event( $ts, $hook );
@@ -547,6 +593,183 @@ class SWPK_Sonda {
 		SWPK_Estado::olvidar();
 
 		return $resumen;
+	}
+
+	// ─────────────────────────────────────────────────────────────────────────
+	// El goteo de XML-RPC
+	// ─────────────────────────────────────────────────────────────────────────
+
+	/**
+	 * Un sitio por minuto, y nada más.
+	 *
+	 * ─── Por qué existe esto aparte ─────────────────────────────────────────
+	 *
+	 * Soporte de Kinsta, el 27-11-2026: «fuiste bloqueado porque hay muchas
+	 * solicitudes XML-RPC a múltiples sitios en un corto período de tiempo.
+	 * Más de 50 sitios». Eran nuestras: 108 POST a xmlrpc.php en ocho
+	 * minutos. Desde un cortafuegos eso es un ataque de fuerza bruta
+	 * repartido, porque tiene la misma forma.
+	 *
+	 * Pero la norma hace falta: si XML-RPC contesta desde internet, se
+	 * prueban cientos de contraseñas de un golpe y el sitio lo registra como
+	 * un solo intento. Y solo se puede comprobar desde fuera — el dato del
+	 * agente da falsos positivos, está explicado en
+	 * `SWPK_Normas::comprobar_xmlrpc_cerrado()`.
+	 *
+	 * Así que la misma medición, repartida. Las cuentas, que son lo que
+	 * manda aquí:
+	 *
+	 *   lo que nos bloqueó   ~47.000 peticiones/hora
+	 *   un sitio por minuto         60 peticiones/hora
+	 *
+	 * Ochocientas veces menos. Y los 108 sitios quedan medidos en menos de
+	 * dos horas: empieza a las 3 de la mañana y a las 5 está.
+	 *
+	 * Lo que NO se hace aquí, a propósito: acelerar cuando va bien. La
+	 * tentación es obvia y es justo como se llega otra vez a 13 por segundo.
+	 */
+	public static function empezar_goteo(): array {
+		$pend = [];
+
+		foreach ( SWPK_Inventario::todos() as $s ) {
+			$d = trim( (string) $s->dominio );
+			if ( '' !== $d ) {
+				$pend[ (string) $s->sitio_id ] = $d;
+			}
+		}
+
+		$cola = [
+			'inicio' => current_time( 'mysql' ),
+			'pend'   => $pend,
+			'total'  => count( $pend ),
+			'hechos' => 0,
+			'llave'  => wp_generate_password( 32, false ),
+			'latido' => time(),
+		];
+
+		update_option( self::COLA_GOTEO, $cola, false );
+
+		return [ 'arrancado' => true, 'total' => $cola['total'] ] + self::gotear();
+	}
+
+	/**
+	 * Mide un sitio, espera a que se cumpla el minuto, y pide el siguiente.
+	 *
+	 * La espera va DESPUÉS de medir y antes de pasar el testigo: así el
+	 * minuto se cuenta entre petición y petición, que es lo que mira el
+	 * cortafuegos, y no entre el final de una y el principio de la otra.
+	 *
+	 * @return array<string,mixed>
+	 */
+	public static function gotear(): array {
+		$cola = get_option( self::COLA_GOTEO, null );
+
+		if ( ! is_array( $cola ) ) {
+			return [];
+		}
+
+		if ( empty( $cola['pend'] ) ) {
+			delete_option( self::COLA_GOTEO );
+
+			return [ 'terminado' => true, 'hechos' => (int) ( $cola['hechos'] ?? 0 ) ];
+		}
+
+		if ( ! SWPK_Relevo::tomar( 'xmlrpc' ) ) {
+			return [ 'ocupado' => true ];
+		}
+
+		$arranco = microtime( true );
+
+		$sitio_id = (string) array_key_first( $cola['pend'] );
+		$dominio  = (string) $cola['pend'][ $sitio_id ];
+
+		unset( $cola['pend'][ $sitio_id ] );
+		++$cola['hechos'];
+		$cola['latido'] = time();
+		update_option( self::COLA_GOTEO, $cola, false );
+
+		self::xmlrpc_de_un_sitio( $sitio_id, $dominio );
+
+		SWPK_Relevo::soltar( 'xmlrpc' );
+
+		if ( empty( $cola['pend'] ) ) {
+			delete_option( self::COLA_GOTEO );
+
+			return [ 'terminado' => true, 'hechos' => (int) $cola['hechos'] ];
+		}
+
+		// Lo que queda del minuto. Si la petición tardó diez segundos, se
+		// esperan cincuenta: el ritmo es uno por minuto, no uno cada minuto
+		// más lo que tarde.
+		$resto = self::SEGUNDOS_GOTEO - ( microtime( true ) - $arranco );
+
+		if ( $resto > 0 ) {
+			sleep( (int) ceil( $resto ) );
+		}
+
+		SWPK_Relevo::pedir( 'swpk_xmlrpc_relevo', (string) ( $cola['llave'] ?? '' ), '' );
+
+		return [ 'pendientes' => count( $cola['pend'] ), 'hechos' => (int) $cola['hechos'] ];
+	}
+
+	/**
+	 * Una sola petición a xmlrpc.php, y la norma medida con lo que conteste.
+	 *
+	 * El resultado se mete en lo que la sonda ya tenía guardado de este
+	 * sitio, para que `comprobar_xmlrpc_cerrado()` lo lea del mismo sitio de
+	 * siempre.
+	 */
+	public static function xmlrpc_de_un_sitio( string $sitio_id, string $dominio ): string {
+		$crudo = self::lanzar( [
+			[
+				'sitio' => $sitio_id,
+				'que'   => 'xmlrpc',
+				'url'   => self::base( $dominio ) . 'xmlrpc.php',
+				'post'  => self::XMLRPC_CUERPO,
+			],
+		] );
+
+		$estado = self::leer_xmlrpc( $crudo[0] ?? [] );
+
+		$guardado = self::de( $sitio_id );
+		$guardado['xmlrpc']    = $estado;
+		$guardado['xmlrpc_de'] = current_time( 'mysql' );
+		$guardado['cuando']    = (string) ( $guardado['cuando'] ?? current_time( 'mysql' ) );
+
+		set_transient( self::CACHE . $sitio_id, $guardado, self::VIDA );
+
+		SWPK_Normas::medir( $sitio_id, [], [ 'xmlrpc_cerrado' ] );
+
+		return $estado;
+	}
+
+	/** Cuántos sitios le faltan al goteo. */
+	public static function pendientes_goteo(): int {
+		$cola = get_option( self::COLA_GOTEO, null );
+
+		return is_array( $cola ) ? count( (array) ( $cola['pend'] ?? [] ) ) : 0;
+	}
+
+	public static function relevo_goteo(): void {
+		$cola = get_option( self::COLA_GOTEO, null );
+
+		if ( ! is_array( $cola ) || '' === (string) ( $cola['llave'] ?? '' ) ) {
+			wp_die( '', '', [ 'response' => 204 ] );
+		}
+
+		if ( ! hash_equals( (string) $cola['llave'], SWPK_Relevo::llave_pedida() ) ) {
+			wp_die( '', '', [ 'response' => 403 ] );
+		}
+
+		ignore_user_abort( true );
+
+		if ( function_exists( 'set_time_limit' ) ) {
+			@set_time_limit( 120 ); // phpcs:ignore WordPress.PHP.NoSilencedErrors
+		}
+
+		self::gotear();
+
+		wp_die( '', '', [ 'response' => 204 ] );
 	}
 
 	/** Si hay una corrida a medias, cuántos sitios le faltan. */
@@ -1555,6 +1778,16 @@ class SWPK_Sonda {
 	 */
 	private static function leer_xmlrpc( array $p ): string {
 		if ( ! $p || $p['error'] ) {
+			return 'no_se_pudo';
+		}
+
+		// Un bloqueo del borde contra NOSOTROS no es «el servidor no deja
+		// llegar la petición a WordPress»: es que no nos dejan medir. Sin
+		// esto, mientras Cloudflare nos tuviera bloqueada la IP, los 108
+		// sitios dirían «cumple» sin que nadie hubiera comprobado nada. Es
+		// exactamente la mentira que prohíbe la regla 3, y con la IP
+		// bloqueada el 27-11-2026 habría salido en toda la cartera.
+		if ( self::lo_corto_el_borde( $p ) ) {
 			return 'no_se_pudo';
 		}
 

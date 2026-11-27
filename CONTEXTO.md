@@ -155,7 +155,7 @@ Reglas de Fer, que valen igual en un chat nuevo:
 
 | | Versión | Dónde está |
 |---|---|---|
-| Panel Kinsta | **0.17.2** | Desplegado en producción y verificado ahí mismo. |
+| Panel Kinsta | **0.18.1** | Desplegado en producción y verificado ahí mismo. |
 | Agente (plugin) | **0.7.0** | 0.6.4 está en 106 de 107. La 0.7.0 trae el registro de actividad y **no está repartida**. |
 | Agente (dentro del tema) | **0.7.0-tema** | La rama unida del jefe sigue en 0.6.4-tema con código de 0.6.3. La corrección + el registro están en una rama lista, **sin PR abierto**. |
 | Tema hijo | **2.6.1** | En el PR. |
@@ -351,6 +351,37 @@ se manda esperando medio segundo y no sin esperar, que es lo que
 
 **Resultado del día, medido:** las mediciones sin dato pasaron de 27 por
 sitio a **9,8**. Heraldos, de 27 a **5**.
+
+---
+
+### Lo del 27, al cierre: el goteo, y un interruptor para la corrida
+
+**El goteo de XML-RPC** (`SWPK_Sonda::empezar_goteo()`): un sitio por minuto,
+empezando a las 9:00 UTC, que son las 3 de la mañana en Guatemala. Los 108
+quedan medidos en menos de dos horas. Las cuentas, que son lo que manda:
+
+| | Peticiones por hora |
+|---|---|
+| Lo que nos bloqueó | ~47.000 |
+| El goteo | 60 |
+
+Lo que NO hace, a propósito: acelerar cuando va bien. Así es como se vuelve a
+trece por segundo.
+
+**Un interruptor, `swpk_sonda_pausada`.** Al parar la corrida en caliente
+descubrí que no se podía: `init()` llama a `programar()`, así que la
+siguiente visita al escritorio la volvía a poner. El «lo paré» duraba hasta
+que alguien abriera una pantalla. Ahora hay una opción que `programar()`
+respeta. **Está puesta: la corrida completa no corre hasta que se quite.** El
+goteo sí, que para eso se hizo.
+
+**Y un falso «cumple» que habría salido en los 108 sitios.** `leer_xmlrpc()`
+devolvía `bloqueado` —o sea, norma cumplida— ante cualquier 403, incluido el
+de Cloudflare bloqueándonos a nosotros. Con la IP bloqueada, la cartera
+entera habría dicho «XML-RPC cerrado» sin que nadie hubiera comprobado nada.
+Ahora el bloqueo del borde se lee como `no_se_pudo`. Comprobado en
+producción: antes de arreglarlo, Heraldos decía «cumple»; después, «falta
+medirlo», que es la verdad mientras no nos dejen mirar.
 
 ---
 
