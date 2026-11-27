@@ -155,10 +155,84 @@ Reglas de Fer, que valen igual en un chat nuevo:
 
 | | Versión | Dónde está |
 |---|---|---|
-| Panel Kinsta | **0.13.2** | Desplegado en producción y verificado ahí mismo. |
+| Panel Kinsta | **0.14.0** | Desplegado en producción y verificado ahí mismo. |
 | Agente (plugin) | **0.7.0** | 0.6.4 está en 106 de 107. La 0.7.0 trae el registro de actividad y **no está repartida**. |
 | Agente (dentro del tema) | **0.7.0-tema** | La rama unida del jefe sigue en 0.6.4-tema con código de 0.6.3. La corrección + el registro están en una rama lista, **sin PR abierto**. |
 | Tema hijo | **2.6.1** | En el PR. |
+
+### Lo del 27 por la mañana: «¿y qué hago yo con esto?» (0.13.2 → 0.14.0)
+
+Fer abrió Heraldos Costa Rica y se encontró con Modern Events Calendar Lite
+5.15.5 marcado **Crítico · Hay parche** y sin ninguna actualización ofrecida:
+
+> «dice que hay un parche, pero no tiene una actualización, ¿o sí? Entonces,
+> ¿qué es lo que podemos hacer? Aquí no me dice qué podemos hacer, solo dice
+> quién puede aprovechar esta vulnerabilidad, qué es lo que permite hacer, pero
+> no me está diciendo qué hacer.»
+
+**Lo que había debajo.** Ese plugin está **cerrado en wordpress.org desde el 11
+de mayo de 2022** por incumplir las normas. La falla se corrige en la 7.37.0 y
+el sitio tiene la 5.15.5: esa versión no va a llegar nunca por WordPress. Lo
+que había que hacer no era actualizar, era reemplazarlo.
+
+El panel no lo decía por un fallo de una línea: `SWPK_Repositorio::preguntar()`
+miraba el **código HTTP** y el repositorio pone el motivo del cierre en el
+**cuerpo del 404**. Así que «404 → no se sabe», y los cinco módulos cerrados de
+la cartera —`modern-events-calendar-lite`, `admin-block-country`,
+`appointment-calendar`, `ultimate-addons-for-elementor` y un `twentytwenty`,
+**cuatro de ellos cerrados por un problema de seguridad**— salían etiquetados
+«Hay parche: actualizar».
+
+Había además **dos implementaciones** de la misma pregunta:
+`SWPK_Riesgo::esta_abandonado()`, que leía el cuerpo y acertaba, y
+`SWPK_Repositorio::estado()`, que no. La que pintaba la etiqueta de la pantalla
+era la mala. Ahora hay una sola, y distingue plugin de tema: existe un
+**plugin** `twentytwenty` cerrado en 2024 y el **tema** Twenty Twenty vivo en su
+3.3, y preguntando siempre por la API de plugins el tema por defecto de
+WordPress salía marcado como cerrado por seguridad.
+
+**`SWPK_QueHacer`** (`includes/class-que-hacer.php`) contesta la pregunta. No
+hay una respuesta, hay ocho, y cada una lleva a un trabajo distinto: lo
+actualiza el hosting · cerrado por WordPress · hay versión y corrige · hay
+versión pero no alcanza · hay parche y el sitio no lo ve · sin parche todavía ·
+está apagado · solo actualización.
+
+**Los must-use de Kinsta.** Fer también vio `kinsta-mu-plugins 3.7.0 → 3.8.0`
+con la frase «hay que entrar al sitio a actualizarlo» debajo:
+
+> «esos deberían ser automáticos, ¿no? Porque esos no es que lo instalemos
+> nosotros, sino de parte de Kinsta […] ¿podemos nosotros saber por qué no lo
+> ha hecho?»
+
+Tenía razón: nadie puede actualizarlos desde wp-admin, y sale pendiente en
+**100 de los 109 sitios**. Ahora dice «Lo actualiza Kinsta» y contesta la
+segunda pregunta con un dato nuestro: en cuántos sitios de la cartera ya cayó
+la versión nueva (hoy, 1 de 103). Cuando pase del 80 % y este sitio siga sin
+ella, el panel sugiere preguntarle a Kinsta.
+
+**La tabla de pendientes** pasa de cinco columnas a cuatro: módulo (con la
+versión dentro), nivel, **qué hacer** y por qué importa. «Quién puede
+aprovecharlo» y «qué permite» eran la misma pregunta partida en dos.
+
+**En la ficha del sitio**, tres cosas más que pidió en el mismo rato:
+
+- **Tarjeta de «Normas sin cumplir»** en la cabecera, al lado de las otras dos
+  cifras, y lleva a la pestaña de normas ya filtrada por «No cumple». Las
+  versiones de WordPress y PHP siguen ahí pero en pequeño: «¿para qué quiero
+  saber el tipo de WordPress que tiene, el PHP? Lo cual no está mal. Pero aquí
+  realmente la información que me importa…».
+- **Los filtros de normas**, de quince pastillas en cuatro renglones a **dos
+  desplegables y un buscador** en una línea. Cada opción lleva su cuenta
+  dentro. Y el rótulo «Cómo está» pasa a «Estado» aquí y a «Riesgo» en Sitios:
+  «"cómo está" como que no se entiende; entre que tiene que ser básico, pero no
+  tan básico que se oye ya más corriente».
+- **La norma abierta**, en **tres pasos numerados** en vez de dos columnas.
+  Estaba «cómo lo sabemos» arriba a la izquierda, «cómo se arregla» debajo y
+  «qué pasa si no» a la derecha: leído de izquierda a derecha salía 1, 3, 2. No
+  era impresión suya, el orden estaba roto. Ahora: qué medimos y qué salió →
+  qué pasa si se deja así → cómo se arregla, con el botón cerrando el tres.
+
+---
 
 ### Lo del 26 de madrugada: los 18 del PDF, cerrados (0.11.0 → 0.13.2)
 

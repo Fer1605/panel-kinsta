@@ -39,6 +39,37 @@ if ( 'vuln' === $solo ) {
 
 $plano = SWPK_Textos::para_asesora( $sitio, $hallazgos );
 
+// ── Las normas se cuentan arriba, porque arriba es donde se preguntan ───────
+//
+//   «nos falta la información de cuántas normas de seguridad tiene pendientes.
+//    Eso no lo estamos viendo en estos cuadros de resumen […] y yo clicarlas,
+//    en vez de tener que ir a normas de seguridad y tener que ver todas»
+//
+// Las cuentas se hacían dentro de la pestaña de normas, así que desde la
+// cabecera no había número que enseñar. Ahora se hacen aquí y la pestaña las
+// reutiliza: un solo recuento para las dos cosas.
+$normas_activas = SWPK_Normas::activas();
+$cumple_sitio   = SWPK_Normas::del_sitio( $sitio_id );
+
+$aplicables = [];
+foreach ( $normas_activas as $n ) {
+	if ( SWPK_Normas::aplica( $n, (string) $sitio->tag ) ) {
+		$aplicables[] = $n;
+	}
+}
+
+$estado_de = static function ( $n ) use ( $cumple_sitio ): string {
+	$fila = $cumple_sitio[ (string) $n->clave ] ?? null;
+	return $fila ? (string) $fila->estado : SWPK_Normas::SIN_DATO;
+};
+
+$normas_falla = 0;
+foreach ( $aplicables as $n ) {
+	if ( SWPK_Normas::FALLA === $estado_de( $n ) ) {
+		++$normas_falla;
+	}
+}
+
 // ── Las pestañas de la ficha ────────────────────────────────────────────────
 //
 // La ficha era una sola página larga y el jefe se perdió en ella: «aquí lo que
@@ -237,19 +268,26 @@ $url_pestana = static fn( string $s ) => add_query_arg(
 			<div class="swpk-r">Solo actualización pendiente</div>
 		</a>
 		<?php
-		// En «Datos del sitio» estas tres no se pintan: la tabla de esa
-		// pestaña las dice enteras, y el mismo dato dos veces en la misma
-		// pantalla es ruido, no refuerzo.
-		if ( 'datos' !== $seccion ) :
+		// ── La tercera cifra que faltaba ────────────────────────────────────
+		//
+		//   «nos falta la información de cuántas normas de seguridad tiene
+		//    pendientes. Eso no lo estamos viendo en estos cuadros de resumen.
+		//    Ahí deberíamos tener cuántas normas pendientes. Y yo clicarlas, en
+		//    vez de tener que ir a normas de seguridad y ver todas»
+		//
+		// Lleva a la pestaña de normas con el estado ya puesto en «No cumple»:
+		// el número y la lista que lo forma son la misma cosa, y hasta ahora
+		// había que reconstruirla a mano.
+		if ( 'datos' !== $seccion && $aplicables ) :
 		?>
-		<div class="swpk-tarjeta">
-			<div class="swpk-n"><?php echo esc_html( $sitio->version_wp ?: '—' ); ?></div>
-			<div class="swpk-r">WordPress</div>
-		</div>
-		<div class="swpk-tarjeta">
-			<div class="swpk-n"><?php echo esc_html( $sitio->version_php ?: '—' ); ?></div>
-			<div class="swpk-r">PHP</div>
-		</div>
+		<a class="swpk-tarjeta swpk-tarjeta-enlace" href="<?php echo esc_url( add_query_arg(
+			'estado',
+			SWPK_Normas::FALLA,
+			$url_pestana( 'normas' )
+		) ); ?>">
+			<div class="swpk-n" style="color:<?php echo $normas_falla ? '#9e0b10' : '#0b5ed7'; ?>"><?php echo (int) $normas_falla; ?></div>
+			<div class="swpk-r">Normas sin cumplir</div>
+		</a>
 		<?php endif; ?>
 		<?php if ( 'datos' !== $seccion && SWPK_Etiquetas::es_nuestro( $sitio->tag ) ) : ?>
 			<div class="swpk-tarjeta">
@@ -258,6 +296,23 @@ $url_pestana = static fn( string $s ) => add_query_arg(
 				</div>
 				<div class="swpk-r">Doble autenticación</div>
 			</div>
+		<?php endif; ?>
+		<?php
+		// Las versiones van al final y en pequeño. No están de más —son el dato
+		// que contesta «¿por qué no actualiza?»— pero no son a lo que se viene:
+		// «¿para qué quiero saber el tipo de WordPress que tiene, el PHP? Lo
+		// cual no está mal. Pero aquí realmente la información que me importa…»
+		// Siguen ahí, sin ocupar el mismo tamaño que lo que hay que hacer.
+		if ( 'datos' !== $seccion ) :
+		?>
+		<div class="swpk-tarjeta swpk-tarjeta-menor">
+			<div class="swpk-n"><?php echo esc_html( $sitio->version_wp ?: '—' ); ?></div>
+			<div class="swpk-r">WordPress</div>
+		</div>
+		<div class="swpk-tarjeta swpk-tarjeta-menor">
+			<div class="swpk-n"><?php echo esc_html( $sitio->version_php ?: '—' ); ?></div>
+			<div class="swpk-r">PHP</div>
+		</div>
 		<?php endif; ?>
 	</div>
 
@@ -350,74 +405,97 @@ $url_pestana = static fn( string $s ) => add_query_arg(
 			true
 		);
 		?>
-		<table class="widefat striped swpk-tabla">
+		<?php
+		// ── «Aquí no me dice qué podemos hacer» ─────────────────────────────
+		//
+		// La tabla tenía cinco columnas —módulo, versión, nivel, quién puede
+		// aprovecharlo, qué permite— y ninguna contestaba lo único que trae a
+		// alguien a esta pantalla:
+		//
+		//   «tiene un nivel crítico y de vulnerabilidad y dice que hay un
+		//    parche, pero no tiene una actualización, ¿o sí? Entonces, ¿qué es
+		//    lo que podemos hacer? […] mi jefe quiere saber qué puede hacer»
+		//
+		// Ahora son cuatro columnas y la tercera es la respuesta. La versión
+		// se fue dentro del módulo, que es donde se lee sin ocupar columna, y
+		// «quién puede» y «qué permite» se juntaron en una sola: son la misma
+		// pregunta —por qué importa— partida en dos.
+		?>
+		<table class="widefat striped swpk-tabla swpk-tabla-pendiente">
 			<thead>
 				<tr>
 					<th>Módulo</th>
-					<th style="width:160px">Versión</th>
-					<th style="width:95px">Nivel</th>
-					<th style="width:230px">Quién puede aprovecharlo</th>
-					<th>Qué permite</th>
+					<th style="width:120px">Nivel</th>
+					<th style="width:30%">Qué hacer</th>
+					<th>Por qué importa</th>
 				</tr>
 			</thead>
 			<tbody>
 			<?php foreach ( $hallazgos as $h ) : ?>
-				<?php $v = $h['vulnerabilidades'][0] ?? null; ?>
+				<?php
+				$v     = $h['vulnerabilidades'][0] ?? null;
+				$hacer = SWPK_QueHacer::para( $h );
+				?>
 				<tr>
 					<td>
 						<strong><?php echo esc_html( SWPK_Textos::limpiar_titulo( (string) $h['titulo'] ) ); ?></strong><br>
 						<span class="swpk-mono" style="color:#50575e"><?php echo esc_html( $h['slug'] ); ?></span>
-						<?php if ( '' === $h['auto_update'] ) : ?>
-							<br><span style="color:#6b7280;font-size:12px">Hay que entrar al sitio a actualizarlo</span>
-						<?php endif; ?>
+						<div style="margin-top:4px">
+							<span class="swpk-mono"><?php echo esc_html( $h['version'] ); ?></span>
+							<?php if ( '' !== $h['version_disponible'] ) : ?>
+								→ <span class="swpk-mono" style="color:#0b5ed7"><?php echo esc_html( $h['version_disponible'] ); ?></span>
+							<?php endif; ?>
+							<?php if ( isset( $h['activo'] ) && 0 === (int) $h['activo'] ) : ?>
+								<span class="swpk-etq swpk-autoupd" title="Instalado pero desactivado. Sus archivos siguen en el servidor.">Apagado</span>
+							<?php endif; ?>
+						</div>
 						<?php
 						// El puente al Historial de ESTE módulo en ESTE sitio.
 						//
 						// «¿cómo se actualizó ayer?» se contestaba saliendo a
 						// Historial, buscando el sitio en un desplegable de 109
-						// nombres y leyendo a ojo. Ahora es un clic, y es lo que
-						// convierte esa pregunta en un dato en vez de en una
-						// discusión.
+						// nombres y leyendo a ojo. Ahora es un clic.
 						?>
-						<br>
 						<a style="font-size:12px" href="<?php echo esc_url( add_query_arg(
 							[ 'page' => 'panel-kinsta-movimientos', 'sitio' => $sitio_id, 'q' => $h['slug'] ],
 							admin_url( 'admin.php' )
 						) ); ?>">Ver su historial →</a>
 					</td>
 					<td>
-						<span class="swpk-mono"><?php echo esc_html( $h['version'] ); ?></span>
-						<?php if ( '' !== $h['version_disponible'] ) : ?>
-							→ <span class="swpk-mono" style="color:#0b5ed7"><?php echo esc_html( $h['version_disponible'] ); ?></span>
-						<?php endif; ?>
-					</td>
-					<td>
 						<?php echo wp_kses_post( SWPK_Admin::nivel_badge( $h['nivel'] ) ); ?>
 						<?php
 						// Qué se puede hacer con ella: hay parche, no lo hay
-						// todavía, o el plugin está cerrado y no lo habrá.
-						$pildora = SWPK_Admin::parche_badge( $v ? (bool) (int) ( $v->parcheada ?? 0 ) : null, (string) $h['slug'] );
+						// todavía, o el módulo está cerrado y no lo habrá.
+						$pildora = SWPK_Admin::parche_badge(
+							$v ? (bool) (int) ( $v->parcheada ?? 0 ) : null,
+							(string) $h['slug'],
+							(string) ( $h['tipo'] ?? 'plugin' )
+						);
 						if ( '' !== $pildora ) :
 							?>
 							<div style="margin-top:6px"><?php echo wp_kses_post( $pildora ); ?></div>
 						<?php endif; ?>
 					</td>
-					<td>
-						<?php if ( $v ) : ?>
-							<?php $quien = SWPK_Textos::quien_puede( (string) ( $v->cvss_vector ?? '' ), (string) $v->descripcion ); ?>
-							<span style="color:<?php echo $quien['sin_cuenta'] ? '#9e0b10' : '#1d2327'; ?>">
-								<?php echo esc_html( $quien['frase'] ); ?>
-							</span>
-						<?php else : ?>
-							<span style="color:#50575e">—</span>
-						<?php endif; ?>
+					<td class="swpk-hacer swpk-hacer-<?php echo esc_attr( $hacer['quien'] ); ?>">
+						<strong><?php echo esc_html( $hacer['titular'] ); ?></strong>
+						<p><?php echo esc_html( $hacer['detalle'] ); ?></p>
 					</td>
 					<td>
 						<?php if ( $v ) : ?>
-							<?php echo esc_html( SWPK_Textos::explicar( (string) $v->titulo, (string) $v->descripcion ) ); ?>
-							<?php if ( '' !== (string) $v->cve ) : ?>
-								<br><span class="swpk-mono" style="color:#50575e"><?php echo esc_html( (string) $v->cve ); ?></span>
-							<?php endif; ?>
+							<?php $quien = SWPK_Textos::quien_puede( (string) ( $v->cvss_vector ?? '' ), (string) $v->descripcion ); ?>
+							<p style="margin:0 0 6px">
+								<span class="swpk-rotulin">Quién</span>
+								<span style="color:<?php echo $quien['sin_cuenta'] ? '#9e0b10' : '#1d2327'; ?>">
+									<?php echo esc_html( $quien['frase'] ); ?>
+								</span>
+							</p>
+							<p style="margin:0">
+								<span class="swpk-rotulin">Qué permite</span>
+								<?php echo esc_html( SWPK_Textos::explicar( (string) $v->titulo, (string) $v->descripcion ) ); ?>
+								<?php if ( '' !== (string) $v->cve ) : ?>
+									<br><span class="swpk-mono" style="color:#50575e"><?php echo esc_html( (string) $v->cve ); ?></span>
+								<?php endif; ?>
+							</p>
 						<?php elseif ( 'vulnerable_sin_detalle' === $h['motivo'] ) : ?>
 							<span style="color:#9e0b10">El hosting la marca como vulnerable</span>,
 							<span style="color:#50575e">a la espera del detalle público.</span>
@@ -453,8 +531,8 @@ $url_pestana = static fn( string $s ) => add_query_arg(
 	// Va en la ficha y no solo en el tablero porque es aquí donde se marcan a
 	// mano las declarativas: el honeypot de ESTE sitio lo revisa alguien que
 	// está mirando ESTE sitio, no una casilla en una pantalla de 107 filas.
-	$normas_activas = SWPK_Normas::activas();
-	$cumple_sitio   = SWPK_Normas::del_sitio( $sitio_id );
+	// $normas_activas, $cumple_sitio, $aplicables y $estado_de se calculan
+	// arriba del todo, porque la tarjeta de la cabecera también los necesita.
 	?>
 
 	<?php if ( $normas_activas && 'normas' === $seccion ) : ?>
@@ -479,13 +557,6 @@ $url_pestana = static fn( string $s ) => add_query_arg(
 		// Las 73 normas de corrido en la ficha de cada sitio son el mismo pozo
 		// que había en «Qué revisamos». Se divide por tema y se pagina, y con
 		// las mismas pastillas, para que las dos pantallas se lean igual.
-		$aplicables = [];
-		foreach ( $normas_activas as $n ) {
-			if ( SWPK_Normas::aplica( $n, (string) $sitio->tag ) ) {
-				$aplicables[] = $n;
-			}
-		}
-
 		$por_tema = [];
 		foreach ( $aplicables as $n ) {
 			$g = (string) ( $n->grupo ?? '' );
@@ -521,6 +592,33 @@ $url_pestana = static fn( string $s ) => add_query_arg(
 		$hay_tema    = '' !== $tema_pedido && isset( $por_tema[ $tema_pedido ] );
 		$para_ver    = $pide_arreglables ? $las_arreglables : ( $hay_tema ? $por_tema[ $tema_pedido ] : $aplicables );
 
+		// ── Buscar por palabra ──────────────────────────────────────────────
+		//
+		//   «y siempre que tengamos como un campo para poder buscar»
+		//
+		// Con 73 normas repartidas en siete páginas, saber que existe una que
+		// habla de XML-RPC no sirve de nada si hay que ir pasando páginas hasta
+		// dar con ella. Busca en el nombre, en la aclaración y en el porqué,
+		// que es por donde alguien la reconocería.
+		$buscar = isset( $_GET['buscar'] ) ? trim( sanitize_text_field( wp_unslash( (string) $_GET['buscar'] ) ) ) : '';
+
+		if ( '' !== $buscar ) {
+			$aguja    = mb_strtolower( $buscar );
+			$para_ver = array_values( array_filter(
+				$para_ver,
+				static function ( $n ) use ( $aguja ): bool {
+					$pajar = mb_strtolower(
+						(string) $n->nombre . ' '
+						. (string) ( $n->aclaracion ?? '' ) . ' '
+						. (string) ( $n->problema ?? '' ) . ' '
+						. (string) ( $n->porque ?? '' ) . ' '
+						. (string) $n->clave
+					);
+					return str_contains( $pajar, $aguja );
+				}
+			) );
+		}
+
 		// ── Filtrar por cómo está la norma ──────────────────────────────
 		//
 		//   «quiero filtrar por las que no cumplen, ¿cómo filtro?»
@@ -530,11 +628,6 @@ $url_pestana = static fn( string $s ) => add_query_arg(
 		// que fallan era ir pasando páginas.
 		//
 		// Se combina con el tema: las de «Cuentas y accesos» que no cumplen.
-		$estado_de = static function ( $n ) use ( $cumple_sitio ): string {
-			$fila = $cumple_sitio[ (string) $n->clave ] ?? null;
-			return $fila ? (string) $fila->estado : SWPK_Normas::SIN_DATO;
-		};
-
 		$estados_posibles = [
 			SWPK_Normas::FALLA    => 'No cumple',
 			SWPK_Normas::SIN_DATO => 'Falta medirlo',
@@ -612,87 +705,85 @@ $url_pestana = static fn( string $s ) => add_query_arg(
 
 		// El tema conserva la pestaña y de dónde se venía; si no, elegir un
 		// tema devolvía a la pestaña de pendientes y se perdía el regreso.
-		$url_tema = static fn( string $g ) => add_query_arg(
-			array_filter( [
-				'page'    => 'panel-kinsta-sitio',
-				'sitio'   => (string) $sitio->sitio_id,
-				'seccion' => 'normas',
-				'tema'    => $g,
-				'estado'  => $estado_pedido,
-			] ) + SWPK_Vista::rastro(),
-			admin_url( 'admin.php' )
-		);
-
-		// Y al revés: elegir estado no puede tirar el tema que ya estaba.
-		$url_estado = static fn( string $e ) => add_query_arg(
-			array_filter( [
-				'page'    => 'panel-kinsta-sitio',
-				'sitio'   => (string) $sitio->sitio_id,
-				'seccion' => 'normas',
-				'tema'    => $tema_pedido,
-				'estado'  => $e,
-			] ) + SWPK_Vista::rastro(),
-			admin_url( 'admin.php' )
-		);
-
-		$pastillas_tema = [ [
-			'texto'  => 'Todas',
-			'n'      => count( $aplicables ),
-			'url'    => $url_tema( '' ),
-			'activa' => ! $hay_tema && ! $pide_arreglables,
-		] ];
-
-		foreach ( $temas as $g ) {
-			$pastillas_tema[] = [
-				'texto'  => $g,
-				'n'      => count( $por_tema[ $g ] ),
-				'url'    => $url_tema( $g ),
-				'activa' => $hay_tema && $tema_pedido === $g,
-			];
-		}
-
-		if ( $las_arreglables ) {
-			$pastillas_tema[] = [
-				'texto'  => 'Las que el panel sabe arreglar',
-				'n'      => count( $las_arreglables ),
-				'url'    => $url_tema( $ARREGLABLES ),
-				'activa' => (bool) $pide_arreglables,
-			];
-		}
-
 		[ $normas_pagina, $pag_nor, $pags_nor ] = SWPK_Vista::paginar( $para_ver, SWPK_Vista::pagina_pedida(), 12 );
-		?>
-		<div class="swpk-pastillas" style="margin:0 0 8px"><?php echo SWPK_Vista::pastillas( $pastillas_tema ); // phpcs:ignore WordPress.Security.EscapeOutput ?></div>
 
-		<?php
-		// La segunda fila: cómo está. Va debajo del tema y no mezclada con él
-		// porque son dos preguntas distintas —de qué trata, y si se cumple— y
-		// en una sola fila de quince pastillas no se distingue cuál es cuál.
-		$pastillas_estado = [ [
-			'texto'  => 'Todas',
-			'n'      => $total_antes_de_estado,
-			'url'    => $url_estado( '' ),
-			'activa' => '' === $estado_pedido,
-		] ];
-		foreach ( $estados_posibles as $clave_e => $nombre_e ) {
-			$pastillas_estado[] = [
-				'texto'  => $nombre_e,
-				'n'      => $cuenta_estado[ $clave_e ],
-				'url'    => $url_estado( $clave_e ),
-				'activa' => $estado_pedido === $clave_e,
-			];
+		// ── Dos desplegables y un buscador, en vez de quince pastillas ──────
+		//
+		//   «aquí en tipo de norma yo no quiero que estén todas así en bloques.
+		//    Mejor que sea un filtro […] y poner esos dos filtros ahí y que
+		//    sean dropdowns, para no estar saturando las pantallas, que es lo
+		//    que él dijo: que no quiere saturar pantallas de información»
+		//
+		// Eran dos filas de pastillas —diez temas y cuatro estados— que
+		// ocupaban cuatro renglones antes de que empezara la lista. Dicen lo
+		// mismo en una sola línea, y cada opción sigue llevando su cuenta
+		// dentro, que era lo único que las pastillas hacían bien.
+		//
+		// Y el rótulo deja de ser «Cómo está»:
+		//
+		//   «no "cómo está", porque "cómo está" como que no se entiende. Entre
+		//    que tiene que ser básico, pero no tan básico que se oye ya más
+		//    corriente.»
+		$temas_opciones = [];
+		foreach ( $temas as $g ) {
+			$temas_opciones[ $g ] = sprintf( '%s (%d)', $g, count( $por_tema[ $g ] ) );
 		}
+		if ( $las_arreglables ) {
+			$temas_opciones[ $ARREGLABLES ] = sprintf( 'Las que el panel sabe arreglar (%d)', count( $las_arreglables ) );
+		}
+
+		$hay_filtro = '' !== $tema_pedido || '' !== $estado_pedido || '' !== $buscar;
 		?>
-		<div class="swpk-pastillas swpk-pastillas-estado" style="margin:0 0 12px">
-			<span class="swpk-pastillas-rotulo">Cómo está</span>
-			<?php echo SWPK_Vista::pastillas( $pastillas_estado ); // phpcs:ignore WordPress.Security.EscapeOutput ?>
-		</div>
+		<form method="get" class="swpk-filtros">
+			<input type="hidden" name="page" value="panel-kinsta-sitio">
+			<input type="hidden" name="sitio" value="<?php echo esc_attr( (string) $sitio->sitio_id ); ?>">
+			<input type="hidden" name="seccion" value="normas">
+			<?php foreach ( SWPK_Vista::rastro() as $k_r => $v_r ) : ?>
+				<input type="hidden" name="<?php echo esc_attr( $k_r ); ?>" value="<?php echo esc_attr( (string) $v_r ); ?>">
+			<?php endforeach; ?>
+
+			<label class="swpk-filtro">
+				<span>Tipo de norma</span>
+				<select name="tema" onchange="this.form.submit()">
+					<option value=""><?php echo esc_html( sprintf( 'Todas (%d)', count( $aplicables ) ) ); ?></option>
+					<?php foreach ( $temas_opciones as $valor => $texto ) : ?>
+						<option value="<?php echo esc_attr( $valor ); ?>" <?php selected( $tema_pedido, $valor ); ?>>
+							<?php echo esc_html( $texto ); ?>
+						</option>
+					<?php endforeach; ?>
+				</select>
+			</label>
+
+			<label class="swpk-filtro">
+				<span>Estado</span>
+				<select name="estado" onchange="this.form.submit()">
+					<option value=""><?php echo esc_html( sprintf( 'Todas (%d)', $total_antes_de_estado ) ); ?></option>
+					<?php foreach ( $estados_posibles as $clave_e => $nombre_e ) : ?>
+						<option value="<?php echo esc_attr( $clave_e ); ?>" <?php selected( $estado_pedido, $clave_e ); ?>>
+							<?php echo esc_html( sprintf( '%s (%d)', $nombre_e, $cuenta_estado[ $clave_e ] ) ); ?>
+						</option>
+					<?php endforeach; ?>
+				</select>
+			</label>
+
+			<label class="swpk-filtro swpk-filtro-buscar">
+				<span>Buscar</span>
+				<input type="search" name="buscar" value="<?php echo esc_attr( $buscar ); ?>"
+					placeholder="una palabra de la norma">
+			</label>
+
+			<button type="submit" class="button">Filtrar</button>
+
+			<?php if ( $hay_filtro ) : ?>
+				<a class="swpk-quitar-filtros" href="<?php echo esc_url( $url_pestana( 'normas' ) ); ?>">Quitar los filtros</a>
+			<?php endif; ?>
+		</form>
 
 		<?php if ( '' !== $estado_pedido && ! $para_ver ) : ?>
 			<div class="notice notice-info inline"><p>
 				Ninguna norma de este sitio está en «<?php echo esc_html( $estados_posibles[ $estado_pedido ] ); ?>»
 				<?php if ( $hay_tema || $pide_arreglables ) : ?>dentro de este tema<?php endif; ?>.
-				<a href="<?php echo esc_url( $url_estado( '' ) ); ?>">Ver todas</a>
+				<a href="<?php echo esc_url( $url_pestana( 'normas' ) ); ?>">Ver todas</a>
 			</p></div>
 		<?php endif; ?>
 
@@ -891,9 +982,31 @@ $url_pestana = static fn( string $s ) => add_query_arg(
 				</summary>
 
 				<div class="swpk-norma-dentro">
-					<div class="swpk-norma-dos">
-						<div>
-							<h4>Cómo lo sabemos</h4>
+					<?php
+					// ── Tres bloques numerados, en un orden que se sigue ────
+					//
+					//   «no cumple, alta… ¿en qué nos afecta?, ¿cómo lo
+					//    sabemos?, el editor no sé qué, cómo se arregla. Esa
+					//    información hay que ordenarla de mejor forma, porque
+					//    yo así no la entiendo. Sí se entiende, pero se ve
+					//    desordenado […] o los numeras o los pones dentro de
+					//    bloquecitos»
+					//
+					// Estaban en dos columnas: a la izquierda «cómo lo
+					// sabemos» y debajo «cómo se arregla», y a la derecha
+					// «qué pasa si no se arregla». Leído de izquierda a
+					// derecha salía 1, 3, 2 — y leído de arriba abajo, el
+					// bloque de la derecha quedaba colgando sin sitio. No era
+					// una impresión: el orden estaba roto de verdad.
+					//
+					// Ahora es una sola columna y van numerados, en el único
+					// orden que cuenta algo: qué se midió, qué pasa si se
+					// deja así, y qué hay que hacer. El botón cierra el tres,
+					// que es donde toca.
+					?>
+					<ol class="swpk-norma-pasos">
+						<li>
+							<h4>Qué medimos, y qué salió</h4>
 							<p>
 								<?php echo esc_html( $fila ? (string) $fila->detalle : 'Todavía no se ha medido.' ); ?>
 								<?php if ( $fila && $fila->medido_en ) : ?>
@@ -920,75 +1033,76 @@ $url_pestana = static fn( string $s ) => add_query_arg(
 									<br><span class="swpk-mudo">El agente todavía no ha mandado esta medición.</span>
 								<?php endif; ?>
 							</p>
-						</div>
-						<div>
-							<h4>Qué pasa si no se arregla</h4>
+						</li>
+
+						<li>
+							<h4>Qué pasa si se deja así</h4>
 							<p><?php echo esc_html( (string) ( $n->porque ?? '' ) ); ?></p>
-						</div>
-					</div>
+						</li>
 
-					<?php
-					// ── «Ok, ¿qué debo de hacer yo a mano?» (17:58) ─────────
-					//
-					// Es el campo que no existía. La tabla de normas guardaba
-					// nombre, problema, porque, comprobador y severidad, y
-					// ninguno decía cómo cerrarla. No es que no se enseñara:
-					// no se había escrito nunca. Están los 73 en
-					// includes/normas-arreglos.php.
-					$pasos = trim( (string) ( $n->como_se_arregla ?? '' ) );
-					?>
-					<?php if ( '' !== $pasos ) : ?>
-						<h4>Cómo se arregla</h4>
-						<?php if ( $es_cliente ) : ?>
-							<p class="swpk-mudo">
-								Este sitio lo lleva el cliente: el panel lo mide, pero no le cambia nada.
-								Lo de abajo es para decírselo a quien sí lo administra.
-							</p>
-						<?php endif; ?>
-						<?php
-						// Las líneas que empiezan por «1.» van en lista
-						// numerada; las demás son párrafos. Así el texto se
-						// escribe de corrido en el archivo y se lee como pasos
-						// aquí, sin que haya que marcar nada a mano.
-						$en_lista = false;
-						foreach ( explode( "\n", $pasos ) as $linea ) {
-							$linea = trim( $linea );
-							if ( '' === $linea ) {
-								continue;
-							}
-							$es_paso = (bool) preg_match( '/^\d+\.\s/', $linea );
-
-							if ( $es_paso && ! $en_lista ) {
-								echo '<ol class="swpk-pasos">';
-								$en_lista = true;
-							} elseif ( ! $es_paso && $en_lista ) {
-								echo '</ol>';
+						<li>
+							<h4>Cómo se arregla</h4>
+							<?php
+							// ── «Ok, ¿qué debo de hacer yo a mano?» (17:58) ──
+							//
+							// Es el campo que no existía. La tabla de normas
+							// guardaba nombre, problema, porque, comprobador y
+							// severidad, y ninguno decía cómo cerrarla. Están
+							// los 73 en includes/normas-arreglos.php.
+							$pasos = trim( (string) ( $n->como_se_arregla ?? '' ) );
+							?>
+							<?php if ( $es_cliente ) : ?>
+								<p class="swpk-mudo">
+									Este sitio lo lleva el cliente: el panel lo mide, pero no le cambia nada.
+									Lo de abajo es para decírselo a quien sí lo administra.
+								</p>
+							<?php endif; ?>
+							<?php if ( '' !== $pasos ) : ?>
+								<?php
+								// Las líneas que empiezan por «1.» van en lista
+								// numerada; las demás son párrafos. Así el texto
+								// se escribe de corrido en el archivo y se lee
+								// como pasos aquí, sin marcar nada a mano.
 								$en_lista = false;
-							}
+								foreach ( explode( "\n", $pasos ) as $linea ) {
+									$linea = trim( $linea );
+									if ( '' === $linea ) {
+										continue;
+									}
+									$es_paso = (bool) preg_match( '/^\d+\.\s/', $linea );
 
-							if ( $es_paso ) {
-								echo '<li>' . esc_html( preg_replace( '/^\d+\.\s*/', '', $linea ) ) . '</li>';
-							} else {
-								echo '<p>' . esc_html( $linea ) . '</p>';
-							}
-						}
-						if ( $en_lista ) {
-							echo '</ol>';
-						}
-						?>
-					<?php else : ?>
-						<h4>Cómo se arregla</h4>
-						<p class="swpk-mudo">Esta norma todavía no tiene los pasos escritos.</p>
-					<?php endif; ?>
+									if ( $es_paso && ! $en_lista ) {
+										echo '<ol class="swpk-pasos">';
+										$en_lista = true;
+									} elseif ( ! $es_paso && $en_lista ) {
+										echo '</ol>';
+										$en_lista = false;
+									}
 
-					<?php if ( $puede_el_panel && ! $es_cliente && SWPK_Normas::FALLA === $estado && $puedo_tocar ) : ?>
-						<p class="swpk-norma-pie">
-							<a class="button button-primary" href="<?php
-								echo esc_url( SWPK_Admin::url_arreglar( $clave, $sitio_id ) );
-							?>">Arreglar ahora</a>
-							<span class="swpk-mudo">El panel le manda la orden al agente y la próxima medición lo confirma.</span>
-						</p>
-					<?php endif; ?>
+									if ( $es_paso ) {
+										echo '<li>' . esc_html( preg_replace( '/^\d+\.\s*/', '', $linea ) ) . '</li>';
+									} else {
+										echo '<p>' . esc_html( $linea ) . '</p>';
+									}
+								}
+								if ( $en_lista ) {
+									echo '</ol>';
+								}
+								?>
+							<?php else : ?>
+								<p class="swpk-mudo">Esta norma todavía no tiene los pasos escritos.</p>
+							<?php endif; ?>
+
+							<?php if ( $puede_el_panel && ! $es_cliente && SWPK_Normas::FALLA === $estado && $puedo_tocar ) : ?>
+								<p class="swpk-norma-pie">
+									<a class="button button-primary" href="<?php
+										echo esc_url( SWPK_Admin::url_arreglar( $clave, $sitio_id ) );
+									?>">Arreglar ahora</a>
+									<span class="swpk-mudo">El panel le manda la orden al agente y la próxima medición lo confirma.</span>
+								</p>
+							<?php endif; ?>
+						</li>
+					</ol>
 				</div>
 			</details>
 		<?php endforeach; ?>

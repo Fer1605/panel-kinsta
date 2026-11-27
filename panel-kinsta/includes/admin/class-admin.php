@@ -493,21 +493,28 @@ class SWPK_Admin {
 	 *
 	 * @param object|null $v La fila de la vulnerabilidad, si la hay.
 	 */
-	public static function parche_badge( ?bool $parcheada, string $slug = '' ): string {
+	public static function parche_badge( ?bool $parcheada, string $slug = '', string $tipo = 'plugin' ): string {
 		if ( null === $parcheada ) {
 			return '';
+		}
+
+		// ── El cierre manda sobre el parche ─────────────────────────────────
+		//
+		// Modern Events Calendar Lite tiene parche publicado (la 7.13.0) Y
+		// está cerrado en WordPress desde 2022. Preguntando primero por el
+		// parche salía «Hay parche: actualizar», que es el consejo contrario
+		// al bueno: esa versión no va a llegar nunca por ahí. Lo que decide
+		// qué hacer es el cierre, así que el cierre se pregunta primero.
+		if ( '' !== $slug && SWPK_Repositorio::CERRADO === SWPK_Repositorio::estado( $slug, $tipo ) ) {
+			return '<span class="swpk-parche swpk-parche-cerrado" title="'
+				. esc_attr( 'WordPress sacó este plugin del repositorio. No va a haber arreglo: hay que reemplazarlo por otro.' )
+				. '">Cerrado por WordPress</span>';
 		}
 
 		if ( $parcheada ) {
 			return '<span class="swpk-parche swpk-parche-hay" title="'
 				. esc_attr( 'El autor ya sacó la versión arreglada. Se resuelve actualizando el módulo.' )
 				. '">Hay parche</span>';
-		}
-
-		if ( '' !== $slug && SWPK_Repositorio::CERRADO === SWPK_Repositorio::estado( $slug ) ) {
-			return '<span class="swpk-parche swpk-parche-cerrado" title="'
-				. esc_attr( 'WordPress sacó este plugin del repositorio. No va a haber arreglo: hay que reemplazarlo por otro.' )
-				. '">Cerrado por WordPress</span>';
 		}
 
 		return '<span class="swpk-parche swpk-parche-sin" title="'

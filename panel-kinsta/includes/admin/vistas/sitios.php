@@ -287,10 +287,19 @@ $volver = add_query_arg(
 				'todas'    => 'Todos los grupos',
 			],
 			'nivel' => [
-				'etiqueta' => 'Cómo está',
+				// ── «Cómo está» no dice qué se está eligiendo ───────────────
+				//
+				//   «no "cómo está", porque "cómo está" como que no se
+				//    entiende. Entre que tiene que ser básico, pero no tan
+				//    básico que se oye ya más corriente.»
+				//
+				// Lo que hay dentro son Crítico, Alto, Medio y Al día: eso es
+				// el riesgo del sitio, y llamarlo por su nombre no lo hace más
+				// técnico, lo hace más corto.
+				'etiqueta' => 'Riesgo',
 				'opciones' => $opciones_nivel,
 				'actual'   => $nivel,
-				'todas'    => 'Cómo está',
+				'todas'    => 'Cualquier riesgo',
 			],
 		] + $versiones['campos'] + [
 			'actualiza' => [
@@ -389,7 +398,7 @@ $volver = add_query_arg(
 			<thead>
 				<tr>
 					<th>Sitio</th>
-					<th style="width:86px">Cómo está</th>
+					<th style="width:86px">Riesgo</th>
 					<th style="width:230px">Qué le falta</th>
 					<th style="width:120px">
 						Se actualiza

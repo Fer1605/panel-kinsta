@@ -3,7 +3,7 @@
  * Plugin Name:       Panel Kinsta — Solución Web
  * Plugin URI:        https://github.com/Fer1605/panel-kinsta
  * Description:       Consolida el estado de los sitios alojados en Kinsta (etiquetas, plugins, versiones, vulnerabilidades y usuarios administradores), avisa a clientes, asesoras y soporte, y deja constancia con fecha de todo lo que se notificó.
- * Version:           0.13.2
+ * Version:           0.14.0
  * Requires at least: 6.4
  * Requires PHP:      8.1
  * Author:            Solución Web
@@ -25,7 +25,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'SWPK_VERSION', '0.13.2' );
+define( 'SWPK_VERSION', '0.14.0' );
 define( 'SWPK_RUTA', plugin_dir_path( __FILE__ ) );
 define( 'SWPK_URL', plugin_dir_url( __FILE__ ) );
 define( 'SWPK_ARCHIVO', __FILE__ );
@@ -62,6 +62,7 @@ require_once SWPK_RUTA . 'includes/class-receptor.php';
 require_once SWPK_RUTA . 'includes/class-api.php';
 require_once SWPK_RUTA . 'includes/class-mcp.php';
 require_once SWPK_RUTA . 'includes/class-codigos.php';
+require_once SWPK_RUTA . 'includes/class-que-hacer.php';
 require_once SWPK_RUTA . 'includes/class-monitor.php';
 require_once SWPK_RUTA . 'includes/class-sincronizador.php';
 require_once SWPK_RUTA . 'includes/class-trabajo.php';

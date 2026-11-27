@@ -2558,3 +2558,143 @@ body[class*="panel-kinsta"] .swpk-interruptor-corto {
 	text-decoration: none;
 }
 body[class*="panel-kinsta"] .swpk-interruptor-corto .swpk-que { font-size: 13px; }
+
+/* ════════════════════════════════════════════════════════════════════════════
+   27-11-2026 · «Qué hacer», los filtros desplegables y la norma ordenada
+   ════════════════════════════════════════════════════════════════════════════ */
+
+/* ── La columna que contesta ─────────────────────────────────────────────────
+   Va con una franja a la izquierda que dice de quién es el trabajo. Es el
+   mismo recurso de las franjas de grupo en Sitios: color frío, 3px, sin
+   rellenar la celda — porque en esta pantalla el color ya lo lleva el nivel. */
+body[class*="panel-kinsta"] .swpk-hacer {
+	border-left: 3px solid #c3cad6;
+	padding-left: 12px;
+}
+body[class*="panel-kinsta"] .swpk-hacer strong {
+	display: block;
+	font-size: 13.5px;
+	line-height: 1.3;
+	margin-bottom: 4px;
+}
+body[class*="panel-kinsta"] .swpk-hacer p {
+	margin: 0;
+	font-size: 12.5px;
+	line-height: 1.5;
+	color: #3a4250;
+}
+body[class*="panel-kinsta"] .swpk-hacer-nosotros { border-left-color: #1c6dc7; }
+body[class*="panel-kinsta"] .swpk-hacer-hosting  { border-left-color: #9aa4b2; }
+body[class*="panel-kinsta"] .swpk-hacer-cliente  { border-left-color: #7a5cd6; }
+body[class*="panel-kinsta"] .swpk-hacer-esperar  { border-left-color: #b4690e; }
+
+/* El rotulito de «Quién» / «Qué permite»: dice de qué va la frase sin gastar
+   una columna de cabecera para cada una. */
+body[class*="panel-kinsta"] .swpk-rotulin {
+	display: block;
+	font-size: 10.5px;
+	letter-spacing: .04em;
+	text-transform: uppercase;
+	color: #6b7280;
+	margin-bottom: 1px;
+}
+
+body[class*="panel-kinsta"] .swpk-tabla-pendiente td { vertical-align: top; }
+
+/* Las versiones de WordPress y PHP: siguen ahí, pero no del tamaño de lo que
+   hay que hacer. */
+body[class*="panel-kinsta"] .swpk-tarjeta-menor .swpk-n {
+	font-size: 20px;
+	padding-top: 6px;
+	color: #3a4250;
+}
+
+/* ── Los filtros: una línea, no cuatro renglones de pastillas ──────────────── */
+body[class*="panel-kinsta"] .swpk-filtros {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: flex-end;
+	gap: 10px 14px;
+	margin: 0 0 14px;
+	padding: 12px 14px;
+	background: #f6f7f9;
+	border: 1px solid #e2e6ee;
+	border-radius: 8px;
+}
+body[class*="panel-kinsta"] .swpk-filtro {
+	display: flex;
+	flex-direction: column;
+	gap: 3px;
+}
+body[class*="panel-kinsta"] .swpk-filtro > span {
+	font-size: 10.5px;
+	letter-spacing: .04em;
+	text-transform: uppercase;
+	color: #6b7280;
+}
+body[class*="panel-kinsta"] .swpk-filtro select,
+body[class*="panel-kinsta"] .swpk-filtro input[type="search"] {
+	min-height: 30px;
+	max-width: 260px;
+	font-size: 13px;
+}
+body[class*="panel-kinsta"] .swpk-filtro-buscar input { min-width: 200px; }
+body[class*="panel-kinsta"] .swpk-quitar-filtros {
+	font-size: 12.5px;
+	align-self: center;
+}
+
+/* ── La norma abierta: tres pasos numerados, uno debajo de otro ──────────────
+   Lo de antes eran dos columnas donde el orden de lectura salía 1, 3, 2. El
+   número delante no es decoración: es lo único que deja decir «el tres» en voz
+   alta y que la otra persona sepa de qué se habla. */
+body[class*="panel-kinsta"] ol.swpk-norma-pasos {
+	list-style: none;
+	counter-reset: swpk-paso;
+	margin: 0;
+	padding: 0;
+}
+body[class*="panel-kinsta"] ol.swpk-norma-pasos > li {
+	counter-increment: swpk-paso;
+	position: relative;
+	margin: 0;
+	padding: 0 0 14px 34px;
+}
+body[class*="panel-kinsta"] ol.swpk-norma-pasos > li + li {
+	padding-top: 14px;
+	border-top: 1px solid #e8ebf1;
+}
+body[class*="panel-kinsta"] ol.swpk-norma-pasos > li::before {
+	content: counter(swpk-paso);
+	position: absolute;
+	left: 0;
+	top: 0;
+	width: 22px;
+	height: 22px;
+	border-radius: 50%;
+	background: #eef0f5;
+	color: #3a4250;
+	border: 1px solid #d7dce6;
+	font-size: 12px;
+	font-weight: 600;
+	line-height: 20px;
+	text-align: center;
+}
+body[class*="panel-kinsta"] ol.swpk-norma-pasos > li + li::before { top: 14px; }
+body[class*="panel-kinsta"] ol.swpk-norma-pasos > li > h4 {
+	margin: 2px 0 6px;
+	font-size: 11px;
+	letter-spacing: .05em;
+	text-transform: uppercase;
+	color: #6b7280;
+}
+body[class*="panel-kinsta"] ol.swpk-norma-pasos > li > p,
+body[class*="panel-kinsta"] ol.swpk-norma-pasos > li .swpk-pasos {
+	margin: 0 0 8px;
+}
+body[class*="panel-kinsta"] .swpk-norma-pie { margin: 10px 0 0; }
+
+@media (max-width: 860px) {
+	body[class*="panel-kinsta"] .swpk-filtro select,
+	body[class*="panel-kinsta"] .swpk-filtro input[type="search"] { max-width: 100%; }
+}

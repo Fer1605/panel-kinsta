@@ -259,6 +259,8 @@ class SWPK_Riesgo {
 					'version_disponible' => $fila->version_disponible,
 					'vulnerabilidades'   => $vulns,
 					'auto_update'        => $fila->auto_update,
+					'tipo'               => $fila->tipo,
+					'activo'             => (int) $fila->activo,
 				];
 				continue;
 			}
@@ -276,6 +278,8 @@ class SWPK_Riesgo {
 					'version_disponible' => $fila->version_disponible,
 					'vulnerabilidades'   => [],
 					'auto_update'        => $fila->auto_update,
+					'tipo'               => $fila->tipo,
+					'activo'             => (int) $fila->activo,
 				];
 				continue;
 			}
@@ -290,6 +294,8 @@ class SWPK_Riesgo {
 					'version_disponible' => $fila->version_disponible,
 					'vulnerabilidades'   => [],
 					'auto_update'        => $fila->auto_update,
+					'tipo'               => $fila->tipo,
+					'activo'             => (int) $fila->activo,
 				];
 			}
 		}
@@ -353,28 +359,12 @@ class SWPK_Riesgo {
 	 * una conversación distinta con el cliente y vale distinguirla.
 	 * Se cachea 12 horas para no castigar a api.wordpress.org.
 	 */
-	public static function esta_abandonado( string $slug ): bool {
-		$cache = get_transient( 'swpk_cerrado_' . $slug );
-		if ( false !== $cache ) {
-			return '1' === $cache;
-		}
-
-		$r = wp_remote_get(
-			add_query_arg(
-				[ 'action' => 'plugin_information', 'request[slug]' => $slug ],
-				'https://api.wordpress.org/plugins/info/1.2/'
-			),
-			[ 'timeout' => 10 ]
-		);
-
-		$cerrado = false;
-		if ( ! is_wp_error( $r ) ) {
-			$datos   = json_decode( (string) wp_remote_retrieve_body( $r ), true );
-			$cerrado = is_array( $datos ) && 'closed' === ( $datos['error'] ?? '' );
-		}
-
-		set_transient( 'swpk_cerrado_' . $slug, $cerrado ? '1' : '0', 12 * HOUR_IN_SECONDS );
-
-		return $cerrado;
+	public static function esta_abandonado( string $slug, string $tipo = 'plugin' ): bool {
+		// Una sola puerta para esto. Había dos: esta, que leía el cuerpo de la
+		// respuesta y acertaba, y SWPK_Repositorio::estado(), que miraba solo el
+		// código HTTP y fallaba — y era la que pintaba la etiqueta de la
+		// pantalla. Dos respuestas distintas a la misma pregunta, y la mala era
+		// la que se veía.
+		return SWPK_Repositorio::CERRADO === SWPK_Repositorio::estado( $slug, $tipo );
 	}
 }
