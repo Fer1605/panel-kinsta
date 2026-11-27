@@ -39,6 +39,7 @@ class SWPK_Admin {
 		add_action( 'admin_post_swpk_correo_resumen', [ __CLASS__, 'accion_correo_resumen' ] );
 		add_action( 'admin_post_swpk_correo_prueba', [ __CLASS__, 'accion_correo_prueba' ] );
 		add_action( 'admin_post_swpk_repartir_asesoras', [ __CLASS__, 'accion_repartir_asesoras' ] );
+		add_action( 'admin_post_swpk_lleva_cartera', [ __CLASS__, 'accion_lleva_cartera' ] );
 		add_action( 'admin_post_swpk_quitar_acceso', [ __CLASS__, 'accion_quitar_acceso' ] );
 		add_action( 'admin_post_swpk_crear_llave', [ __CLASS__, 'accion_crear_llave' ] );
 		add_action( 'admin_post_swpk_revocar_llave', [ __CLASS__, 'accion_revocar_llave' ] );
@@ -1261,11 +1262,51 @@ class SWPK_Admin {
 	 * La regla también corre sola en cada sincronización; este botón es para
 	 * no esperar a mañana y para ver el resultado en una frase.
 	 */
+	/** Marca o desmarca a una persona para el reparto automático de la cartera. */
+	public static function accion_lleva_cartera(): void {
+		if ( ! self::puede_administrar() ) {
+			wp_die( 'Sin permiso.' );
+		}
+
+		$usuario = isset( $_GET['usuario'] ) ? (int) $_GET['usuario'] : 0;
+		check_admin_referer( 'swpk_lleva_cartera_' . $usuario );
+
+		$si = isset( $_GET['si'] ) && '1' === $_GET['si'];
+		SWPK_Perfiles::marcar_para_el_reparto( $usuario, $si );
+
+		$u = get_userdata( $usuario );
+
+		wp_safe_redirect( add_query_arg(
+			'swpk_msg',
+			'ok:' . rawurlencode( sprintf(
+				'%s %s en el reparto de la cartera.%s',
+				$u ? $u->display_name : 'Esa persona',
+				$si ? 'entra' : 'ya no entra',
+				$si ? ' Pulsá «Poner las asesoras en todos los nuestros» en Sitios para aplicarlo.' : ''
+			) ),
+			wp_get_referer() ?: admin_url( 'admin.php?page=' . self::SLUG . '-equipo' )
+		) );
+		exit;
+	}
+
 	public static function accion_repartir_asesoras(): void {
 		if ( ! self::puede_administrar() ) {
 			wp_die( 'Sin permiso.' );
 		}
 		check_admin_referer( 'swpk_repartir_asesoras' );
+
+		if ( ! SWPK_Perfiles::las_del_reparto() ) {
+			wp_safe_redirect( add_query_arg(
+				'swpk_msg',
+				'error:' . rawurlencode(
+					'Nadie lleva cartera todavía. En Equipo, marcá «Lleva cartera» a quien deba recibir '
+					. 'los sitios nuestros: tener perfil de asesora no basta, porque hay gente con ese '
+					. 'perfil que no lleva cartera.'
+				),
+				wp_get_referer() ?: admin_url( 'admin.php?page=' . self::SLUG . '-equipo' )
+			) );
+			exit;
+		}
 
 		$r = SWPK_Perfiles::repartir_asesoras_por_defecto();
 

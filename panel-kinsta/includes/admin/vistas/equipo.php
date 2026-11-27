@@ -111,6 +111,15 @@ $hay_filtro_equipo = ( '' !== $perfil_pedido || '' !== $busca_persona );
 					<th>Nombre</th>
 					<th style="width:180px">Perfil</th>
 					<th style="width:160px">Qué alcanza</th>
+					<th style="width:160px">
+						Lleva cartera
+						<?php echo wp_kses_post( SWPK_Vista::ayuda(
+							'Quien esté marcado aquí entra en el reparto automático: el panel le pone '
+							. 'todos los sitios nuestros —auto update y desarrollo— y le manda el correo '
+							. 'semanal de lo que esos sitios tengan pendiente. Tener perfil de asesora no '
+							. 'basta: hay gente con ese perfil que no lleva cartera.'
+						) ); ?>
+					</th>
 					<th style="width:170px">Última entrada</th>
 					<th style="width:110px"></th>
 				</tr>
@@ -142,6 +151,21 @@ $hay_filtro_equipo = ( '' !== $perfil_pedido || '' !== $busca_persona );
 							<?php echo $asignados ? esc_html( SWPK_Vista::plural( (int) $asignados, 'sitio', 'sitios' ) ) : '<span style="color:#9e0b10">ninguno todavía</span>'; ?>
 						<?php else : ?>
 							<span style="color:#50575e">todos</span>
+						<?php endif; ?>
+					</td>
+					<td>
+						<?php if ( SWPK_Perfiles::VENTAS === $perfil ) : ?>
+							<?php $lleva = SWPK_Perfiles::entra_en_el_reparto( (int) $u->ID ); ?>
+							<a class="swpk-interruptor swpk-interruptor-corto<?php echo $lleva ? ' swpk-encendido' : ''; ?>"
+								href="<?php echo esc_url( wp_nonce_url(
+									admin_url( 'admin-post.php?action=swpk_lleva_cartera&usuario=' . $u->ID . '&si=' . ( $lleva ? '0' : '1' ) ),
+									'swpk_lleva_cartera_' . $u->ID
+								) ); ?>">
+								<span class="swpk-palanca"></span>
+								<span class="swpk-que"><?php echo $lleva ? 'Sí' : 'No'; ?></span>
+							</a>
+						<?php else : ?>
+							<span class="swpk-gris">—</span>
 						<?php endif; ?>
 					</td>
 					<td><?php echo $ultima ? esc_html( SWPK_Frescura::fmt( 'j M Y, H:i', (string) $ultima ) ) : '<span style="color:#50575e">nunca</span>'; ?></td>

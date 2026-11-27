@@ -2549,3 +2549,12 @@ body[class*="panel-kinsta"] a.swpk-enlace-pie { margin-left: 14px; font-size: 13
 		grid-template-areas: "form" "previa" "marcas";
 	}
 }
+
+/* El interruptor corto de la tabla de Equipo: palanca y una palabra, sin
+   el bloque de explicación que llevan los de Correos. */
+body[class*="panel-kinsta"] .swpk-interruptor-corto {
+	display: inline-flex; align-items: center; gap: 8px;
+	padding: 0; border: 0; background: none; box-shadow: none;
+	text-decoration: none;
+}
+body[class*="panel-kinsta"] .swpk-interruptor-corto .swpk-que { font-size: 13px; }

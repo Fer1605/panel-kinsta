@@ -33,6 +33,9 @@ defined( 'ABSPATH' ) || exit;
 
 class SWPK_Perfiles {
 
+	/** Marca de usuario: esta persona entra en el reparto automático de la cartera. */
+	public const META_REPARTO = 'swpk_asesora_cartera';
+
 	public const DIRECCION = 'swpk_direccion';
 	public const VENTAS    = 'swpk_ventas';
 	public const SOPORTE   = 'swpk_soporte';
@@ -415,6 +418,48 @@ class SWPK_Perfiles {
 	 * @return array{guardadas:int,rechazado:string}
 	 */
 	/**
+	 * ─── Quién entra en el reparto automático ───────────────────────────────
+	 *
+	 * No todos los que tienen perfil de asesora llevan cartera. En producción
+	 * son cuatro —Tiffany, Alejandra, Luisa y Fer— y el jefe nombró a dos:
+	 * «también van a Ale, deberían ser las dos, ellas dos como asesoras»
+	 * (03:45). Luisa está para las caídas y Fer lleva el panel.
+	 *
+	 * Repartir «todas las que tengan el perfil» les habría puesto 96 sitios a
+	 * las cuatro, y con eso el correo semanal a dos personas que no lo
+	 * esperan. Así que es una marca por persona, que se pone en Equipo, y no
+	 * una deducción del perfil.
+	 *
+	 * Sin nadie marcado no se reparte nada: es más seguro no hacer nada que
+	 * adivinar a quién le toca la cartera.
+	 *
+	 * @return array<int,int>
+	 */
+	public static function las_del_reparto(): array {
+		$ids = [];
+
+		foreach ( self::asesoras() as $u ) {
+			if ( get_user_meta( (int) $u->ID, self::META_REPARTO, true ) ) {
+				$ids[] = (int) $u->ID;
+			}
+		}
+
+		return $ids;
+	}
+
+	public static function entra_en_el_reparto( int $usuario_id ): bool {
+		return (bool) get_user_meta( $usuario_id, self::META_REPARTO, true );
+	}
+
+	public static function marcar_para_el_reparto( int $usuario_id, bool $si ): void {
+		if ( $si ) {
+			update_user_meta( $usuario_id, self::META_REPARTO, 1 );
+		} else {
+			delete_user_meta( $usuario_id, self::META_REPARTO );
+		}
+	}
+
+	/**
 	 * ─── La regla de reparto, aplicada a toda la cartera ────────────────────
 	 *
 	 * «Poné a las 2 asesoras en todos los sitios de auto update, y a los NO
@@ -440,7 +485,7 @@ class SWPK_Perfiles {
 		global $wpdb;
 
 		$tabla = SWPK_Tablas::tabla( 'sitio_asesoras' );
-		$todas = array_map( static fn( $u ) => (int) $u->ID, self::asesoras() );
+		$todas = self::las_del_reparto();
 
 		$cuenta = [ 'puestas' => 0, 'quitadas' => 0, 'ya_tenian' => 0 ];
 
