@@ -173,7 +173,10 @@ En orden de urgencia, dicho por Fer el 27-11-2026:
 2. ~~**Caídas**~~ — hecho el 27 por la tarde, en 0.19.4. Ver §9 ter.
 3. ~~**Pendientes de un sitio**~~ — hecho a la vez, en 0.19.0: filtros y
    páginas. Ver §9 bis.
-4. **Seguridad** — «creo que está más decente». **Es la que queda.**
+4. ~~**Seguridad**~~ — hecho el 27 por la tarde, en 0.19.5. Ver §9 ter.
+
+**La lista de arriba está cerrada.** Lo que sigue pendiente de esta sección es
+la pieza concreta del final: el botón «arreglarlo en Kinsta».
 
 ---
 
@@ -258,7 +261,7 @@ escribirla: así se arregló «Abrir en Kinsta», que llevaba a la lista de los
 
 ---
 
-## 9 ter. Lo que se hizo con Caídas (0.19.4)
+## 9 ter. Lo que se hizo con Caídas (0.19.4) y con Seguridad (0.19.5)
 
 El diagnóstico de arriba —«la pantalla está bien, lo que satura es lo que
 enseña de golpe»— era exacto. Medido antes de tocar nada: **4.809 px de alto y
@@ -291,6 +294,26 @@ Nada nuevo en el método; es el mismo de §9 bis aplicado a lo que había:
   entera y nunca fila por fila**.
 - **El historial se pagina**, de diez en diez, con su propio parámetro `ph`:
   con `p` para las dos listas, pasar de página en una saltaba también la otra.
+
+Y en **Seguridad**, que era la que menos urgía («creo que está más decente»),
+dos cosas y ya:
+
+- **La cuarta dona.** Misma caja de 278 px para tres números de los que dos
+  suelen ser cero, y sin poder pulsarlos. La misma filita, y ahora cada cifra
+  lleva a su lista: «Cumplen todo» y «Les falta algo» abren la vista por sitio
+  con el estado puesto, «Sin revisar» abre la de «Sin información».
+- **La misma frase, cinco veces.** Cada bloque de norma listaba cinco sitios y
+  repetía en los cinco, palabra por palabra, el mismo detalle: «El sitio no
+  manda la cabecera. La primera visita de cada persona sigue saliendo sin
+  cifrar.» ×5. Para casi todas las normas el detalle no depende del sitio —o
+  la cabecera está o no está—. **Cuando los detalles del bloque son todos
+  iguales, se dice una vez bajo el título y la columna desaparece**; cuando de
+  verdad cambian («3 módulos en una versión con falla conocida: …») se quedan.
+  Es la regla §3.2 multiplicada por cinco.
+- Y el porqué de cada norma deja de ser un párrafo recortado a 160 caracteres
+  con puntos suspensivos y pasa a la burbuja del título. Dos renglones por
+  bloque, cortados a media frase, es texto que nadie termina de leer y que
+  ocupa igual.
 
 ---
 

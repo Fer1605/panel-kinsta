@@ -156,7 +156,7 @@ Reglas de Fer, que valen igual en un chat nuevo:
 
 | | Versión | Dónde está |
 |---|---|---|
-| Panel Kinsta | **0.19.4** | En el repositorio y comprobado en local a 1280 px. **La 0.18.1 es la que está en producción**: la 0.19.x todavía no se ha desplegado. |
+| Panel Kinsta | **0.19.5** | En el repositorio y comprobado en local a 1280 px. **La 0.18.1 es la que está en producción**: la 0.19.x todavía no se ha desplegado. |
 | Agente (plugin) | **0.7.0** | 0.6.4 está en 106 de 107. La 0.7.0 trae el registro de actividad y **no está repartida**. |
 | Agente (dentro del tema) | **0.7.0-tema** | La rama unida del jefe sigue en 0.6.4-tema con código de 0.6.3. La corrección + el registro están en una rama lista, **sin PR abierto**. |
 | Tema hijo | **2.6.1** | En el PR. |
@@ -269,8 +269,32 @@ El historial se pagina de diez en diez con su propio parámetro `ph`.
 
 Queda: **2.672 px, y la lista empieza en el 477.**
 
-**Lo que sigue:** Seguridad, el punto 4 y último de la lista de §9. «Creo que
-está más decente», así que es la que menos urge.
+### Lo del 27, cerrando la lista: Seguridad (0.19.4 → 0.19.5)
+
+El punto 4 y último. Era la que menos urgía —«creo que está más decente»— y
+tenía dos cosas:
+
+- **La cuarta dona del panel.** Otra caja de 278 px para tres números de los
+  que dos suelen ser cero, y sin poder pulsarlos. La misma filita de tarjetas,
+  y ahora cada cifra lleva a su lista: «Cumplen todo» y «Les falta algo» abren
+  la vista por sitio con el estado puesto, «Sin revisar» abre la de «Sin
+  información».
+- **La misma frase, cinco veces.** Cada bloque de norma listaba cinco sitios y
+  repetía en los cinco, palabra por palabra, el mismo detalle: «El sitio no
+  manda la cabecera. La primera visita de cada persona sigue saliendo sin
+  cifrar.» ×5. Ahora, cuando los detalles del bloque son todos iguales, se
+  dice una vez bajo el título y la columna desaparece; cuando de verdad
+  cambian de sitio en sitio —«3 módulos en una versión con falla conocida:
+  …»— se quedan. Y el porqué de la norma deja de ser un párrafo recortado con
+  puntos suspensivos y pasa a la burbuja del título.
+
+Queda en **2.432 px** (eran 2.883) y el primer bloque empieza en el 577.
+
+**La lista de §9 está cerrada.** Lo que sigue pendiente de maquetado es la
+pieza concreta del final de esa sección: el botón «arreglarlo en Kinsta» para
+las normas que se tocan en MyKinsta y no en el sitio —el HTTPS forzado, las
+redirecciones, la protección de bots—, comprobando cada dirección a mano antes
+de escribirla.
 
 ### Lo del 27 a mediodía: el panel decía que 100 sitios tenían 2FA (0.14.1 → 0.15.1)
 

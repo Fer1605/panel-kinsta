@@ -128,27 +128,56 @@ $trozos_cumpl = [
 	],
 ];
 
-SWPK_Vista::rejilla_abrir();
+// ── La dona se fue, y en su lugar van las tres cifras en una filita ────────
+//
+// Era una caja de 278 px de alto —un círculo de 140 px y tres renglones de
+// leyenda— para decir tres números, de los que dos suelen ser cero. Es la
+// cuarta vez que esta forma aparece en el panel y la cuarta que se cambia por
+// lo mismo: «que sea solo una filita, el número y el texto a la par». Y ahora
+// cada cifra lleva a su lista, que la dona no hacía: pulsar un trozo de dona
+// no llevaba a ninguna parte.
+//
+// Los tres trozos suman el total a propósito. «Sin revisar» no es relleno: es
+// la parte de la cartera de la que este panel no sabe nada, y esconderla
+// dejaría una cuenta que promete saber más de lo que sabe.
+$url_vista_con = static fn( array $args ) => add_query_arg(
+	[ 'page' => 'panel-kinsta-seguridad', 'seccion' => 'cumplimiento' ] + $args,
+	admin_url( 'admin.php' )
+);
+?>
+<div class="swpk-tarjetas swpk-tarjetas-fila">
+	<a class="swpk-tarjeta swpk-tarjeta-enlace" href="<?php echo esc_url( $url_vista_con( [ 'vista' => 'sitio', 'como' => 'limpio' ] ) ); ?>">
+		<div class="swpk-n" style="color:#1c6dc7"><?php echo (int) $al_dia_medibles; ?></div>
+		<div class="swpk-r">Cumplen todo</div>
+	</a>
+	<a class="swpk-tarjeta swpk-tarjeta-enlace" href="<?php echo esc_url( $url_vista_con( [ 'vista' => 'sitio', 'como' => 'falla' ] ) ); ?>">
+		<div class="swpk-n" style="color:<?php echo $fallando_medibles ? '#9e0b10' : '#1c6dc7'; ?>"><?php echo (int) $fallando_medibles; ?></div>
+		<div class="swpk-r">Les falta algo</div>
+	</a>
+	<a class="swpk-tarjeta swpk-tarjeta-enlace" href="<?php echo esc_url( $url_vista_con( [ 'vista' => 'hueco' ] ) ); ?>">
+		<div class="swpk-n"><?php echo (int) count( $ciegos ); ?></div>
+		<div class="swpk-r">Sin revisar</div>
+	</a>
+</div>
 
-// La dona iba a cinco columnas y al lado, a siete, la lista de problemas. La
-// lista es larga y la dona mide lo que mide un círculo, así que debajo de ella
-// quedaba media pantalla en blanco: «ese espacio en blanco ahí no le gusta».
-// Ahora la dona es una tira baja a todo lo ancho y la lista va entera debajo.
-SWPK_Vista::caja_abrir(
-	'Estado de cumplimiento' . SWPK_Vista::ayuda(
+<p class="swpk-comoasi-linea">
+	<?php echo esc_html( SWPK_Vista::plural( count( $normas ), 'norma activa', 'normas activas' ) ); ?>,
+	medidas sobre <?php echo esc_html( SWPK_Vista::plural( (int) $tablero['total'], 'sitio', 'sitios' ) ); ?>.
+	<?php echo wp_kses_post( SWPK_Vista::ayuda(
 		'El panel no comprueba estas normas por su cuenta: las mira el plugin instalado en cada '
 		. 'sitio y las manda en su reporte. Lo que se ve es cómo estaba ese sitio la última vez que '
-		. 'reportó, y por eso cada dato lleva su fecha en la ficha del sitio.'
-	),
-	esc_html( SWPK_Vista::plural( count( $normas ), 'norma activa', 'normas activas' ) ),
-	'swpk-c12'
-);
+		. 'reportó, y por eso cada dato lleva su fecha en la ficha del sitio. Un sitio «sin revisar» '
+		. 'no es un sitio que esté bien ni uno que esté mal: es uno del que todavía no sabemos nada.'
+	) ); ?>
+</p>
+<?php
 
-SWPK_Vista::dona( $trozos_cumpl, (int) $tablero['total'], 'sitios' );
+SWPK_Vista::rejilla_abrir();
 
-// Las normas que no incumple nadie. Van aquí dentro y no en una tarjeta
-// propia: decir lo que está bien es parte de decir cómo vamos, y una
-// pantalla que solo enseña problemas se lee como si todo estuviera mal.
+// Las normas que no incumple nadie. Decir lo que está bien es parte de decir
+// cómo vamos: una pantalla que solo enseña problemas se lee como si todo
+// estuviera mal. Va plegado y fuera de ninguna caja, que es lo que era cuando
+// vivía dentro de la de la dona.
 if ( $cumplidas && $medibles ) {
 	$limpias = array_filter( $cumplidas, static fn( $r ) => $r['cumple'] >= 1 );
 
@@ -173,8 +202,6 @@ if ( $cumplidas && $medibles ) {
 		echo '</ul></details>';
 	}
 }
-
-SWPK_Vista::caja_cerrar();
 
 usort(
 	$con_fallas,
@@ -466,39 +493,73 @@ $cuenta_vista = [
 		if ( $recortada ) {
 			$lista = array_slice( $lista, 0, $POR_BLOQUE );
 		}
+
+		// ── La misma frase, cinco veces ─────────────────────────────────────
+		//
+		//   «El sitio no manda la cabecera. La primera visita de cada persona
+		//    sigue saliendo sin cifrar.»  ×5
+		//
+		// Eso es lo que enseñaba este bloque: la columna del medio repetía
+		// palabra por palabra el mismo detalle en los cinco renglones, porque
+		// para casi todas las normas el detalle no depende del sitio —o la
+		// cabecera está o no está—. Es la regla §3.2 del estilo de las
+		// pantallas, «si una frase dice lo mismo que otra que está diez
+		// píxeles más abajo, sobra una», multiplicada por cinco.
+		//
+		// Cuando todos los detalles del bloque son el mismo, se dice UNA vez
+		// debajo del título y la columna desaparece. Cuando de verdad cambian
+		// de sitio en sitio —«3 módulos en una versión con falla conocida:
+		// Limit Login Attempts Reloaded, WP Fastest Cache, Divi»— se quedan,
+		// porque ahí cada renglón dice algo distinto.
+		$detalles_unicos = array_values( array_unique( array_map(
+			static fn( $i ) => trim( (string) $i['detalle'] ),
+			$lista_entera
+		) ) );
+
+		$detalle_comun = ( 1 === count( $detalles_unicos ) && '' !== $detalles_unicos[0] )
+			? $detalles_unicos[0]
+			: '';
 		?>
 		<div class="swpk-norma-bloque">
 			<div class="swpk-norma-cabeza">
 				<span class="swpk-etq swpk-sev-<?php echo esc_attr( (string) $n->severidad ); ?>">
 					<?php echo esc_html( ucfirst( (string) $n->severidad ) ); ?>
 				</span>
-				<?php // El PROBLEMA, no la regla: aquí abajo van los sitios que lo tienen. ?>
-				<h3><?php echo esc_html( SWPK_Normas::problema( $n ) ); ?></h3>
+				<?php
+				// El PROBLEMA, no la regla: aquí abajo van los sitios que lo
+				// tienen. El porqué entero va en la burbuja y no en un párrafo
+				// recortado con puntos suspensivos: dos renglones por bloque,
+				// cortados a media frase, es texto que nadie termina de leer y
+				// que ocupa igual.
+				?>
+				<h3>
+					<?php echo esc_html( SWPK_Normas::problema( $n ) ); ?>
+					<?php if ( '' !== (string) $n->porque ) : ?>
+						<?php echo wp_kses_post( SWPK_Vista::ayuda( (string) $n->porque ) ); ?>
+					<?php endif; ?>
+				</h3>
 				<span class="swpk-norma-cuenta">
 					en <?php echo esc_html( SWPK_Vista::plural( (int) $r['falla'], 'sitio', 'sitios' ) ); ?>
 				</span>
 			</div>
 
-			<?php // Resumido: el texto entero se lee al abrir la norma sola. ?>
-			<p class="swpk-norma-porque" title="<?php echo esc_attr( (string) $n->porque ); ?>"><?php
-				echo esc_html(
-					'' !== $norma_pedida
-						? (string) $n->porque
-						: SWPK_Vista::recortar( (string) $n->porque, 160 )
-				);
-			?></p>
+			<?php if ( '' !== $detalle_comun ) : ?>
+				<p class="swpk-norma-porque"><?php echo esc_html( $detalle_comun ); ?></p>
+			<?php endif; ?>
 
 			<table class="widefat striped swpk-norma-tabla">
 				<tbody>
 				<?php foreach ( $lista as $item ) : ?>
 					<tr>
-						<td style="width:30%">
+						<td<?php echo '' === $detalle_comun ? ' style="width:30%"' : ''; ?>>
 							<a href="<?php echo esc_url( $url_sitio( (string) $item['sitio']->sitio_id ) ); ?>"><strong><?php
 								echo esc_html( $nombre_de( $item['sitio'] ) );
 							?></strong></a>
 							<?php echo SWPK_Admin::grupo_badge( (string) $item['sitio']->tag ); ?>
 						</td>
-						<td><?php echo esc_html( (string) $item['detalle'] ); ?></td>
+						<?php if ( '' === $detalle_comun ) : ?>
+							<td><?php echo esc_html( (string) $item['detalle'] ); ?></td>
+						<?php endif; ?>
 						<td style="width:160px;text-align:right">
 							<?php if ( '' !== $orden && (int) $n->arreglable === 1 && SWPK_Etiquetas::NO_UPDATE !== (string) $item['sitio']->tag ) : ?>
 								<a class="button button-small"
