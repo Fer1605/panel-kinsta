@@ -1495,11 +1495,20 @@ body[class*="panel-kinsta"] .swpk-ayuda {
 	user-select: none;
 }
 
-/* Una «?» y no una «i». «Los palitos que no son is»: una i minúscula dentro
-   de un círculo de 16px es un palito con un punto encima, y a ese tamaño el
-   punto se pierde. La interrogación no se confunde con nada, y además dice
-   mejor lo que hace: abre una explicación. */
-body[class*="panel-kinsta"] .swpk-ayuda::before { content: "?"; }
+/* Una «i», que es lo que pidió el jefe el 27-11-2026: «todos los signos de
+   interrogación en todo el panel, ponles is».
+
+   Aquí estuvo una «?» por un motivo que sigue siendo cierto: una i minúscula
+   en un círculo de 16px es un palito con un punto que se pierde. Así que la
+   i va en serif y en cursiva, que es como se dibuja en todas partes, y un
+   punto más grande que el de la tipografía del escritorio. */
+body[class*="panel-kinsta"] .swpk-ayuda::before {
+	content: "i";
+	font-family: Georgia, "Times New Roman", serif;
+	font-style: italic;
+	font-size: 12px;
+	line-height: 1;
+}
 
 /* Un campo con su burbuja AL LADO, no debajo.
    Un `width:100%` dentro de una celda empuja la burbuja al renglón de abajo,

@@ -939,73 +939,19 @@ $url_pestana = static fn( string $s ) => add_query_arg(
 		}
 		?>
 		<?php
-		// ── «Eso es lo que convierte 21 filas rojas en un plan de trabajo» ──
+		// ── Aquí vivía el reparto en azul, y se quitó ───────────────────────
 		//
-		// «mira, tienes de 30 normas que revisamos solo tienes 15 aplicadas al
-		// sitio web — eso sí me interesa» (12:58).
+		//   «tenemos repetida la información, ¿te das cuenta? "De 16 normas
+		//    sin cumplir de 73: 1 la arregla el panel con un clic, 15 se
+		//    arreglan entrando al sitio". Y luego abajo dice "1 norma se
+		//    arregla desde aquí, el resto hay que ir a cambiarlo al sitio".
+		//    O sea, fatal.»
 		//
-		// El reparto por QUIÉN tiene que moverse, no por tema ni por
-		// gravedad: lo que el panel arregla con un clic, lo que obliga a
-		// entrar al sitio, y lo que hay que hablar con el cliente antes de
-		// tocar nada. Son tres trabajos distintos y hasta ahora salían
-		// mezclados en una lista de filas rojas.
-		$reparto = [ 'panel' => 0, 'entrar' => 0, 'hablar' => 0 ];
-
-		foreach ( $aplicables as $n_r ) {
-			$f_r = $cumple_sitio[ (string) $n_r->clave ] ?? null;
-			if ( SWPK_Normas::FALLA !== ( $f_r ? (string) $f_r->estado : '' ) ) {
-				continue;
-			}
-
-			if ( $es_cliente ) {
-				// En un sitio del cliente no se entra a cambiar nada sin
-				// pedirlo, así que TODO lo que falle es una conversación.
-				++$reparto['hablar'];
-			} elseif ( '' !== SWPK_Ordenes::orden_de_la_norma( (string) $n_r->clave ) && 1 === (int) $n_r->arreglable ) {
-				++$reparto['panel'];
-			} else {
-				++$reparto['entrar'];
-			}
-		}
-
-		$total_falla = array_sum( $reparto );
+		// Eran dos frases diciendo lo mismo, una encima de la otra, y la de
+		// arriba además pintada de azul. Queda la de abajo, que es la corta.
+		// El reparto completo sigue estando en la pantalla de Seguridad, que
+		// es donde se mira la cartera entera.
 		?>
-		<?php if ( $total_falla > 0 ) : ?>
-			<p class="swpk-reparto">
-				<?php
-				$trozos = [];
-				if ( $reparto['panel'] ) {
-					$trozos[] = sprintf(
-						'<strong>%d</strong> %s el panel con un clic',
-						$reparto['panel'],
-						1 === $reparto['panel'] ? 'la arregla' : 'las arregla'
-					);
-				}
-				if ( $reparto['entrar'] ) {
-					$trozos[] = sprintf(
-						'<strong>%d</strong> se %s entrando al sitio',
-						$reparto['entrar'],
-						1 === $reparto['entrar'] ? 'arregla' : 'arreglan'
-					);
-				}
-				if ( $reparto['hablar'] ) {
-					$trozos[] = sprintf(
-						'<strong>%d</strong> hay que %s con el cliente',
-						$reparto['hablar'],
-						1 === $reparto['hablar'] ? 'hablarla' : 'hablarlas'
-					);
-				}
-
-				printf(
-					'De %s sin cumplir de %d: %s.',
-					esc_html( SWPK_Vista::plural( $total_falla, 'norma', 'normas' ) ),
-					count( $aplicables ),
-					wp_kses_post( implode( ', ', $trozos ) )
-				);
-				?>
-			</p>
-		<?php endif; ?>
-
 		<p class="swpk-aviso-corto">
 			<?php
 			if ( $es_cliente ) {
@@ -1016,10 +962,14 @@ $url_pestana = static fn( string $s ) => add_query_arg(
 					SWPK_Vista::plural( count( $las_arreglables ), 'norma', 'normas' )
 				) );
 			} elseif ( 0 === $arreglables_aqui ) {
-				echo 'De lo que le falta a este sitio, el panel no puede arreglar nada solo: hay que entrar al sitio a cambiarlo.';
+				echo 'De lo que le falta a este sitio, el panel no puede arreglar nada solo: hay que ajustarlo a mano.';
 			} else {
+				// «El resto hay que ir a cambiarlo al sitio» no era verdad:
+				// algunas se cambian en MyKinsta y no se entra al sitio para
+				// nada —el HTTPS forzado, por ejemplo—. Cada norma dice
+				// dentro dónde se toca; aquí se dice solo cuántas.
 				echo esc_html( sprintf(
-					'%s desde aquí; el resto hay que ir a cambiarlo al sitio.',
+					'%s desde aquí; el resto se ajustan a mano.',
 					SWPK_Vista::plural( $arreglables_aqui, 'norma se arregla', 'normas se arreglan' )
 				) );
 			}
@@ -1089,9 +1039,17 @@ $url_pestana = static fn( string $s ) => add_query_arg(
 
 			// Se abre sola la que falla Y el panel puede arreglar: es la que
 			// uno vino a ver. Las demás, cerradas.
-			$abierta = SWPK_Normas::FALLA === $estado && $puede_el_panel && ! $es_cliente;
+			// Ninguna abierta al entrar.
+			//
+			//   «al entrar a las normas sin cumplir me aparece la primera
+			//    abierta. Eso no, que todas estén cerradas […] si no mi jefe
+			//    va a ver que esto está sobresaturado de información»
+			//
+			// Abrir la primera parecía una ayuda —señalar la que se puede
+			// arreglar— y lo que hace es volcar media pantalla de texto antes
+			// de que nadie haya pedido nada.
 			?>
-			<details class="swpk-norma" <?php echo $abierta ? 'open' : ''; ?>>
+			<details class="swpk-norma">
 				<summary>
 					<span class="swpk-norma-nombre">
 						<strong><?php echo esc_html( (string) $n->nombre ); ?></strong>
