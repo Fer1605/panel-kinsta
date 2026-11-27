@@ -51,6 +51,8 @@ Si solo vas a leer tres, que sean estos, en este orden:
 | 12 | [Pantheon](12-pantheon.md) | El plan para que el panel lea sitios que no están en Kinsta |
 | 13 | [Qué es cada sitio](13-que-es-cada-sitio.md) | Tienda, cotizador o informativo: las tres capas y los dos agujeros de la regla simple |
 | 14 | [Cadencia y lo que cuesta](14-cadencia-y-lo-que-cuesta.md) | Cada cuánto pasa cada cosa, qué se puede programar y qué exige pagar |
+| 15 | [El agente en el tema hijo](15-el-agente-en-el-child-theme.md) | Cómo vive el agente dentro del tema y qué se rompió al mudarlo |
+| 16 | [El estilo de las pantallas](16-estilo-de-las-pantallas.md) | Cómo se ve y cómo se lee el panel, con el motivo de cada regla. **El que hay que abrir para optimizar una pantalla** |
 
 ## Las cuatro reglas que no se tocan
 

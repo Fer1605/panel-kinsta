@@ -66,6 +66,7 @@ y cuatro de sus archivos están a propósito distintos de los del plugin —
 | `documentacion/01-como-esta-armado.md` | Las piezas y cómo encajan. El primero que hay que leer. |
 | `documentacion/10-decisiones.md` | **El más importante.** Lo que se decidió a propósito y qué se rompe si se cambia. 33 secciones. |
 | `documentacion/11-como-trabajar-en-esto.md` | Convenciones de la casa: cómo se nombra, cómo se comenta, cómo se prueba. |
+| `documentacion/16-estilo-de-las-pantallas.md` | **Para seguir optimizando pantallas.** Cómo se ve y cómo se lee el panel, con el motivo de cada regla, y la lista de lo que falta: Vulnerabilidades primero, luego Caídas. |
 | `documentacion/02` a `09`, `12` a `14` | Base de datos, de dónde salen los datos, el agente, las pantallas, las 73 normas, la API y el MCP, permisos y llaves, avisos y bitácora, Pantheon, qué es cada sitio, cadencia y costos. |
 | `CONTEXTO.md` | Este archivo. |
 
