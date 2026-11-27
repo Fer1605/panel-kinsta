@@ -127,7 +127,13 @@ $fallidos  = SWPK_Accesos::fallidos_recientes( 24 );
 			'los últimos %d · %s en 24 h',
 			count( $registros ),
 			SWPK_Vista::plural( (int) $fallidos, 'intento fallido', 'intentos fallidos' )
-		) ),
+		) )
+		. SWPK_Vista::ayuda(
+			'Esto es quién entró A ESTE PANEL, no a los sitios de los clientes. Lo de cada '
+			. 'sitio lo lleva su agente y se mira en la ficha del sitio. Un intento fallido '
+			. 'suelto es alguien que se equivocó de contraseña; muchos seguidos desde la '
+			. 'misma dirección es otra cosa.'
+		),
 		'',
 		true
 	);

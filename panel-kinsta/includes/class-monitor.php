@@ -46,6 +46,27 @@ class SWPK_Monitor {
 	public const HOOK = 'swpk_sondeo';
 
 	/**
+	 * ─── El sondeo rápido, solo mientras hay algo caído ─────────────────────
+	 *
+	 * «como hace solo revisiones cada hora, en esa hora un minuto, en lo que
+	 * volvió a revisar el sitio ya no estaba caído. Pudieron haber sido solo
+	 * unos segundos» (19:16). El diagnóstico lo dio él, y es correcto: con una
+	 * revisión por hora, «estuvo caído 1h 1min» es una resta de relojes
+	 * disfrazada de medición.
+	 *
+	 * El arreglo no es sondear los 109 sitios cada cinco minutos —eso son
+	 * 1.300 peticiones la hora para enterarse de nada el 99 % del tiempo—:
+	 * es sondear cada cinco minutos SOLO los que están caídos, que casi
+	 * siempre son cero. Con eso la vuelta se detecta con cinco minutos de
+	 * margen, y eso ya se puede afirmar sin mentir.
+	 *
+	 * El evento se pone cuando cae el primero y se quita cuando vuelve el
+	 * último, para no dejar un cron corriendo de balde.
+	 */
+	public const HOOK_RAPIDO = 'swpk_sondeo_rapido';
+	public const INTERVALO_RAPIDO = 'swpk_cinco_minutos';
+
+	/**
 	 * Cada cuánto se sondea.
 	 *
 	 * `hourly` es de WordPress, no nuestro, y eso importa: el intervalo propio
@@ -216,6 +237,14 @@ class SWPK_Monitor {
 	public static function init(): void {
 		add_action( self::HOOK, [ __CLASS__, 'sondear_todos' ] );
 
+		// El intervalo de cinco minutos se registra SIEMPRE, caiga o no caiga
+		// nada. Es lo que enseñó el fallo de abajo: wp_schedule_event()
+		// comprueba que la recurrencia exista y, si no, devuelve false en
+		// silencio. Registrarla solo cuando hace falta es volver a pisar la
+		// misma piedra.
+		add_filter( 'cron_schedules', [ __CLASS__, 'intervalos' ] );
+		add_action( self::HOOK_RAPIDO, [ __CLASS__, 'sondear_los_caidos' ] );
+
 		// Y se programa aquí además de en la activación, igual que la sonda y
 		// la revisión diaria. Ver programar(): en los paneles instalados antes
 		// de este arreglo el sondeo NUNCA quedó puesto.
@@ -263,6 +292,87 @@ class SWPK_Monitor {
 		if ( $ts ) {
 			wp_unschedule_event( $ts, self::HOOK );
 		}
+
+		self::apagar_rapido();
+	}
+
+	/** @param array<string,array{interval:int,display:string}> $h */
+	public static function intervalos( array $h ): array {
+		$h[ self::INTERVALO_RAPIDO ] = [
+			'interval' => 5 * MINUTE_IN_SECONDS,
+			'display'  => 'Cada 5 minutos (solo mientras hay un sitio caído)',
+		];
+
+		return $h;
+	}
+
+	// ── El sondeo rápido ────────────────────────────────────────────────────
+
+	public static function encender_rapido(): void {
+		if ( wp_next_scheduled( self::HOOK_RAPIDO ) ) {
+			return;
+		}
+
+		wp_schedule_event( time() + 5 * MINUTE_IN_SECONDS, self::INTERVALO_RAPIDO, self::HOOK_RAPIDO );
+	}
+
+	public static function apagar_rapido(): void {
+		$ts = wp_next_scheduled( self::HOOK_RAPIDO );
+		if ( $ts ) {
+			wp_unschedule_event( $ts, self::HOOK_RAPIDO );
+		}
+	}
+
+	/** Cuántos sitios figuran caídos ahora mismo. */
+	public static function cuantos_abajo(): int {
+		global $wpdb;
+
+		return (int) $wpdb->get_var(
+			"SELECT COUNT(*) FROM " . SWPK_Tablas::tabla( 'monitor' ) . " WHERE estado = 'abajo'"
+		);
+	}
+
+	/**
+	 * Sondea solo los que están caídos. Es lo que convierte «estuvo caído
+	 * entre 0 y 60 minutos» en «entre 5 y 10».
+	 *
+	 * Si no hay ninguno, se apaga solo: un cron de cinco minutos corriendo
+	 * para no hacer nada es exactamente lo que no queremos.
+	 */
+	public static function sondear_los_caidos(): array {
+		global $wpdb;
+
+		$caidos = $wpdb->get_results(
+			"SELECT e.sitio_id, s.dominio
+			   FROM " . SWPK_Tablas::tabla( 'monitor' ) . " e
+			   JOIN " . SWPK_Tablas::tabla( 'sitios' ) . " s ON s.sitio_id = e.sitio_id
+			  WHERE e.estado = 'abajo' AND s.de_baja = 0 AND s.dominio <> ''"
+		) ?: [];
+
+		if ( ! $caidos ) {
+			self::apagar_rapido();
+			return [ 'sondeados' => 0, 'volvieron' => 0 ];
+		}
+
+		$objetivos = [];
+		foreach ( $caidos as $c ) {
+			$objetivos[ (string) $c->sitio_id ] = self::url( (string) $c->dominio );
+		}
+
+		$resultados = self::sondear( $objetivos, self::TIMEOUT_REINTENTO );
+
+		$volvieron = 0;
+		foreach ( $resultados as $sitio_id => $r ) {
+			if ( self::guardar( (string) $sitio_id, $r ) && 'abajo' !== $r['estado'] ) {
+				++$volvieron;
+			}
+		}
+
+		if ( 0 === self::cuantos_abajo() ) {
+			self::apagar_rapido();
+		}
+
+		return [ 'sondeados' => count( $resultados ), 'volvieron' => $volvieron ];
 	}
 
 	/**
@@ -750,6 +860,9 @@ class SWPK_Monitor {
 
 			if ( 'abajo' === $estado_publico ) {
 				$datos['caidas_mes'] = (int) $previo->caidas_mes + 1;
+				// Mientras haya algo caído se mira cada cinco minutos, no cada
+				// hora. Es lo que hace que la duración se pueda afirmar.
+				self::encender_rapido();
 				self::avisar_caida( $sitio_id, $r );
 			} elseif ( 'ausente' === $estado_publico ) {
 				// De «caído» a «ya no está en el hosting» NO es una
@@ -764,9 +877,17 @@ class SWPK_Monitor {
 				$datos['segundos_caido'] = (int) $previo->segundos_caido + $segundos;
 				self::avisar_recuperacion( $sitio_id, $segundos, (string) $previo->desde );
 			}
+
+			// El apagado se comprueba DESPUÉS de escribir la fila, al final de
+			// esta función: aquí todavía figura caído el que acaba de volver.
+			$revisar_rapido = true;
 		}
 
 		$wpdb->update( $tabla, $datos, [ 'id' => (int) $previo->id ] );
+
+		if ( ! empty( $revisar_rapido ) && 0 === self::cuantos_abajo() ) {
+			self::apagar_rapido();
+		}
 
 		return $cambio;
 	}
@@ -836,6 +957,24 @@ class SWPK_Monitor {
 					: 'no contestó'
 			),
 		];
+
+		// ── Los tres bloques que faltaban ───────────────────────────────────
+		//
+		// «se cayó, ¿por qué se cayó? ¿Qué hubo de análisis? No hay análisis»
+		// (19:45). El código HTTP lo teníamos en la mano al sondear y lo
+		// tirábamos para escribir una frase genérica. No es un diagnóstico:
+		// es una traducción de diez entradas. Ver SWPK_Codigos.
+		$t       = SWPK_Codigos::traducir( (int) ( $r['codigo'] ?? 0 ), (string) $r['motivo'] );
+		$dequien = SWPK_Codigos::de_quien();
+		$logs    = $sitio ? SWPK_Codigos::url_registros( $sitio ) : '';
+
+		$marcas['{{codigo}}']        = esc_html( SWPK_Codigos::titulo_corto( (int) ( $r['codigo'] ?? 0 ), (string) $r['motivo'] ) );
+		$marcas['{{que_significa}}'] = esc_html( $t['significa'] );
+		$marcas['{{de_quien}}']      = esc_html( $dequien[ $t['quien'] ] ?? '' );
+		$marcas['{{que_se_hace}}']   = esc_html( $t['primero'] );
+		$marcas['{{ver_registros}}'] = '' !== $logs
+			? sprintf( '<a href="%s">Ver los registros en Kinsta</a>', esc_url( $logs ) )
+			: '';
 
 		SWPK_Bitacora::enviar(
 			SWPK_Bitacora::CAIDA,

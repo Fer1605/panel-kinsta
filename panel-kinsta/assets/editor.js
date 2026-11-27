@@ -139,6 +139,88 @@
 		} );
 	} );
 
+	// ── La vista previa de al lado, viva ────────────────────────────────────
+	//
+	// «"ver y editar texto". Esto no es un ver. Vista previa… esa vista previa
+	// debería estar del otro lado» (09:22).
+	//
+	// La de antes era un botón que armaba el correo DE VERDAD en el servidor y
+	// lo abría en otra ventana encima. Eso sigue existiendo —«Verlo armado de
+	// verdad»—, porque es lo único que comprueba el correo entero con su
+	// plantilla y su pie. Pero para escribir hace falta ver el cambio al
+	// teclearlo, y eso no puede ser una petición por pulsación.
+	//
+	// Así que esta sustituye las marcas con valores de ejemplo aquí mismo. Es
+	// una aproximación a propósito: enseña el texto, no el diseño del correo.
+	function escapar( t ) {
+		var d = document.createElement( 'div' );
+		d.textContent = t;
+		return d.innerHTML;
+	}
+
+	function rellenar( texto, ejemplos ) {
+		return String( texto ).replace( /\{\{[a-z_]+\}\}/gi, function ( m ) {
+			// Una marca que no existe se deja tal cual, que es justo lo que
+			// hace el panel al mandar el correo: así un error de escritura se
+			// ve aquí igual que se vería en la bandeja.
+			return Object.prototype.hasOwnProperty.call( ejemplos, m ) ? ejemplos[ m ] : m;
+		} );
+	}
+
+	function pintarPrevia( caja ) {
+		var panel = caja.querySelector( '.swpk-editor-previa' );
+
+		if ( ! panel ) {
+			return;
+		}
+
+		var ejemplos = {};
+		try {
+			ejemplos = JSON.parse( panel.getAttribute( 'data-ejemplos' ) || '{}' );
+		} catch ( e ) {
+			ejemplos = {};
+		}
+
+		var asunto = caja.querySelector( '[data-papel="asunto"]' );
+		var cuerpo = caja.querySelector( '[data-papel="cuerpo"]' );
+		var vA     = panel.querySelector( '[data-papel="previa-asunto"]' );
+		var vC     = panel.querySelector( '[data-papel="previa-cuerpo"]' );
+
+		if ( vA && asunto ) {
+			vA.textContent = rellenar( asunto.value, ejemplos );
+		}
+
+		if ( vC && cuerpo ) {
+			// Una línea en blanco separa párrafos, que es la misma regla con
+			// la que el panel arma el correo.
+			vC.innerHTML = rellenar( cuerpo.value, ejemplos )
+				.split( /\n\s*\n/ )
+				.map( function ( p ) {
+					return '<p>' + escapar( p.trim() ).replace( /\n/g, '<br>' ) + '</p>';
+				} )
+				.join( '' );
+		}
+	}
+
+	document.addEventListener( 'input', function ( e ) {
+		var papel = e.target.getAttribute ? e.target.getAttribute( 'data-papel' ) : null;
+
+		if ( 'asunto' !== papel && 'cuerpo' !== papel ) {
+			return;
+		}
+
+		var caja = e.target.closest( '.swpk-editor' );
+		if ( caja ) {
+			pintarPrevia( caja );
+		}
+	} );
+
+	// Y la primera vez, al abrir: si no, la previa arranca en blanco al lado
+	// de un texto que sí está escrito.
+	document.querySelectorAll( '.swpk-editor' ).forEach( function ( caja ) {
+		pintarPrevia( caja );
+	} );
+
 	// ── Volver de guardar con la ventana abierta donde estaba ───────────────
 	//
 	// Guardar manda el formulario y la pantalla se recarga. Sin esto, el

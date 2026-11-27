@@ -219,6 +219,50 @@ class SWPK_Inventario {
 	 * @param array<int,string> $sitio_ids
 	 * @return array<string,array{con:int,sin:int,total:int}>
 	 */
+	/**
+	 * Cuántos sitios NUESTROS tienen módulos que hay que entrar a actualizar
+	 * a mano, y cuántos módulos son en total.
+	 *
+	 * Es la pregunta del lunes —«¿qué hay que arreglar hoy en los sitios de
+	 * auto-update?»— y hasta ahora no salía en ninguna pantalla de inicio.
+	 * Solo cuenta los nuestros: en los del cliente no se entra a actualizar
+	 * nada sin pedirlo.
+	 *
+	 * @return array{sitios:int,modulos:int}
+	 */
+	public static function cuantos_en_ajuste_manual(): array {
+		global $wpdb;
+
+		$fotos  = SWPK_Tablas::tabla( 'fotos' );
+		$sitios = SWPK_Tablas::tabla( 'sitios' );
+
+		$fila = $wpdb->get_row(
+			"SELECT COUNT(*) AS sitios, COALESCE( SUM( x.sin_auto ), 0 ) AS modulos
+			   FROM (
+				SELECT f.sitio_id,
+					   SUM( CASE WHEN f.auto_update = '' THEN 1 ELSE 0 END ) AS sin_auto
+				  FROM {$fotos} f
+				  INNER JOIN (
+						SELECT sitio_id, MAX(fecha) AS ultima
+						  FROM {$fotos}
+						 GROUP BY sitio_id
+				  ) u ON u.sitio_id = f.sitio_id AND u.ultima = f.fecha
+				  INNER JOIN {$sitios} s ON s.sitio_id = f.sitio_id
+				 WHERE f.activo = 1
+				   AND s.de_baja = 0
+				   AND ( CASE WHEN s.grupo_a_mano <> '' THEN s.grupo_a_mano ELSE s.tag END )
+					   IN ( 'auto_update', 'desarrollo' )
+				 GROUP BY f.sitio_id
+				HAVING sin_auto > 0
+			   ) x"
+		);
+
+		return [
+			'sitios'  => (int) ( $fila->sitios ?? 0 ),
+			'modulos' => (int) ( $fila->modulos ?? 0 ),
+		];
+	}
+
 	public static function auto_update_de_varios( array $sitio_ids = [] ): array {
 		global $wpdb;
 

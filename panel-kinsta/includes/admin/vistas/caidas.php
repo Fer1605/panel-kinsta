@@ -267,7 +267,18 @@ $historial = array_filter(
 		// La dona necesita lo que necesita —es un círculo de 140 px— y lo que
 		// sobraba era el hueco en blanco a su derecha. Así que la dona ocupa
 		// un tercio y la tabla, abajo, todo el ancho.
-		SWPK_Vista::caja_abrir( 'Cómo están ahora', 'sondeo cada hora', 'swpk-c12' );
+		SWPK_Vista::caja_abrir(
+			'Cómo están ahora',
+			'cada hora, y cada 5 minutos mientras algo esté caído'
+				. SWPK_Vista::ayuda(
+					'El panel mira todos los sitios una vez por hora. En cuanto uno deja de '
+					. 'responder, pasa a mirar SOLO los caídos cada cinco minutos, hasta que vuelvan. '
+					. 'Por eso la duración de una caída se puede afirmar con cinco minutos de margen '
+					. 'y no con sesenta. Un sitio que figura «sin medir» no es un sitio caído: es uno '
+					. 'al que el cortafuegos de su hosting no nos deja preguntarle.'
+				),
+			'swpk-c12'
+		);
 
 		// Tres porciones, no dos. Antes «Responden» era todo-menos-los-caídos,
 		// así que los 106 sitios que el cortafuegos no deja medir se contaban
@@ -393,16 +404,39 @@ $historial = array_filter(
 					<td>
 						<span class="swpk-nivel" style="background:<?php echo esc_attr( $color ); ?>;color:<?php echo esc_attr( $sobre ); ?>;border-color:<?php echo esc_attr( $color ); ?>"><?php echo esc_html( $texto ); ?></span>
 						<?php if ( $e->codigo || $e->motivo ) : ?>
+							<?php
+							// ── La ficha que él nos dibujó con el correo de Kinsta ──
+							//
+							// «se cayó, ¿por qué se cayó? ¿Qué hubo de análisis? No hay
+							// análisis» (19:45). Y: «ya Kinsta me avisa. Eso debería de
+							// tenerlo yo aquí» (20:11).
+							//
+							// No hay motivo para que el correo sepa más que el panel, así
+							// que la misma traducción sale en los dos sitios. Va plegada
+							// porque la tabla tiene 109 filas y esto son cuatro párrafos:
+							// se abre la del sitio que a uno le importa.
+							$t     = SWPK_Codigos::traducir( (int) $e->codigo, (string) $e->motivo );
+							$quien = SWPK_Codigos::de_quien();
+							$logs  = $sitio ? SWPK_Codigos::url_registros( $sitio ) : '';
+							?>
 							<br>
 							<span class="swpk-gris" style="font-size:12px">
-								<?php
-								$detalle = array_filter( [
-									$e->codigo ? (string) (int) $e->codigo : '',
-									(string) $e->motivo,
-								] );
-								echo esc_html( implode( ' · ', $detalle ) );
-								?>
+								<?php echo esc_html( SWPK_Codigos::titulo_corto( (int) $e->codigo, (string) $e->motivo ) ); ?>
 							</span>
+							<details class="swpk-caida-ficha">
+								<summary>Qué significa</summary>
+								<h5>Qué significa</h5>
+								<p><?php echo esc_html( $t['significa'] ); ?></p>
+								<h5>Qué se hace</h5>
+								<p>
+									<strong><?php echo esc_html( $quien[ $t['quien'] ] ?? '' ); ?>.</strong>
+									<?php echo esc_html( $t['primero'] ); ?>
+								</p>
+								<p class="swpk-mudo">Lo que midió el panel: <?php echo esc_html( (string) $e->motivo ); ?></p>
+								<?php if ( '' !== $logs ) : ?>
+									<p><a href="<?php echo esc_url( $logs ); ?>" target="_blank" rel="noopener">Ver los registros en Kinsta ↗</a></p>
+								<?php endif; ?>
+							</details>
 						<?php endif; ?>
 						<?php if ( $e->desde ) : ?>
 							<br><span class="swpk-gris" style="font-size:12px">desde <?php echo esc_html( SWPK_Frescura::fmt( 'j M, H:i', $e->desde ) ); ?></span>

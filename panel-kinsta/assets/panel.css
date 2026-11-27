@@ -2437,3 +2437,115 @@ body[class*="panel-kinsta"] .swpk-norma-pie {
 @media (max-width: 960px) {
 	body[class*="panel-kinsta"] .swpk-norma > summary { grid-template-columns: 1fr; gap: 6px; }
 }
+
+/* La ficha de una caída, plegada dentro de su fila. Son cuatro párrafos
+   y la tabla tiene 109 filas: se abre la del sitio que importa. */
+body[class*="panel-kinsta"] .swpk-caida-ficha { margin-top: 5px; }
+body[class*="panel-kinsta"] .swpk-caida-ficha > summary {
+	cursor: pointer; font-size: 12px; color: #1c6dc7;
+	list-style: none; display: inline-block;
+}
+body[class*="panel-kinsta"] .swpk-caida-ficha > summary::-webkit-details-marker { display: none; }
+body[class*="panel-kinsta"] .swpk-caida-ficha > summary::before { content: "▸ "; }
+body[class*="panel-kinsta"] .swpk-caida-ficha[open] > summary::before { content: "▾ "; }
+body[class*="panel-kinsta"] .swpk-caida-ficha h5 {
+	margin: 10px 0 3px; font-size: 11px; letter-spacing: .05em;
+	text-transform: uppercase; color: #5c6670;
+}
+body[class*="panel-kinsta"] .swpk-caida-ficha p {
+	margin: 0 0 4px; font-size: 13px; line-height: 1.55; max-width: 60ch;
+}
+
+/* ── «Lo que hay que hacer», en el Resumen ─────────────────────────
+   Su panel abre con frases que dicen qué falta y a dónde ir; el
+   nuestro abría contando. Cada fila es una frase y un camino. */
+body[class*="panel-kinsta"] .swpk-pasos-inicio { margin: 0; }
+body[class*="panel-kinsta"] .swpk-pasos-inicio li {
+	display: flex; align-items: center; justify-content: space-between;
+	gap: 16px; margin: 0; padding: 11px 2px;
+	border-bottom: 1px solid #eef0f5;
+}
+body[class*="panel-kinsta"] .swpk-pasos-inicio li:last-child { border-bottom: 0; }
+body[class*="panel-kinsta"] .swpk-pasos-inicio li > span { line-height: 1.5; }
+body[class*="panel-kinsta"] .swpk-paso-mal > span { color: #9e0b10; font-weight: 600; }
+body[class*="panel-kinsta"] .swpk-pasos-inicio a { white-space: nowrap; font-weight: 600; }
+
+/* El reparto del trabajo de un sitio, en una frase. Es lo que convierte
+   una lista de filas rojas en tres trabajos con dueño. */
+body[class*="panel-kinsta"] .swpk-reparto {
+	margin: 0 0 10px;
+	padding: 10px 14px;
+	background: #f1f3f7;
+	border-left: 4px solid #1c6dc7;
+	border-radius: 0 6px 6px 0;
+	font-size: 14px;
+	line-height: 1.6;
+	max-width: 80ch;
+}
+
+/* ═════════════════════════════════════════════════════════════════
+   El editor de correo, a dos columnas
+   ═════════════════════════════════════════════════════════════════
+   «Esto no es un ver. Vista previa… esa vista previa debería estar
+   del otro lado» (09:22). Se escribe a la izquierda y se mira a la
+   derecha, sin bajar y sin abrir otra ventana. */
+
+body[class*="panel-kinsta"] .swpk-editor-ficha {
+	display: flex; gap: 32px; flex-wrap: wrap;
+	padding: 12px 20px;
+	background: #f7f9fc;
+	border-bottom: 1px solid #e2e6ee;
+	font-size: 13px;
+}
+body[class*="panel-kinsta"] .swpk-editor-ficha-rot {
+	display: block;
+	font-size: 11px; letter-spacing: .05em; text-transform: uppercase;
+	color: #5c6670; margin-bottom: 2px;
+}
+
+body[class*="panel-kinsta"] .swpk-editor-dos {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+	grid-template-areas: "form previa" "marcas previa";
+	align-items: start;
+	gap: 0 24px;
+}
+body[class*="panel-kinsta"] .swpk-editor-dos > .swpk-editor-form   { grid-area: form; }
+body[class*="panel-kinsta"] .swpk-editor-dos > .swpk-editor-previa { grid-area: previa; }
+body[class*="panel-kinsta"] .swpk-editor-dos > .swpk-editor-marcas { grid-area: marcas; }
+
+body[class*="panel-kinsta"] .swpk-previa-sobre {
+	border: 1px solid #e2e6ee;
+	border-radius: 8px;
+	padding: 14px 16px;
+	background: #fbfcfe;
+	max-height: 440px;
+	overflow: auto;
+}
+body[class*="panel-kinsta"] .swpk-previa-rot {
+	margin: 0 0 2px;
+	font-size: 11px; letter-spacing: .05em; text-transform: uppercase;
+	color: #5c6670;
+}
+body[class*="panel-kinsta"] .swpk-previa-asunto {
+	margin: 0 0 14px; font-weight: 600; line-height: 1.45;
+}
+body[class*="panel-kinsta"] .swpk-previa-cuerpo p { margin: 0 0 10px; line-height: 1.6; }
+body[class*="panel-kinsta"] .swpk-previa-cuerpo p:last-child { margin-bottom: 0; }
+
+/* El pie: una sola acción azul, el resto en texto. Regla 6 de su panel. */
+body[class*="panel-kinsta"] .wrap button.swpk-enlace-pie {
+	background: none; border: 0; padding: 0; margin-left: 14px;
+	color: #1c6dc7; cursor: pointer; font-size: 13px;
+	text-decoration: underline;
+}
+body[class*="panel-kinsta"] a.swpk-enlace-pie { margin-left: 14px; font-size: 13px; }
+
+/* A 1280 px las dos columnas dentro de un diálogo dejan el textarea
+   en una tira. Por debajo de eso, una encima de otra. */
+@media (max-width: 1200px) {
+	body[class*="panel-kinsta"] .swpk-editor-dos {
+		grid-template-columns: 1fr;
+		grid-template-areas: "form" "previa" "marcas";
+	}
+}

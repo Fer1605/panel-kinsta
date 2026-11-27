@@ -70,8 +70,11 @@ $movimientos = array_filter(
 		if ( '' === $busqueda ) {
 			return true;
 		}
+		// El slug entra en la búsqueda: es lo único que distingue «elementor»
+		// de «elementor-pro», y es por donde llega el enlace «Ver su
+		// historial» de cada módulo de la ficha.
 		$nombre = (string) ( $sitios[ (string) $e->sitio_id ]->nombre_visible ?? '' );
-		return false !== stripos( $nombre . ' ' . $e->titulo, $busqueda );
+		return false !== stripos( $nombre . ' ' . $e->titulo . ' ' . $e->slug, $busqueda );
 	}
 );
 
@@ -97,7 +100,13 @@ arsort( $por_tipo );
 <?php
 SWPK_Vista::caja_abrir(
 	'El historial',
-	'lo más reciente primero',
+	'lo más reciente primero'
+		. SWPK_Vista::ayuda(
+			'Cada fila lleva el slug del módulo debajo del nombre. Hace falta porque hay '
+			. 'familias enteras que comparten marca —Elementor, Elementor Pro, Elementor '
+			. 'Forms— y sin el slug dos plugins distintos se leen como el mismo, que fue '
+			. 'exactamente lo que pasó con Elementor. El buscador también busca por slug.'
+		),
 	'',
 	true
 );
@@ -219,7 +228,37 @@ SWPK_Vista::caja_abrir(
 				<td<?php echo 'critico' === $e->severidad ? ' class="swpk-rojo"' : ''; ?>>
 					<?php echo esc_html( $etq_evt[ $e->tipo ] ?? $e->tipo ); ?>
 				</td>
-				<td><?php echo esc_html( $e->titulo ); ?></td>
+				<td>
+					<?php echo esc_html( $e->titulo ); ?>
+					<?php
+					// ── El mismo módulo, con el mismo nombre, en las dos pantallas ──
+					//
+					// «entonces aquí dice que se actualizó a la 4.4.2 ayer, y hoy dice
+					// que debo de hacer, sin actualización automática… ¿cómo se
+					// actualizó ayer?» (15:13), y «¿a quién le creo? ¿a tu reporte o al
+					// ojo? alguien no está sincronizando» (15:40).
+					//
+					// El panel no mentía: son dos plugins distintos, «elementor» y
+					// «elementor-pro», con el mismo número de destino. Lo que los
+					// volvía indistinguibles es que el Historial escribía «Elementor»
+					// a secas y la ficha «Elementor Pro», y ninguna de las dos
+					// enseñaba el slug, que es lo único que no se repite.
+					//
+					// Con 25 módulos por sitio y familias enteras compartiendo marca
+					// —Elementor, Elementor Pro, Elementor Forms, Unlimited Elements
+					// for Elementor— esto iba a volver a pasar. Hoy fue Elementor;
+					// mañana es WooCommerce, o Yoast.
+					?>
+					<?php if ( '' !== (string) $e->slug ) : ?>
+						<br>
+						<span class="swpk-mono swpk-gris" style="font-size:12px"><?php echo esc_html( (string) $e->slug ); ?></span>
+						<?php if ( $s ) : ?>
+							<a style="font-size:12px;margin-left:8px" href="<?php
+								echo esc_url( SWPK_Vista::url_del_sitio( (string) $e->sitio_id, 'panel-kinsta-movimientos' ) );
+							?>">Ver el sitio →</a>
+						<?php endif; ?>
+					<?php endif; ?>
+				</td>
 			</tr>
 		<?php endforeach; ?>
 		</tbody>

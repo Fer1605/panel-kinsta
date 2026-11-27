@@ -118,19 +118,30 @@ class SWPK_Plantillas {
 				'quien'  => 'A soporte, en el momento: un sitio dejó de responder.',
 				'titulo' => 'Un sitio no está respondiendo',
 				'asunto' => '[Caído] {{sitio}}',
-				'cuerpo' => "{{sitio}} no está respondiendo.\n\n"
+				// Los cuatro bloques del correo de Kinsta, que es el que él
+				// nos enseñó diciendo «esto es lo que yo quiero»: qué pasó,
+				// qué significa, cómo se arregla, y qué va a pasar ahora.
+				// Teníamos uno y medio. Ver SWPK_Codigos.
+				'cuerpo' => "{{sitio}} no está respondiendo: {{codigo}}\n\n"
 					. "Dirección: {{url}}\n"
 					. "Detectado: {{cuando}}\n"
-					. "Qué pasó: {{motivo}}\n"
 					. "Intentos: {{intentos}}\n\n"
-					. 'El monitor vuelve a revisar dentro de una hora. Si para entonces ya responde, '
-					. 'les llega otro correo.',
+					. "QUÉ SIGNIFICA\n{{que_significa}}\n\n"
+					. "QUÉ SE HACE\n{{de_quien}}\n{{que_se_hace}}\n\n"
+					. "{{ver_registros}}\n\n"
+					. 'Mientras siga sin responder, el panel lo revisa cada cinco minutos en vez de '
+					. 'cada hora. En cuanto vuelva, les llega otro correo con cuánto estuvo caído.',
 				'marcas' => [
-					'{{sitio}}'    => 'El nombre del sitio',
-					'{{url}}'      => 'La dirección que se sondeó',
-					'{{cuando}}'   => 'Cuándo se detectó, en hora de Guatemala',
-					'{{motivo}}'   => 'Qué contestó el servidor, en palabras: «el dominio no resuelve», «rechazó la conexión»…',
-					'{{intentos}}' => 'Cuántas veces seguidas se le preguntó antes de avisar, y en cuánto tiempo',
+					'{{sitio}}'         => 'El nombre del sitio',
+					'{{url}}'           => 'La dirección que se sondeó',
+					'{{cuando}}'        => 'Cuándo se detectó, en hora de Guatemala',
+					'{{motivo}}'        => 'Qué contestó el servidor, tal cual lo midió el panel',
+					'{{intentos}}'      => 'Cuántas veces seguidas se le preguntó antes de avisar, y en cuánto tiempo',
+					'{{codigo}}'        => 'El código y su nombre: «504 · Tiempo de espera agotado»',
+					'{{que_significa}}' => 'Qué quiere decir ese código, en castellano',
+					'{{de_quien}}'      => 'A quién le toca arreglarlo: Kinsta, nosotros o el cliente',
+					'{{que_se_hace}}'   => 'Qué se mira primero',
+					'{{ver_registros}}' => 'El enlace a los registros de ese sitio en MyKinsta, si se sabe cuál es',
 				],
 			],
 			'sigue_caido' => [
@@ -1159,6 +1170,50 @@ class SWPK_Plantillas {
 	 *
 	 * @param array<string,string> $marcas ya escapadas
 	 */
+	/**
+	 * Valores de ejemplo para la vista previa que se escribe al lado.
+	 *
+	 * «"ver y editar texto". Esto no es un ver. Vista previa… esa vista previa
+	 * debería estar del otro lado» (09:22).
+	 *
+	 * La previa de antes era un botón que abría otra ventana encima con el
+	 * correo armado de verdad. Servía para comprobar, no para escribir: había
+	 * que escribir, pulsar, mirar, cerrar y volver. La de al lado se actualiza
+	 * mientras se teclea, y para eso hacen falta valores inventados — los de
+	 * verdad están en la base y traerlos en cada tecla no tiene sentido.
+	 *
+	 * Los nombres son inventados a propósito: nunca un cliente real ni la
+	 * marca de nadie.
+	 *
+	 * @return array<string,string>
+	 */
+	public static function ejemplos(): array {
+		return [
+			'{{sitio}}'          => 'Heraldos Costa Rica',
+			'{{url}}'            => 'https://heraldos.cr',
+			'{{nombre}}'         => 'Andrea López',
+			'{{mes}}'            => 'octubre 2026',
+			'{{cuando}}'         => '26 de noviembre, 14:33',
+			'{{desde}}'          => '26 de noviembre, 14:33',
+			'{{revisado}}'       => '26 de noviembre, 14:38',
+			'{{cuanto}}'         => '2 horas',
+			'{{motivo}}'         => 'El servidor devolvió 504',
+			'{{intentos}}'       => 'no contestó 4 veces seguidas en 95 segundos',
+			'{{codigo}}'         => '504 · Tiempo de espera agotado',
+			'{{que_significa}}'  => 'El servidor web esperó demasiado la respuesta de otro servicio y se rindió.',
+			'{{de_quien}}'       => 'Lo arregla Kinsta',
+			'{{que_se_hace}}'    => 'Mirar los registros de PHP de esa hora en MyKinsta.',
+			'{{ver_registros}}'  => 'Ver los registros en Kinsta',
+			'{{actualizaciones}}' => '14',
+			'{{remitente}}'      => 'Marcela Valle',
+			'{{agencia}}'        => 'Solución Web',
+			'{{asesora}}'        => 'Andrea López',
+			'{{sitios}}'         => '(aquí va un recuadro por sitio, con el texto listo para copiarle al cliente)',
+			'{{cuantos}}'        => '7',
+			'{{semana}}'         => 'del 20 al 26 de noviembre',
+		];
+	}
+
 	public static function caida( array $marcas ): string {
 		return self::envolver(
 			self::catalogo()['caida']['titulo'],

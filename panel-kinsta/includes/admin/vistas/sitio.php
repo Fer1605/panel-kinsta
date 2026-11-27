@@ -368,8 +368,22 @@ $url_pestana = static fn( string $s ) => add_query_arg(
 						<strong><?php echo esc_html( SWPK_Textos::limpiar_titulo( (string) $h['titulo'] ) ); ?></strong><br>
 						<span class="swpk-mono" style="color:#50575e"><?php echo esc_html( $h['slug'] ); ?></span>
 						<?php if ( '' === $h['auto_update'] ) : ?>
-							<br><span style="color:#6b7280;font-size:12px">sin actualización automática</span>
+							<br><span style="color:#6b7280;font-size:12px">Hay que entrar al sitio a actualizarlo</span>
 						<?php endif; ?>
+						<?php
+						// El puente al Historial de ESTE módulo en ESTE sitio.
+						//
+						// «¿cómo se actualizó ayer?» se contestaba saliendo a
+						// Historial, buscando el sitio en un desplegable de 109
+						// nombres y leyendo a ojo. Ahora es un clic, y es lo que
+						// convierte esa pregunta en un dato en vez de en una
+						// discusión.
+						?>
+						<br>
+						<a style="font-size:12px" href="<?php echo esc_url( add_query_arg(
+							[ 'page' => 'panel-kinsta-movimientos', 'sitio' => $sitio_id, 'q' => $h['slug'] ],
+							admin_url( 'admin.php' )
+						) ); ?>">Ver su historial →</a>
 					</td>
 					<td>
 						<span class="swpk-mono"><?php echo esc_html( $h['version'] ); ?></span>
@@ -698,6 +712,74 @@ $url_pestana = static fn( string $s ) => add_query_arg(
 			}
 		}
 		?>
+		<?php
+		// ── «Eso es lo que convierte 21 filas rojas en un plan de trabajo» ──
+		//
+		// «mira, tienes de 30 normas que revisamos solo tienes 15 aplicadas al
+		// sitio web — eso sí me interesa» (12:58).
+		//
+		// El reparto por QUIÉN tiene que moverse, no por tema ni por
+		// gravedad: lo que el panel arregla con un clic, lo que obliga a
+		// entrar al sitio, y lo que hay que hablar con el cliente antes de
+		// tocar nada. Son tres trabajos distintos y hasta ahora salían
+		// mezclados en una lista de filas rojas.
+		$reparto = [ 'panel' => 0, 'entrar' => 0, 'hablar' => 0 ];
+
+		foreach ( $aplicables as $n_r ) {
+			$f_r = $cumple_sitio[ (string) $n_r->clave ] ?? null;
+			if ( SWPK_Normas::FALLA !== ( $f_r ? (string) $f_r->estado : '' ) ) {
+				continue;
+			}
+
+			if ( $es_cliente ) {
+				// En un sitio del cliente no se entra a cambiar nada sin
+				// pedirlo, así que TODO lo que falle es una conversación.
+				++$reparto['hablar'];
+			} elseif ( '' !== SWPK_Ordenes::orden_de_la_norma( (string) $n_r->clave ) && 1 === (int) $n_r->arreglable ) {
+				++$reparto['panel'];
+			} else {
+				++$reparto['entrar'];
+			}
+		}
+
+		$total_falla = array_sum( $reparto );
+		?>
+		<?php if ( $total_falla > 0 ) : ?>
+			<p class="swpk-reparto">
+				<?php
+				$trozos = [];
+				if ( $reparto['panel'] ) {
+					$trozos[] = sprintf(
+						'<strong>%d</strong> %s el panel con un clic',
+						$reparto['panel'],
+						1 === $reparto['panel'] ? 'la arregla' : 'las arregla'
+					);
+				}
+				if ( $reparto['entrar'] ) {
+					$trozos[] = sprintf(
+						'<strong>%d</strong> se %s entrando al sitio',
+						$reparto['entrar'],
+						1 === $reparto['entrar'] ? 'arregla' : 'arreglan'
+					);
+				}
+				if ( $reparto['hablar'] ) {
+					$trozos[] = sprintf(
+						'<strong>%d</strong> hay que %s con el cliente',
+						$reparto['hablar'],
+						1 === $reparto['hablar'] ? 'hablarla' : 'hablarlas'
+					);
+				}
+
+				printf(
+					'De %s sin cumplir de %d: %s.',
+					esc_html( SWPK_Vista::plural( $total_falla, 'norma', 'normas' ) ),
+					count( $aplicables ),
+					wp_kses_post( implode( ', ', $trozos ) )
+				);
+				?>
+			</p>
+		<?php endif; ?>
+
 		<p class="swpk-aviso-corto">
 			<?php
 			if ( $es_cliente ) {

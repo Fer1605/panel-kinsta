@@ -310,6 +310,112 @@ $bien_hoy = $resumen_dia[ $hoy ] ?? [ 'sitios' => 0, 'modulos' => 0 ];
 			</p>
 		</div>
 
+		<?php
+		// ── De contar a listar ──────────────────────────────────────────────
+		//
+		// Su panel abre con filas que no son datos sino frases que dicen qué
+		// falta y a dónde ir: «PASO 3 · Falta el plan de diciembre 2026 →».
+		// El nuestro decía «107 sitios les falta algo» y ahí se acababa.
+		//
+		// «lo que quiero son resúmenes» (02:52) no era pedir menos números:
+		// era pedir que el número viniera con la frase y el camino. Un número
+		// sin enlace obliga a adivinar en qué pantalla está lo que cuenta.
+		//
+		// Cada fila es: una frase, y una flecha que lleva a la pantalla YA
+		// FILTRADA por eso mismo. Si no hay nada que hacer, no se dibuja: una
+		// lista de «todo bien» repetida cinco veces es ruido.
+		$toca = [];
+
+		if ( $estado['caidos'] ) {
+			$toca[] = [
+				'que' => sprintf(
+					'%s sin responder ahora mismo',
+					SWPK_Vista::plural( count( $estado['caidos'] ), 'sitio', 'sitios' )
+				),
+				'url' => admin_url( 'admin.php?page=panel-kinsta-caidas' ),
+				'ir'  => 'Ver las caídas',
+				'mal' => true,
+			];
+		}
+
+		if ( $cuantas_urg ) {
+			$toca[] = [
+				'que' => sprintf(
+					'%s con una vulnerabilidad conocida y parche disponible',
+					SWPK_Vista::plural( $cuantas_urg, 'hallazgo', 'hallazgos' )
+				),
+				'url' => admin_url( 'admin.php?page=panel-kinsta-vulnerabilidades&parche=hay' ),
+				'ir'  => 'Ver cuáles',
+				'mal' => true,
+			];
+		}
+
+		if ( $normas_fallando > 0 ) {
+			$toca[] = [
+				'que' => sprintf(
+					'%s sin cumplir, repartidas en %s',
+					SWPK_Vista::plural( $normas_fallando, 'norma', 'normas' ),
+					SWPK_Vista::plural( $sitios_fallando, 'sitio', 'sitios' )
+				),
+				'url' => admin_url( 'admin.php?page=panel-kinsta-seguridad' ),
+				'ir'  => 'Ver las normas',
+				'mal' => false,
+			];
+		}
+
+		// Los sitios nuestros con módulos que hay que entrar a actualizar: es
+		// la pregunta del lunes, y hasta ahora no estaba en ninguna pantalla
+		// de inicio.
+		$a_mano = SWPK_Inventario::cuantos_en_ajuste_manual();
+		if ( $a_mano['sitios'] > 0 ) {
+			$toca[] = [
+				'que' => sprintf(
+					'%s con %s que hay que entrar a actualizar',
+					SWPK_Vista::plural( $a_mano['sitios'], 'sitio nuestro', 'sitios nuestros' ),
+					SWPK_Vista::plural( $a_mano['modulos'], 'módulo', 'módulos' )
+				),
+				'url' => admin_url( 'admin.php?page=panel-kinsta-sitios&tag=auto_update&actualiza=manual' ),
+				'ir'  => 'Ver cuáles',
+				'mal' => false,
+			];
+		}
+
+		if ( $sin_leer ) {
+			$toca[] = [
+				'que' => sprintf(
+					'%s con algo sin atender desde antes de hoy',
+					SWPK_Vista::plural( $sin_leer, 'sitio', 'sitios' )
+				),
+				'url' => admin_url( 'admin.php?page=panel-kinsta-sitios&nivel=critico' ),
+				'ir'  => 'Ver cuáles',
+				'mal' => false,
+			];
+		}
+		?>
+
+		<?php if ( $toca ) : ?>
+			<?php SWPK_Vista::caja_abrir(
+				'Lo que hay que hacer',
+				'con el camino a cada cosa'
+					. SWPK_Vista::ayuda(
+						'Cada línea lleva a la pantalla ya filtrada por eso mismo, para no tener que '
+						. 'buscarlo otra vez. Lo que no aparece aquí es porque no hay nada que hacer: '
+						. 'esta lista no se rellena con «todo bien».'
+					),
+				'swpk-c12',
+				true
+			); ?>
+			<ul class="swpk-pasos-inicio">
+				<?php foreach ( $toca as $t ) : ?>
+					<li class="<?php echo $t['mal'] ? 'swpk-paso-mal' : ''; ?>">
+						<span><?php echo esc_html( $t['que'] ); ?></span>
+						<a href="<?php echo esc_url( $t['url'] ); ?>"><?php echo esc_html( $t['ir'] ); ?> →</a>
+					</li>
+				<?php endforeach; ?>
+			</ul>
+			<?php SWPK_Vista::caja_cerrar(); ?>
+		<?php endif; ?>
+
 		<?php SWPK_Vista::rejilla_abrir(); ?>
 
 			<?php

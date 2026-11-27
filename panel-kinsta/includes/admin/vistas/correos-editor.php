@@ -51,7 +51,26 @@ foreach ( SWPK_Plantillas::catalogo() as $clave => $ficha ) :
 			<form method="dialog"><button class="button">Cerrar</button></form>
 		</div>
 
-		<div class="swpk-editor-cuerpo">
+		<?php
+		// «Cuándo sale» y «Para», arriba del todo, como en su panel: para no
+		// tener que acordarse de a quién le va esto mientras se escribe.
+		?>
+		<div class="swpk-editor-ficha">
+			<div>
+				<span class="swpk-editor-ficha-rot">Cuándo sale y para quién</span>
+				<span><?php echo esc_html( (string) $ficha['quien'] ); ?></span>
+			</div>
+			<div>
+				<span class="swpk-editor-ficha-rot">Ahora mismo</span>
+				<span><?php
+					echo SWPK_Correos::encendido( $clave )
+						? '<strong>Encendido</strong>'
+						: 'Apagado';
+				?></span>
+			</div>
+		</div>
+
+		<div class="swpk-editor-cuerpo swpk-editor-dos">
 			<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" class="swpk-editor-form">
 				<input type="hidden" name="action" value="swpk_guardar_plantilla">
 				<input type="hidden" name="plantilla" value="<?php echo esc_attr( $clave ); ?>">
@@ -62,8 +81,10 @@ foreach ( SWPK_Plantillas::catalogo() as $clave => $ficha ) :
 				<input type="hidden" name="volver_a" value="<?php echo esc_attr( isset( $seccion ) ? (string) $seccion : 'envios' ); ?>">
 				<?php wp_nonce_field( 'swpk_guardar_plantilla' ); ?>
 
-				<p class="swpk-mudo swpk-editor-quien"><?php echo esc_html( (string) $ficha['quien'] ); ?></p>
-
+				<?php
+				// El «a quién le llega» ya está en la ficha de arriba. Dejarlo
+				// también aquí lo decía dos veces en la misma pantalla.
+				?>
 				<?php if ( ! $tocada ) : ?>
 					<p class="swpk-mudo swpk-editor-quien">
 						Está tal como vino de fábrica. Lo que escribas aquí reemplaza ese texto.
@@ -91,26 +112,60 @@ foreach ( SWPK_Plantillas::catalogo() as $clave => $ficha ) :
 				</p>
 
 				<?php if ( $puede_tocar ) : ?>
+					<?php
+					// Una sola acción azul por bloque, que es la regla 6 de su
+					// panel: «"Limpiar" parece un botón más». Guardar es azul;
+					// lo demás va en texto, que es lo que son.
+					?>
 					<p class="swpk-editor-botones">
-						<button type="submit" class="button button-primary">Guardar la plantilla</button>
+						<button type="submit" class="button button-primary">Guardar</button>
 
-						<button type="button" class="button" data-swpk-previa
+						<button type="button" class="swpk-enlace-pie" data-swpk-previa
 							data-url="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>"
 							data-plantilla="<?php echo esc_attr( $clave ); ?>"
 							data-nonce="<?php echo esc_attr( wp_create_nonce( 'swpk_vista_previa' ) ); ?>">
-							Vista previa
+							Verlo armado de verdad
 						</button>
 
 						<?php if ( $tocada ) : ?>
-							<a class="button"
+							<a class="swpk-enlace-pie"
 								href="<?php echo esc_url( wp_nonce_url( admin_url( 'admin-post.php?action=swpk_plantilla_fabrica&plantilla=' . $clave ), 'swpk_plantilla_fabrica_' . $clave ) ); ?>"
 								onclick="return confirm('Se pierde lo que hayas escrito en esta plantilla y vuelve el texto de fábrica. ¿Seguro?');">
-								Volver a la de fábrica
+								Restaurar el original
 							</a>
 						<?php endif; ?>
 					</p>
 				<?php endif; ?>
 			</form>
+
+			<?php
+			// ── La vista previa «del otro lado» ─────────────────────────────
+			//
+			// «esa vista previa debería estar del otro lado» (09:22). Estaba
+			// detrás de un botón que abría OTRA ventana encima: servía para
+			// comprobar, no para escribir. Ahora va al lado y se actualiza
+			// mientras se teclea, con datos de ejemplo.
+			//
+			// Los ejemplos viajan en un data- y la sustitución la hace el
+			// navegador: pedirle al servidor el correo armado en cada tecla
+			// sería una petición por pulsación.
+			//
+			// Y sí, el asunto también se sustituye. Era una pregunta suya
+			// concreta —«hay que ver si el parámetro también funciona en el
+			// subject»— y la respuesta es sí: asunto() pasa por el mismo
+			// reemplazo que el cuerpo. Aquí se ve.
+			?>
+			<div class="swpk-editor-previa" data-ejemplos="<?php
+				echo esc_attr( (string) wp_json_encode( SWPK_Plantillas::ejemplos() ) );
+			?>">
+				<p class="swpk-editor-marcas-tit"><strong>Vista previa</strong> <span class="swpk-mudo">con datos de ejemplo</span></p>
+				<div class="swpk-previa-sobre">
+					<p class="swpk-previa-rot">Asunto</p>
+					<p class="swpk-previa-asunto" data-papel="previa-asunto"></p>
+					<p class="swpk-previa-rot">Mensaje</p>
+					<div class="swpk-previa-cuerpo" data-papel="previa-cuerpo"></div>
+				</div>
+			</div>
 
 			<div class="swpk-editor-marcas">
 				<p class="swpk-editor-marcas-tit">
