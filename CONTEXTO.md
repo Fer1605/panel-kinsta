@@ -151,14 +151,72 @@ Reglas de Fer, que valen igual en un chat nuevo:
 
 ---
 
-## 5. Estado al 26 de noviembre de 2026
+## 5. Estado al 27 de noviembre de 2026
 
 | | Versión | Dónde está |
 |---|---|---|
-| Panel Kinsta | **0.11.0** | Desplegado en producción y verificado ahí mismo. |
+| Panel Kinsta | **0.13.2** | Desplegado en producción y verificado ahí mismo. |
 | Agente (plugin) | **0.7.0** | 0.6.4 está en 106 de 107. La 0.7.0 trae el registro de actividad y **no está repartida**. |
 | Agente (dentro del tema) | **0.7.0-tema** | La rama unida del jefe sigue en 0.6.4-tema con código de 0.6.3. La corrección + el registro están en una rama lista, **sin PR abierto**. |
 | Tema hijo | **2.6.1** | En el PR. |
+
+### Lo del 26 de madrugada: los 18 del PDF, cerrados (0.11.0 → 0.13.2)
+
+De los 18 que pidió, quedaban los puntos 6 al 18. Están todos.
+
+- **9 · El botón de «prueba» que no lo era.** Los cuatro llamaban al envío de
+  verdad; el del mensual recorre los 109 sitios y le escribe al contacto de
+  cada cliente. No pasaba nada porque ese aviso está apagado desde la 0.9.0,
+  pero el día que se encendiera mandaba correo a todos a quien le diera clic.
+  El arreglo va en `despachar()`, la única puerta por la que sale un correo:
+  con el desvío puesto, los cuatro se vuelven pruebas sin tocar su código.
+
+- **6 y 7 · Los 73 «cómo se arregla».** El campo no existía: la tabla guardaba
+  nombre, problema, porque, comprobador y severidad, y ninguno decía cómo
+  cerrar la norma. Dos columnas nuevas (tablas v18) y los 73 textos escritos,
+  en `includes/normas-arreglos.php`. Cada norma se despliega con las cuatro
+  respuestas de la maqueta.
+
+- **8 · La columna que bailaba** salió gratis con el 6: podía tener siete
+  contenidos distintos alineados a la derecha. Ahora es de ancho fijo, a la
+  izquierda, y solo lleva botón.
+
+- **10, 11 y 12 · Las caídas.** `SWPK_Codigos` traduce los diez códigos: qué
+  significa, de quién es el arreglo, qué se mira primero. Sale en el correo y
+  en el panel, con enlace a los registros de Kinsta. Y el sondeo pasa a cinco
+  minutos **solo mientras hay algo caído** —no los 109 cada cinco minutos—,
+  con el evento puesto al caer el primero y quitado al volver el último.
+
+- **13 · El slug en las cinco pantallas** y los enlaces cruzados ficha ↔
+  historial. Es lo que cierra la contradicción de Elementor.
+
+- **14 · El editor a dos columnas**, con la previa al lado actualizándose al
+  teclear. Y sí, la marca también se sustituye en el asunto: era una pregunta
+  suya concreta.
+
+- **15 · El Resumen lista en vez de contar**, con el camino a cada cosa.
+
+- **17 · El reparto en una frase** en la ficha: cuántas arregla el panel,
+  cuántas obligan a entrar y cuántas hay que hablar con el cliente.
+
+- **18 · Las burbujas** en las cinco vistas que no tenían ninguna.
+
+#### Las asesoras, y la trampa que casi se come el reparto
+
+Fer pidió las dos asesoras en todos los sitios de auto update y ninguna en los
+no update. En producción hay **cuatro** personas con perfil de asesora
+—Tiffany, Alejandra, Luisa y Fer—, así que repartir «todas las que tengan el
+perfil» les habría puesto 96 sitios a las cuatro, y con eso el correo semanal
+a dos que no lo esperan.
+
+Por eso el reparto va por una **marca por persona** —«Lleva cartera», en
+Equipo— y no por deducción del perfil. Marcadas Tiffany y Alejandra, que son
+las dos que nombró el jefe. Resultado: **96 sitios nuestros con las dos, 13 del
+cliente sin ninguna**. El semanal sigue apagado, así que todavía no sale nada.
+
+Y un fallo que salió al mirarlo: «Qué alcanza» en Equipo contaba sobre
+`sitios.asesora_id`, que solo guarda a la primera. Alejandra salía con 96 y
+Tiffany con «ninguno», teniendo las dos exactamente los mismos.
 
 ### Lo del 26 por la noche: los cinco primeros del PDF (0.10.0 → 0.11.0)
 
