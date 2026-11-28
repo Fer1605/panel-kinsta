@@ -156,7 +156,7 @@ Reglas de Fer, que valen igual en un chat nuevo:
 
 | | Versión | Dónde está |
 |---|---|---|
-| Panel Kinsta | **0.19.9** | En GitHub y en `master` de Pantheon, **desplegado en `test` y probado ahí**. Falta el último paso a producción: `terminus env:deploy solucionweb.live --cc`. La 0.19.8 sí está en producción. |
+| Panel Kinsta | **0.20.0** | En GitHub y en `master` de Pantheon, **desplegado en `test` y probado ahí**. Falta el último paso a producción: `terminus env:deploy solucionweb.live --cc`. La 0.19.8 es la que está en producción. |
 | Agente (plugin) | **0.7.0** | 0.6.4 está en 106 de 107. La 0.7.0 trae el registro de actividad y **no está repartida**. |
 | Agente (dentro del tema) | **0.7.0-tema** | La rama unida del jefe sigue en 0.6.4-tema con código de 0.6.3. La corrección + el registro están en una rama lista, **sin PR abierto**. |
 | Tema hijo | **2.6.1** | En el PR. |
@@ -345,6 +345,35 @@ programado a las 5:00.
    noviembre; World Vision tiene 3 días. El corte está en 5 días porque la
    lectura de Kinsta no cae el mismo día en todos: de 107 sitios, 69 son de
    ayer, 9 de anteayer y 23 de hace tres días.
+
+#### Lo que se hizo con esto (0.19.9 y 0.20.0)
+
+**El aviso de «dejó de reportar» dice cuál de las tres causas es**, en vez de
+listarlas todas. `SWPK_Receptor::motivo_del_silencio()`.
+
+**Un sitio al que el hosting ya no le ve WordPress sale marcado como
+suspendido.** `SWPK_Inventario::revisar_suspendidos()`, en el paso de cierre de
+la corrida diaria. Tres señales a la vez, y hacen falta las tres:
+
+1. El hosting no reporta versión de WordPress en el entorno vivo.
+2. Lleva más de cinco días sin releer ese entorno.
+3. El agente del sitio lleva más de 48 horas sin llamar.
+
+**Cito Color es la razón de que sean tres.** Cumple las dos primeras —220 días
+sin relectura y sin versión de WordPress— y es un WordPress vivo que abre sin
+problema. La tercera lo salva porque nunca tuvo agente.
+
+**El hueco que eso deja, a propósito:** un sitio sin agente no puede salir
+suspendido nunca. Marcar de más a un cliente vivo cuesta más caro que no marcar
+a uno muerto.
+
+**Solo el entorno vivo.** `normalizar_sitio()` elige `live` y es el único que
+llega a `wp_swpk_sitios`, así que un `staging` apagado meses no puede disparar
+nada. Comprobado el 27: ni World Vision ni DeConsulta tienen staging en Kinsta;
+los dos agentes reportan desde el dominio de producción.
+
+Trae evento y correo en los dos sentidos (`sitio_suspendido`,
+`sitio_reactivado`) y la marca en la pantalla de Sitios.
 
 #### Lo que bloquea «despertar» a los sitios callados
 
