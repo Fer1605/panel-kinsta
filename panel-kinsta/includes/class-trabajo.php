@@ -435,6 +435,12 @@ class SWPK_Trabajo {
 	private static function paso_cierre( array &$t ): void {
 		SWPK_Sincronizador::cerrar_foto( $t['vistos'] );
 
+		// Va aquí y no en el paso de sitios porque una de las tres señales
+		// —hace cuánto que el hosting no relee el entorno— solo está completa
+		// cuando ya se leyeron los plugins de todos. Antes de este punto,
+		// `inventario_en` es el de ayer en media cartera.
+		SWPK_Inventario::revisar_suspendidos();
+
 		$t['resumen']['filas_foto'] = (int) $t['filas'];
 
 		if ( $t['fallos'] ) {

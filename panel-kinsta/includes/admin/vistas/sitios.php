@@ -476,6 +476,22 @@ $volver = add_query_arg(
 							<?php echo esc_html( SWPK_Etiquetas::nombres()[ $grupo_s ] ?? 'Sin etiqueta' ); ?>
 						</div>
 						<?php
+						// ── Suspendido ──────────────────────────────────────
+						//
+						// Sin línea de color en la orilla: esa se la lleva el
+						// grupo, y dos franjas en la misma celda no se leen.
+						// Va en texto, con el nombre de lo que pasa y qué
+						// hacer, porque es lo único de esta pantalla que
+						// significa «este sitio ya no es nuestro».
+						?>
+						<?php if ( ! empty( $s->suspendido ) ) : ?>
+							<div class="swpk-sitio-suspendido">
+								<strong>Suspendido.</strong>
+								En el hosting ya no tiene WordPress. Confirmalo en el panel del
+								hosting y decidí si sale de la cartera.
+							</div>
+						<?php endif; ?>
+						<?php
 						// ── «Ver todo»: lo que no se mira a diario ──────────
 						//
 						// Versiones, última revisión, doble paso y asesora

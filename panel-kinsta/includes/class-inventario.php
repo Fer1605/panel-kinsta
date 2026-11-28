@@ -134,6 +134,142 @@ class SWPK_Inventario {
 	 *
 	 * @param array<int,string> $vistos Los sitio_id que la fuente SÍ devolvió.
 	 */
+	/**
+	 * Los sitios cuyo entorno vivo se quedó sin WordPress.
+	 *
+	 * ─── Qué está pasando cuando esto salta ─────────────────────────────────
+	 *
+	 * El 20 de noviembre de 2026 el cliente de DeConsulta movió su dominio a
+	 * otro proveedor. El sitio de ahí siguió abriendo perfecto —otro sitio,
+	 * hecho con otra cosa— y el panel lo marcaba «arriba», porque alguien
+	 * contestaba 200 en esa dirección. Lo único que se notó fue que su agente
+	 * llevaba una semana callado, y el aviso de callado decía lo mismo que
+	 * diría de un sitio al que solo se le paró el reloj.
+	 *
+	 * El hosting SÍ lo sabía: en su panel ese entorno sale con el cartel de
+	 * «Entorno suspendido — direcciona fuera de SW». Lo que no hay es forma de
+	 * leer ese cartel: su API no tiene campo de suspensión. Se comprobó el 27
+	 * de noviembre de 2026 contra `/sites`, `/sites/{id}` y
+	 * `/sites/{id}/environments`: el sitio suspendido viene con
+	 * `status: "live"` e `is_blocked: false`, idéntico a los 108 sanos.
+	 *
+	 * ─── Entonces, cómo se sabe ─────────────────────────────────────────────
+	 *
+	 * Por tres cosas a la vez, que es lo que lo hace de fiar. Una sola de las
+	 * tres se equivoca; las tres juntas, no:
+	 *
+	 *   1. El hosting no reporta qué versión de WordPress hay en el entorno
+	 *      vivo. Es lo que en su panel se lee como «WordPress no instalado».
+	 *   2. El hosting lleva más de cinco días sin releer ese entorno.
+	 *   3. El agente del sitio dejó de llamar hace más de dos días.
+	 *
+	 * ─── Por qué hacen falta las tres, con nombre y apellido ────────────────
+	 *
+	 * **Cito Color** es la razón. El 27 de noviembre cumplía las dos primeras
+	 * —el hosting no reporta su versión de WordPress y lleva 220 días sin
+	 * releerlo— y sin embargo es un WordPress vivo, servido por el hosting,
+	 * que abre sin problema. Con dos condiciones habría salido suspendido el
+	 * primer día. La tercera lo salva, porque un sitio que ya no existe no
+	 * tiene agente que deje de llamar, y Cito Color nunca tuvo agente.
+	 *
+	 * Eso deja un hueco que conviene saber: **un sitio sin agente no puede
+	 * entrar aquí**, porque le falta la tercera pata. Es a propósito. Marcar
+	 * de más a un cliente vivo cuesta mucho más caro que no marcar a uno
+	 * muerto, y los 95 sitios con agente son los que de verdad se vigilan.
+	 *
+	 * ─── Solo el entorno vivo ───────────────────────────────────────────────
+	 *
+	 * El panel solo mide el de producción: es el que `normalizar_sitio()`
+	 * elige y el único que llega a esta tabla. Un `staging` apagado meses es
+	 * lo normal y nunca puede disparar esto, porque nunca se mira.
+	 */
+	public static function revisar_suspendidos(): void {
+		global $wpdb;
+
+		$tabla    = SWPK_Tablas::tabla( 'sitios' );
+		$agentes  = SWPK_Tablas::tabla( 'agentes' );
+		$ahora    = current_time( 'mysql' );
+		$sin_leer = SWPK_Frescura::limite( self::DIAS_SIN_RELEER * DAY_IN_SECONDS );
+		$callado  = SWPK_Frescura::limite( self::HORAS_SIN_AGENTE * HOUR_IN_SECONDS );
+
+		// Sin prepare: no entra ni un dato de fuera: los dos nombres de tabla
+		// los arma SWPK_Tablas con el prefijo de WordPress.
+		$filas = $wpdb->get_results(
+			"SELECT s.sitio_id, s.nombre_visible, s.dominio, s.suspendido,
+			        s.version_wp, s.inventario_en, a.ultimo_reporte
+			   FROM {$tabla} s
+			   LEFT JOIN {$agentes} a ON a.sitio_id = s.sitio_id
+			  WHERE s.de_baja = 0"
+		);
+
+		foreach ( (array) $filas as $f ) {
+			$sin_wordpress = '' === trim( (string) $f->version_wp );
+			$sin_relectura = '' !== (string) $f->inventario_en
+				&& (string) $f->inventario_en < $sin_leer;
+			$agente_mudo   = null !== $f->ultimo_reporte
+				&& (string) $f->ultimo_reporte < $callado;
+
+			$suspendido = $sin_wordpress && $sin_relectura && $agente_mudo;
+			$estaba     = 1 === (int) $f->suspendido;
+
+			if ( $suspendido === $estaba ) {
+				continue;
+			}
+
+			$wpdb->update(
+				$tabla,
+				[
+					'suspendido'    => $suspendido ? 1 : 0,
+					'suspendido_en' => $suspendido ? $ahora : null,
+				],
+				[ 'sitio_id' => (string) $f->sitio_id ]
+			);
+
+			$nombre = (string) ( $f->nombre_visible ?: $f->dominio );
+
+			SWPK_Eventos::registrar(
+				$suspendido ? SWPK_Eventos::SITIO_SUSPENDIDO : SWPK_Eventos::SITIO_REACTIVADO,
+				(string) $f->sitio_id,
+				$suspendido
+					? sprintf( 'En el hosting, el entorno vivo de %s ya no tiene WordPress.', $nombre )
+					: sprintf( 'El entorno vivo de %s volvió a tener WordPress.', $nombre ),
+				$suspendido ? 'alto' : 'ok'
+			);
+
+			self::avisar_suspension( (string) $f->sitio_id, $nombre, (string) $f->dominio, $suspendido );
+		}
+	}
+
+	/** Cuántos días sin que el hosting relea un entorno cuentan como abandono. */
+	private const DIAS_SIN_RELEER = 5;
+
+	/** Y cuántas horas sin que el agente llame. El mismo corte que el aviso de callado. */
+	private const HORAS_SIN_AGENTE = 48;
+
+	/** El correo, en los dos sentidos. */
+	private static function avisar_suspension( string $sitio_id, string $nombre, string $dominio, bool $suspendido ): void {
+		$clave = $suspendido ? 'sitio_suspendido' : 'sitio_reactivado';
+
+		if ( ! SWPK_Correos::encendido( $clave ) ) {
+			return;
+		}
+
+		$marcas = [
+			'{{sitio}}' => esc_html( $nombre ),
+			'{{url}}'   => esc_html( $dominio ),
+		];
+
+		SWPK_Bitacora::enviar(
+			SWPK_Bitacora::CAIDA,
+			SWPK_Monitor::destinatarios_caida(),
+			SWPK_Plantillas::asunto( $clave, [ '{{sitio}}' => $nombre ] ),
+			$suspendido
+				? SWPK_Plantillas::sitio_suspendido( $marcas )
+				: SWPK_Plantillas::sitio_reactivado( $marcas ),
+			$sitio_id
+		);
+	}
+
 	private static function dar_de_baja_a_los_que_ya_no_estan( array $vistos, string $ahora ): void {
 		global $wpdb;
 

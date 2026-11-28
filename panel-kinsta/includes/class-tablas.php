@@ -33,7 +33,7 @@ defined( 'ABSPATH' ) || exit;
 
 class SWPK_Tablas {
 
-	public const VERSION = 18;
+	public const VERSION = 19;
 
 	public static function tabla( string $nombre ): string {
 		global $wpdb;
@@ -82,6 +82,8 @@ class SWPK_Tablas {
 				ausencias SMALLINT UNSIGNED NOT NULL DEFAULT 0,
 				de_baja TINYINT(1) NOT NULL DEFAULT 0,
 				de_baja_en DATETIME NULL,
+				suspendido TINYINT(1) NOT NULL DEFAULT 0,
+				suspendido_en DATETIME NULL,
 				PRIMARY KEY (id),
 				UNIQUE KEY sitio_id (sitio_id),
 				KEY tag (tag)

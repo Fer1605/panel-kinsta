@@ -2373,6 +2373,19 @@ body[class*="panel-kinsta"] .swpk-sitio-pie {
 	color: #5c6670;
 }
 
+/* Un sitio al que el hosting ya no le ve WordPress. El estado lo dice el
+   fondo, no una línea de color en la orilla: esa es del grupo. */
+body[class*="panel-kinsta"] .swpk-sitio-suspendido {
+	margin-top: 6px;
+	padding: 6px 8px;
+	background: #fbeceb;
+	border: 1px solid #e8c4c0;
+	border-radius: 3px;
+	font-size: 12px;
+	line-height: 1.45;
+	color: #7a2f28;
+}
+
 /* ── «Ver todo»: el detalle se despliega, no se muestra ────────────
    Regla 7 del panel que nos enseñó. Versiones, revisado, doble paso y
    asesora viven aquí: están a un clic, no en dos pantallas, y no

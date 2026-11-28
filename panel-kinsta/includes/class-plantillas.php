@@ -191,6 +191,43 @@ class SWPK_Plantillas {
 					'{{motivo}}' => 'Por qué dejó de reportar, hasta donde el panel puede saberlo',
 				],
 			],
+			'sitio_suspendido' => [
+				'nombre' => 'Un sitio se quedó sin WordPress',
+				'quien'  => 'A soporte y a avisos de caída: el hosting ya no ve WordPress en ese sitio.',
+				'titulo' => 'Un sitio ya no tiene WordPress',
+				'asunto' => '[Suspendido] {{sitio}}',
+				// Lo primero que tiene que quedar claro es que NO es una
+				// caída, porque es lo que se va a suponer al ver el asunto.
+				// El 27 de noviembre de 2026 el jefe recibió el aviso de
+				// «dejó de reportar» de un sitio así y lo leyó como un sitio
+				// que no servía. Era un sitio que cambió de proveedor.
+				'cuerpo' => "En el hosting, {{sitio}} ya no tiene WordPress.\n\n"
+					. "Dirección: {{url}}\n\n"
+					. 'Esto no es una caída. El sitio de esa dirección puede abrir perfecto: '
+					. 'lo que pasa es que ya no es el WordPress que teníamos nosotros. Es lo que '
+					. 'se ve cuando a un entorno se le quita WordPress, o cuando el cliente '
+					. 'apunta su dominio a otro proveedor.'
+					. "\n\n"
+					. 'Desde hoy el panel deja de medir este sitio y lo enseña como suspendido. '
+					. 'Conviene confirmarlo en el panel del hosting y decidir si sale de la cartera.',
+				'marcas' => [
+					'{{sitio}}' => 'El nombre del sitio',
+					'{{url}}'   => 'La dirección del sitio',
+				],
+			],
+			'sitio_reactivado' => [
+				'nombre' => 'Un sitio suspendido volvió',
+				'quien'  => 'A soporte y a avisos de caída: el hosting volvió a ver WordPress ahí.',
+				'titulo' => 'Un sitio suspendido volvió',
+				'asunto' => '[Volvió] {{sitio}}',
+				'cuerpo' => "En el hosting, {{sitio}} volvió a tener WordPress.\n\n"
+					. "Dirección: {{url}}\n\n"
+					. 'El panel vuelve a medirlo y le quita la marca de suspendido.',
+				'marcas' => [
+					'{{sitio}}' => 'El nombre del sitio',
+					'{{url}}'   => 'La dirección del sitio',
+				],
+			],
 			'repuesto' => [
 				'nombre' => 'Aviso de recuperación',
 				'quien'  => 'A soporte, en el momento: un sitio que estaba caído volvió.',
@@ -317,6 +354,8 @@ class SWPK_Plantillas {
 			'caida'       => [ 'Ver el estado de los sitios', 'panel-kinsta-caidas' ],
 			'sigue_caido' => [ 'Ver el estado de los sitios', 'panel-kinsta-caidas' ],
 			'agente_callado' => [ 'Ver el sitio en el panel', 'panel-kinsta-sitios' ],
+			'sitio_suspendido' => [ 'Ver el sitio en el panel', 'panel-kinsta-sitios' ],
+			'sitio_reactivado' => [ 'Ver el sitio en el panel', 'panel-kinsta-sitios' ],
 			'repuesto' => [ 'Ver el estado de los sitios', 'panel-kinsta-caidas' ],
 			'de_baja'  => [ 'Ver el sitio en el panel', 'panel-kinsta-sitios' ],
 		];
@@ -1254,6 +1293,26 @@ class SWPK_Plantillas {
 			self::cuerpo( 'agente_callado', $marcas ),
 			false,
 			self::boton_de( 'agente_callado' )
+		);
+	}
+
+	/** El aviso de que a un sitio le quitaron WordPress, o se lo llevaron. */
+	public static function sitio_suspendido( array $marcas ): string {
+		return self::envolver(
+			self::catalogo()['sitio_suspendido']['titulo'],
+			self::cuerpo( 'sitio_suspendido', $marcas ),
+			false,
+			self::boton_de( 'sitio_suspendido' )
+		);
+	}
+
+	/** Y el de que volvió. */
+	public static function sitio_reactivado( array $marcas ): string {
+		return self::envolver(
+			self::catalogo()['sitio_reactivado']['titulo'],
+			self::cuerpo( 'sitio_reactivado', $marcas ),
+			false,
+			self::boton_de( 'sitio_reactivado' )
 		);
 	}
 

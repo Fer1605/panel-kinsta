@@ -370,10 +370,19 @@ class SWPK_Receptor {
 
 		$sitio = $wpdb->get_row(
 			$wpdb->prepare(
-				'SELECT inventario_en, version_wp FROM ' . SWPK_Tablas::tabla( 'sitios' ) . ' WHERE sitio_id = %s',
+				'SELECT inventario_en, version_wp, suspendido FROM ' . SWPK_Tablas::tabla( 'sitios' ) . ' WHERE sitio_id = %s',
 				$sitio_id
 			)
 		);
+
+		// Si ya está marcado como suspendido, eso es la respuesta y no hace
+		// falta deducir nada: la corrida diaria lo decidió con las tres
+		// señales en la mano. Ver SWPK_Inventario::revisar_suspendidos().
+		if ( ! empty( $sitio->suspendido ) ) {
+			return 'Este sitio está marcado como suspendido: en el hosting, su entorno vivo ya '
+				. 'no tiene WordPress. No es que el sitio falle — es que el WordPress que '
+				. 'vigilábamos ahí ya no está.';
+		}
 
 		$visto = $wpdb->get_var(
 			$wpdb->prepare(

@@ -1222,7 +1222,7 @@ class SWPK_Monitor {
 	 *
 	 * @return array<int,string>
 	 */
-	private static function destinatarios_caida(): array {
+	public static function destinatarios_caida(): array {
 		$extra = (string) SWPK_Ajustes::obtener( 'correo_caidas', '' );
 
 		return array_values(

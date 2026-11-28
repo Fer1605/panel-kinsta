@@ -26,6 +26,12 @@ class SWPK_Eventos {
 	/** El hosting dejó de devolver el sitio. Ver SWPK_Inventario::AUSENCIAS_PARA_BAJA. */
 	public const SITIO_DE_BAJA   = 'sitio_de_baja';
 
+	/** El entorno vivo se quedó sin WordPress. Ver SWPK_Inventario::revisar_suspendidos(). */
+	public const SITIO_SUSPENDIDO = 'sitio_suspendido';
+
+	/** Y volvió a tenerlo. */
+	public const SITIO_REACTIVADO = 'sitio_reactivado';
+
 	/**
 	 * Lo que NO hace falta mirar: son buenas noticias.
 	 *
@@ -37,7 +43,7 @@ class SWPK_Eventos {
 	 * sitio.
 	 */
 	public static function rutinarios(): array {
-		return [ self::ACTUALIZADO, self::RESUELTA, self::SITIO_REPUESTO ];
+		return [ self::ACTUALIZADO, self::RESUELTA, self::SITIO_REPUESTO, self::SITIO_REACTIVADO ];
 	}
 
 	public static function es_rutinario( string $tipo ): bool {
@@ -58,6 +64,8 @@ class SWPK_Eventos {
 			self::SITIO_CAIDO    => 'Sitio caído',
 			self::SITIO_REPUESTO => 'Sitio repuesto',
 			self::SITIO_DE_BAJA  => 'Sitio dado de baja',
+			self::SITIO_SUSPENDIDO => 'Sitio suspendido',
+			self::SITIO_REACTIVADO => 'Sitio reactivado',
 			'agente_registrado'  => 'Plugin instalado en el sitio',
 			'administrador_eliminado' => 'Administrador eliminado',
 		];
