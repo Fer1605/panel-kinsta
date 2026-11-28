@@ -156,7 +156,7 @@ Reglas de Fer, que valen igual en un chat nuevo:
 
 | | Versión | Dónde está |
 |---|---|---|
-| Panel Kinsta | **0.19.8** | **Desplegado en producción el 27 por la noche y verificado ahí mismo**, a 1280 px y sin errores en las cuatro pantallas. |
+| Panel Kinsta | **0.19.9** | En GitHub y en `master` de Pantheon, **desplegado en `test` y probado ahí**. Falta el último paso a producción: `terminus env:deploy solucionweb.live --cc`. La 0.19.8 sí está en producción. |
 | Agente (plugin) | **0.7.0** | 0.6.4 está en 106 de 107. La 0.7.0 trae el registro de actividad y **no está repartida**. |
 | Agente (dentro del tema) | **0.7.0-tema** | La rama unida del jefe sigue en 0.6.4-tema con código de 0.6.3. La corrección + el registro están en una rama lista, **sin PR abierto**. |
 | Tema hijo | **2.6.1** | En el PR. |
@@ -311,6 +311,53 @@ Tres cosas que solo se ven cuando ya están las cuatro pantallas hechas:
   primeras son atributos del sitio y las otras navegación; mezcladas no se ve
   qué se puede pulsar. Las etiquetas bajan junto al dominio y a la derecha
   quedan solo las pestañas.
+
+### Lo del 27 de noviembre por la noche: por qué dos sitios dejaron de reportar
+
+Llegaron dos correos de «Sin reportar» el mismo día —DeConsulta (176h) y World
+Vision (58h)— con el mismo texto. Resultaron ser **dos causas distintas**.
+
+**La causa común:** el agente solo reporta cuando el reloj de WordPress lo
+despierta, y ese reloj solo corre cuando una visita llega hasta PHP. Las horas
+de los últimos reportes lo delatan: 16:00 y 13:58, cuando el reporte está
+programado a las 5:00.
+
+- **World Vision** está servido entero desde caché —Cloudflare con
+  `s-maxage=86400` encima de la caché de Kinsta—, así que casi ninguna visita
+  llega a PHP. El sitio está perfecto; lo que está parado es su reloj.
+- **DeConsulta ya no es WordPress.** El dominio lo sirve otro proveedor desde
+  el 20 de noviembre: la portada no trae `wp-content`, `/wp-json/` devuelve la
+  misma página y `wp-login.php` da 403. MyKinsta lo confirma con un cartel de
+  **«Entorno suspendido — direcciona fuera de SW, el cliente parece haber
+  cambiado los registros a otro proveedor»**.
+
+#### Tres cosas que se comprobaron y conviene no volver a comprobar
+
+1. **La API de Kinsta NO dice «entorno suspendido».** Probado contra `/sites`,
+   `/sites/{id}` y `/sites/{id}/environments`: DeConsulta viene con
+   `status: "live"` e `is_blocked: false`, igual que los 108 sanos. Ese cartel
+   solo existe en MyKinsta. `/sites/environments/{id}` no existe (404).
+2. **`wordpress_version: null` no sirve como señal sola.** Lo traen dos sitios
+   de 109: DeConsulta y **Cito Color**, y Cito Color es un WordPress vivo que
+   reporta sin problema.
+3. **Lo que sí sirve es `last_updated_at` del inventario de Kinsta**, que el
+   panel ya guarda como `inventario_en`. DeConsulta está congelado en el 18 de
+   noviembre; World Vision tiene 3 días. El corte está en 5 días porque la
+   lectura de Kinsta no cae el mismo día en todos: de 107 sitios, 69 son de
+   ayer, 9 de anteayer y 23 de hace tres días.
+
+#### Lo que bloquea «despertar» a los sitios callados
+
+La idea era que el panel pidiera la portada saltándose la caché para que
+arrancara PHP. **No se puede hoy:** desde el servidor del panel, Cloudflare
+devuelve **403** en worldvision.org.gt, en citocolor.com y hasta en
+`worldvision.kinsta.cloud`. Es la IP de salida mala de Pantheon, la de
+`KINSTA-pedido-de-desbloqueo.md`, que sigue sin resolverse.
+
+**Y es peor de lo que parecía:** el sondeo de las 00:31 del 28 salió por
+`34.46.111.53` y volvió con **106 ciegos de 108**. El panel está, la mayoría de
+las vueltas, sin poder ver su propia cartera. Mientras no esté la excepción de
+Bot Protection, despertar sitios no es posible desde aquí.
 
 ### Lo del 27 por la noche: desplegado (0.19.8)
 
