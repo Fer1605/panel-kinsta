@@ -208,7 +208,7 @@ class SWPK_Plantillas {
 					. 'se ve cuando a un entorno se le quita WordPress, o cuando el cliente '
 					. 'apunta su dominio a otro proveedor.'
 					. "\n\n"
-					. 'Desde hoy el panel deja de medir este sitio y lo enseña como suspendido. '
+					. 'El panel lo deja marcado como suspendido en la pantalla de Sitios. '
 					. 'Conviene confirmarlo en el panel del hosting y decidir si sale de la cartera.',
 				'marcas' => [
 					'{{sitio}}' => 'El nombre del sitio',
