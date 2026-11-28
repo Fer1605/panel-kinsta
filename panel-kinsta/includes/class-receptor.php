@@ -316,6 +316,124 @@ class SWPK_Receptor {
 		return $wpdb->get_results( "SELECT * FROM {$tabla} ORDER BY nombre ASC" ) ?: [];
 	}
 
+	/**
+	 * Por qué este sitio dejó de reportar, hasta donde el panel puede saberlo.
+	 *
+	 * ─── Para qué existe ────────────────────────────────────────────────────
+	 *
+	 * El aviso de «un sitio dejó de reportar» decía las tres causas posibles y
+	 * dejaba al lector elegir: «alguien desactivó el plugin, el sitio está en
+	 * mantenimiento, o el reloj del sitio dejó de correr». El 27 de noviembre
+	 * de 2026 salieron dos de esos correos el mismo día, uno por cada causa
+	 * distinta, y los dos decían exactamente lo mismo. Quien los recibió tuvo
+	 * que ir a averiguar cuál era cuál —y uno de los dos resultó ser un sitio
+	 * que se había ido del hosting hacía una semana.
+	 *
+	 * El panel ya tenía lo que hacía falta para distinguirlos; solo que no lo
+	 * miraba al escribir el correo. Esto lo mira.
+	 *
+	 * ─── Lo que se cruza, y por qué esos tres ───────────────────────────────
+	 *
+	 * Nada de esto pide una petición nueva. Son tres datos que ya están
+	 * guardados y que, juntos, separan los tres casos:
+	 *
+	 *   · `inventario_en`  cuándo leyó el HOSTING los plugins de ese sitio.
+	 *   · `version_wp`     qué versión de WordPress ve el hosting ahí.
+	 *   · el estado del monitor, que dice si desde aquí se le puede ver.
+	 *
+	 * El primero es el que más dice. Si el hosting tampoco está leyendo ese
+	 * entorno, el silencio del agente no es cosa del agente: es que ahí ya no
+	 * hay nada que leer. Un entorno suspendido o un dominio que se movió de
+	 * proveedor se ven exactamente así.
+	 *
+	 * ─── Lo que NO se puede saber, y por eso no se dice ─────────────────────
+	 *
+	 * La API del hosting no tiene campo de «entorno suspendido». Se comprobó
+	 * el 27 de noviembre de 2026 contra `/sites`, `/sites/{id}` y
+	 * `/sites/{id}/environments`: el sitio suspendido venía con `status: live`
+	 * y `is_blocked: false`, igual que los 108 sanos. Ese cartel existe en el
+	 * panel del hosting y en ningún sitio más.
+	 *
+	 * Así que aquí no se afirma «está suspendido». Se dice lo que sí se midió
+	 * —que el hosting lleva días sin leerlo— y se manda a mirarlo allá. Es la
+	 * regla 3: decir lo que se sabe, no lo que se deduce con ganas.
+	 */
+	public static function motivo_del_silencio( object $agente ): string {
+		global $wpdb;
+
+		$sitio_id = (string) ( $agente->sitio_id ?? '' );
+
+		if ( '' === $sitio_id ) {
+			return 'Este agente no está emparejado con ningún sitio del hosting, así que de él '
+				. 'no se puede decir más que esto: dejó de llamar.';
+		}
+
+		$sitio = $wpdb->get_row(
+			$wpdb->prepare(
+				'SELECT inventario_en, version_wp FROM ' . SWPK_Tablas::tabla( 'sitios' ) . ' WHERE sitio_id = %s',
+				$sitio_id
+			)
+		);
+
+		$visto = $wpdb->get_var(
+			$wpdb->prepare(
+				'SELECT estado FROM ' . SWPK_Tablas::tabla( 'monitor' ) . ' WHERE sitio_id = %s',
+				$sitio_id
+			)
+		);
+
+		// ── 1. El hosting tampoco lo está leyendo ───────────────────────────
+		//
+		// Lo primero que se mira, porque es lo único que apunta a que el
+		// problema no está en el agente sino en que ese entorno ya no es
+		// nuestro. El corte son cinco días: el hosting relee la cartera a
+		// diario, así que tres días de retraso entran dentro de lo normal y
+		// cinco ya no.
+		$leido = (string) ( $sitio->inventario_en ?? '' );
+		$edad  = SWPK_Frescura::edad( $leido );
+
+		if ( null === $edad || $edad > self::DIAS_SIN_LEER * DAY_IN_SECONDS ) {
+			$cuando = '' === $leido
+				? 'y no consta que lo haya leído nunca'
+				: 'desde el ' . SWPK_Frescura::fmt( 'j \d\e F', $leido );
+
+			return sprintf(
+				'El hosting tampoco está leyendo este sitio %s%s. Un entorno suspendido o un '
+				. 'dominio que se movió a otro proveedor se ven así. Conviene abrirlo en el panel '
+				. 'del hosting antes que en el sitio.',
+				$cuando,
+				'' === (string) ( $sitio->version_wp ?? '' ) ? ', y tampoco reporta qué versión de WordPress tiene' : ''
+			);
+		}
+
+		// ── 2. Desde aquí no se le puede ver ────────────────────────────────
+		if ( 'ciego' === $visto ) {
+			return 'El cortafuegos del hosting bloquea al monitor del panel, así que desde aquí '
+				. 'no se puede comprobar nada de este sitio. El silencio del agente puede ser '
+				. 'cualquier cosa; esto no lo aclara.';
+		}
+
+		if ( 'abajo' === $visto ) {
+			return 'Además, el sitio no está respondiendo. Mientras esté caído, el agente no '
+				. 'tiene cómo reportar.';
+		}
+
+		// ── 3. El sitio está vivo y el hosting lo lee: es el reloj ──────────
+		return 'El hosting lo sigue leyendo y el sitio responde, así que el sitio está bien. Lo '
+			. 'que no está corriendo es su reloj: el agente solo reporta cuando una visita llega '
+			. 'hasta PHP, y en un sitio servido entero desde caché eso puede no pasar en días.';
+	}
+
+	/**
+	 * Cuántos días sin que el hosting lea un sitio hacen sospechar.
+	 *
+	 * El hosting relee la cartera a diario, pero no todos los sitios caen en
+	 * la misma vuelta: medido el 27 de noviembre de 2026, de 107 sitios al día
+	 * 69 tenían la lectura de ayer, 9 de anteayer y 23 de hace tres días. Con
+	 * el corte en tres días saldrían veintitrés avisos falsos.
+	 */
+	private const DIAS_SIN_LEER = 5;
+
 	/** Un agente que lleva más de 48 horas sin reportar es, por sí mismo, una señal. */
 	public static function callados( int $horas = 48 ): array {
 		global $wpdb;

@@ -178,13 +178,17 @@ class SWPK_Plantillas {
 					. "panel ya no sabe nada nuevo: ni sus administradores, ni su verificación en dos "
 					. "pasos, ni sus normas de seguridad. Lo que se vea de él en el panel es de hace "
 					. "{{cuanto}}.\n\n"
-					. 'Lo normal es que alguien haya desactivado el plugin, que el sitio esté en '
-					. 'mantenimiento, o que el reloj del sitio dejara de correr.',
+					// Antes aquí iban las tres causas posibles, las tres a la
+					// vez, y quien recibía el correo elegía. Ahora el panel
+					// cruza lo que ya sabe y dice cuál de las tres es. Ver
+					// SWPK_Receptor::motivo_del_silencio().
+					. '{{motivo}}',
 				'marcas' => [
 					'{{sitio}}'  => 'El nombre del sitio',
 					'{{url}}'    => 'La dirección del sitio',
 					'{{cuanto}}' => 'Cuánto lleva sin reportar, en palabras',
 					'{{ultimo}}' => 'Cuándo fue su último reporte',
+					'{{motivo}}' => 'Por qué dejó de reportar, hasta donde el panel puede saberlo',
 				],
 			],
 			'repuesto' => [

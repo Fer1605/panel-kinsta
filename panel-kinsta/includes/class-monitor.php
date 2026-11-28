@@ -1188,6 +1188,7 @@ class SWPK_Monitor {
 				'{{ultimo}}' => esc_html(
 					'' === $ultimo ? 'nunca' : SWPK_Frescura::fmt( 'j \d\e F \d\e Y, H:i', $ultimo )
 				),
+				'{{motivo}}' => esc_html( SWPK_Receptor::motivo_del_silencio( $a ) ),
 			];
 
 			SWPK_Bitacora::enviar(
