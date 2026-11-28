@@ -392,16 +392,20 @@ class SWPK_Receptor {
 		$leido = (string) ( $sitio->inventario_en ?? '' );
 		$edad  = SWPK_Frescura::edad( $leido );
 
-		if ( null === $edad || $edad > self::DIAS_SIN_LEER * DAY_IN_SECONDS ) {
-			$cuando = '' === $leido
-				? 'y no consta que lo haya leído nunca'
-				: 'desde el ' . SWPK_Frescura::fmt( 'j \d\e F', $leido );
+		// «Nunca leído» no es lo mismo que «dejó de leerse», y confundirlos
+		// convierte un sitio recién dado de alta —o uno cuya lectura falló esa
+		// vuelta— en un sitio que se fue del hosting. Se dice lo que hay: nada.
+		if ( null === $edad ) {
+			return 'El panel no tiene registro de que el hosting haya leído este sitio, así que '
+				. 'desde aquí no se puede decir por qué se calló.';
+		}
 
+		if ( $edad > self::DIAS_SIN_LEER * DAY_IN_SECONDS ) {
 			return sprintf(
-				'El hosting tampoco está leyendo este sitio %s%s. Un entorno suspendido o un '
-				. 'dominio que se movió a otro proveedor se ven así. Conviene abrirlo en el panel '
-				. 'del hosting antes que en el sitio.',
-				$cuando,
+				'El hosting tampoco está leyendo este sitio desde el %s%s. Un entorno suspendido '
+				. 'o un dominio que se movió a otro proveedor se ven así. Conviene abrirlo en el '
+				. 'panel del hosting antes que en el sitio.',
+				SWPK_Frescura::fmt( 'j \d\e F', $leido ),
 				'' === (string) ( $sitio->version_wp ?? '' ) ? ', y tampoco reporta qué versión de WordPress tiene' : ''
 			);
 		}
